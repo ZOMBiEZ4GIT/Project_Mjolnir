@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import type { Holding } from "@/lib/db/schema";
 import {
   Table,
@@ -12,6 +14,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { EditHoldingDialog } from "./edit-holding-dialog";
 
 // Display names for holding types
@@ -51,7 +63,38 @@ function groupHoldingsByType(holdings: Holding[]): Map<Holding["type"], Holding[
 
 export function HoldingsTable({ holdings }: HoldingsTableProps) {
   const [editingHolding, setEditingHolding] = useState<Holding | null>(null);
+  const [deletingHolding, setDeletingHolding] = useState<Holding | null>(null);
   const groupedHoldings = groupHoldingsByType(holdings);
+  const queryClient = useQueryClient();
+
+  const deleteMutation = useMutation({
+    mutationFn: async (holdingId: string) => {
+      const response = await fetch(`/api/holdings/${holdingId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete holding");
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["holdings"] });
+      toast.success("Holding deleted successfully");
+      setDeletingHolding(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const handleDelete = () => {
+    if (deletingHolding) {
+      deleteMutation.mutate(deletingHolding.id);
+    }
+  };
 
   return (
     <>
@@ -70,6 +113,7 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
               type={type}
               holdings={typeHoldings}
               onEdit={setEditingHolding}
+              onDelete={setDeletingHolding}
             />
           );
         })}
@@ -84,6 +128,32 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
           }}
         />
       )}
+
+      <AlertDialog
+        open={!!deletingHolding}
+        onOpenChange={(open) => {
+          if (!open) setDeletingHolding(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Holding</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deletingHolding?.name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
@@ -92,9 +162,10 @@ interface HoldingsTypeSectionProps {
   type: Holding["type"];
   holdings: Holding[];
   onEdit: (holding: Holding) => void;
+  onDelete: (holding: Holding) => void;
 }
 
-function HoldingsTypeSection({ type, holdings, onEdit }: HoldingsTypeSectionProps) {
+function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeSectionProps) {
   const label = HOLDING_TYPE_LABELS[type];
   const showSymbol = type === "stock" || type === "etf" || type === "crypto";
 
@@ -114,7 +185,7 @@ function HoldingsTypeSection({ type, holdings, onEdit }: HoldingsTypeSectionProp
               )}
               <TableHead className="text-gray-400">Currency</TableHead>
               <TableHead className="text-gray-400">Status</TableHead>
-              <TableHead className="text-gray-400 w-[70px]">Actions</TableHead>
+              <TableHead className="text-gray-400 w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -143,15 +214,26 @@ function HoldingsTypeSection({ type, holdings, onEdit }: HoldingsTypeSectionProp
                   )}
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-gray-400 hover:text-white"
-                    onClick={() => onEdit(holding)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                    <span className="sr-only">Edit {holding.name}</span>
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-white"
+                      onClick={() => onEdit(holding)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Edit {holding.name}</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-red-500"
+                      onClick={() => onDelete(holding)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Delete {holding.name}</span>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
