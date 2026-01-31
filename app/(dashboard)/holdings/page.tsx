@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
+import { HoldingsTable } from "@/components/holdings/holdings-table";
 import type { Holding } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -95,13 +96,11 @@ export default function HoldingsPage() {
     );
   }
 
-  // Show holdings list (placeholder for now - US-006 will implement the grouped table)
+  // Show holdings list in grouped table
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold text-white mb-6">Holdings</h1>
-      <div className="text-gray-400">
-        {holdings.length} holding{holdings.length !== 1 ? "s" : ""} found
-      </div>
+      <HoldingsTable holdings={holdings} />
     </div>
   );
 }
