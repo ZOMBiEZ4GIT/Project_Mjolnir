@@ -1,16 +1,22 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { HoldingsTable } from "@/components/holdings/holdings-table";
 import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import type { Holding } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
-async function fetchHoldings(): Promise<Holding[]> {
-  const response = await fetch("/api/holdings");
+async function fetchHoldings(includeDormant: boolean): Promise<Holding[]> {
+  const url = includeDormant
+    ? "/api/holdings?include_dormant=true"
+    : "/api/holdings";
+  const response = await fetch(url);
   if (!response.ok) {
     if (response.status === 401) {
       throw new Error("Unauthorized");
@@ -22,14 +28,28 @@ async function fetchHoldings(): Promise<Holding[]> {
 
 export default function HoldingsPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const showDormant = searchParams.get("show_dormant") === "true";
+
+  const handleShowDormantChange = (checked: boolean) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (checked) {
+      params.set("show_dormant", "true");
+    } else {
+      params.delete("show_dormant");
+    }
+    router.push(`/holdings${params.toString() ? `?${params.toString()}` : ""}`);
+  };
 
   const {
     data: holdings,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["holdings"],
-    queryFn: fetchHoldings,
+    queryKey: ["holdings", { showDormant }],
+    queryFn: () => fetchHoldings(showDormant),
     enabled: isLoaded && isSignedIn,
   });
 
@@ -91,6 +111,16 @@ export default function HoldingsPage() {
             <Button>Add Holding</Button>
           </AddHoldingDialog>
         </div>
+        <div className="flex items-center gap-2 mb-4">
+          <Switch
+            id="show-dormant-empty"
+            checked={showDormant}
+            onCheckedChange={handleShowDormantChange}
+          />
+          <Label htmlFor="show-dormant-empty" className="text-gray-300 cursor-pointer">
+            Show dormant holdings
+          </Label>
+        </div>
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
           <div className="text-gray-400">
             <p className="text-lg">No holdings yet</p>
@@ -111,6 +141,16 @@ export default function HoldingsPage() {
         <AddHoldingDialog>
           <Button>Add Holding</Button>
         </AddHoldingDialog>
+      </div>
+      <div className="flex items-center gap-2 mb-4">
+        <Switch
+          id="show-dormant"
+          checked={showDormant}
+          onCheckedChange={handleShowDormantChange}
+        />
+        <Label htmlFor="show-dormant" className="text-gray-300 cursor-pointer">
+          Show dormant holdings
+        </Label>
       </div>
       <HoldingsTable holdings={holdings} />
     </div>

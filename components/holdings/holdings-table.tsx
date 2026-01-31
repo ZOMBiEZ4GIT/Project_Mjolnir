@@ -190,7 +190,10 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
           </TableHeader>
           <TableBody>
             {holdings.map((holding) => (
-              <TableRow key={holding.id} className="border-gray-800">
+              <TableRow
+                key={holding.id}
+                className={`border-gray-800 ${holding.isDormant ? "opacity-60" : ""}`}
+              >
                 <TableCell className="text-white font-medium">
                   {holding.name}
                 </TableCell>
