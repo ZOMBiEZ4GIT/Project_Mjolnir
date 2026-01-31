@@ -193,3 +193,43 @@
   - Query key should include filter values to refetch when filters change: `["transactions", { holdingId, action }]`
 ---
 
+## 2026-02-01 - US-011
+- What was implemented:
+  - Created `components/transactions/add-transaction-dialog.tsx` with AddTransactionDialog component
+  - Modal uses shadcn/ui Dialog with holding selector and action type selector
+  - Holding selector fetches tradeable holdings (stock, etf, crypto) via existing API
+  - Action type selector uses RadioGroup with 4 options: BUY, SELL, DIVIDEND, SPLIT
+  - Cancel button and X close button both close modal and reset state
+  - Added "Add Transaction" button to transactions page header (both empty state and table view)
+- Files changed:
+  - components/transactions/add-transaction-dialog.tsx - new file
+  - app/(dashboard)/transactions/page.tsx - added AddTransactionDialog import and button
+- **Learnings for future iterations:**
+  - Follow add-holding-dialog.tsx pattern for modal structure and state management
+  - Use `enabled: open` on useQuery to only fetch when dialog is open
+  - RadioGroup with peer-data-[state=checked] creates nice selectable cards like holdings type selector
+  - Modal should reset state in handleClose function (called by both cancel and onOpenChange)
+  - Export types like TransactionAction for reuse in form components in later stories
+---
+
+## 2026-02-01 - US-012
+- What was implemented:
+  - Added step 2 to AddTransactionDialog for BUY/SELL transaction forms
+  - Form fields: Date (date picker), Quantity, Unit Price, Fees (optional), Notes (optional)
+  - Currency auto-filled from holding (read-only display)
+  - Calculated total displayed: (quantity x unit_price) +/- fees
+  - For SELL: shows current quantity held, validates against it, warns when selling all
+  - Save calls POST /api/transactions with toast on success/error
+  - Created /api/holdings/[id]/quantity endpoint to fetch current holdings for SELL validation
+- Files changed:
+  - components/transactions/add-transaction-dialog.tsx - added step 2 BUY/SELL form
+  - app/api/holdings/[id]/quantity/route.ts - new file for quantity endpoint
+- **Learnings for future iterations:**
+  - Use `useMemo` for calculated values that depend on form state (e.g., total, isSellingAll, exceedsHoldings)
+  - For client-side validation before server submission, check computed values like `exceedsHoldings`
+  - Fetch quantity only when SELL is selected and step 2 is shown: `enabled: open && step === 2 && selectedAction === "SELL"`
+  - Reset form data when going back to step 1 to prevent stale values
+  - Use parseFloat for form values since input type="number" still returns strings
+  - Placeholder for DIVIDEND/SPLIT forms makes it clear those are deferred to next story
+---
+

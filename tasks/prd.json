@@ -196,8 +196,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created AddTransactionDialog component with shadcn/ui Dialog, holding selector (tradeable types only), action type radio selector (BUY, SELL, DIVIDEND, SPLIT). Added Add Transaction button to transactions page header. Cancel closes modal and resets state."
     },
     {
       "id": "US-012",
@@ -217,8 +217,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added step 2 to AddTransactionDialog for BUY/SELL forms. Includes date picker, quantity, unit price, fees, notes fields. Currency displayed read-only from holding. Total calculated (qty*price +/- fees). SELL shows current quantity via /api/holdings/[id]/quantity endpoint, validates against it, shows warning when selling all. POST to /api/transactions with toast success/error, query invalidation on success."
     },
     {
       "id": "US-013",
