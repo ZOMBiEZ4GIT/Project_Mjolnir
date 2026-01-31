@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@/components/providers/clerk-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,6 +14,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     <html lang="en" className="dark">
       <body className="antialiased bg-gray-950 text-white min-h-screen">
         {children}
+        <Toaster />
       </body>
     </html>
   );
