@@ -1,8 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { holdings } from "@/lib/db/schema";
+import { holdings, type NewHolding } from "@/lib/db/schema";
 import { eq, isNull, and } from "drizzle-orm";
+
+// Valid holding types
+const holdingTypes = ["stock", "etf", "crypto", "super", "cash", "debt"] as const;
+const currencies = ["AUD", "NZD", "USD"] as const;
+const exchanges = ["ASX", "NZX", "NYSE", "NASDAQ"] as const;
+
+// Types that require a symbol
+const tradeableTypes = ["stock", "etf", "crypto"] as const;
+// Types that require an exchange
+const exchangeRequiredTypes = ["stock", "etf"] as const;
+
+type HoldingType = (typeof holdingTypes)[number];
+type Currency = (typeof currencies)[number];
+
+interface CreateHoldingBody {
+  type?: string;
+  name?: string;
+  symbol?: string;
+  currency?: string;
+  exchange?: string;
+  isDormant?: boolean;
+  notes?: string;
+}
 
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
@@ -29,4 +52,78 @@ export async function GET(request: NextRequest) {
     .where(and(...conditions));
 
   return NextResponse.json(result);
+}
+
+export async function POST(request: NextRequest) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: CreateHoldingBody;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON body" },
+      { status: 400 }
+    );
+  }
+
+  const errors: Record<string, string> = {};
+
+  // Validate required fields
+  if (!body.type) {
+    errors.type = "Type is required";
+  } else if (!holdingTypes.includes(body.type as HoldingType)) {
+    errors.type = `Type must be one of: ${holdingTypes.join(", ")}`;
+  }
+
+  if (!body.name || body.name.trim() === "") {
+    errors.name = "Name is required";
+  }
+
+  if (!body.currency) {
+    errors.currency = "Currency is required";
+  } else if (!currencies.includes(body.currency as Currency)) {
+    errors.currency = `Currency must be one of: ${currencies.join(", ")}`;
+  }
+
+  // Validate symbol is required for tradeable types
+  const isTradeable = tradeableTypes.includes(body.type as (typeof tradeableTypes)[number]);
+  if (isTradeable && (!body.symbol || body.symbol.trim() === "")) {
+    errors.symbol = "Symbol is required for stock, etf, and crypto holdings";
+  }
+
+  // Validate exchange is required for stock/etf types
+  const requiresExchange = exchangeRequiredTypes.includes(body.type as (typeof exchangeRequiredTypes)[number]);
+  if (requiresExchange) {
+    if (!body.exchange) {
+      errors.exchange = "Exchange is required for stock and etf holdings";
+    } else if (!exchanges.includes(body.exchange as (typeof exchanges)[number])) {
+      errors.exchange = `Exchange must be one of: ${exchanges.join(", ")}`;
+    }
+  }
+
+  // Return validation errors if any
+  if (Object.keys(errors).length > 0) {
+    return NextResponse.json({ errors }, { status: 400 });
+  }
+
+  // Create the holding
+  const newHolding: NewHolding = {
+    userId,
+    type: body.type as HoldingType,
+    name: body.name!.trim(),
+    currency: body.currency as Currency,
+    symbol: isTradeable ? body.symbol!.trim() : null,
+    exchange: requiresExchange ? body.exchange : null,
+    isDormant: body.isDormant ?? false,
+    notes: body.notes?.trim() || null,
+  };
+
+  const [created] = await db.insert(holdings).values(newHolding).returning();
+
+  return NextResponse.json(created, { status: 201 });
 }
