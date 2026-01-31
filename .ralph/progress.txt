@@ -1,0 +1,20 @@
+# Ralph Progress Tracker
+
+This file tracks the completion status of user stories from prd.json.
+
+## Format
+- [ ] US-XXX: Story Title - Not started
+- [x] US-XXX: Story Title - Complete
+
+---
+
+## W-1 Project Scaffolding
+
+- [ ] US-001: Initialize Next.js 14+ project with TypeScript
+- [ ] US-002: Configure Tailwind CSS with dark mode
+- [ ] US-003: Establish project directory structure
+- [ ] US-004: Install and configure shadcn/ui
+- [ ] US-005: Define Drizzle ORM schema for all database tables
+- [ ] US-006: Create base layout component with header
+- [ ] US-007: Create placeholder homepage with Button component
+- [ ] US-008: Configure development tooling and scripts
