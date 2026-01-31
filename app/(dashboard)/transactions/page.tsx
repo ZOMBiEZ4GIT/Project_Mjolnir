@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
@@ -21,6 +22,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
+import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
+import { DeleteTransactionDialog } from "@/components/transactions/delete-transaction-dialog";
 import type { Holding } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -212,6 +215,10 @@ export default function TransactionsPage() {
     enabled: isLoaded && isSignedIn,
   });
 
+  // State for edit and delete dialogs
+  const [editTransaction, setEditTransaction] = useState<TransactionWithHolding | null>(null);
+  const [deleteTransaction, setDeleteTransaction] = useState<TransactionWithHolding | null>(null);
+
   // Filter controls component
   const FilterControls = () => (
     <div className="flex flex-wrap gap-4 mb-4">
@@ -360,6 +367,7 @@ export default function TransactionsPage() {
               <TableHead className="text-gray-400 text-right">Unit Price</TableHead>
               <TableHead className="text-gray-400 text-right">Fees</TableHead>
               <TableHead className="text-gray-400 text-right">Total</TableHead>
+              <TableHead className="text-gray-400 text-right w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -417,12 +425,85 @@ export default function TransactionsPage() {
                       ? "—"
                       : formatCurrency(total, transaction.currency)}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                        onClick={() => setEditTransaction(transaction)}
+                      >
+                        <span className="sr-only">Edit</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                          <path d="m15 5 4 4" />
+                        </svg>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-gray-400 hover:text-red-400"
+                        onClick={() => setDeleteTransaction(transaction)}
+                      >
+                        <span className="sr-only">Delete</span>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M3 6h18" />
+                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                          <line x1="10" x2="10" y1="11" y2="17" />
+                          <line x1="14" x2="14" y1="11" y2="17" />
+                        </svg>
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               );
             })}
           </TableBody>
         </Table>
       </div>
+
+      {/* Edit Transaction Dialog */}
+      {editTransaction && (
+        <EditTransactionDialog
+          transaction={editTransaction}
+          open={!!editTransaction}
+          onOpenChange={(open) => {
+            if (!open) setEditTransaction(null);
+          }}
+        />
+      )}
+
+      {/* Delete Transaction Dialog */}
+      {deleteTransaction && (
+        <DeleteTransactionDialog
+          transaction={deleteTransaction}
+          open={!!deleteTransaction}
+          onOpenChange={(open) => {
+            if (!open) setDeleteTransaction(null);
+          }}
+        />
+      )}
     </div>
   );
 }
