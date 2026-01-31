@@ -158,13 +158,21 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
     },
   });
 
-  // Calculate total for BUY/SELL
+  // Calculate total for BUY/SELL and DIVIDEND
   const calculatedTotal = useMemo(() => {
     const qty = parseFloat(formData.quantity) || 0;
     const price = parseFloat(formData.unitPrice) || 0;
     const fees = parseFloat(formData.fees) || 0;
 
-    if (qty <= 0 || price <= 0) return null;
+    if (qty <= 0) return null;
+
+    // DIVIDEND: just qty * price (no fees)
+    if (selectedAction === "DIVIDEND") {
+      if (price <= 0) return null;
+      return qty * price;
+    }
+
+    if (price <= 0) return null;
 
     const baseAmount = qty * price;
     if (selectedAction === "BUY") {
@@ -234,25 +242,27 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
   const handleSubmit = () => {
     const newErrors: FormErrors = {};
 
-    // Validate date
+    // Validate date (required for all)
     if (!formData.date) {
       newErrors.date = "Date is required";
     }
 
-    // Validate quantity
+    // Validate quantity (required for all)
     const qty = parseFloat(formData.quantity);
     if (!formData.quantity || isNaN(qty) || qty <= 0) {
       newErrors.quantity = "Quantity must be a positive number";
     }
 
-    // Validate unit price
-    const price = parseFloat(formData.unitPrice);
-    if (!formData.unitPrice || isNaN(price) || price < 0) {
-      newErrors.unit_price = "Unit price must be a non-negative number";
+    // Validate unit price (required for BUY/SELL/DIVIDEND, not for SPLIT)
+    if (selectedAction !== "SPLIT") {
+      const price = parseFloat(formData.unitPrice);
+      if (!formData.unitPrice || isNaN(price) || price < 0) {
+        newErrors.unit_price = "Unit price must be a non-negative number";
+      }
     }
 
-    // Validate fees if provided
-    if (formData.fees) {
+    // Validate fees if provided (for BUY/SELL only, not DIVIDEND/SPLIT)
+    if ((selectedAction === "BUY" || selectedAction === "SELL") && formData.fees) {
       const feesNum = parseFloat(formData.fees);
       if (isNaN(feesNum) || feesNum < 0) {
         newErrors.fees = "Fees must be a non-negative number";
@@ -269,14 +279,29 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
       return;
     }
 
+    // Determine values based on action type
+    let unitPrice = formData.unitPrice;
+    let fees = formData.fees || "0";
+
+    // SPLIT: unit_price and fees are always 0
+    if (selectedAction === "SPLIT") {
+      unitPrice = "0";
+      fees = "0";
+    }
+
+    // DIVIDEND: fees are always 0
+    if (selectedAction === "DIVIDEND") {
+      fees = "0";
+    }
+
     // Submit the transaction
     mutation.mutate({
       holding_id: selectedHoldingId,
       date: formData.date,
       action: selectedAction as TransactionAction,
       quantity: formData.quantity,
-      unit_price: formData.unitPrice,
-      fees: formData.fees || "0",
+      unit_price: unitPrice,
+      fees,
       currency: selectedHolding?.currency || "AUD",
       notes: formData.notes.trim() || undefined,
     });
@@ -284,6 +309,8 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
 
   const canContinue = selectedHoldingId && selectedAction;
   const isBuySell = selectedAction === "BUY" || selectedAction === "SELL";
+  const isDividend = selectedAction === "DIVIDEND";
+  const isSplit = selectedAction === "SPLIT";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -544,32 +571,231 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
               </Button>
             </DialogFooter>
           </>
-        ) : (
-          // Placeholder for DIVIDEND and SPLIT forms (US-013)
+        ) : isDividend ? (
+          // DIVIDEND form
           <>
             <DialogHeader>
               <DialogTitle>
-                {selectedAction === "DIVIDEND" ? "Dividend" : "Stock Split"} - {selectedHolding?.symbol || selectedHolding?.name}
+                Dividend - {selectedHolding?.symbol || selectedHolding?.name}
               </DialogTitle>
               <DialogDescription>
-                This form will be implemented in a future update.
+                Record a dividend payment received.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="py-8 text-center text-muted-foreground">
-              <p>DIVIDEND and SPLIT forms coming soon...</p>
+            <div className="grid gap-4 py-4">
+              {/* Currency display (read-only) */}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Currency:</span>
+                <span className="font-medium text-foreground">{selectedHolding?.currency}</span>
+              </div>
+
+              {/* Date field */}
+              <div className="grid gap-2">
+                <Label htmlFor="date">Date</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => {
+                    setFormData({ ...formData, date: e.target.value });
+                    if (errors.date) setErrors({ ...errors, date: undefined });
+                  }}
+                />
+                {errors.date && (
+                  <p className="text-sm text-red-500">{errors.date}</p>
+                )}
+              </div>
+
+              {/* Shares Held (quantity) field */}
+              <div className="grid gap-2">
+                <Label htmlFor="quantity">Shares Held</Label>
+                <Input
+                  id="quantity"
+                  type="number"
+                  step="any"
+                  min="0"
+                  placeholder="Number of shares at dividend date"
+                  value={formData.quantity}
+                  onChange={(e) => {
+                    setFormData({ ...formData, quantity: e.target.value });
+                    if (errors.quantity) setErrors({ ...errors, quantity: undefined });
+                  }}
+                />
+                {errors.quantity && (
+                  <p className="text-sm text-red-500">{errors.quantity}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Enter the number of shares you held when this dividend was paid
+                </p>
+              </div>
+
+              {/* Dividend Per Share (unit_price) field */}
+              <div className="grid gap-2">
+                <Label htmlFor="unitPrice">Dividend Per Share ({selectedHolding?.currency})</Label>
+                <Input
+                  id="unitPrice"
+                  type="number"
+                  step="any"
+                  min="0"
+                  placeholder="0.00"
+                  value={formData.unitPrice}
+                  onChange={(e) => {
+                    setFormData({ ...formData, unitPrice: e.target.value });
+                    if (errors.unit_price) setErrors({ ...errors, unit_price: undefined });
+                  }}
+                />
+                {errors.unit_price && (
+                  <p className="text-sm text-red-500">{errors.unit_price}</p>
+                )}
+              </div>
+
+              {/* Notes field */}
+              <div className="grid gap-2">
+                <Label htmlFor="notes">Notes (optional)</Label>
+                <Input
+                  id="notes"
+                  placeholder="e.g., Q4 2025 dividend"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                />
+              </div>
+
+              {/* Calculated total dividend */}
+              {calculatedTotal !== null && (
+                <div className="rounded-md border border-border bg-muted/50 p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Total Dividend
+                    </span>
+                    <span className="text-lg font-semibold font-mono text-green-500">
+                      {selectedHolding?.currency} {calculatedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formData.quantity} shares × {selectedHolding?.currency} {parseFloat(formData.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} per share
+                  </p>
+                </div>
+              )}
             </div>
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={handleBack}>
                 Back
               </Button>
-              <Button disabled>
-                Save
+              <Button
+                onClick={handleSubmit}
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending ? "Saving..." : "Save"}
               </Button>
             </DialogFooter>
           </>
-        )}
+        ) : isSplit ? (
+          // SPLIT form
+          <>
+            <DialogHeader>
+              <DialogTitle>
+                Stock Split - {selectedHolding?.symbol || selectedHolding?.name}
+              </DialogTitle>
+              <DialogDescription>
+                Record a stock split or reverse split.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid gap-4 py-4">
+              {/* Explanation */}
+              <div className="rounded-md border border-blue-500/20 bg-blue-500/10 p-3">
+                <p className="text-sm text-blue-400">
+                  <strong>How splits work:</strong> A 2:1 split doubles your shares and halves the price per share.
+                  Your total investment value stays the same, but the share count and price per share change.
+                </p>
+              </div>
+
+              {/* Date field */}
+              <div className="grid gap-2">
+                <Label htmlFor="date">Date</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => {
+                    setFormData({ ...formData, date: e.target.value });
+                    if (errors.date) setErrors({ ...errors, date: undefined });
+                  }}
+                />
+                {errors.date && (
+                  <p className="text-sm text-red-500">{errors.date}</p>
+                )}
+              </div>
+
+              {/* Split Ratio field */}
+              <div className="grid gap-2">
+                <Label htmlFor="quantity">Split Ratio</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="quantity"
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="2"
+                    value={formData.quantity}
+                    onChange={(e) => {
+                      setFormData({ ...formData, quantity: e.target.value });
+                      if (errors.quantity) setErrors({ ...errors, quantity: undefined });
+                    }}
+                    className="w-24"
+                  />
+                  <span className="text-muted-foreground">: 1</span>
+                </div>
+                {errors.quantity && (
+                  <p className="text-sm text-red-500">{errors.quantity}</p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {formData.quantity && parseFloat(formData.quantity) > 0 ? (
+                    parseFloat(formData.quantity) >= 1 ? (
+                      <>
+                        A {formData.quantity}:1 split multiplies your shares by {formData.quantity}.
+                        {parseFloat(formData.quantity) === 2 && " (e.g., 100 shares become 200)"}
+                        {parseFloat(formData.quantity) === 3 && " (e.g., 100 shares become 300)"}
+                        {parseFloat(formData.quantity) === 4 && " (e.g., 100 shares become 400)"}
+                      </>
+                    ) : (
+                      <>
+                        A {formData.quantity}:1 reverse split reduces your shares to {(parseFloat(formData.quantity) * 100).toFixed(0)}% of the original.
+                      </>
+                    )
+                  ) : (
+                    "Enter 2 for a 2:1 split, 0.5 for a 1:2 reverse split"
+                  )}
+                </p>
+              </div>
+
+              {/* Notes field */}
+              <div className="grid gap-2">
+                <Label htmlFor="notes">Notes (optional)</Label>
+                <Input
+                  id="notes"
+                  placeholder="e.g., 2-for-1 stock split"
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" onClick={handleBack}>
+                Back
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={mutation.isPending}
+              >
+                {mutation.isPending ? "Saving..." : "Save"}
+              </Button>
+            </DialogFooter>
+          </>
+        ) : null}
       </DialogContent>
     </Dialog>
   );
