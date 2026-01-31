@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { transactions, holdings, type NewTransaction } from "@/lib/db/schema";
 import { eq, isNull, and, desc } from "drizzle-orm";
+import { calculateQuantityHeld } from "@/lib/calculations/quantity";
 
 // Valid values for validation
 const transactionActions = ["BUY", "SELL", "DIVIDEND", "SPLIT"] as const;
@@ -169,6 +170,21 @@ export async function POST(request: NextRequest) {
       errors.holding_id = "Holding not found";
     } else if (!tradeableTypes.includes(holding.type as (typeof tradeableTypes)[number])) {
       errors.holding_id = `Transactions can only be added to tradeable holdings (${tradeableTypes.join(", ")})`;
+    }
+  }
+
+  // For SELL action: validate that sell quantity doesn't exceed current holdings
+  if (
+    body.action === "SELL" &&
+    body.holding_id &&
+    !errors.holding_id &&
+    !errors.quantity
+  ) {
+    const currentQuantity = await calculateQuantityHeld(body.holding_id);
+    const sellQuantity = Number(body.quantity);
+
+    if (sellQuantity > currentQuantity) {
+      errors.quantity = "Sell quantity exceeds holdings";
     }
   }
 
