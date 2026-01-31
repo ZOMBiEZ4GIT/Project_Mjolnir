@@ -1,0 +1,144 @@
+## Codebase Patterns
+- Project uses Next.js 16+ App Router with TypeScript
+- Drizzle ORM is already installed (`drizzle-orm`, `drizzle-kit`, `@neondatabase/serverless`)
+- shadcn/ui components available in `components/ui`
+- Dark mode only - no light mode support
+- Quality checks: `npm run build` and `npm run lint`
+- ESLint 9 with flat config format (eslint.config.mjs) - do not use .eslintrc.json
+- Next.js 16 doesn't have `next lint` command - use `eslint .` directly
+
+- Database module uses lazy initialization via Proxy to avoid build-time errors when DATABASE_URL is not set
+- Use `sql` template tag from drizzle-orm for raw SQL queries with `db.execute(sql\`...\`)`
+- ClerkProvider conditionally renders based on NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to allow builds without Clerk keys
+- Use `export const dynamic = "force-dynamic"` for pages/layouts that use Clerk components
+- Dashboard routes at `/dashboard` and `/profile` are protected; landing page `/` is public
+- Auth pages use `(auth)` route group; dashboard uses `(dashboard)` route group
+
+---
+
+# W-2 Infrastructure Integration Progress Log
+
+## 2026-01-31 - US-001
+- Implemented Drizzle database connection module
+- Files changed:
+  - Created `lib/db/index.ts` with Neon serverless driver
+  - Created `eslint.config.mjs` (ESLint 9 flat config)
+  - Updated `package.json` to use `eslint .` instead of `next lint`
+  - Removed deprecated `.eslintrc.json`
+- **Learnings for future iterations:**
+  - Next.js 16 removed the `next lint` command - use ESLint directly
+  - ESLint 9 requires flat config format (eslint.config.mjs), not .eslintrc.json
+  - eslint-config-next exports flat config directly - just import and spread
+---
+
+## 2026-01-31 - US-002
+- Implemented database health check API route
+- Files changed:
+  - Created `app/api/health/route.ts` - health check endpoint
+  - Updated `lib/db/index.ts` - refactored to use lazy initialization with Proxy
+- **Learnings for future iterations:**
+  - Database module must use lazy initialization to avoid build-time errors when DATABASE_URL is not set
+  - Next.js 16 compiles API routes at build time, so any top-level code that requires env vars will fail
+  - Use Proxy pattern to defer db connection until actual usage at runtime
+  - For raw SQL queries with Drizzle, use `db.execute(sql\`SELECT 1\`)` with `sql` template from drizzle-orm
+---
+
+## 2026-01-31 - US-003
+- Implemented Clerk provider integration
+- Files changed:
+  - Updated `app/layout.tsx` - added ClerkProvider with dark theme
+  - Updated `package.json` - added @clerk/nextjs and @clerk/themes
+  - Created `.env.example` - documented required environment variables
+- **Learnings for future iterations:**
+  - ClerkProvider requires @clerk/themes package for theming (dark theme)
+  - Must conditionally skip ClerkProvider during build when NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY is not set
+  - ClerkProvider must wrap the html element, not be inside body
+  - Extract AppContent as separate component to avoid duplication when conditionally rendering ClerkProvider
+---
+
+## 2026-01-31 - US-004
+- Implemented Clerk middleware for route protection
+- Files changed:
+  - Created `middleware.ts` - route protection with public routes defined
+- **Learnings for future iterations:**
+  - Use `createRouteMatcher` from @clerk/nextjs/server to define public routes
+  - Use regex patterns for routes with catch-all segments (e.g., `/sign-in(.*)`)
+  - Middleware uses `auth.protect()` to require authentication on non-public routes
+---
+
+## 2026-01-31 - US-005
+- Implemented sign-in and sign-up pages
+- Files changed:
+  - Created `app/(auth)/sign-in/[[...sign-in]]/page.tsx` - sign-in page with Clerk SignIn component
+  - Created `app/(auth)/sign-up/[[...sign-up]]/page.tsx` - sign-up page with Clerk SignUp component
+  - Updated `.env.example` - added NEXT_PUBLIC_CLERK_SIGN_IN_URL and NEXT_PUBLIC_CLERK_SIGN_UP_URL
+- **Learnings for future iterations:**
+  - Clerk auth pages use catch-all route segments `[[...sign-in]]` to handle multiple paths
+  - The `(auth)` route group keeps auth pages separate without affecting URL structure
+  - Dark mode styling uses bg-gray-950 for darkest background with centered flex container
+---
+
+## 2026-01-31 - US-006
+- Implemented protected dashboard layout
+- Files changed:
+  - Created `app/(dashboard)/layout.tsx` - dashboard layout with header and UserButton
+  - Updated `app/layout.tsx` - simplified root layout to remove duplicate header
+- **Learnings for future iterations:**
+  - Dashboard routes use `(dashboard)` route group for protected pages
+  - Root layout should be minimal - just html/body structure with ClerkProvider
+  - Dashboard layout adds the header with UserButton from @clerk/nextjs
+  - UserButton accepts `afterSignOutUrl` prop for redirect after sign-out
+---
+
+## 2026-01-31 - US-007
+- Implemented dashboard home page
+- Files changed:
+  - Created `app/(dashboard)/dashboard/page.tsx` - dashboard home page at `/dashboard`
+  - Updated `app/(dashboard)/layout.tsx` - added dynamic export and conditional UserButton rendering
+- **Learnings for future iterations:**
+  - Dashboard page is at `/dashboard` to avoid conflict with root landing page
+  - Use `export const dynamic = "force-dynamic"` for pages/layouts that use Clerk components
+  - UserButton must be conditionally rendered based on `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` to allow builds without Clerk
+  - Use `currentUser()` from `@clerk/nextjs/server` to get user data in server components
+---
+
+## 2026-01-31 - US-008
+- Implemented user profile page
+- Files changed:
+  - Created `app/(dashboard)/profile/page.tsx` - profile page with Clerk UserProfile component
+- **Learnings for future iterations:**
+  - UserProfile component renders Clerk's built-in profile management UI
+  - Must conditionally render Clerk components when key is not available
+  - Appearance prop allows customizing UserProfile styling for dark mode
+---
+
+## 2026-01-31 - US-009
+- Implemented public landing page
+- Files changed:
+  - Updated `app/page.tsx` - public landing page with conditional sign-in/dashboard button
+- **Learnings for future iterations:**
+  - Use `auth()` from `@clerk/nextjs/server` to check authentication in server components
+  - Use `asChild` prop on shadcn Button to render as a Link component
+  - Conditionally call auth() only when Clerk key is available
+---
+
+## 2026-01-31 - US-010
+- Configured Vercel deployment
+- Files changed:
+  - Created `vercel.json` - minimal config specifying Next.js framework
+- **Learnings for future iterations:**
+  - For Next.js apps, Vercel defaults are usually sufficient
+  - vercel.json can be minimal - just specifying framework is enough
+  - `.env.example` already documented required env vars from US-003
+---
+
+## 2026-01-31 - US-011
+- Added environment variable documentation
+- Files changed:
+  - Updated `.env.example` - enhanced with better comments and structure
+  - Created `README.md` - setup instructions and project documentation
+- **Learnings for future iterations:**
+  - `.env.example` should include comments explaining where to get each value
+  - README.md should include getting started steps, prerequisites, and available scripts
+---
+

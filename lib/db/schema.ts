@@ -18,7 +18,7 @@ export const currencyEnum = pgEnum("currency", ["AUD", "NZD", "USD"]);
 
 export const transactionActionEnum = pgEnum("transaction_action", ["BUY", "SELL"]);
 
-export const exchangeEnum = pgEnum("exchange", ["ASX", "NYSE", "NASDAQ"]);
+export const exchangeEnum = pgEnum("exchange", ["ASX", "NZX", "NYSE", "NASDAQ"]);
 
 // =============================================================================
 // USERS

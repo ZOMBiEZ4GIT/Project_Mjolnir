@@ -1,0 +1,24 @@
+# Ralph Progress Log
+
+## Codebase Patterns
+- Use `npm run build && npm run lint` for quality checks
+- Dark mode only - no light mode toggle needed
+- Drizzle ORM for database operations
+- shadcn/ui for component library
+- App Router (Next.js 14+) - use Server Components by default
+- Clerk v6 uses `clerkMiddleware` and `createRouteMatcher` for route protection
+- Next.js 16 shows middleware deprecation warning in favor of "proxy" but middleware still works
+
+---
+
+Started: Project Mjolnir - Net Worth Tracker
+
+## 2026-01-31 - US-004
+- Implemented Clerk middleware for route protection
+- Files changed: `middleware.ts` (new file)
+- **Learnings for future iterations:**
+  - Clerk v6 uses `clerkMiddleware` with async `auth.protect()` for route protection
+  - Use `createRouteMatcher` from `@clerk/nextjs/server` for matching public routes
+  - Pattern for catch-all routes like `/sign-in(.*)` captures nested routes
+  - Next.js 16 deprecates "middleware" in favor of "proxy" convention but middleware still functions correctly
+---
