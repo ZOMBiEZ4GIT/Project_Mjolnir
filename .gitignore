@@ -38,11 +38,3 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# ralph
-scripts/ralph/
-
-# claude code
-CLAUDE.md
-
-# tasks
-tasks/

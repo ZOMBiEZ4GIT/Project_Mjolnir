@@ -1,0 +1,182 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/w2-infrastructure-integration",
+  "description": "W-2 Infrastructure Integration - Set up database connectivity with Neon PostgreSQL via Drizzle ORM, authentication with Clerk, and deployment to Vercel",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create Drizzle database connection module",
+      "description": "As a developer, I need a database connection module so that the app can query Neon PostgreSQL.",
+      "acceptanceCriteria": [
+        "Create `lib/db/index.ts` with Drizzle client configuration",
+        "Use `DATABASE_URL` environment variable for connection string",
+        "Export `db` instance for use throughout the app",
+        "Connection uses Neon serverless driver (`@neondatabase/serverless`)",
+        "Typecheck passes (`npm run build`)",
+        "Lint passes (`npm run lint`)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Create database health check API route",
+      "description": "As a developer, I need a health check endpoint to verify database connectivity works in all environments.",
+      "acceptanceCriteria": [
+        "Create `app/api/health/route.ts` endpoint",
+        "Returns `{ status: \"ok\", database: \"connected\" }` on success",
+        "Returns `{ status: \"error\", database: \"disconnected\" }` with 500 status on failure",
+        "Executes simple query (`SELECT 1`) to verify connection",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Add Clerk provider to application",
+      "description": "As a developer, I need Clerk integrated so users can authenticate.",
+      "acceptanceCriteria": [
+        "Install `@clerk/nextjs` package",
+        "Add `ClerkProvider` wrapper in root layout",
+        "Configure `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` env vars in .env.example",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Create Clerk middleware for route protection",
+      "description": "As a developer, I need middleware to protect dashboard routes from unauthenticated access.",
+      "acceptanceCriteria": [
+        "Create `middleware.ts` in project root",
+        "Public routes: `/`, `/sign-in`, `/sign-up`, `/api/health`",
+        "All other routes require authentication",
+        "Unauthenticated users redirected to `/sign-in`",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Create sign-in and sign-up pages",
+      "description": "As a user, I need sign-in and sign-up pages so I can authenticate with the app.",
+      "acceptanceCriteria": [
+        "Create `app/(auth)/sign-in/[[...sign-in]]/page.tsx` with Clerk `<SignIn />` component",
+        "Create `app/(auth)/sign-up/[[...sign-up]]/page.tsx` with Clerk `<SignUp />` component",
+        "Pages are centered and styled for dark mode",
+        "Configure `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in` env var in .env.example",
+        "Configure `NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up` env var in .env.example",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Create protected dashboard layout",
+      "description": "As a user, I need a dashboard layout that only appears when I'm signed in.",
+      "acceptanceCriteria": [
+        "Create `app/(dashboard)/layout.tsx` for protected routes",
+        "Layout includes header with app name \"Mjolnir\"",
+        "Header includes `<UserButton />` component from Clerk (shows avatar, sign-out)",
+        "Dark mode styling consistent with design principles",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Create dashboard home page",
+      "description": "As a user, I need a dashboard home page as the main entry point after signing in.",
+      "acceptanceCriteria": [
+        "Create `app/(dashboard)/page.tsx`",
+        "Displays welcome message with user's first name (from Clerk)",
+        "Shows placeholder text: \"Net worth tracking coming soon\"",
+        "Page is protected (redirects to sign-in if not authenticated)",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Create user profile page",
+      "description": "As a user, I want to view and manage my profile settings.",
+      "acceptanceCriteria": [
+        "Create `app/(dashboard)/profile/page.tsx`",
+        "Displays Clerk `<UserProfile />` component",
+        "Accessible from UserButton dropdown or direct navigation",
+        "Dark mode styling applied",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Create public landing page",
+      "description": "As a visitor, I need a landing page that explains the app and lets me sign in.",
+      "acceptanceCriteria": [
+        "Update `app/page.tsx` as public landing page",
+        "Shows app name \"Mjolnir\" and tagline \"Personal Net Worth Tracker\"",
+        "Includes \"Sign In\" button linking to `/sign-in`",
+        "If already signed in, shows \"Go to Dashboard\" button instead",
+        "Dark mode styling",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Configure Vercel deployment",
+      "description": "As a developer, I need the app deployed to Vercel with automatic deployments.",
+      "acceptanceCriteria": [
+        "Create `vercel.json` with any required configuration (or confirm defaults suffice)",
+        "Document required environment variables in `.env.example`",
+        "Verify build succeeds locally with `npm run build`",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Add environment variable documentation",
+      "description": "As a developer, I need clear documentation of all environment variables for local and production setup.",
+      "acceptanceCriteria": [
+        "Create `.env.example` with all required variables (comments explaining each)",
+        "Variables include: `DATABASE_URL`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_SIGN_IN_URL`, `NEXT_PUBLIC_CLERK_SIGN_UP_URL`",
+        "Add setup instructions to README.md (or create if not exists)",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}
