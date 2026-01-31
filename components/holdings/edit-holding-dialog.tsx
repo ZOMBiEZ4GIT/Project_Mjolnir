@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { Holding } from "@/lib/db/schema";
 
 const HOLDING_TYPE_LABELS: Record<Holding["type"], string> = {
@@ -48,6 +49,7 @@ interface FormData {
   symbol: string;
   currency: Currency | "";
   exchange: Exchange | "";
+  isDormant: boolean;
 }
 
 interface FormErrors {
@@ -70,6 +72,7 @@ async function updateHolding(
     symbol?: string;
     currency?: string;
     exchange?: string;
+    isDormant?: boolean;
   }
 ) {
   const response = await fetch(`/api/holdings/${id}`, {
@@ -115,6 +118,7 @@ export function EditHoldingDialog({
     symbol: "",
     currency: "",
     exchange: "",
+    isDormant: false,
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -128,6 +132,7 @@ export function EditHoldingDialog({
         symbol: holding.symbol || "",
         currency: (holding.currency as Currency) || "",
         exchange: (holding.exchange as Exchange) || "",
+        isDormant: holding.isDormant ?? false,
       });
       setErrors({});
     }
@@ -136,9 +141,15 @@ export function EditHoldingDialog({
   const mutation = useMutation({
     mutationFn: (data: Parameters<typeof updateHolding>[1]) =>
       updateHolding(holding.id, data),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["holdings"] });
-      toast.success("Holding updated successfully");
+      // Show specific toast message for dormant status change
+      if (variables.isDormant !== undefined) {
+        const statusText = variables.isDormant ? "marked as dormant" : "marked as active";
+        toast.success(`Holding ${statusText}`);
+      } else {
+        toast.success("Holding updated successfully");
+      }
       onOpenChange(false);
     },
     onError: (error: { errors?: FormErrors; error?: string }) => {
@@ -210,6 +221,9 @@ export function EditHoldingDialog({
     }
     if (requiresExchange && formData.exchange !== holding.exchange) {
       updateData.exchange = formData.exchange;
+    }
+    if (formData.isDormant !== (holding.isDormant ?? false)) {
+      updateData.isDormant = formData.isDormant;
     }
 
     // Only submit if there are changes
@@ -342,6 +356,23 @@ export function EditHoldingDialog({
               )}
             </div>
           )}
+
+          {/* Mark as Dormant checkbox */}
+          <div className="flex items-center space-x-2 pt-2">
+            <Checkbox
+              id="edit-is-dormant"
+              checked={formData.isDormant}
+              onCheckedChange={(checked) => {
+                setFormData({ ...formData, isDormant: checked === true });
+              }}
+            />
+            <Label
+              htmlFor="edit-is-dormant"
+              className="text-sm font-normal cursor-pointer"
+            >
+              Mark as Dormant
+            </Label>
+          </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
