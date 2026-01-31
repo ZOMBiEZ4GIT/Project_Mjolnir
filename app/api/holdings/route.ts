@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { holdings, type NewHolding } from "@/lib/db/schema";
+import { holdings, type NewHolding, type Holding } from "@/lib/db/schema";
 import { eq, isNull, and } from "drizzle-orm";
+import { calculateCostBasis } from "@/lib/calculations/cost-basis";
 
 // Valid holding types
 const holdingTypes = ["stock", "etf", "crypto", "super", "cash", "debt"] as const;
@@ -16,6 +17,13 @@ const exchangeRequiredTypes = ["stock", "etf"] as const;
 
 type HoldingType = (typeof holdingTypes)[number];
 type Currency = (typeof currencies)[number];
+
+// Extended holding type with cost basis data
+interface HoldingWithCostBasis extends Holding {
+  quantity: number | null;
+  costBasis: number | null;
+  avgCost: number | null;
+}
 
 interface CreateHoldingBody {
   type?: string;
@@ -36,6 +44,7 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const includeDormant = searchParams.get("include_dormant") === "true";
+  const includeCostBasis = searchParams.get("include_cost_basis") === "true";
 
   const conditions = [
     eq(holdings.userId, userId),
@@ -50,6 +59,34 @@ export async function GET(request: NextRequest) {
     .select()
     .from(holdings)
     .where(and(...conditions));
+
+  // If cost basis data is requested, calculate for tradeable holdings
+  if (includeCostBasis) {
+    const holdingsWithCostBasis: HoldingWithCostBasis[] = await Promise.all(
+      result.map(async (holding) => {
+        // Only calculate cost basis for tradeable types
+        if (tradeableTypes.includes(holding.type as (typeof tradeableTypes)[number])) {
+          const costBasisResult = await calculateCostBasis(holding.id);
+          return {
+            ...holding,
+            quantity: costBasisResult.quantity,
+            costBasis: costBasisResult.costBasis,
+            avgCost: costBasisResult.quantity > 0
+              ? costBasisResult.costBasis / costBasisResult.quantity
+              : null,
+          };
+        }
+        // Non-tradeable holdings get null values
+        return {
+          ...holding,
+          quantity: null,
+          costBasis: null,
+          avgCost: null,
+        };
+      })
+    );
+    return NextResponse.json(holdingsWithCostBasis);
+  }
 
   return NextResponse.json(result);
 }
