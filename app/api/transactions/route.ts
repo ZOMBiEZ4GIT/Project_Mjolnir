@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const holdingId = searchParams.get("holding_id");
+  const action = searchParams.get("action");
 
   // Build query with join to include holding info
   // Filter by user via the holdings table (ensures user only sees their own transactions)
@@ -44,6 +45,11 @@ export async function GET(request: NextRequest) {
 
   if (holdingId) {
     baseConditions.push(eq(transactions.holdingId, holdingId));
+  }
+
+  // Filter by action type if provided and valid
+  if (action && transactionActions.includes(action as TransactionAction)) {
+    baseConditions.push(eq(transactions.action, action as TransactionAction));
   }
 
   const result = await db

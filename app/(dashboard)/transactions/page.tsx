@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import {
   Table,
@@ -10,6 +11,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import type { Holding } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +45,22 @@ interface TransactionWithHolding {
   };
 }
 
-async function fetchTransactions(): Promise<TransactionWithHolding[]> {
-  const response = await fetch("/api/transactions");
+const transactionActions = ["BUY", "SELL", "DIVIDEND", "SPLIT"] as const;
+type TransactionAction = (typeof transactionActions)[number];
+
+async function fetchTransactions(
+  holdingId: string | null,
+  action: string | null
+): Promise<TransactionWithHolding[]> {
+  const params = new URLSearchParams();
+  if (holdingId) {
+    params.set("holding_id", holdingId);
+  }
+  if (action) {
+    params.set("action", action);
+  }
+  const url = `/api/transactions${params.toString() ? `?${params.toString()}` : ""}`;
+  const response = await fetch(url);
   if (!response.ok) {
     if (response.status === 401) {
       throw new Error("Unauthorized");
@@ -44,6 +68,21 @@ async function fetchTransactions(): Promise<TransactionWithHolding[]> {
     throw new Error("Failed to fetch transactions");
   }
   return response.json();
+}
+
+async function fetchTradeableHoldings(): Promise<Holding[]> {
+  const response = await fetch("/api/holdings?include_dormant=true");
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Unauthorized");
+    }
+    throw new Error("Failed to fetch holdings");
+  }
+  const holdings: Holding[] = await response.json();
+  // Filter to tradeable types only (stock, etf, crypto)
+  return holdings.filter((h) =>
+    ["stock", "etf", "crypto"].includes(h.type)
+  );
 }
 
 /**
@@ -122,16 +161,102 @@ function getActionColorClass(action: TransactionWithHolding["action"]): string {
 
 export default function TransactionsPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Get filters from URL search params
+  const selectedHoldingId = searchParams.get("holding_id");
+  const selectedAction = searchParams.get("action") as TransactionAction | null;
+
+  // Update URL search params when filters change
+  const updateFilters = (
+    holdingId: string | null,
+    action: string | null
+  ) => {
+    const params = new URLSearchParams();
+    if (holdingId) {
+      params.set("holding_id", holdingId);
+    }
+    if (action) {
+      params.set("action", action);
+    }
+    router.push(`/transactions${params.toString() ? `?${params.toString()}` : ""}`);
+  };
+
+  const handleHoldingChange = (value: string) => {
+    const holdingId = value === "all" ? null : value;
+    updateFilters(holdingId, selectedAction);
+  };
+
+  const handleActionChange = (value: string) => {
+    const action = value === "all" ? null : value;
+    updateFilters(selectedHoldingId, action);
+  };
+
+  // Fetch tradeable holdings for the filter dropdown
+  const { data: tradeableHoldings } = useQuery({
+    queryKey: ["holdings", "tradeable"],
+    queryFn: fetchTradeableHoldings,
+    enabled: isLoaded && isSignedIn,
+  });
 
   const {
     data: transactions,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["transactions"],
-    queryFn: fetchTransactions,
+    queryKey: ["transactions", { holdingId: selectedHoldingId, action: selectedAction }],
+    queryFn: () => fetchTransactions(selectedHoldingId, selectedAction),
     enabled: isLoaded && isSignedIn,
   });
+
+  // Filter controls component
+  const FilterControls = () => (
+    <div className="flex flex-wrap gap-4 mb-4">
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="holding-filter" className="text-gray-400 text-sm">
+          Holding
+        </Label>
+        <Select
+          value={selectedHoldingId || "all"}
+          onValueChange={handleHoldingChange}
+        >
+          <SelectTrigger id="holding-filter" className="w-[200px] bg-gray-900 border-gray-700 text-white">
+            <SelectValue placeholder="All holdings" />
+          </SelectTrigger>
+          <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectItem value="all" className="text-white">All holdings</SelectItem>
+            {tradeableHoldings?.map((holding) => (
+              <SelectItem key={holding.id} value={holding.id} className="text-white">
+                {holding.symbol || holding.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="action-filter" className="text-gray-400 text-sm">
+          Action
+        </Label>
+        <Select
+          value={selectedAction || "all"}
+          onValueChange={handleActionChange}
+        >
+          <SelectTrigger id="action-filter" className="w-[140px] bg-gray-900 border-gray-700 text-white">
+            <SelectValue placeholder="All actions" />
+          </SelectTrigger>
+          <SelectContent className="bg-gray-900 border-gray-700">
+            <SelectItem value="all" className="text-white">All</SelectItem>
+            {transactionActions.map((action) => (
+              <SelectItem key={action} value={action} className="text-white">
+                {action}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
 
   // Show loading while Clerk auth is loading
   if (!isLoaded) {
@@ -161,6 +286,7 @@ export default function TransactionsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-white mb-6">Transactions</h1>
+        <FilterControls />
         <div className="flex items-center justify-center min-h-[30vh]">
           <div className="text-gray-400">Loading transactions...</div>
         </div>
@@ -173,6 +299,7 @@ export default function TransactionsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-white mb-6">Transactions</h1>
+        <FilterControls />
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-2">
           <p className="text-red-400">Failed to load transactions</p>
           <p className="text-gray-500 text-sm">{error.message}</p>
@@ -188,11 +315,18 @@ export default function TransactionsPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-white">Transactions</h1>
         </div>
+        <FilterControls />
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
           <div className="text-gray-400">
-            <p className="text-lg">No transactions yet</p>
+            <p className="text-lg">
+              {selectedHoldingId || selectedAction
+                ? "No transactions match your filters"
+                : "No transactions yet"}
+            </p>
             <p className="text-sm mt-2">
-              Add your first transaction to start tracking your portfolio.
+              {selectedHoldingId || selectedAction
+                ? "Try adjusting your filters to see more transactions."
+                : "Add your first transaction to start tracking your portfolio."}
             </p>
           </div>
         </div>
@@ -206,6 +340,7 @@ export default function TransactionsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">Transactions</h1>
       </div>
+      <FilterControls />
       <div className="rounded-lg border border-gray-800 overflow-hidden">
         <Table>
           <TableHeader>
