@@ -276,8 +276,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated holdings API with ?include_cost_basis=true parameter that calculates cost basis for tradeable holdings using calculateCostBasis helper. Updated holdings-table.tsx to show Quantity, Cost Basis, and Avg Cost columns for stock/etf/crypto types. Columns hidden for super/cash/debt. Shows dash for zero/null values. Values calculated from transactions via FIFO methodology."
     }
   ]
 }

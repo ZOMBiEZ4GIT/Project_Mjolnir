@@ -278,3 +278,23 @@
   - Conditional dialog rendering pattern: `{editTransaction && <EditTransactionDialog ... />}` ensures dialog only mounts when needed
 ---
 
+## 2026-02-01 - US-015
+- What was implemented:
+  - Updated GET /api/holdings with optional `?include_cost_basis=true` parameter
+  - For tradeable holdings (stock, etf, crypto), calculates quantity, cost basis, and avg cost using calculateCostBasis helper
+  - Non-tradeable holdings (super, cash, debt) return null for these fields
+  - Created `HoldingWithCostBasis` interface extending `Holding` with quantity, costBasis, avgCost fields
+  - Updated `holdings-table.tsx` to display Quantity, Cost Basis, Avg Cost columns for tradeable types only
+  - Added formatQuantity (with more decimals for crypto) and formatCurrency helper functions
+  - Shows dash (—) for zero/null values to indicate no transactions
+- Files changed:
+  - app/api/holdings/route.ts - added include_cost_basis parameter and cost basis calculation
+  - app/(dashboard)/holdings/page.tsx - added HoldingWithCostBasis interface, updated fetch URL
+  - components/holdings/holdings-table.tsx - added new columns, helper functions, updated types
+- **Learnings for future iterations:**
+  - Use `?include_cost_basis=true` query param pattern to optionally include computed data (avoids extra DB queries when not needed)
+  - Export types from page components if needed by child components (like HoldingWithCostBasis exported from holdings/page.tsx)
+  - formatQuantity should use more decimal places for values < 1 (common in crypto) vs whole units (stocks)
+  - Conditional columns in tables: add both header and body cells inside same `{isTradeable && (<>...</>)}` block
+---
+
