@@ -1,4 +1,5 @@
 import { UserButton } from "@clerk/nextjs";
+import { DashboardNav } from "@/components/dashboard/nav";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,10 @@ export default function DashboardLayout({
     <div className="min-h-screen flex flex-col">
       <header className="bg-gray-900 border-b border-gray-800">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white">Mjolnir</h1>
+          <div className="flex items-center gap-8">
+            <h1 className="text-2xl font-bold text-white">Mjolnir</h1>
+            <DashboardNav />
+          </div>
           {hasClerkKey && (
             <UserButton
               afterSignOutUrl="/"
