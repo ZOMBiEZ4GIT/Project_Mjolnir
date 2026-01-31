@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@clerk/nextjs";
-import { dark } from "@clerk/themes";
+import { ClerkProvider } from "@/components/providers/clerk-provider";
+import { QueryProvider } from "@/components/providers/query-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,18 +23,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Skip ClerkProvider during build when keys aren't available
-  if (!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) {
-    return <AppContent>{children}</AppContent>;
-  }
-
   return (
-    <ClerkProvider
-      appearance={{
-        baseTheme: dark,
-      }}
-    >
-      <AppContent>{children}</AppContent>
+    <ClerkProvider>
+      <QueryProvider>
+        <AppContent>{children}</AppContent>
+      </QueryProvider>
     </ClerkProvider>
   );
 }
