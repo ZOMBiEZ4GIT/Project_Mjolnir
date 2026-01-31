@@ -3,6 +3,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { HoldingsTable } from "@/components/holdings/holdings-table";
+import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
+import { Button } from "@/components/ui/button";
 import type { Holding } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -83,7 +85,12 @@ export default function HoldingsPage() {
   if (!holdings || holdings.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-white mb-6">Holdings</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-white">Holdings</h1>
+          <AddHoldingDialog>
+            <Button>Add Holding</Button>
+          </AddHoldingDialog>
+        </div>
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
           <div className="text-gray-400">
             <p className="text-lg">No holdings yet</p>
@@ -99,7 +106,12 @@ export default function HoldingsPage() {
   // Show holdings list in grouped table
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-white mb-6">Holdings</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-white">Holdings</h1>
+        <AddHoldingDialog>
+          <Button>Add Holding</Button>
+        </AddHoldingDialog>
+      </div>
       <HoldingsTable holdings={holdings} />
     </div>
   );
