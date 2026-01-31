@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const HOLDING_TYPES = [
   { value: "stock", label: "Stock", description: "Individual company shares" },
@@ -50,6 +51,7 @@ interface FormData {
   symbol: string;
   currency: Currency | "";
   exchange: Exchange | "";
+  isDormant: boolean;
 }
 
 interface FormErrors {
@@ -69,6 +71,7 @@ async function createHolding(data: {
   symbol?: string;
   currency: string;
   exchange?: string;
+  isDormant?: boolean;
 }) {
   const response = await fetch("/api/holdings", {
     method: "POST",
@@ -109,6 +112,7 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
     symbol: "",
     currency: "",
     exchange: "",
+    isDormant: false,
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -135,7 +139,7 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
     // Reset state when closing
     setStep(1);
     setSelectedType(null);
-    setFormData({ name: "", symbol: "", currency: "", exchange: "" });
+    setFormData({ name: "", symbol: "", currency: "", exchange: "", isDormant: false });
     setErrors({});
   };
 
@@ -160,6 +164,7 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
 
   const isTradeable = selectedType && TRADEABLE_TYPES.includes(selectedType as typeof TRADEABLE_TYPES[number]);
   const requiresExchange = selectedType && EXCHANGE_REQUIRED_TYPES.includes(selectedType as typeof EXCHANGE_REQUIRED_TYPES[number]);
+  const isSuper = selectedType === "super";
 
   const handleSubmit = () => {
     const newErrors: FormErrors = {};
@@ -204,6 +209,7 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
       symbol: isTradeable ? formData.symbol.trim().toUpperCase() : undefined,
       currency: formData.currency,
       exchange: requiresExchange ? formData.exchange : undefined,
+      isDormant: isSuper ? formData.isDormant : undefined,
     });
   };
 
@@ -275,7 +281,17 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
                 <Label htmlFor="name">Name</Label>
                 <Input
                   id="name"
-                  placeholder={isTradeable ? "e.g., Vanguard Australian Shares" : "e.g., Savings Account"}
+                  placeholder={
+                    isTradeable
+                      ? "e.g., Vanguard Australian Shares"
+                      : selectedType === "super"
+                      ? "e.g., AustralianSuper"
+                      : selectedType === "cash"
+                      ? "e.g., Savings Account"
+                      : selectedType === "debt"
+                      ? "e.g., Home Loan"
+                      : "e.g., My Holding"
+                  }
                   value={formData.name}
                   onChange={(e) => {
                     setFormData({ ...formData, name: e.target.value });
@@ -367,6 +383,25 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
                   {errors.exchange && (
                     <p className="text-sm text-red-500">{errors.exchange}</p>
                   )}
+                </div>
+              )}
+
+              {/* Is Dormant checkbox - only for super type */}
+              {isSuper && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="isDormant"
+                    checked={formData.isDormant}
+                    onCheckedChange={(checked) => {
+                      setFormData({ ...formData, isDormant: checked === true });
+                    }}
+                  />
+                  <Label
+                    htmlFor="isDormant"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Mark as dormant (e.g., inactive Kiwisaver)
+                  </Label>
                 </div>
               )}
             </div>
