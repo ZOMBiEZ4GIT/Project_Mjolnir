@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { Pencil } from "lucide-react";
 import type { Holding } from "@/lib/db/schema";
 import {
   Table,
@@ -9,6 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { EditHoldingDialog } from "./edit-holding-dialog";
 
 // Display names for holding types
 const HOLDING_TYPE_LABELS: Record<Holding["type"], string> = {
@@ -46,36 +50,51 @@ function groupHoldingsByType(holdings: Holding[]): Map<Holding["type"], Holding[
 }
 
 export function HoldingsTable({ holdings }: HoldingsTableProps) {
+  const [editingHolding, setEditingHolding] = useState<Holding | null>(null);
   const groupedHoldings = groupHoldingsByType(holdings);
 
   return (
-    <div className="space-y-8">
-      {HOLDING_TYPE_ORDER.map((type) => {
-        const typeHoldings = groupedHoldings.get(type);
+    <>
+      <div className="space-y-8">
+        {HOLDING_TYPE_ORDER.map((type) => {
+          const typeHoldings = groupedHoldings.get(type);
 
-        // Skip empty sections
-        if (!typeHoldings || typeHoldings.length === 0) {
-          return null;
-        }
+          // Skip empty sections
+          if (!typeHoldings || typeHoldings.length === 0) {
+            return null;
+          }
 
-        return (
-          <HoldingsTypeSection
-            key={type}
-            type={type}
-            holdings={typeHoldings}
-          />
-        );
-      })}
-    </div>
+          return (
+            <HoldingsTypeSection
+              key={type}
+              type={type}
+              holdings={typeHoldings}
+              onEdit={setEditingHolding}
+            />
+          );
+        })}
+      </div>
+
+      {editingHolding && (
+        <EditHoldingDialog
+          holding={editingHolding}
+          open={!!editingHolding}
+          onOpenChange={(open) => {
+            if (!open) setEditingHolding(null);
+          }}
+        />
+      )}
+    </>
   );
 }
 
 interface HoldingsTypeSectionProps {
   type: Holding["type"];
   holdings: Holding[];
+  onEdit: (holding: Holding) => void;
 }
 
-function HoldingsTypeSection({ type, holdings }: HoldingsTypeSectionProps) {
+function HoldingsTypeSection({ type, holdings, onEdit }: HoldingsTypeSectionProps) {
   const label = HOLDING_TYPE_LABELS[type];
   const showSymbol = type === "stock" || type === "etf" || type === "crypto";
 
@@ -95,6 +114,7 @@ function HoldingsTypeSection({ type, holdings }: HoldingsTypeSectionProps) {
               )}
               <TableHead className="text-gray-400">Currency</TableHead>
               <TableHead className="text-gray-400">Status</TableHead>
+              <TableHead className="text-gray-400 w-[70px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -121,6 +141,17 @@ function HoldingsTypeSection({ type, holdings }: HoldingsTypeSectionProps) {
                       Active
                     </span>
                   )}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-gray-400 hover:text-white"
+                    onClick={() => onEdit(holding)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">Edit {holding.name}</span>
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
