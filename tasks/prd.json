@@ -237,8 +237,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added DIVIDEND form: Date, Shares Held (quantity), Dividend Per Share (unit_price), Notes. Shows calculated total dividend with green color. Added SPLIT form: Date, Split Ratio (X:1 format), Notes. Includes explanation of how splits work. Both forms call POST /api/transactions - fees auto-set to 0 for both, unit_price auto-set to 0 for SPLIT."
     },
     {
       "id": "US-014",
@@ -258,8 +258,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created EditTransactionDialog with pre-populated form, holding/action read-only, SELL quantity validation showing available quantity. Created DeleteTransactionDialog with transaction details and cost basis warning. Added Edit/Delete icon buttons to transaction rows. PATCH and DELETE endpoints already existed from US-006."
     },
     {
       "id": "US-015",
