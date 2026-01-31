@@ -19,6 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
 import type { Holding } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -314,6 +316,9 @@ export default function TransactionsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-white">Transactions</h1>
+          <AddTransactionDialog>
+            <Button>Add Transaction</Button>
+          </AddTransactionDialog>
         </div>
         <FilterControls />
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
@@ -339,6 +344,9 @@ export default function TransactionsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">Transactions</h1>
+        <AddTransactionDialog>
+          <Button>Add Transaction</Button>
+        </AddTransactionDialog>
       </div>
       <FilterControls />
       <div className="rounded-lg border border-gray-800 overflow-hidden">
