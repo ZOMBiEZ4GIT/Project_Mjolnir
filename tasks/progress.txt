@@ -91,6 +91,13 @@
   - `getTopPerformers(userId, limit)` returns gainers and losers based on unrealized gain/loss
   - Drizzle `inArray()` with enum columns requires `as const` on values array for type safety
 
+- Dashboard components in `components/dashboard/`:
+  - Client components using TanStack Query for data fetching from API routes
+  - Pattern: fetch data from API, show loading skeleton, then render content
+  - Use `useAuthSafe` hook to check `isLoaded && isSignedIn` before enabling queries
+  - Currency formatting: `Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" })`
+  - Icons from `lucide-react` (TrendingUp, TrendingDown, AlertTriangle, etc.)
+
 ---
 
 # W-7 Net Worth Calculation Progress Log
@@ -196,5 +203,22 @@ Started: 2026-02-01
   - Supports `?limit=N` query param with validation (positive integer, max 20)
   - Returns `{ gainers: Performer[], losers: Performer[], calculatedAt }` - all Performer fields pass through as-is
   - Consistent pattern with other net-worth APIs: auth from Clerk, 401 for unauthorized, 500 for errors
+
+---
+
+## 2026-02-01 - US-009
+- Implemented dashboard hero net worth card in `components/dashboard/net-worth-hero.tsx`
+- Files changed: components/dashboard/net-worth-hero.tsx (new file)
+- **Learnings for future iterations:**
+  - Dashboard components use `useAuthSafe` hook for client-side auth state that works with/without Clerk
+  - Net worth hero fetches data from `/api/net-worth` and `/api/net-worth/history?months=2` for change calculation
+  - Change from last month calculated by comparing current net worth to second-to-last history point
+  - History API returns data in chronological order (oldest first), so last item is most recent
+  - Currency formatting uses `Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" })`
+  - TrendingUp/TrendingDown icons from lucide-react for positive/negative change indicators
+  - Stale data warning uses AlertTriangle icon with yellow-500 color
+  - Loading skeleton uses `animate-pulse` class with gray-700 background placeholders
+  - Error state uses red-700 border with red-900/20 background
+  - Browser verification requires local DATABASE_URL configuration; manual verification may be needed
 
 ---
