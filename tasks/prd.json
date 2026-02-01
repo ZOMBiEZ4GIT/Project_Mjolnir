@@ -238,8 +238,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Modal uses Dialog from shadcn/ui with month selector (current/previous only). Holdings fetched via API with ?month= param. Grouped by type with typeOrder array. Progress indicator tracks updatedHoldingIds set. Skip button closes modal and resets state."
     },
     {
       "id": "US-014",

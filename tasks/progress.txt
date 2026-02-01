@@ -176,3 +176,17 @@
   - Check-in status API returns: needsCheckIn, holdingsToUpdate, totalSnapshotHoldings, currentMonth, holdings[]
 ---
 
+## 2026-02-01 - US-013
+- What was implemented: Monthly check-in modal base structure with month selector and grouped holdings
+- Files changed:
+  - components/check-in/check-in-modal.tsx (new file) - Modal with Dialog, month selector, grouped holdings display
+  - components/check-in/check-in-prompt-card.tsx - Integrated modal trigger with useState
+  - app/api/check-in/status/route.ts - Added ?month= query param support for current/previous month filtering
+- **Learnings for future iterations:**
+  - Modal components take open/onOpenChange props for controlled state from parent
+  - Use useMemo to group data by type with a typeOrder array for consistent ordering
+  - Reset modal state (selectedMonth, updatedHoldingIds) in handleOpenChange when closing
+  - API month filtering: validate YYYY-MM-01 format and restrict to current/previous month only
+  - NextRequest param required for accessing searchParams: `GET(request: NextRequest)`
+---
+
