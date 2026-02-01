@@ -186,3 +186,15 @@ Started: 2026-02-01
   - Response includes fetchedAt timestamp and isStale boolean based on 15-minute TTL
   - Returns null values for price/currency/etc if no cached price exists for a holding
 ---
+
+## 2026-02-01 - US-011
+- What was implemented: Exchange rates API endpoint for getting cached exchange rates
+- Files changed:
+  - `app/api/exchange-rates/route.ts` - Created new API route with GET handler
+- **Learnings for future iterations:**
+  - GET /api/exchange-rates returns all cached exchange rates in format { rates: { 'USD/AUD': 1.53 }, fetchedAt, isStale }
+  - Supports `?refresh=true` query parameter to force refresh USD/AUD and NZD/AUD pairs
+  - Uses getExchangeRate from exchange-rates service which handles cache check + fetch + update
+  - Returns isStale: true if any cached rate is older than 1 hour (DEFAULT_EXCHANGE_RATE_TTL_MINUTES)
+  - fetchedAt returns the oldest timestamp among all cached rates
+---
