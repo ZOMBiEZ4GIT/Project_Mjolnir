@@ -127,3 +127,14 @@ Started: 2026-02-01
   - Same currency conversion (AUD to AUD) can short-circuit to return 1 without API call
   - Follow same error handling pattern as CoinGecko service for consistency
 ---
+
+## 2026-02-01 - US-006
+- What was implemented: Price cache service for managing cached prices with TTL
+- Files changed:
+  - `lib/services/price-cache.ts` - Created new service with getCachedPrice, setCachedPrice, isCacheValid, getAllCachedPrices, deleteCachedPrice functions
+- **Learnings for future iterations:**
+  - Drizzle decimal fields come as strings from the database - use Number() conversion in toCachedPrice helper
+  - Upsert pattern: check if row exists first, then update or insert (Drizzle doesn't have native upsert)
+  - Export DEFAULT_PRICE_CACHE_TTL_MINUTES constant (15 minutes) for reuse by other services
+  - Include helper types CachedPrice (output) and PriceDataToCache (input) for type safety
+---
