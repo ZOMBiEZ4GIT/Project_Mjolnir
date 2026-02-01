@@ -22,6 +22,20 @@
       "when": 1769915567207,
       "tag": "0002_white_scream",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1769922827432,
+      "tag": "0003_slim_cyclops",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1769923202191,
+      "tag": "0004_lazy_radioactive_man",
+      "breakpoints": true
     }
   ]
 }

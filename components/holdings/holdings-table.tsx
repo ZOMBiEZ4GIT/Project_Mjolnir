@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown, RotateCw } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Holding } from "@/lib/db/schema";
@@ -78,8 +78,23 @@ export interface HoldingWithData extends Holding {
   latestSnapshot: LatestSnapshot | null;
 }
 
+// Price data for a holding
+export interface PriceData {
+  price: number;
+  currency: string;
+  changePercent: number | null;
+  changeAbsolute: number | null;
+  fetchedAt: Date | null;
+  isStale: boolean;
+  error?: string;
+}
+
 interface HoldingsTableProps {
   holdings: HoldingWithData[];
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
+  onRetryPrice?: (holdingId: string) => void;
+  retryingPriceIds?: Set<string>;
 }
 
 function groupHoldingsByType(holdings: HoldingWithData[]): Map<Holding["type"], HoldingWithData[]> {
@@ -158,7 +173,122 @@ function formatQuantity(value: number | null): string {
   });
 }
 
-export function HoldingsTable({ holdings }: HoldingsTableProps) {
+/**
+ * Format price with currency symbol
+ */
+function formatPrice(price: number, currency: string): string {
+  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  return `${symbol}${price.toLocaleString("en-AU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+/**
+ * Format change percent with sign and color indicator
+ */
+function formatChangePercent(percent: number): { text: string; isPositive: boolean } {
+  const sign = percent >= 0 ? "+" : "";
+  return {
+    text: `${sign}${percent.toFixed(2)}%`,
+    isPositive: percent >= 0,
+  };
+}
+
+/**
+ * Format change absolute value with sign
+ */
+function formatChangeAbsolute(value: number, currency: string): string {
+  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  const absValue = Math.abs(value).toLocaleString("en-AU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${symbol}${absValue}`;
+}
+
+/**
+ * Format a date as "X ago" (e.g., "5 min ago", "2 hours ago")
+ */
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMinutes < 1) {
+    return "just now";
+  }
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`;
+  }
+  if (diffHours < 24) {
+    return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
+  }
+  return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
+}
+
+/**
+ * Calculate market value (quantity x price)
+ */
+function calculateMarketValue(quantity: number | null, price: number | null): number | null {
+  if (quantity === null || quantity === 0 || price === null) {
+    return null;
+  }
+  return quantity * price;
+}
+
+/**
+ * Format market value with currency symbol
+ */
+function formatMarketValue(value: number | null, currency: string): string {
+  if (value === null) return "—";
+  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  return `${symbol}${value.toLocaleString("en-AU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+/**
+ * Calculate unrealized gain/loss (Market Value - Cost Basis)
+ */
+function calculateGainLoss(
+  marketValue: number | null,
+  costBasis: number | null
+): { amount: number; percent: number } | null {
+  if (marketValue === null || costBasis === null || costBasis === 0) {
+    return null;
+  }
+  const amount = marketValue - costBasis;
+  const percent = ((marketValue / costBasis) - 1) * 100;
+  return { amount, percent };
+}
+
+/**
+ * Format gain/loss amount with sign
+ */
+function formatGainLossAmount(amount: number, currency: string): string {
+  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  const sign = amount >= 0 ? "+" : "";
+  const absValue = Math.abs(amount).toLocaleString("en-AU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${sign}${symbol}${absValue}`;
+}
+
+/**
+ * Format gain/loss percentage with sign
+ */
+function formatGainLossPercent(percent: number): string {
+  const sign = percent >= 0 ? "+" : "";
+  return `${sign}${percent.toFixed(2)}%`;
+}
+
+export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, retryingPriceIds }: HoldingsTableProps) {
   const [editingHolding, setEditingHolding] = useState<HoldingWithData | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
   const groupedHoldings = groupHoldingsByType(holdings);
@@ -209,8 +339,12 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
               key={type}
               type={type}
               holdings={typeHoldings}
+              prices={prices}
+              pricesLoading={pricesLoading}
               onEdit={setEditingHolding}
               onDelete={setDeletingHolding}
+              onRetryPrice={onRetryPrice}
+              retryingPriceIds={retryingPriceIds}
             />
           );
         })}
@@ -258,11 +392,215 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
 interface HoldingsTypeSectionProps {
   type: Holding["type"];
   holdings: HoldingWithData[];
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
   onEdit: (holding: HoldingWithData) => void;
   onDelete: (holding: HoldingWithData) => void;
+  onRetryPrice?: (holdingId: string) => void;
+  retryingPriceIds?: Set<string>;
 }
 
-function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeSectionProps) {
+/**
+ * PriceCell component displays current price with change and staleness indicators.
+ */
+interface PriceCellProps {
+  holdingId: string;
+  holdingCurrency: string;
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
+  onRetry?: () => void;
+  isRetrying?: boolean;
+}
+
+function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry, isRetrying }: PriceCellProps) {
+  // Loading state for initial price fetch
+  if (pricesLoading) {
+    return <span className="text-gray-500 text-sm">Loading...</span>;
+  }
+
+  // No price data available
+  const priceData = prices?.get(holdingId);
+  if (!priceData) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  const { price, currency, changePercent, changeAbsolute, fetchedAt, isStale, error } = priceData;
+  const displayCurrency = currency || holdingCurrency;
+
+  // Format change display
+  const hasChange = changePercent !== null && changeAbsolute !== null;
+  const changeInfo = hasChange ? formatChangePercent(changePercent) : null;
+
+  // Show retry button for errors or if currently retrying
+  const showRetry = (error || isRetrying) && onRetry;
+
+  return (
+    <div className="flex flex-col gap-0.5 items-end">
+      {/* Main price */}
+      <span className="text-white font-mono">
+        {formatPrice(price, displayCurrency)}
+      </span>
+
+      {/* Change indicator */}
+      {hasChange && changeInfo && (
+        <span
+          className={`text-xs flex items-center gap-0.5 ${
+            changeInfo.isPositive ? "text-green-400" : "text-red-400"
+          }`}
+        >
+          {changeInfo.isPositive ? (
+            <TrendingUp className="h-3 w-3" />
+          ) : (
+            <TrendingDown className="h-3 w-3" />
+          )}
+          {changeInfo.text}
+          {changeAbsolute !== null && (
+            <span className="text-gray-400 ml-1">
+              ({formatChangeAbsolute(changeAbsolute, displayCurrency)})
+            </span>
+          )}
+        </span>
+      )}
+
+      {/* Staleness/timestamp indicator with optional retry button */}
+      <span
+        className={`text-xs flex items-center gap-0.5 ${
+          isStale || error ? "text-yellow-400" : "text-gray-500"
+        }`}
+      >
+        {isRetrying ? (
+          <RotateCw className="h-3 w-3 animate-spin" />
+        ) : (
+          <>
+            {isStale && <AlertTriangle className="h-3 w-3" />}
+            {error && !isStale && <AlertTriangle className="h-3 w-3" />}
+            {!isStale && !error && fetchedAt && <Clock className="h-3 w-3" />}
+          </>
+        )}
+        {isRetrying ? (
+          <span>Retrying...</span>
+        ) : (
+          <>
+            {fetchedAt ? formatTimeAgo(fetchedAt) : "unknown"}
+            {error && <span className="ml-1">(error)</span>}
+          </>
+        )}
+        {showRetry && !isRetrying && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="ml-1.5 p-0.5 rounded hover:bg-gray-700 transition-colors"
+            title="Retry price fetch"
+          >
+            <RotateCw className="h-3 w-3" />
+            <span className="sr-only">Retry</span>
+          </button>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * MarketValueCell component displays market value (quantity x price).
+ */
+interface MarketValueCellProps {
+  quantity: number | null;
+  holdingId: string;
+  holdingCurrency: string;
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
+}
+
+function MarketValueCell({ quantity, holdingId, holdingCurrency, prices, pricesLoading }: MarketValueCellProps) {
+  // Loading state
+  if (pricesLoading) {
+    return <span className="text-gray-500 text-sm">Loading...</span>;
+  }
+
+  // No quantity - cannot calculate market value
+  if (quantity === null || quantity === 0) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  // No price data available
+  const priceData = prices?.get(holdingId);
+  if (!priceData) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  const { price, currency } = priceData;
+  const displayCurrency = currency || holdingCurrency;
+  const marketValue = calculateMarketValue(quantity, price);
+
+  return (
+    <span className="text-white font-mono">
+      {formatMarketValue(marketValue, displayCurrency)}
+    </span>
+  );
+}
+
+/**
+ * GainLossCell component displays unrealized gain/loss (Market Value - Cost Basis).
+ */
+interface GainLossCellProps {
+  quantity: number | null;
+  costBasis: number | null;
+  holdingId: string;
+  holdingCurrency: string;
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
+}
+
+function GainLossCell({ quantity, costBasis, holdingId, holdingCurrency, prices, pricesLoading }: GainLossCellProps) {
+  // Loading state
+  if (pricesLoading) {
+    return <span className="text-gray-500 text-sm">Loading...</span>;
+  }
+
+  // No quantity - cannot calculate market value
+  if (quantity === null || quantity === 0) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  // No cost basis - cannot calculate gain/loss
+  if (costBasis === null || costBasis === 0) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  // No price data available
+  const priceData = prices?.get(holdingId);
+  if (!priceData) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  const { price, currency } = priceData;
+  const displayCurrency = currency || holdingCurrency;
+  const marketValue = calculateMarketValue(quantity, price);
+  const gainLoss = calculateGainLoss(marketValue, costBasis);
+
+  if (!gainLoss) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  const isPositive = gainLoss.amount >= 0;
+  const colorClass = isPositive ? "text-green-400" : "text-red-400";
+
+  return (
+    <div className="flex flex-col gap-0.5 items-end">
+      {/* Amount */}
+      <span className={`font-mono ${colorClass}`}>
+        {formatGainLossAmount(gainLoss.amount, displayCurrency)}
+      </span>
+      {/* Percentage */}
+      <span className={`text-xs ${colorClass}`}>
+        {formatGainLossPercent(gainLoss.percent)}
+      </span>
+    </div>
+  );
+}
+
+function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, onDelete, onRetryPrice, retryingPriceIds }: HoldingsTypeSectionProps) {
   const label = HOLDING_TYPE_LABELS[type];
   const isTradeable = TRADEABLE_TYPES.includes(type as (typeof TRADEABLE_TYPES)[number]);
   const isSnapshotType = SNAPSHOT_TYPES.includes(type as (typeof SNAPSHOT_TYPES)[number]);
@@ -288,6 +626,9 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
               {isTradeable && (
                 <>
                   <TableHead className="text-gray-400 text-right">Quantity</TableHead>
+                  <TableHead className="text-gray-400 text-right">Price</TableHead>
+                  <TableHead className="text-gray-400 text-right">Market Value</TableHead>
+                  <TableHead className="text-gray-400 text-right">Gain/Loss</TableHead>
                   <TableHead className="text-gray-400 text-right">Cost Basis</TableHead>
                   <TableHead className="text-gray-400 text-right">Avg Cost</TableHead>
                 </>
@@ -344,6 +685,35 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
                     <>
                       <TableCell className="text-gray-300 text-right font-mono">
                         {formatQuantity(holding.quantity)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <PriceCell
+                          holdingId={holding.id}
+                          holdingCurrency={holding.currency}
+                          prices={prices}
+                          pricesLoading={pricesLoading}
+                          onRetry={onRetryPrice ? () => onRetryPrice(holding.id) : undefined}
+                          isRetrying={retryingPriceIds?.has(holding.id)}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <MarketValueCell
+                          quantity={holding.quantity}
+                          holdingId={holding.id}
+                          holdingCurrency={holding.currency}
+                          prices={prices}
+                          pricesLoading={pricesLoading}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <GainLossCell
+                          quantity={holding.quantity}
+                          costBasis={holding.costBasis}
+                          holdingId={holding.id}
+                          holdingCurrency={holding.currency}
+                          prices={prices}
+                          pricesLoading={pricesLoading}
+                        />
                       </TableCell>
                       <TableCell className="text-gray-300 text-right font-mono">
                         {formatCurrency(holding.costBasis)}

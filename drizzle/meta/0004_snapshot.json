@@ -1,6 +1,6 @@
 {
-  "id": "06cc9118-b4b4-42d2-bcc1-423ac57cb579",
-  "prevId": "d74e8d7e-2f69-4119-bafd-d73a94cdd30c",
+  "id": "09482884-b950-42cd-900c-71fbfa9c17c6",
+  "prevId": "161717b6-65c8-4acc-9f03-ffe30586b3fb",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -92,6 +92,60 @@
           "columns": [
             "holding_id",
             "date"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.exchange_rates": {
+      "name": "exchange_rates",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "from_currency": {
+          "name": "from_currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "to_currency": {
+          "name": "to_currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rate": {
+          "name": "rate",
+          "type": "numeric(18, 8)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fetched_at": {
+          "name": "fetched_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "exchange_rates_from_currency_to_currency_unique": {
+          "name": "exchange_rates_from_currency_to_currency_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "from_currency",
+            "to_currency"
           ]
         }
       },
@@ -241,18 +295,45 @@
           "primaryKey": false,
           "notNull": true
         },
+        "change_percent": {
+          "name": "change_percent",
+          "type": "numeric(10, 4)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "change_absolute": {
+          "name": "change_absolute",
+          "type": "numeric(20, 8)",
+          "primaryKey": false,
+          "notNull": false
+        },
         "fetched_at": {
           "name": "fetched_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "source": {
+          "name": "source",
+          "type": "price_cache_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "price_cache_symbol_unique": {
+          "name": "price_cache_symbol_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "symbol"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -383,19 +464,19 @@
         },
         "quantity": {
           "name": "quantity",
-          "type": "numeric(20, 8)",
+          "type": "numeric(18, 8)",
           "primaryKey": false,
           "notNull": true
         },
         "unit_price": {
           "name": "unit_price",
-          "type": "numeric(20, 8)",
+          "type": "numeric(18, 8)",
           "primaryKey": false,
           "notNull": true
         },
         "fees": {
           "name": "fees",
-          "type": "numeric(20, 8)",
+          "type": "numeric(18, 8)",
           "primaryKey": false,
           "notNull": true,
           "default": "'0'"
@@ -419,6 +500,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -514,12 +608,22 @@
         "debt"
       ]
     },
+    "public.price_cache_source": {
+      "name": "price_cache_source",
+      "schema": "public",
+      "values": [
+        "yahoo",
+        "coingecko"
+      ]
+    },
     "public.transaction_action": {
       "name": "transaction_action",
       "schema": "public",
       "values": [
         "BUY",
-        "SELL"
+        "SELL",
+        "DIVIDEND",
+        "SPLIT"
       ]
     }
   },

@@ -128,13 +128,37 @@ export const contributions = pgTable(
 // PRICE CACHE
 // =============================================================================
 
+export const priceCacheSourceEnum = pgEnum("price_cache_source", ["yahoo", "coingecko"]);
+
 export const priceCache = pgTable("price_cache", {
   id: uuid("id").defaultRandom().primaryKey(),
-  symbol: text("symbol").notNull(),
+  symbol: text("symbol").notNull().unique(),
   price: decimal("price", { precision: 20, scale: 8 }).notNull(),
   currency: currencyEnum("currency").notNull(),
+  changePercent: decimal("change_percent", { precision: 10, scale: 4 }),
+  changeAbsolute: decimal("change_absolute", { precision: 20, scale: 8 }),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+  source: priceCacheSourceEnum("source").notNull(),
 });
+
+// =============================================================================
+// EXCHANGE RATES
+// =============================================================================
+
+export const exchangeRates = pgTable(
+  "exchange_rates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    fromCurrency: text("from_currency").notNull(),
+    toCurrency: text("to_currency").notNull(),
+    rate: decimal("rate", { precision: 18, scale: 8 }).notNull(),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    // Unique constraint: one rate per currency pair
+    uniqueCurrencyPair: unique().on(table.fromCurrency, table.toCurrency),
+  })
+);
 
 // =============================================================================
 // RELATIONS
@@ -196,3 +220,6 @@ export type NewContribution = typeof contributions.$inferInsert;
 
 export type PriceCache = typeof priceCache.$inferSelect;
 export type NewPriceCache = typeof priceCache.$inferInsert;
+
+export type ExchangeRate = typeof exchangeRates.$inferSelect;
+export type NewExchangeRate = typeof exchangeRates.$inferInsert;
