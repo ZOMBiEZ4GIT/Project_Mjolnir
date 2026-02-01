@@ -128,12 +128,17 @@ export const contributions = pgTable(
 // PRICE CACHE
 // =============================================================================
 
+export const priceCacheSourceEnum = pgEnum("price_cache_source", ["yahoo", "coingecko"]);
+
 export const priceCache = pgTable("price_cache", {
   id: uuid("id").defaultRandom().primaryKey(),
-  symbol: text("symbol").notNull(),
+  symbol: text("symbol").notNull().unique(),
   price: decimal("price", { precision: 20, scale: 8 }).notNull(),
   currency: currencyEnum("currency").notNull(),
+  changePercent: decimal("change_percent", { precision: 10, scale: 4 }),
+  changeAbsolute: decimal("change_absolute", { precision: 20, scale: 8 }),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+  source: priceCacheSourceEnum("source").notNull(),
 });
 
 // =============================================================================
