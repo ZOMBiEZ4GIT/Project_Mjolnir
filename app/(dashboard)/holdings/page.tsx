@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
@@ -87,12 +87,13 @@ interface PriceRefreshResult {
   error?: string;
 }
 
-async function refreshPrices(): Promise<PriceRefreshResult[]> {
+async function refreshPrices(holdingIds?: string[]): Promise<PriceRefreshResult[]> {
   const response = await fetch("/api/prices/refresh", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
+    body: JSON.stringify(holdingIds ? { holding_ids: holdingIds } : {}),
   });
   if (!response.ok) {
     if (response.status === 401) {
@@ -156,7 +157,7 @@ export default function HoldingsPage() {
 
   // Mutation for refreshing prices (manual user action with toasts)
   const refreshMutation = useMutation({
-    mutationFn: refreshPrices,
+    mutationFn: () => refreshPrices(),
     onSuccess: (results) => {
       // Count successes and failures
       const failures = results.filter((r) => r.error);
@@ -185,13 +186,46 @@ export default function HoldingsPage() {
 
   // Mutation for background auto-refresh (silent, no toasts)
   const backgroundRefreshMutation = useMutation({
-    mutationFn: refreshPrices,
+    mutationFn: () => refreshPrices(),
     onSuccess: () => {
       // Silently invalidate prices query to refetch updated cached prices
       queryClient.invalidateQueries({ queryKey: ["prices"] });
     },
     // Silent error handling - no toast for background refresh failures
   });
+
+  // Track which holdings are currently being retried
+  const [retryingPriceIds, setRetryingPriceIds] = useState<Set<string>>(new Set());
+
+  // Handler for retrying a single holding's price fetch
+  const handleRetryPrice = useCallback(async (holdingId: string) => {
+    // Add to retrying set
+    setRetryingPriceIds((prev) => new Set(prev).add(holdingId));
+
+    try {
+      const results = await refreshPrices([holdingId]);
+      const result = results[0];
+
+      // Invalidate prices query to refetch updated cached prices
+      queryClient.invalidateQueries({ queryKey: ["prices"] });
+
+      // Show toast based on result
+      if (result?.error) {
+        toast.error(`Failed to fetch price for ${result.symbol}: ${result.error}`);
+      } else if (result?.price !== null) {
+        toast.success(`Price updated for ${result.symbol}`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to refresh price");
+    } finally {
+      // Remove from retrying set
+      setRetryingPriceIds((prev) => {
+        const next = new Set(prev);
+        next.delete(holdingId);
+        return next;
+      });
+    }
+  }, [queryClient]);
 
   // Track if auto-refresh has been triggered to prevent duplicate calls
   const autoRefreshTriggered = useRef(false);
@@ -345,7 +379,13 @@ export default function HoldingsPage() {
           Show dormant holdings
         </Label>
       </div>
-      <HoldingsTable holdings={holdings} prices={priceMap} pricesLoading={pricesLoading} />
+      <HoldingsTable
+        holdings={holdings}
+        prices={priceMap}
+        pricesLoading={pricesLoading}
+        onRetryPrice={handleRetryPrice}
+        retryingPriceIds={retryingPriceIds}
+      />
     </div>
   );
 }

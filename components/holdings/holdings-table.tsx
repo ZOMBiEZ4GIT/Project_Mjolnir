@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown, RotateCw } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Holding } from "@/lib/db/schema";
@@ -93,6 +93,8 @@ interface HoldingsTableProps {
   holdings: HoldingWithData[];
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  onRetryPrice?: (holdingId: string) => void;
+  retryingPriceIds?: Set<string>;
 }
 
 function groupHoldingsByType(holdings: HoldingWithData[]): Map<Holding["type"], HoldingWithData[]> {
@@ -286,7 +288,7 @@ function formatGainLossPercent(percent: number): string {
   return `${sign}${percent.toFixed(2)}%`;
 }
 
-export function HoldingsTable({ holdings, prices, pricesLoading }: HoldingsTableProps) {
+export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, retryingPriceIds }: HoldingsTableProps) {
   const [editingHolding, setEditingHolding] = useState<HoldingWithData | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
   const groupedHoldings = groupHoldingsByType(holdings);
@@ -341,6 +343,8 @@ export function HoldingsTable({ holdings, prices, pricesLoading }: HoldingsTable
               pricesLoading={pricesLoading}
               onEdit={setEditingHolding}
               onDelete={setDeletingHolding}
+              onRetryPrice={onRetryPrice}
+              retryingPriceIds={retryingPriceIds}
             />
           );
         })}
@@ -392,6 +396,8 @@ interface HoldingsTypeSectionProps {
   pricesLoading?: boolean;
   onEdit: (holding: HoldingWithData) => void;
   onDelete: (holding: HoldingWithData) => void;
+  onRetryPrice?: (holdingId: string) => void;
+  retryingPriceIds?: Set<string>;
 }
 
 /**
@@ -402,10 +408,12 @@ interface PriceCellProps {
   holdingCurrency: string;
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  onRetry?: () => void;
+  isRetrying?: boolean;
 }
 
-function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading }: PriceCellProps) {
-  // Loading state
+function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry, isRetrying }: PriceCellProps) {
+  // Loading state for initial price fetch
   if (pricesLoading) {
     return <span className="text-gray-500 text-sm">Loading...</span>;
   }
@@ -422,6 +430,9 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading }: PriceC
   // Format change display
   const hasChange = changePercent !== null && changeAbsolute !== null;
   const changeInfo = hasChange ? formatChangePercent(changePercent) : null;
+
+  // Show retry button for errors or if currently retrying
+  const showRetry = (error || isRetrying) && onRetry;
 
   return (
     <div className="flex flex-col gap-0.5 items-end">
@@ -451,17 +462,40 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading }: PriceC
         </span>
       )}
 
-      {/* Staleness/timestamp indicator */}
+      {/* Staleness/timestamp indicator with optional retry button */}
       <span
         className={`text-xs flex items-center gap-0.5 ${
           isStale || error ? "text-yellow-400" : "text-gray-500"
         }`}
       >
-        {isStale && <AlertTriangle className="h-3 w-3" />}
-        {error && !isStale && <AlertTriangle className="h-3 w-3" />}
-        {!isStale && !error && fetchedAt && <Clock className="h-3 w-3" />}
-        {fetchedAt ? formatTimeAgo(fetchedAt) : "unknown"}
-        {error && <span className="ml-1">(error)</span>}
+        {isRetrying ? (
+          <RotateCw className="h-3 w-3 animate-spin" />
+        ) : (
+          <>
+            {isStale && <AlertTriangle className="h-3 w-3" />}
+            {error && !isStale && <AlertTriangle className="h-3 w-3" />}
+            {!isStale && !error && fetchedAt && <Clock className="h-3 w-3" />}
+          </>
+        )}
+        {isRetrying ? (
+          <span>Retrying...</span>
+        ) : (
+          <>
+            {fetchedAt ? formatTimeAgo(fetchedAt) : "unknown"}
+            {error && <span className="ml-1">(error)</span>}
+          </>
+        )}
+        {showRetry && !isRetrying && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="ml-1.5 p-0.5 rounded hover:bg-gray-700 transition-colors"
+            title="Retry price fetch"
+          >
+            <RotateCw className="h-3 w-3" />
+            <span className="sr-only">Retry</span>
+          </button>
+        )}
       </span>
     </div>
   );
@@ -566,7 +600,7 @@ function GainLossCell({ quantity, costBasis, holdingId, holdingCurrency, prices,
   );
 }
 
-function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, onDelete }: HoldingsTypeSectionProps) {
+function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, onDelete, onRetryPrice, retryingPriceIds }: HoldingsTypeSectionProps) {
   const label = HOLDING_TYPE_LABELS[type];
   const isTradeable = TRADEABLE_TYPES.includes(type as (typeof TRADEABLE_TYPES)[number]);
   const isSnapshotType = SNAPSHOT_TYPES.includes(type as (typeof SNAPSHOT_TYPES)[number]);
@@ -658,6 +692,8 @@ function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, on
                           holdingCurrency={holding.currency}
                           prices={prices}
                           pricesLoading={pricesLoading}
+                          onRetry={onRetryPrice ? () => onRetryPrice(holding.id) : undefined}
+                          isRetrying={retryingPriceIds?.has(holding.id)}
                         />
                       </TableCell>
                       <TableCell className="text-right">
