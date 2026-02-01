@@ -106,3 +106,16 @@ Started: 2026-02-02
 
 ---
 
+## 2026-02-02 - US-001
+- Implemented user_preferences table schema for storing display currency preference
+- Files changed:
+  - `lib/db/schema.ts` - Added userPreferences table, relations, and types
+  - `drizzle/0005_robust_leo.sql` - Migration for new table
+  - `drizzle/meta/0005_snapshot.json` - Drizzle meta snapshot
+  - `drizzle/meta/_journal.json` - Updated journal
+- **Learnings for future iterations:**
+  - The currencyEnum already exists in the schema, so we can reuse it
+  - Schema follows existing patterns: uuid id, timestamp fields, relations
+  - Unique constraint on user_id ensures one preference per user
+---
+

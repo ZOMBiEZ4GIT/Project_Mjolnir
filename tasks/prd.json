@@ -17,8 +17,8 @@
         "Lint passes (`npm run lint`)"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Schema created with migration 0005_robust_leo.sql"
     },
     {
       "id": "US-002",
