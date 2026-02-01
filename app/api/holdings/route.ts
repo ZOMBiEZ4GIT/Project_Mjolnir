@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { holdings, type NewHolding } from "@/lib/db/schema";
-import { eq, isNull, and } from "drizzle-orm";
+import { holdings, snapshots, type NewHolding } from "@/lib/db/schema";
+import { eq, isNull, and, sql } from "drizzle-orm";
 
 // Valid holding types
 const holdingTypes = ["stock", "etf", "crypto", "super", "cash", "debt"] as const;
@@ -27,6 +27,9 @@ interface CreateHoldingBody {
   notes?: string;
 }
 
+// Snapshot types that use balance tracking
+const snapshotTypes = ["super", "cash", "debt"] as const;
+
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
 
@@ -36,6 +39,7 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const includeDormant = searchParams.get("include_dormant") === "true";
+  const includeLatestSnapshot = searchParams.get("include_latest_snapshot") === "true";
 
   const conditions = [
     eq(holdings.userId, userId),
@@ -51,7 +55,71 @@ export async function GET(request: NextRequest) {
     .from(holdings)
     .where(and(...conditions));
 
-  return NextResponse.json(result);
+  // If not requesting snapshots, return just the holdings
+  if (!includeLatestSnapshot) {
+    return NextResponse.json(result);
+  }
+
+  // Get latest snapshots for all snapshot-type holdings
+  const snapshotHoldingIds = result
+    .filter((h) => snapshotTypes.includes(h.type as (typeof snapshotTypes)[number]))
+    .map((h) => h.id);
+
+  if (snapshotHoldingIds.length === 0) {
+    return NextResponse.json(
+      result.map((h) => ({ ...h, latestSnapshot: null }))
+    );
+  }
+
+  // Use a subquery to find the max date for each holding
+  const latestDates = db
+    .select({
+      holdingId: snapshots.holdingId,
+      maxDate: sql<string>`MAX(${snapshots.date})`.as("max_date"),
+    })
+    .from(snapshots)
+    .where(
+      and(
+        sql`${snapshots.holdingId} IN (${sql.join(
+          snapshotHoldingIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`,
+        isNull(snapshots.deletedAt)
+      )
+    )
+    .groupBy(snapshots.holdingId)
+    .as("latest_dates");
+
+  const latestSnapshots = await db
+    .select({
+      id: snapshots.id,
+      holdingId: snapshots.holdingId,
+      date: snapshots.date,
+      balance: snapshots.balance,
+      currency: snapshots.currency,
+    })
+    .from(snapshots)
+    .innerJoin(
+      latestDates,
+      and(
+        eq(snapshots.holdingId, latestDates.holdingId),
+        eq(snapshots.date, latestDates.maxDate)
+      )
+    )
+    .where(isNull(snapshots.deletedAt));
+
+  // Create a map for O(1) lookup
+  const snapshotMap = new Map(
+    latestSnapshots.map((s) => [s.holdingId, s])
+  );
+
+  // Merge holdings with their latest snapshots
+  const holdingsWithSnapshots = result.map((h) => ({
+    ...h,
+    latestSnapshot: snapshotMap.get(h.id) || null,
+  }));
+
+  return NextResponse.json(holdingsWithSnapshots);
 }
 
 export async function POST(request: NextRequest) {
