@@ -175,3 +175,15 @@ Started: 2026-02-01
   - Error handling wraps the calculation in try/catch, returns 500 on failure
 
 ---
+
+## 2026-02-01 - US-007
+- Implemented net worth history API endpoint in `app/api/net-worth/history/route.ts`
+- Files changed: app/api/net-worth/history/route.ts (new file)
+- **Learnings for future iterations:**
+  - History API is a nested route under `/api/net-worth/history/`
+  - Supports `?months=N` query param with validation (positive integer, max 60)
+  - Converts Date objects to ISO strings for JSON response
+  - Maps `HistoryPoint[]` to serializable format (date as string)
+  - Same auth pattern as main net-worth endpoint: `auth()` from Clerk, return 401 if no userId
+
+---
