@@ -6,6 +6,10 @@
  * Pro tier (with API key): Higher limits
  */
 
+// Import getCoinGeckoId for internal use and re-export for backwards compatibility
+export { getCoinGeckoId } from "./crypto-symbols";
+import { getCoinGeckoId } from "./crypto-symbols";
+
 // Re-export PriceData type for consistency with yahoo-finance.ts
 export interface PriceData {
   price: number;
@@ -27,74 +31,6 @@ export class CoinGeckoError extends Error {
     super(message);
     this.name = "CoinGeckoError";
   }
-}
-
-/**
- * Maps common crypto symbols to CoinGecko IDs.
- * CoinGecko uses lowercase slug-style IDs (e.g., "bitcoin", "ethereum").
- */
-const SYMBOL_TO_COINGECKO_ID: Record<string, string> = {
-  // Top cryptocurrencies by market cap
-  BTC: "bitcoin",
-  ETH: "ethereum",
-  USDT: "tether",
-  BNB: "binancecoin",
-  SOL: "solana",
-  XRP: "ripple",
-  USDC: "usd-coin",
-  ADA: "cardano",
-  DOGE: "dogecoin",
-  AVAX: "avalanche-2",
-  DOT: "polkadot",
-  TRX: "tron",
-  LINK: "chainlink",
-  MATIC: "matic-network",
-  TON: "the-open-network",
-  SHIB: "shiba-inu",
-  DAI: "dai",
-  LTC: "litecoin",
-  BCH: "bitcoin-cash",
-  ATOM: "cosmos",
-  UNI: "uniswap",
-  XLM: "stellar",
-  XMR: "monero",
-  ETC: "ethereum-classic",
-  FIL: "filecoin",
-  HBAR: "hedera-hashgraph",
-  APT: "aptos",
-  CRO: "crypto-com-chain",
-  ARB: "arbitrum",
-  VET: "vechain",
-  MKR: "maker",
-  OP: "optimism",
-  NEAR: "near",
-  AAVE: "aave",
-  GRT: "the-graph",
-  ALGO: "algorand",
-  QNT: "quant-network",
-  FTM: "fantom",
-  EGLD: "elrond-erd-2",
-  SAND: "the-sandbox",
-  MANA: "decentraland",
-  AXS: "axie-infinity",
-  THETA: "theta-token",
-  XTZ: "tezos",
-  EOS: "eos",
-  FLOW: "flow",
-  CHZ: "chiliz",
-  RUNE: "thorchain",
-  KCS: "kucoin-shares",
-};
-
-/**
- * Gets the CoinGecko ID for a given crypto symbol.
- *
- * @param symbol - The crypto symbol (e.g., "BTC", "ETH")
- * @returns The CoinGecko ID or null if not found
- */
-export function getCoinGeckoId(symbol: string): string | null {
-  const upperSymbol = symbol.toUpperCase().trim();
-  return SYMBOL_TO_COINGECKO_ID[upperSymbol] ?? null;
 }
 
 /**
