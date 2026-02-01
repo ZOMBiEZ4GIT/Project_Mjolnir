@@ -77,6 +77,15 @@
   - `calculateAssetBreakdown(userId)` returns AssetBreakdown with percentage for each type and holding
   - Uses `calculateQuantityHeld()` for tradeable assets, `getLatestSnapshots()` for snapshot-based assets
   - All values converted to AUD via `getExchangeRate()`
+  - Carry-forward logic: stale data is used for calculations with `StaleHolding[]` tracking
+  - Tradeable staleness: 15-minute price TTL via `isCacheValid()`
+  - Snapshot staleness: 2-month threshold (SNAPSHOT_STALE_THRESHOLD_MS)
+
+- Historical net worth calculation in `lib/calculations/net-worth-history.ts`:
+  - `calculateHistoricalNetWorth(userId, months)` returns HistoricalNetWorthResult with history array
+  - HistoryPoint: { date, netWorth, totalAssets, totalDebt }
+  - Uses carry-forward for snapshots (most recent on or before date)
+  - Tradeable uses current prices (historical prices not stored) - values are estimates
 
 ---
 
@@ -105,5 +114,33 @@ Started: 2026-02-01
   - Assets sorted by value descending
   - Debt treated as separate category (percentage = 100% since it's its own group)
   - `addHoldingPercentages()` helper to calculate percentage within a group
+
+---
+
+## 2026-02-01 - US-003
+- Implemented carry-forward logic for missing data in `lib/calculations/net-worth.ts`
+- Files changed: lib/calculations/net-worth.ts
+- **Learnings for future iterations:**
+  - Added `StaleHolding` type with `StaleReason` union: `price_expired`, `no_price`, `snapshot_old`, `no_snapshot`
+  - `NetWorthResult` now includes `staleHoldings: StaleHolding[]` and `hasStaleData: boolean`
+  - Tradeable: uses `isCacheValid()` from price-cache.ts to check 15-minute TTL
+  - Snapshots: 2-month staleness threshold (SNAPSHOT_STALE_THRESHOLD_MS constant)
+  - Helper functions now return result objects with both `holdingValue` and `staleHolding` fields
+  - Even stale data is used for calculations - staleness is tracked for UI warnings, not exclusion
+
+---
+
+## 2026-02-01 - US-004
+- Implemented historical net worth calculation in `lib/calculations/net-worth-history.ts`
+- Files changed: lib/calculations/net-worth-history.ts (new file)
+- **Learnings for future iterations:**
+  - Historical net worth is in separate file from current net worth (net-worth-history.ts vs net-worth.ts)
+  - `calculateHistoricalNetWorth(userId, months)` returns `HistoricalNetWorthResult` with `history: HistoryPoint[]` and `generatedAt`
+  - Uses `calculateQuantityHeldAsOf(holdingId, asOfDate)` - similar to `calculateQuantityHeld` but filters transactions up to date
+  - Uses `getSnapshotAsOf(holdingId, asOfDate)` - finds most recent snapshot on or before the date (carry-forward)
+  - Tradeable assets use current price (historical prices not stored) - this is an estimate, not actual historical value
+  - Pre-fetches all prices into a Map for efficiency when calculating multiple months
+  - Month ends calculated with `getMonthEnd(year, month)` using the "day 0 of next month" trick
+  - Returns data points in chronological order (oldest first)
 
 ---
