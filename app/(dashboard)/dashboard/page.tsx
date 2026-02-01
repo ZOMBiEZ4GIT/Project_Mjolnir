@@ -4,6 +4,7 @@ import { NetWorthHero } from "@/components/dashboard/net-worth-hero";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { AssetAllocation } from "@/components/dashboard/asset-allocation";
 import { NetWorthChart } from "@/components/dashboard/net-worth-chart";
+import { TopPerformers } from "@/components/dashboard/top-performers";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,11 @@ export default async function DashboardPage() {
       {/* Net Worth History Chart */}
       <div className="mb-6">
         <NetWorthChart />
+      </div>
+
+      {/* Top Performers: Gainers and Losers */}
+      <div className="mb-6">
+        <TopPerformers />
       </div>
 
       <CheckInPromptCard />
