@@ -250,3 +250,17 @@
   - Disable buttons during mutation with isPending
 ---
 
+
+## 2026-02-01 - US-018
+- What was implemented: Delete snapshot with confirmation dialog, including associated contribution deletion
+- Files changed:
+  - components/snapshots/delete-snapshot-dialog.tsx (new file) - AlertDialog with snapshot details and delete confirmation
+  - app/api/snapshots/[id]/route.ts - Updated DELETE handler to also soft-delete associated contributions for super holdings
+  - app/(dashboard)/snapshots/page.tsx - Added Trash2 button and DeleteSnapshotDialog integration
+- **Learnings for future iterations:**
+  - Delete dialogs use AlertDialog from shadcn/ui (not Dialog) for confirmation pattern
+  - For cascading deletes, update the API to handle related entities (contributions when deleting super snapshots)
+  - Use yellow warning color (text-yellow-400, bg-yellow-400/10) for important user warnings
+  - Mutation isPending state can disable both Cancel and Action buttons during delete operation
+  - Table action buttons: wrap multiple buttons in `<div className="flex justify-end gap-1">` for proper spacing
+---
