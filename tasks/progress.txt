@@ -47,6 +47,16 @@
 
 # W-5 Snapshot Tracking Progress Log
 
+## 2026-02-01 - US-003
+- What was implemented: Snapshots API GET endpoints
+- Files changed:
+  - app/api/snapshots/route.ts - GET /api/snapshots with ?holding_id filter
+  - app/api/snapshots/[id]/route.ts - GET /api/snapshots/[id] single snapshot
+- **Learnings for future iterations:**
+  - Use innerJoin with holdings table to validate user ownership AND include holding info in response
+  - Pattern: select specific fields from join to create clean response object with holdingName, holdingType
+---
+
 ## 2026-02-01 - US-001 & US-002
 - What was implemented: Added updated_at, deleted_at fields to snapshots and contributions tables; added unique constraint on contributions(holding_id, date)
 - Files changed:

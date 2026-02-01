@@ -57,8 +57,8 @@
         "Lint passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Uses innerJoin with holdings for ownership validation and including holding name/type"
     },
     {
       "id": "US-004",
