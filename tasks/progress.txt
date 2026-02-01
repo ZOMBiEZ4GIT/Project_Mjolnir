@@ -174,3 +174,15 @@ Started: 2026-02-01
   - Returns array with price results including holdingId, symbol, price, currency, changePercent, isStale, error
   - Partial failures handled - each holding returns its own result/error independently
 ---
+
+## 2026-02-01 - US-010
+- What was implemented: Prices API GET endpoint for fetching cached prices
+- Files changed:
+  - `app/api/prices/route.ts` - Added GET handler for cached prices
+- **Learnings for future iterations:**
+  - GET /api/prices returns cached prices for all tradeable holdings belonging to the authenticated user
+  - Uses normalizeSymbol from yahoo-finance service for consistent cache key lookups
+  - Crypto symbols use uppercase for cache lookup, stock/etf use normalizeSymbol with exchange
+  - Response includes fetchedAt timestamp and isStale boolean based on 15-minute TTL
+  - Returns null values for price/currency/etc if no cached price exists for a holding
+---
