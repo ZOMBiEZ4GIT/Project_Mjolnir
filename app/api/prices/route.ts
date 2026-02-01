@@ -3,13 +3,30 @@ import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { holdings } from "@/lib/db/schema";
 import { eq, isNull, and, inArray } from "drizzle-orm";
+import { fetchPrice, PriceResult } from "@/lib/services/price-fetcher";
 import {
-  fetchPrice,
-  PriceResult,
-} from "@/lib/services/price-fetcher";
+  getCachedPrice,
+  isCacheValid,
+  DEFAULT_PRICE_CACHE_TTL_MINUTES,
+} from "@/lib/services/price-cache";
+import { normalizeSymbol } from "@/lib/services/yahoo-finance";
 
 // Types that can have live prices
 const tradeableTypes = ["stock", "etf", "crypto"] as const;
+
+/**
+ * Result for a single holding's cached price.
+ */
+interface CachedPriceResult {
+  holdingId: string;
+  symbol: string;
+  price: number | null;
+  currency: string | null;
+  changePercent: number | null;
+  changeAbsolute: number | null;
+  fetchedAt: Date | null;
+  isStale: boolean;
+}
 
 /**
  * Result for a single holding's price refresh.
@@ -126,6 +143,97 @@ export async function POST(request: NextRequest) {
           error: error instanceof Error ? error.message : "Failed to fetch price",
         };
       }
+    })
+  );
+
+  return NextResponse.json(results);
+}
+
+/**
+ * GET /api/prices
+ *
+ * Returns cached prices for all tradeable holdings.
+ * Includes staleness indicator based on TTL (15 minutes).
+ *
+ * @returns Array of cached price results with staleness indicators
+ */
+export async function GET() {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Fetch all active tradeable holdings for the user
+  const userHoldings = await db
+    .select()
+    .from(holdings)
+    .where(
+      and(
+        eq(holdings.userId, userId),
+        isNull(holdings.deletedAt),
+        eq(holdings.isActive, true)
+      )
+    );
+
+  // Filter to only tradeable holdings with symbols
+  const tradeableHoldings = userHoldings.filter(
+    (h) =>
+      tradeableTypes.includes(h.type as (typeof tradeableTypes)[number]) &&
+      h.symbol
+  );
+
+  // Get cached prices for each holding
+  const results: CachedPriceResult[] = await Promise.all(
+    tradeableHoldings.map(async (holding) => {
+      if (!holding.symbol) {
+        return {
+          holdingId: holding.id,
+          symbol: "",
+          price: null,
+          currency: null,
+          changePercent: null,
+          changeAbsolute: null,
+          fetchedAt: null,
+          isStale: true,
+        };
+      }
+
+      // Normalize symbol for cache lookup (same as in price-fetcher)
+      const cacheSymbol =
+        holding.type === "crypto"
+          ? holding.symbol.toUpperCase()
+          : normalizeSymbol(holding.symbol, holding.exchange);
+
+      const cached = await getCachedPrice(cacheSymbol);
+
+      if (!cached) {
+        // No cached price available
+        return {
+          holdingId: holding.id,
+          symbol: holding.symbol,
+          price: null,
+          currency: null,
+          changePercent: null,
+          changeAbsolute: null,
+          fetchedAt: null,
+          isStale: true,
+        };
+      }
+
+      // Check if cache is stale
+      const isStale = !isCacheValid(cached, DEFAULT_PRICE_CACHE_TTL_MINUTES);
+
+      return {
+        holdingId: holding.id,
+        symbol: holding.symbol,
+        price: cached.price,
+        currency: cached.currency,
+        changePercent: cached.changePercent,
+        changeAbsolute: cached.changeAbsolute,
+        fetchedAt: cached.fetchedAt,
+        isStale,
+      };
     })
   );
 
