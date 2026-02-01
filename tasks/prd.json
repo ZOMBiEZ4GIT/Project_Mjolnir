@@ -132,8 +132,8 @@
         "Lint passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Full CRUD for contributions with GET, PATCH, DELETE handlers"
     },
     {
       "id": "US-008",
