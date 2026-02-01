@@ -1,0 +1,280 @@
+## Codebase Patterns
+- Project uses Next.js 16+ App Router with TypeScript
+- Drizzle ORM is already installed (`drizzle-orm`, `drizzle-kit`, `@neondatabase/serverless`)
+- shadcn/ui components available in `components/ui`
+- Dark mode only - no light mode support
+- Quality checks: `npm run build` and `npm run lint`
+- ESLint 9 with flat config format (eslint.config.mjs) - do not use .eslintrc.json
+- Next.js 16 doesn't have `next lint` command - use `eslint .` directly
+
+- Database module uses lazy initialization via Proxy to avoid build-time errors when DATABASE_URL is not set
+- Use `sql` template tag from drizzle-orm for raw SQL queries with `db.execute(sql\`...\`)`
+- ClerkProvider conditionally renders based on NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to allow builds without Clerk keys
+- Use `export const dynamic = "force-dynamic"` for pages/layouts that use Clerk components
+- Dashboard routes at `/dashboard` and `/profile` are protected; landing page `/` is public
+- Auth pages use `(auth)` route group; dashboard uses `(dashboard)` route group
+
+- Drizzle migrations are stored in `drizzle/` directory and should be committed to git
+- The holdings schema exists in `lib/db/schema.ts` with all required fields
+- Transactions schema exists with action enum: BUY, SELL, DIVIDEND, SPLIT
+
+- TanStack Query provider is in `components/providers/query-provider.tsx` - wrap layouts with QueryProvider
+- ClerkProvider wrapper is in `components/providers/clerk-provider.tsx` - handles missing Clerk keys gracefully
+- Use `useAuthSafe` hook from `lib/hooks/use-auth-safe.ts` for client-side auth state that works with/without Clerk
+- Holdings page is at `/holdings` using `app/(dashboard)/holdings/page.tsx`
+- Transactions page is at `/transactions` using `app/(dashboard)/transactions/page.tsx`
+
+- Toast notifications use Sonner - import `toast` from `sonner` and use `toast.success()` / `toast.error()`
+- Toaster component is in root layout; for dark mode only, hardcode `theme="dark"` in Sonner component
+
+- Dashboard navigation uses `components/dashboard/nav.tsx` with usePathname for active state
+- Navigation items defined in array for easy extension
+- ESLint no-case-declarations: wrap switch case blocks containing `const`/`let` declarations in braces `{ }`
+
+- API patterns:
+  - Use innerJoin with holdings to validate user ownership AND include holding info
+  - Return 409 Conflict for duplicate prevention (unique constraint violations)
+  - Return 400 with `{ errors: { field: "message" } }` for validation errors
+  - Decimal fields from Drizzle come as strings, need Number() conversion for arithmetic
+
+- Calculation helpers in `lib/calculations/`:
+  - `quantity.ts` - calculateQuantityHeld for tradeable holdings
+  - `cost-basis.ts` - calculateCostBasis with FIFO methodology
+
+- Snapshots and contributions schema: uses `employer_contrib`/`employee_contrib` (not `employer_contribution`) for DB column names to avoid migration renames
+
+- Query helpers in `lib/queries/`:
+  - `snapshots.ts` - getLatestSnapshots() and getLatestSnapshotForHolding() for fetching most recent snapshots
+
+- Calculation helpers in `lib/calculations/`:
+  - `super-returns.ts` - calculateInvestmentReturns() and calculateMonthlyInvestmentReturns() for super fund performance
+
+- Check-in status API at `/api/check-in/status` returns holdings needing current month snapshots
+- Dashboard components in `components/check-in/` for monthly check-in workflow
+- Quote paths with parentheses in bash git commands: `git add "app/(dashboard)/..."`
+
+- Edit modals pattern: components/[domain]/edit-[entity]-modal.tsx structure
+- For related entity editing (e.g., contributions for super snapshots), fetch existing data with useQuery and handle create/update based on existence
+
+---
+
+# W-5 Snapshot Tracking Progress Log
+
+## 2026-02-01 - US-017
+- What was implemented: Edit snapshot modal with contributions support for super holdings
+- Files changed:
+  - components/snapshots/edit-snapshot-modal.tsx (new file)
+  - components/ui/textarea.tsx (new shadcn component)
+  - app/(dashboard)/snapshots/page.tsx - added edit button and modal integration
+- **Learnings for future iterations:**
+  - Create separate domain modal components: components/[domain]/edit-[entity]-modal.tsx
+  - When editing an entity that may have related data (e.g., contributions), fetch related data in modal with useQuery
+  - For create/update decision: check if related entity exists, then call POST or PATCH accordingly
+  - Use `npx shadcn@latest add [component]` to add missing UI components
+  - Table action buttons: use Button variant="ghost" size="icon" for compact icon buttons
+  - Use selectedSnapshot state pattern: set when row clicked, clear on modal close
+---
+
+## 2026-02-01 - US-008
+- What was implemented: Latest snapshot helper functions for efficient lookups
+- Files changed:
+  - lib/queries/snapshots.ts (new file)
+- **Learnings for future iterations:**
+  - Use subquery pattern for "get latest per group": MAX(date) grouped by holdingId, then join back to get full records
+  - Query helpers should take userId for ownership validation consistency
+  - Return Map<string, T> for O(1) lookup when caller needs to access by key
+  - Define SnapshotWithHolding interface extending base Snapshot type for joined results
+---
+
+## 2026-02-01 - US-007
+- What was implemented: Contributions GET, PATCH, DELETE endpoints for individual records
+- Files changed:
+  - app/api/contributions/[id]/route.ts - all three handlers
+- **Learnings for future iterations:**
+  - Same pattern as snapshots/[id]: GET for single, PATCH for update, DELETE for soft delete
+---
+
+## 2026-02-01 - US-006
+- What was implemented: Contributions GET and POST endpoints
+- Files changed:
+  - app/api/contributions/route.ts - GET and POST handlers
+- **Learnings for future iterations:**
+  - Contributions only for "super" type holdings (not cash/debt)
+  - Default contribution amounts to "0" when not provided
+---
+
+## 2026-02-01 - US-005
+- What was implemented: Snapshots PATCH and DELETE endpoints
+- Files changed:
+  - app/api/snapshots/[id]/route.ts - added PATCH and DELETE handlers
+- **Learnings for future iterations:**
+  - Keep existing select structure for ownership check, then build separate update object
+  - Soft delete pattern: set deletedAt and updatedAt timestamps
+---
+
+## 2026-02-01 - US-004
+- What was implemented: Snapshots POST endpoint with validation and duplicate prevention
+- Files changed:
+  - app/api/snapshots/route.ts - added POST handler
+- **Learnings for future iterations:**
+  - Date normalization helper: normalizeToFirstOfMonth() converts any date to YYYY-MM-01
+  - Month validation: isValidSnapshotMonth() checks current or previous month only
+  - Validate holding type with snapshotTypes = ["super", "cash", "debt"]
+---
+
+## 2026-02-01 - US-003
+- What was implemented: Snapshots API GET endpoints
+- Files changed:
+  - app/api/snapshots/route.ts - GET /api/snapshots with ?holding_id filter
+  - app/api/snapshots/[id]/route.ts - GET /api/snapshots/[id] single snapshot
+- **Learnings for future iterations:**
+  - Use innerJoin with holdings table to validate user ownership AND include holding info in response
+  - Pattern: select specific fields from join to create clean response object with holdingName, holdingType
+---
+
+## 2026-02-01 - US-001 & US-002
+- What was implemented: Added updated_at, deleted_at fields to snapshots and contributions tables; added unique constraint on contributions(holding_id, date)
+- Files changed:
+  - lib/db/schema.ts - added missing fields to snapshots and contributions
+  - drizzle/0001_white_scream.sql - generated migration
+  - drizzle/meta/_journal.json, drizzle/meta/0001_snapshot.json - migration metadata
+- **Learnings for future iterations:**
+  - Schema already existed from W-1 scaffolding; only needed to add soft delete support
+  - Keep DB column names as `employer_contrib`/`employee_contrib` (not renamed) to avoid interactive drizzle-kit prompts
+  - Migration generation requires no interactive input when not renaming columns
+---
+
+## 2026-02-01 - US-009
+- What was implemented: Investment returns calculation for super funds
+- Files changed:
+  - lib/calculations/super-returns.ts (new file)
+- **Learnings for future iterations:**
+  - Calculation helpers go in `lib/calculations/` directory
+  - Super investment returns formula: (new_balance - old_balance) - employer_contrib - employee_contrib
+  - Functions require userId for ownership validation (consistent with query helpers)
+  - Drizzle returns decimal fields as strings, use Number() for arithmetic
+  - Missing contributions should default to 0 (not error)
+  - Added calculateMonthlyInvestmentReturns() convenience wrapper for common use case
+---
+
+## 2026-02-01 - US-010
+- What was implemented: Added Snapshots link to dashboard navigation
+- Files changed:
+  - components/dashboard/nav.tsx - added Snapshots to navItems array
+- **Learnings for future iterations:**
+  - Navigation is simple: just add to navItems array with href and label
+  - Active state styling already handled by usePathname comparison
+---
+
+## 2026-02-01 - US-011
+- What was implemented: Snapshots list page with table, filters, and loading/empty states
+- Files changed:
+  - app/(dashboard)/snapshots/page.tsx (new file)
+- **Learnings for future iterations:**
+  - List pages follow same pattern: useAuthSafe + TanStack Query + filter dropdowns
+  - Client-side type filtering when API doesn't support it directly (filter after fetch)
+  - Format dates with toLocaleDateString("en-AU", { month: "long", year: "numeric" })
+  - Currency formatting: use symbols map (AUD→A$, NZD→NZ$, USD→US$)
+  - Dark mode styling: bg-gray-800 border-gray-700 for Select components
+  - Define SnapshotWithHolding interface for API responses with joined holding data
+---
+
+## 2026-02-01 - US-012
+- What was implemented: Dashboard check-in prompt card showing when monthly snapshots needed
+- Files changed:
+  - app/api/check-in/status/route.ts (new file) - API to detect holdings needing current month snapshot
+  - components/check-in/check-in-prompt-card.tsx (new file) - Client component with TanStack Query
+  - app/(dashboard)/dashboard/page.tsx - Integrated CheckInPromptCard component
+  - lib/hooks/use-auth-safe.ts - Fixed conditional hook to work without Clerk configured
+- **Learnings for future iterations:**
+  - useAuthSafe hook must check clerkPubKey BEFORE calling useAuth() to avoid "useAuth outside ClerkProvider" error
+  - Dashboard cards use pattern: fetch status API → conditionally render based on response
+  - Card hidden when `needsCheckIn: false` or on loading/error (graceful degradation)
+  - Quote paths with parentheses in bash git commands: `git add "app/(dashboard)/..."`
+  - Check-in status API returns: needsCheckIn, holdingsToUpdate, totalSnapshotHoldings, currentMonth, holdings[]
+---
+
+## 2026-02-01 - US-013
+- What was implemented: Monthly check-in modal base structure with month selector and grouped holdings
+- Files changed:
+  - components/check-in/check-in-modal.tsx (new file) - Modal with Dialog, month selector, grouped holdings display
+  - components/check-in/check-in-prompt-card.tsx - Integrated modal trigger with useState
+  - app/api/check-in/status/route.ts - Added ?month= query param support for current/previous month filtering
+- **Learnings for future iterations:**
+  - Modal components take open/onOpenChange props for controlled state from parent
+  - Use useMemo to group data by type with a typeOrder array for consistent ordering
+  - Reset modal state (selectedMonth, updatedHoldingIds) in handleOpenChange when closing
+  - API month filtering: validate YYYY-MM-01 format and restrict to current/previous month only
+  - NextRequest param required for accessing searchParams: `GET(request: NextRequest)`
+---
+
+## 2026-02-01 - US-014
+- What was implemented: Super holdings entry in check-in modal with balance input and optional contributions
+- Files changed:
+  - components/check-in/check-in-modal.tsx - Added SuperHoldingEntry component and state management
+- **Learnings for future iterations:**
+  - Create separate sub-components (like SuperHoldingEntry) for complex form sections within modals
+  - Use Record<string, DataType> for form state when managing multiple dynamic entries
+  - Expandable sections: use ChevronDown/ChevronRight icons from lucide-react with button toggle
+  - Currency symbols map: AUD→A$, NZD→NZ$, USD→US$ for display
+  - Track "updated" state based on whether required fields (balance) have values
+  - Export interfaces (SuperHoldingData) for use in future stories (save functionality)
+---
+
+## 2026-02-01 - US-015
+- What was implemented: Cash and debt holding entries in check-in modal
+- Files changed:
+  - components/check-in/check-in-modal.tsx - Added CashHoldingEntry and DebtHoldingEntry components
+- **Learnings for future iterations:**
+  - BalanceHoldingData interface for simpler holdings (just balance, no contributions)
+  - Cash and debt use same pattern: name label + balance input with currency symbol
+  - Debt section requires explanatory text above holdings for user clarity
+  - Reuse patterns from SuperHoldingEntry (currency symbols, state management) for consistency
+  - Each holding type needs its own state (superHoldingsData, cashHoldingsData, debtHoldingsData)
+  - Reset all state types when month changes or modal closes
+---
+
+## 2026-02-01 - US-016
+- What was implemented: Check-in modal save and complete functionality
+- Files changed:
+  - app/api/check-in/save/route.ts (new file) - Batch save API endpoint
+  - components/check-in/check-in-modal.tsx - Added Save All button, validation, and mutation
+- **Learnings for future iterations:**
+  - Batch API endpoints reduce multiple round trips - process all entries in single request
+  - useMutation from TanStack Query with onSuccess/onError for clean save flow
+  - Invalidate multiple query keys on success: check-in-holdings, check-in-status, snapshots, contributions, holdings
+  - Add error prop to entry components for inline validation display
+  - Use conditional border styling: `${error ? "border-red-500" : "border-gray-700"}`
+  - toast from sonner for success/error notifications
+  - Loader2 from lucide-react with animate-spin for loading state
+  - Disable buttons during mutation with isPending
+---
+
+
+## 2026-02-01 - US-018
+- What was implemented: Delete snapshot with confirmation dialog, including associated contribution deletion
+- Files changed:
+  - components/snapshots/delete-snapshot-dialog.tsx (new file) - AlertDialog with snapshot details and delete confirmation
+  - app/api/snapshots/[id]/route.ts - Updated DELETE handler to also soft-delete associated contributions for super holdings
+  - app/(dashboard)/snapshots/page.tsx - Added Trash2 button and DeleteSnapshotDialog integration
+- **Learnings for future iterations:**
+  - Delete dialogs use AlertDialog from shadcn/ui (not Dialog) for confirmation pattern
+  - For cascading deletes, update the API to handle related entities (contributions when deleting super snapshots)
+  - Use yellow warning color (text-yellow-400, bg-yellow-400/10) for important user warnings
+  - Mutation isPending state can disable both Cancel and Action buttons during delete operation
+  - Table action buttons: wrap multiple buttons in `<div className="flex justify-end gap-1">` for proper spacing
+---
+
+## 2026-02-01 - US-019
+- What was implemented: Display holdings with latest balance for snapshot holdings (super, cash, debt)
+- Files changed:
+  - app/api/holdings/route.ts - Added `include_latest_snapshot` query param to include latest snapshot data
+  - app/(dashboard)/holdings/page.tsx - Updated to request holdings with latest snapshots
+  - components/holdings/holdings-table.tsx - Added Balance column with stale indicator for snapshot types
+- **Learnings for future iterations:**
+  - API pattern: use query params for optional data inclusion (`include_latest_snapshot=true`)
+  - For efficient "latest per group" queries: use subquery with MAX() grouped by holdingId, then join back
+  - Stale indicator pattern: compare dates in frontend helper function for UI flexibility
+  - Export TypeScript interfaces from table components for type reuse in pages
+  - AlertTriangle icon from lucide-react for warning indicators
+---
