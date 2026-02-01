@@ -49,6 +49,10 @@
 - Calculation helpers in `lib/calculations/`:
   - `super-returns.ts` - calculateInvestmentReturns() and calculateMonthlyInvestmentReturns() for super fund performance
 
+- Check-in status API at `/api/check-in/status` returns holdings needing current month snapshots
+- Dashboard components in `components/check-in/` for monthly check-in workflow
+- Quote paths with parentheses in bash git commands: `git add "app/(dashboard)/..."`
+
 ---
 
 # W-5 Snapshot Tracking Progress Log
@@ -155,5 +159,20 @@
   - Currency formatting: use symbols map (AUD→A$, NZD→NZ$, USD→US$)
   - Dark mode styling: bg-gray-800 border-gray-700 for Select components
   - Define SnapshotWithHolding interface for API responses with joined holding data
+---
+
+## 2026-02-01 - US-012
+- What was implemented: Dashboard check-in prompt card showing when monthly snapshots needed
+- Files changed:
+  - app/api/check-in/status/route.ts (new file) - API to detect holdings needing current month snapshot
+  - components/check-in/check-in-prompt-card.tsx (new file) - Client component with TanStack Query
+  - app/(dashboard)/dashboard/page.tsx - Integrated CheckInPromptCard component
+  - lib/hooks/use-auth-safe.ts - Fixed conditional hook to work without Clerk configured
+- **Learnings for future iterations:**
+  - useAuthSafe hook must check clerkPubKey BEFORE calling useAuth() to avoid "useAuth outside ClerkProvider" error
+  - Dashboard cards use pattern: fetch status API → conditionally render based on response
+  - Card hidden when `needsCheckIn: false` or on loading/error (graceful degradation)
+  - Quote paths with parentheses in bash git commands: `git add "app/(dashboard)/..."`
+  - Check-in status API returns: needsCheckIn, holdingsToUpdate, totalSnapshotHoldings, currentMonth, holdings[]
 ---
 

@@ -218,8 +218,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "API at /api/check-in/status returns holdings needing updates. CheckInPromptCard component shows prompt when needsCheckIn=true. Fixed useAuthSafe hook to handle missing Clerk configuration."
     },
     {
       "id": "US-013",
