@@ -190,3 +190,29 @@
   - NextRequest param required for accessing searchParams: `GET(request: NextRequest)`
 ---
 
+## 2026-02-01 - US-014
+- What was implemented: Super holdings entry in check-in modal with balance input and optional contributions
+- Files changed:
+  - components/check-in/check-in-modal.tsx - Added SuperHoldingEntry component and state management
+- **Learnings for future iterations:**
+  - Create separate sub-components (like SuperHoldingEntry) for complex form sections within modals
+  - Use Record<string, DataType> for form state when managing multiple dynamic entries
+  - Expandable sections: use ChevronDown/ChevronRight icons from lucide-react with button toggle
+  - Currency symbols map: AUD→A$, NZD→NZ$, USD→US$ for display
+  - Track "updated" state based on whether required fields (balance) have values
+  - Export interfaces (SuperHoldingData) for use in future stories (save functionality)
+---
+
+## 2026-02-01 - US-015
+- What was implemented: Cash and debt holding entries in check-in modal
+- Files changed:
+  - components/check-in/check-in-modal.tsx - Added CashHoldingEntry and DebtHoldingEntry components
+- **Learnings for future iterations:**
+  - BalanceHoldingData interface for simpler holdings (just balance, no contributions)
+  - Cash and debt use same pattern: name label + balance input with currency symbol
+  - Debt section requires explanatory text above holdings for user clarity
+  - Reuse patterns from SuperHoldingEntry (currency symbols, state management) for consistency
+  - Each holding type needs its own state (superHoldingsData, cashHoldingsData, debtHoldingsData)
+  - Reset all state types when month changes or modal closes
+---
+
