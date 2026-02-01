@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { holdings, snapshots } from "@/lib/db/schema";
@@ -13,20 +13,57 @@ function getFirstOfCurrentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
+// Get first of previous month
+function getFirstOfPreviousMonth(): string {
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+// Validate that a month string is current or previous month only
+function isValidMonth(month: string): boolean {
+  const current = getFirstOfCurrentMonth();
+  const previous = getFirstOfPreviousMonth();
+  return month === current || month === previous;
+}
+
 // Format month for display (e.g., "February 2026")
 function formatMonthYear(dateStr: string): string {
   const date = new Date(dateStr);
   return date.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const { userId } = await auth();
 
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const currentMonth = getFirstOfCurrentMonth();
+  // Get month from query params, default to current month
+  const searchParams = request.nextUrl.searchParams;
+  const monthParam = searchParams.get("month");
+
+  let targetMonth = getFirstOfCurrentMonth();
+
+  if (monthParam) {
+    // Validate month format and range
+    if (!/^\d{4}-\d{2}-01$/.test(monthParam)) {
+      return NextResponse.json(
+        { error: "Invalid month format. Use YYYY-MM-01" },
+        { status: 400 }
+      );
+    }
+    if (!isValidMonth(monthParam)) {
+      return NextResponse.json(
+        { error: "Month must be current or previous month" },
+        { status: 400 }
+      );
+    }
+    targetMonth = monthParam;
+  }
+
+  const currentMonth = targetMonth;
 
   // Get all active snapshot-type holdings for the user
   const allSnapshotHoldings = await db

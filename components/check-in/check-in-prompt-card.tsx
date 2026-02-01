@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { Button } from "@/components/ui/button";
+import { CheckInModal } from "./check-in-modal";
 
 interface CheckInStatusResponse {
   needsCheckIn: boolean;
@@ -28,6 +30,7 @@ async function fetchCheckInStatus(): Promise<CheckInStatusResponse> {
 
 export function CheckInPromptCard() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["check-in-status"],
@@ -66,16 +69,12 @@ export function CheckInPromptCard() {
             {data.totalSnapshotHoldings} holdings already updated
           </p>
         </div>
-        <Button
-          className="shrink-0"
-          onClick={() => {
-            // Modal trigger - to be connected in later story (US-013)
-            console.log("Start Check-in clicked");
-          }}
-        >
+        <Button className="shrink-0" onClick={() => setIsModalOpen(true)}>
           Start Check-in
         </Button>
       </div>
+
+      <CheckInModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 }
