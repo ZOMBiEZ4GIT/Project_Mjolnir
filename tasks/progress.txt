@@ -28,6 +28,12 @@
 - Toaster component is in root layout; for dark mode only, hardcode `theme="dark"` in Sonner component
 
 - Dashboard navigation uses `components/dashboard/nav.tsx` with usePathname for active state
+
+- CurrencyDisplay component in `components/ui/currency-display.tsx`:
+  - Use for all currency value displays for consistency
+  - Props: amount, currency, showNative?, nativeCurrency?, nativeAmount?, isLoading?, compact?
+  - Tooltip shows ISO code on hover; skeleton for loading state
+  - Import: `import { CurrencyDisplay } from "@/components/ui/currency-display"`
 - Navigation items defined in array for easy extension
 - ESLint no-case-declarations: wrap switch case blocks containing `const`/`let` declarations in braces `{ }`
 
@@ -154,5 +160,20 @@ Started: 2026-02-02
   - Currency symbols: AUD = "$", NZD = "NZ$", USD = "US$"
   - Compact notation uses K/M/B suffixes for 1000+/1M+/1B+ values
   - formatCompactValue helper shows 1 decimal place only when needed
+---
+
+## 2026-02-02 - US-005
+- Implemented CurrencyDisplay component for consistent currency formatting
+- Files changed:
+  - `components/ui/currency-display.tsx` - New CurrencyDisplay component with tooltip and skeleton
+  - `components/ui/tooltip.tsx` - Added shadcn/ui Tooltip component
+  - `package.json` - Added @radix-ui/react-tooltip dependency
+  - `app/test-currency/page.tsx` - Test page for visual verification
+- **Learnings for future iterations:**
+  - CurrencyDisplay accepts: amount, currency, showNative?, nativeCurrency?, nativeAmount?, isLoading?, compact?
+  - Tooltip uses shadcn/ui pattern with TooltipProvider, Tooltip, TooltipTrigger, TooltipContent
+  - Native currency indicator shows `(currencyCode)` badge when showNative=true and currencies differ
+  - Loading skeleton uses inline span with animate-pulse for consistent sizing
+  - Test pages can be added at `/test-*` routes for component verification
 ---
 
