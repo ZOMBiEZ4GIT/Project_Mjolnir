@@ -46,6 +46,9 @@
 - Query helpers in `lib/queries/`:
   - `snapshots.ts` - getLatestSnapshots() and getLatestSnapshotForHolding() for fetching most recent snapshots
 
+- Calculation helpers in `lib/calculations/`:
+  - `super-returns.ts` - calculateInvestmentReturns() and calculateMonthlyInvestmentReturns() for super fund performance
+
 ---
 
 # W-5 Snapshot Tracking Progress Log
@@ -117,5 +120,18 @@
   - Schema already existed from W-1 scaffolding; only needed to add soft delete support
   - Keep DB column names as `employer_contrib`/`employee_contrib` (not renamed) to avoid interactive drizzle-kit prompts
   - Migration generation requires no interactive input when not renaming columns
+---
+
+## 2026-02-01 - US-009
+- What was implemented: Investment returns calculation for super funds
+- Files changed:
+  - lib/calculations/super-returns.ts (new file)
+- **Learnings for future iterations:**
+  - Calculation helpers go in `lib/calculations/` directory
+  - Super investment returns formula: (new_balance - old_balance) - employer_contrib - employee_contrib
+  - Functions require userId for ownership validation (consistent with query helpers)
+  - Drizzle returns decimal fields as strings, use Number() for arithmetic
+  - Missing contributions should default to 0 (not error)
+  - Added calculateMonthlyInvestmentReturns() convenience wrapper for common use case
 ---
 

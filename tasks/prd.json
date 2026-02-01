@@ -165,8 +165,8 @@
         "Lint passes"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Functions require userId for ownership validation. Added bonus calculateMonthlyInvestmentReturns convenience function."
     },
     {
       "id": "US-010",
