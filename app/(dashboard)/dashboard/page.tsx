@@ -5,6 +5,7 @@ import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { AssetAllocation } from "@/components/dashboard/asset-allocation";
 import { NetWorthChart } from "@/components/dashboard/net-worth-chart";
 import { TopPerformers } from "@/components/dashboard/top-performers";
+import { StaleDataWarning } from "@/components/dashboard/stale-data-warning";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,11 @@ export default async function DashboardPage() {
       {/* Net Worth Hero Card */}
       <div className="mb-6">
         <NetWorthHero />
+      </div>
+
+      {/* Stale Data Warning Banner */}
+      <div className="mb-6">
+        <StaleDataWarning />
       </div>
 
       {/* Summary Cards: Total Assets and Total Debt */}
