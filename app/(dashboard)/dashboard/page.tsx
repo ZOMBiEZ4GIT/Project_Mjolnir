@@ -2,6 +2,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { CheckInPromptCard } from "@/components/check-in/check-in-prompt-card";
 import { NetWorthHero } from "@/components/dashboard/net-worth-hero";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
+import { AssetAllocation } from "@/components/dashboard/asset-allocation";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,11 @@ export default async function DashboardPage() {
       {/* Summary Cards: Total Assets and Total Debt */}
       <div className="mb-6">
         <SummaryCards />
+      </div>
+
+      {/* Asset Allocation Breakdown */}
+      <div className="mb-6">
+        <AssetAllocation />
       </div>
 
       <CheckInPromptCard />
