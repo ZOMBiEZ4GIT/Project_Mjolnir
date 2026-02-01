@@ -150,3 +150,15 @@ Started: 2026-02-01
   - Exchange rate cache TTL is 60 minutes (1 hour), exported as DEFAULT_EXCHANGE_RATE_TTL_MINUTES
   - Use `and()` from drizzle-orm to combine multiple eq() conditions for composite key lookups
 ---
+
+## 2026-02-01 - US-008
+- What was implemented: Unified price fetcher service for routing to appropriate providers
+- Files changed:
+  - `lib/services/price-fetcher.ts` - Created new service with fetchPrice, fetchPricesForHoldings, isTradeableHolding, and helper functions
+- **Learnings for future iterations:**
+  - The unified fetcher routes based on holding type: crypto → CoinGecko, stock/etf → Yahoo Finance
+  - Returns PriceResult with isStale flag for graceful fallback when fetch fails
+  - For cache lookup, normalize symbol: crypto uses uppercase, stocks use normalizeSymbol() with exchange
+  - HoldingForPriceFetch interface defines minimal fields needed (type, symbol, exchange, currency)
+  - fetchPricesForHoldings() handles batch fetching in parallel with Promise.all
+---
