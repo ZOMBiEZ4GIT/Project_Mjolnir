@@ -41,7 +41,21 @@
   - `quantity.ts` - calculateQuantityHeld for tradeable holdings
   - `cost-basis.ts` - calculateCostBasis with FIFO methodology
 
+- Snapshots and contributions schema: uses `employer_contrib`/`employee_contrib` (not `employer_contribution`) for DB column names to avoid migration renames
+
 ---
 
 # W-5 Snapshot Tracking Progress Log
+
+## 2026-02-01 - US-001 & US-002
+- What was implemented: Added updated_at, deleted_at fields to snapshots and contributions tables; added unique constraint on contributions(holding_id, date)
+- Files changed:
+  - lib/db/schema.ts - added missing fields to snapshots and contributions
+  - drizzle/0001_white_scream.sql - generated migration
+  - drizzle/meta/_journal.json, drizzle/meta/0001_snapshot.json - migration metadata
+- **Learnings for future iterations:**
+  - Schema already existed from W-1 scaffolding; only needed to add soft delete support
+  - Keep DB column names as `employer_contrib`/`employee_contrib` (not renamed) to avoid interactive drizzle-kit prompts
+  - Migration generation requires no interactive input when not renaming columns
+---
 

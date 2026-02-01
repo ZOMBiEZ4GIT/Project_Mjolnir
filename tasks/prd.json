@@ -19,8 +19,8 @@
         "Lint passes (`npm run lint`)"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Schema already existed with most fields; added updated_at, deleted_at. Migration 0001_white_scream.sql generated."
     },
     {
       "id": "US-002",
@@ -37,8 +37,8 @@
         "Lint passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Schema already existed; added updated_at, deleted_at, unique constraint. Uses employer_contrib/employee_contrib column names for DB compatibility."
     },
     {
       "id": "US-003",
