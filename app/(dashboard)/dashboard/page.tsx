@@ -3,6 +3,7 @@ import { CheckInPromptCard } from "@/components/check-in/check-in-prompt-card";
 import { NetWorthHero } from "@/components/dashboard/net-worth-hero";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { AssetAllocation } from "@/components/dashboard/asset-allocation";
+import { NetWorthChart } from "@/components/dashboard/net-worth-chart";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,11 @@ export default async function DashboardPage() {
       {/* Asset Allocation Breakdown */}
       <div className="mb-6">
         <AssetAllocation />
+      </div>
+
+      {/* Net Worth History Chart */}
+      <div className="mb-6">
+        <NetWorthChart />
       </div>
 
       <CheckInPromptCard />
