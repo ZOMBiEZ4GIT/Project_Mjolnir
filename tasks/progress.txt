@@ -162,3 +162,15 @@ Started: 2026-02-01
   - HoldingForPriceFetch interface defines minimal fields needed (type, symbol, exchange, currency)
   - fetchPricesForHoldings() handles batch fetching in parallel with Promise.all
 ---
+
+## 2026-02-01 - US-009
+- What was implemented: Prices API refresh endpoint for fetching fresh prices
+- Files changed:
+  - `app/api/prices/route.ts` - Created new API route with POST handler for price refresh
+- **Learnings for future iterations:**
+  - POST /api/prices/refresh accepts optional `holding_ids` array in request body
+  - Filters to tradeable holdings (stock, etf, crypto) with symbols
+  - Uses `forceRefresh: true` option on fetchPrice to bypass cache
+  - Returns array with price results including holdingId, symbol, price, currency, changePercent, isStale, error
+  - Partial failures handled - each holding returns its own result/error independently
+---
