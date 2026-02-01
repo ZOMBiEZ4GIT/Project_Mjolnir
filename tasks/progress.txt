@@ -72,10 +72,38 @@
   - MarketValueCell calculating quantity x price
   - GainLossCell showing unrealized gain/loss with percentage
 
+- Net worth calculation in `lib/calculations/net-worth.ts`:
+  - `calculateNetWorth(userId)` returns NetWorthResult with netWorth, totalAssets, totalDebt, breakdown by type
+  - `calculateAssetBreakdown(userId)` returns AssetBreakdown with percentage for each type and holding
+  - Uses `calculateQuantityHeld()` for tradeable assets, `getLatestSnapshots()` for snapshot-based assets
+  - All values converted to AUD via `getExchangeRate()`
+
 ---
 
 # W-7 Net Worth Calculation Progress Log
 
 Started: 2026-02-01
+
+---
+
+## 2026-02-01 - US-001
+- Implemented net worth calculation service in `lib/calculations/net-worth.ts`
+- Files changed: lib/calculations/net-worth.ts (new file)
+- **Learnings for future iterations:**
+  - Net worth calculation reuses existing helpers: `calculateQuantityHeld()`, `getLatestSnapshots()`, `getCachedPrice()`, `getExchangeRate()`
+  - Breakdown includes both per-type grouping AND per-holding details
+  - Debt is tracked separately from assets (debtBreakdown field)
+  - Holdings with no cached price are included in breakdown with value=0 for visibility
+
+---
+
+## 2026-02-01 - US-002
+- Implemented `calculateAssetBreakdown(userId)` function in `lib/calculations/net-worth.ts`
+- Files changed: lib/calculations/net-worth.ts
+- **Learnings for future iterations:**
+  - Added new types: `HoldingWithPercentage`, `AssetBreakdownItem`, `AssetBreakdown`
+  - Assets sorted by value descending
+  - Debt treated as separate category (percentage = 100% since it's its own group)
+  - `addHoldingPercentages()` helper to calculate percentage within a group
 
 ---

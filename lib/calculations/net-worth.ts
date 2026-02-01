@@ -58,6 +58,46 @@ export interface HoldingValue {
 }
 
 /**
+ * Holding with percentage of group.
+ */
+export interface HoldingWithPercentage extends HoldingValue {
+  /** Percentage of group total */
+  percentageOfGroup: number;
+}
+
+/**
+ * Asset breakdown by type with percentage.
+ */
+export interface AssetBreakdownItem {
+  /** Type of holding */
+  type: "stock" | "etf" | "crypto" | "super" | "cash" | "debt";
+  /** Total value in AUD */
+  totalValue: number;
+  /** Number of holdings in this type */
+  count: number;
+  /** Percentage of total assets (or total debt for debt type) */
+  percentage: number;
+  /** Individual holdings with percentage */
+  holdings: HoldingWithPercentage[];
+}
+
+/**
+ * Complete asset breakdown result.
+ */
+export interface AssetBreakdown {
+  /** Breakdown by asset type (excluding debt) */
+  assets: AssetBreakdownItem[];
+  /** Debt breakdown */
+  debt: AssetBreakdownItem | null;
+  /** Total assets value in AUD */
+  totalAssets: number;
+  /** Total debt value in AUD */
+  totalDebt: number;
+  /** Timestamp when calculation was performed */
+  calculatedAt: Date;
+}
+
+/**
  * Result of net worth calculation.
  */
 export interface NetWorthResult {
@@ -348,6 +388,200 @@ export async function calculateNetWorth(userId: string): Promise<NetWorthResult>
     totalDebt,
     breakdown,
     debtBreakdown: validDebtValues,
+    calculatedAt,
+  };
+}
+
+// =============================================================================
+// ASSET BREAKDOWN CALCULATION
+// =============================================================================
+
+/**
+ * Adds percentage to holdings based on group total.
+ */
+function addHoldingPercentages(
+  holdings: HoldingValue[],
+  groupTotal: number
+): HoldingWithPercentage[] {
+  return holdings.map((h) => ({
+    ...h,
+    percentageOfGroup: groupTotal > 0 ? (h.value / groupTotal) * 100 : 0,
+  }));
+}
+
+/**
+ * Calculates asset breakdown by type with percentages.
+ *
+ * Groups assets by type (stocks, ETFs, crypto, super, cash) and debt,
+ * calculating the percentage each group represents of total assets
+ * and the percentage each holding represents within its group.
+ *
+ * @param userId - The user ID to calculate breakdown for
+ * @returns AssetBreakdown with grouped assets and percentages
+ *
+ * @example
+ * const breakdown = await calculateAssetBreakdown("user_123");
+ * breakdown.assets.forEach(group => {
+ *   console.log(`${group.type}: ${group.percentage.toFixed(1)}% of portfolio`);
+ * });
+ */
+export async function calculateAssetBreakdown(
+  userId: string
+): Promise<AssetBreakdown> {
+  const calculatedAt = new Date();
+
+  // Get all active holdings
+  const userHoldings = await getUserHoldings(userId);
+
+  // Get latest snapshots for all holdings (single query)
+  const snapshotsMap = await getLatestSnapshots(userId);
+
+  // Categorize holdings
+  const tradeableTypes = ["stock", "etf", "crypto"] as const;
+  const snapshotAssetTypes = ["super", "cash"] as const;
+  const debtTypes = ["debt"] as const;
+
+  const tradeableHoldings = userHoldings.filter((h) =>
+    tradeableTypes.includes(h.type as (typeof tradeableTypes)[number])
+  );
+  const snapshotAssetHoldings = userHoldings.filter((h) =>
+    snapshotAssetTypes.includes(h.type as (typeof snapshotAssetTypes)[number])
+  );
+  const debtHoldings = userHoldings.filter((h) =>
+    debtTypes.includes(h.type as (typeof debtTypes)[number])
+  );
+
+  // Calculate values for each category
+  const tradeableValues = await Promise.all(
+    tradeableHoldings.map((h) => calculateTradeableValue(h))
+  );
+
+  const snapshotAssetValues = await Promise.all(
+    snapshotAssetHoldings.map((h) => calculateSnapshotValue(h, snapshotsMap))
+  );
+
+  const debtValues = await Promise.all(
+    debtHoldings.map((h) => calculateSnapshotValue(h, snapshotsMap))
+  );
+
+  // Filter out nulls
+  const validTradeableValues = tradeableValues.filter(
+    (v): v is HoldingValue => v !== null
+  );
+  const validSnapshotAssetValues = snapshotAssetValues.filter(
+    (v): v is HoldingValue => v !== null
+  );
+  const validDebtValues = debtValues.filter(
+    (v): v is HoldingValue => v !== null
+  );
+
+  // Group tradeable by type
+  const stockValues = validTradeableValues.filter((v) => {
+    const holding = tradeableHoldings.find((h) => h.id === v.id);
+    return holding?.type === "stock";
+  });
+  const etfValues = validTradeableValues.filter((v) => {
+    const holding = tradeableHoldings.find((h) => h.id === v.id);
+    return holding?.type === "etf";
+  });
+  const cryptoValues = validTradeableValues.filter((v) => {
+    const holding = tradeableHoldings.find((h) => h.id === v.id);
+    return holding?.type === "crypto";
+  });
+
+  // Group snapshot assets by type
+  const superValues = validSnapshotAssetValues.filter((v) => {
+    const holding = snapshotAssetHoldings.find((h) => h.id === v.id);
+    return holding?.type === "super";
+  });
+  const cashValues = validSnapshotAssetValues.filter((v) => {
+    const holding = snapshotAssetHoldings.find((h) => h.id === v.id);
+    return holding?.type === "cash";
+  });
+
+  // Calculate group totals
+  const stockTotal = stockValues.reduce((sum, v) => sum + v.value, 0);
+  const etfTotal = etfValues.reduce((sum, v) => sum + v.value, 0);
+  const cryptoTotal = cryptoValues.reduce((sum, v) => sum + v.value, 0);
+  const superTotal = superValues.reduce((sum, v) => sum + v.value, 0);
+  const cashTotal = cashValues.reduce((sum, v) => sum + v.value, 0);
+  const debtTotal = validDebtValues.reduce((sum, v) => sum + v.value, 0);
+
+  const totalAssets = stockTotal + etfTotal + cryptoTotal + superTotal + cashTotal;
+
+  // Build breakdown with percentages
+  const assets: AssetBreakdownItem[] = [];
+
+  if (stockValues.length > 0) {
+    assets.push({
+      type: "stock",
+      totalValue: stockTotal,
+      count: stockValues.length,
+      percentage: totalAssets > 0 ? (stockTotal / totalAssets) * 100 : 0,
+      holdings: addHoldingPercentages(stockValues, stockTotal),
+    });
+  }
+
+  if (etfValues.length > 0) {
+    assets.push({
+      type: "etf",
+      totalValue: etfTotal,
+      count: etfValues.length,
+      percentage: totalAssets > 0 ? (etfTotal / totalAssets) * 100 : 0,
+      holdings: addHoldingPercentages(etfValues, etfTotal),
+    });
+  }
+
+  if (cryptoValues.length > 0) {
+    assets.push({
+      type: "crypto",
+      totalValue: cryptoTotal,
+      count: cryptoValues.length,
+      percentage: totalAssets > 0 ? (cryptoTotal / totalAssets) * 100 : 0,
+      holdings: addHoldingPercentages(cryptoValues, cryptoTotal),
+    });
+  }
+
+  if (superValues.length > 0) {
+    assets.push({
+      type: "super",
+      totalValue: superTotal,
+      count: superValues.length,
+      percentage: totalAssets > 0 ? (superTotal / totalAssets) * 100 : 0,
+      holdings: addHoldingPercentages(superValues, superTotal),
+    });
+  }
+
+  if (cashValues.length > 0) {
+    assets.push({
+      type: "cash",
+      totalValue: cashTotal,
+      count: cashValues.length,
+      percentage: totalAssets > 0 ? (cashTotal / totalAssets) * 100 : 0,
+      holdings: addHoldingPercentages(cashValues, cashTotal),
+    });
+  }
+
+  // Sort by value descending
+  assets.sort((a, b) => b.totalValue - a.totalValue);
+
+  // Build debt breakdown (percentage is 100% since debt is separate)
+  const debt: AssetBreakdownItem | null =
+    validDebtValues.length > 0
+      ? {
+          type: "debt",
+          totalValue: debtTotal,
+          count: validDebtValues.length,
+          percentage: 100, // Debt is its own category, so 100%
+          holdings: addHoldingPercentages(validDebtValues, debtTotal),
+        }
+      : null;
+
+  return {
+    assets,
+    debt,
+    totalAssets,
+    totalDebt: debtTotal,
     calculatedAt,
   };
 }
