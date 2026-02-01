@@ -180,8 +180,8 @@
         "Lint passes"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added Snapshots to navItems array. Active state styling handled by existing usePathname logic."
     },
     {
       "id": "US-011",
@@ -200,8 +200,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Table with Date, Holding, Type, Balance, Currency columns. Two filter dropdowns for holding and type. Uses TanStack Query for data fetching. Follows holdings page pattern."
     },
     {
       "id": "US-012",

@@ -135,3 +135,25 @@
   - Added calculateMonthlyInvestmentReturns() convenience wrapper for common use case
 ---
 
+## 2026-02-01 - US-010
+- What was implemented: Added Snapshots link to dashboard navigation
+- Files changed:
+  - components/dashboard/nav.tsx - added Snapshots to navItems array
+- **Learnings for future iterations:**
+  - Navigation is simple: just add to navItems array with href and label
+  - Active state styling already handled by usePathname comparison
+---
+
+## 2026-02-01 - US-011
+- What was implemented: Snapshots list page with table, filters, and loading/empty states
+- Files changed:
+  - app/(dashboard)/snapshots/page.tsx (new file)
+- **Learnings for future iterations:**
+  - List pages follow same pattern: useAuthSafe + TanStack Query + filter dropdowns
+  - Client-side type filtering when API doesn't support it directly (filter after fetch)
+  - Format dates with toLocaleDateString("en-AU", { month: "long", year: "numeric" })
+  - Currency formatting: use symbols map (AUD→A$, NZD→NZ$, USD→US$)
+  - Dark mode styling: bg-gray-800 border-gray-700 for Select components
+  - Define SnapshotWithHolding interface for API responses with joined holding data
+---
+
