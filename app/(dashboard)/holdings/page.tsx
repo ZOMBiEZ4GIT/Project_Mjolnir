@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
@@ -102,6 +103,17 @@ async function refreshPrices(): Promise<PriceRefreshResult[]> {
   return response.json();
 }
 
+/**
+ * Check if any price in the map is stale (older than 15 minutes).
+ */
+function hasStalePrice(priceMap: Map<string, PriceData> | undefined): boolean {
+  if (!priceMap || priceMap.size === 0) return false;
+  for (const price of priceMap.values()) {
+    if (price.isStale) return true;
+  }
+  return false;
+}
+
 export default function HoldingsPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const searchParams = useSearchParams();
@@ -142,7 +154,7 @@ export default function HoldingsPage() {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Mutation for refreshing prices
+  // Mutation for refreshing prices (manual user action with toasts)
   const refreshMutation = useMutation({
     mutationFn: refreshPrices,
     onSuccess: (results) => {
@@ -170,6 +182,34 @@ export default function HoldingsPage() {
       toast.error(error.message || "Failed to refresh prices");
     },
   });
+
+  // Mutation for background auto-refresh (silent, no toasts)
+  const backgroundRefreshMutation = useMutation({
+    mutationFn: refreshPrices,
+    onSuccess: () => {
+      // Silently invalidate prices query to refetch updated cached prices
+      queryClient.invalidateQueries({ queryKey: ["prices"] });
+    },
+    // Silent error handling - no toast for background refresh failures
+  });
+
+  // Track if auto-refresh has been triggered to prevent duplicate calls
+  const autoRefreshTriggered = useRef(false);
+
+  // Auto-refresh prices on page load if any cached price is stale
+  useEffect(() => {
+    // Only trigger once per page mount
+    if (autoRefreshTriggered.current) return;
+
+    // Wait for prices to load first
+    if (pricesLoading) return;
+
+    // Check if any price is stale
+    if (hasStalePrice(priceMap)) {
+      autoRefreshTriggered.current = true;
+      backgroundRefreshMutation.mutate();
+    }
+  }, [priceMap, pricesLoading, backgroundRefreshMutation]);
 
   // Show loading while Clerk auth is loading
   if (!isLoaded) {
@@ -261,20 +301,32 @@ export default function HoldingsPage() {
     );
   }
 
+  // Check if any refresh is in progress
+  const isRefreshing = refreshMutation.isPending || backgroundRefreshMutation.isPending;
+
   // Show holdings list in grouped table
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Holdings</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-white">Holdings</h1>
+          {/* Subtle background refresh indicator */}
+          {backgroundRefreshMutation.isPending && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+              <RefreshCw className="h-3 w-3 animate-spin" />
+              <span>Updating prices...</span>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             onClick={() => refreshMutation.mutate()}
-            disabled={refreshMutation.isPending}
+            disabled={isRefreshing}
             className="gap-2"
           >
             <RefreshCw
-              className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`}
+              className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
             />
             {refreshMutation.isPending ? "Refreshing..." : "Refresh Prices"}
           </Button>
