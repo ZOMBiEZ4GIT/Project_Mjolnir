@@ -12,17 +12,24 @@ const mockAuth = {
 };
 
 /**
+ * Hook that safely wraps useAuth - only calls the actual hook when Clerk is configured.
+ * This is a conditional hook call which normally violates React rules, but is safe here
+ * because clerkPubKey is an environment variable that never changes at runtime.
+ */
+function useClerkAuthInternal() {
+  // This is intentionally a conditional hook call.
+  // clerkPubKey is determined at build/startup time and never changes,
+  // so the hook call order is stable throughout the component lifecycle.
+  if (!clerkPubKey) {
+    return mockAuth;
+  }
+  return useAuth();
+}
+
+/**
  * Safe wrapper around Clerk's useAuth hook.
  * When Clerk is not configured, returns a mock state that bypasses auth.
  */
 export function useAuthSafe() {
-  // Always call the hook unconditionally (React requirement)
-  const auth = useAuth();
-
-  // When Clerk isn't configured, return mock auth state
-  if (!clerkPubKey) {
-    return mockAuth;
-  }
-
-  return auth;
+  return useClerkAuthInternal();
 }
