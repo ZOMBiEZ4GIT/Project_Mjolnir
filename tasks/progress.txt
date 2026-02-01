@@ -264,3 +264,17 @@
   - Mutation isPending state can disable both Cancel and Action buttons during delete operation
   - Table action buttons: wrap multiple buttons in `<div className="flex justify-end gap-1">` for proper spacing
 ---
+
+## 2026-02-01 - US-019
+- What was implemented: Display holdings with latest balance for snapshot holdings (super, cash, debt)
+- Files changed:
+  - app/api/holdings/route.ts - Added `include_latest_snapshot` query param to include latest snapshot data
+  - app/(dashboard)/holdings/page.tsx - Updated to request holdings with latest snapshots
+  - components/holdings/holdings-table.tsx - Added Balance column with stale indicator for snapshot types
+- **Learnings for future iterations:**
+  - API pattern: use query params for optional data inclusion (`include_latest_snapshot=true`)
+  - For efficient "latest per group" queries: use subquery with MAX() grouped by holdingId, then join back
+  - Stale indicator pattern: compare dates in frontend helper function for UI flexibility
+  - Export TypeScript interfaces from table components for type reuse in pages
+  - AlertTriangle icon from lucide-react for warning indicators
+---

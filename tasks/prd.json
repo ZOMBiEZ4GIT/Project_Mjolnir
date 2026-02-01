@@ -348,8 +348,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 19,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Holdings API now supports include_latest_snapshot query param. HoldingsTable displays Balance column for super/cash/debt with stale indicator using AlertTriangle icon for snapshots older than 2 months."
     }
   ]
 }
