@@ -4,9 +4,18 @@
  * Uses exchangerate-api.com for fetching live exchange rates.
  * Supports optional EXCHANGE_RATE_API_KEY env var for authenticated requests.
  * Free tier: 1500 requests/month
+ *
+ * Includes caching with 1-hour TTL.
  */
 
+import { db } from "@/lib/db";
+import { exchangeRates, ExchangeRate, NewExchangeRate } from "@/lib/db/schema";
+import { and, eq } from "drizzle-orm";
+
 export type SupportedCurrency = "USD" | "AUD" | "NZD";
+
+// Default cache TTL in minutes for exchange rates (1 hour)
+export const DEFAULT_EXCHANGE_RATE_TTL_MINUTES = 60;
 
 /**
  * Custom error for exchange rate operations
@@ -211,4 +220,210 @@ export async function fetchExchangeRate(
       error
     );
   }
+}
+
+// =============================================================================
+// CACHING FUNCTIONS
+// =============================================================================
+
+/**
+ * Cached exchange rate data returned from the cache.
+ */
+export interface CachedExchangeRate {
+  id: string;
+  fromCurrency: string;
+  toCurrency: string;
+  rate: number;
+  fetchedAt: Date;
+}
+
+/**
+ * Converts a database ExchangeRate row to our CachedExchangeRate interface.
+ * Handles decimal string to number conversions.
+ */
+function toCachedExchangeRate(row: ExchangeRate): CachedExchangeRate {
+  return {
+    id: row.id,
+    fromCurrency: row.fromCurrency,
+    toCurrency: row.toCurrency,
+    rate: Number(row.rate),
+    fetchedAt: row.fetchedAt,
+  };
+}
+
+/**
+ * Checks if a cached exchange rate is still valid based on TTL.
+ *
+ * @param cachedRate - The cached rate to check
+ * @param ttlMinutes - Time-to-live in minutes (default: 60)
+ * @returns true if the cache is still valid, false if expired
+ */
+export function isExchangeRateCacheValid(
+  cachedRate: CachedExchangeRate,
+  ttlMinutes: number = DEFAULT_EXCHANGE_RATE_TTL_MINUTES
+): boolean {
+  const now = new Date();
+  const fetchedAt = cachedRate.fetchedAt;
+  const ageMs = now.getTime() - fetchedAt.getTime();
+  const ttlMs = ttlMinutes * 60 * 1000;
+
+  return ageMs < ttlMs;
+}
+
+/**
+ * Gets a cached exchange rate for a given currency pair.
+ *
+ * @param from - Source currency code (e.g., "USD")
+ * @param to - Target currency code (e.g., "AUD")
+ * @returns The cached rate if found and not expired, null otherwise
+ *
+ * @example
+ * const rate = await getCachedRate("USD", "AUD");
+ * if (rate !== null) {
+ *   console.log(`Cached rate: 1 USD = ${rate} AUD`);
+ * }
+ */
+export async function getCachedRate(
+  from: string,
+  to: string
+): Promise<number | null> {
+  const normalizedFrom = from.toUpperCase().trim();
+  const normalizedTo = to.toUpperCase().trim();
+
+  // Same currency = rate of 1
+  if (normalizedFrom === normalizedTo) {
+    return 1;
+  }
+
+  const rows = await db
+    .select()
+    .from(exchangeRates)
+    .where(
+      and(
+        eq(exchangeRates.fromCurrency, normalizedFrom),
+        eq(exchangeRates.toCurrency, normalizedTo)
+      )
+    )
+    .limit(1);
+
+  if (rows.length === 0) {
+    return null;
+  }
+
+  const cached = toCachedExchangeRate(rows[0]);
+
+  // Return null if cache is expired
+  if (!isExchangeRateCacheValid(cached)) {
+    return null;
+  }
+
+  return cached.rate;
+}
+
+/**
+ * Sets (upserts) a cached exchange rate for a given currency pair.
+ * If a cache entry exists for the pair, it will be updated.
+ * If no entry exists, a new one will be created.
+ *
+ * @param from - Source currency code (e.g., "USD")
+ * @param to - Target currency code (e.g., "AUD")
+ * @param rate - The exchange rate to cache
+ */
+async function setCachedRate(
+  from: string,
+  to: string,
+  rate: number
+): Promise<void> {
+  const normalizedFrom = from.toUpperCase().trim();
+  const normalizedTo = to.toUpperCase().trim();
+  const now = new Date();
+
+  const newCacheEntry: NewExchangeRate = {
+    fromCurrency: normalizedFrom,
+    toCurrency: normalizedTo,
+    rate: rate.toString(),
+    fetchedAt: now,
+  };
+
+  // Check if entry exists for this currency pair
+  const existing = await db
+    .select({ id: exchangeRates.id })
+    .from(exchangeRates)
+    .where(
+      and(
+        eq(exchangeRates.fromCurrency, normalizedFrom),
+        eq(exchangeRates.toCurrency, normalizedTo)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    // Update existing entry
+    await db
+      .update(exchangeRates)
+      .set({
+        rate: newCacheEntry.rate,
+        fetchedAt: newCacheEntry.fetchedAt,
+      })
+      .where(
+        and(
+          eq(exchangeRates.fromCurrency, normalizedFrom),
+          eq(exchangeRates.toCurrency, normalizedTo)
+        )
+      );
+  } else {
+    // Insert new entry
+    await db.insert(exchangeRates).values(newCacheEntry);
+  }
+}
+
+/**
+ * Gets an exchange rate, using cache if available and not expired.
+ * If the cache is expired or missing, fetches fresh rate and updates cache.
+ *
+ * This is the main function to use for getting exchange rates - it handles
+ * caching automatically.
+ *
+ * @param from - Source currency code (e.g., "USD")
+ * @param to - Target currency code (e.g., "AUD")
+ * @returns Promise<number> - The exchange rate (e.g., 1.53 for USD to AUD)
+ * @throws ExchangeRateError on network failure, invalid currency, or API error
+ *
+ * @example
+ * // Get USD to AUD rate (uses cache if available)
+ * const rate = await getExchangeRate("USD", "AUD");
+ * console.log(`1 USD = ${rate} AUD`);
+ */
+export async function getExchangeRate(from: string, to: string): Promise<number> {
+  const normalizedFrom = from.toUpperCase().trim();
+  const normalizedTo = to.toUpperCase().trim();
+
+  // Same currency = rate of 1
+  if (normalizedFrom === normalizedTo) {
+    return 1;
+  }
+
+  // Check cache first
+  const cachedRate = await getCachedRate(normalizedFrom, normalizedTo);
+  if (cachedRate !== null) {
+    return cachedRate;
+  }
+
+  // Fetch fresh rate
+  const freshRate = await fetchExchangeRate(normalizedFrom, normalizedTo);
+
+  // Update cache
+  await setCachedRate(normalizedFrom, normalizedTo, freshRate);
+
+  return freshRate;
+}
+
+/**
+ * Gets all cached exchange rates from the database.
+ *
+ * @returns Array of all cached exchange rates
+ */
+export async function getAllCachedRates(): Promise<CachedExchangeRate[]> {
+  const rows = await db.select().from(exchangeRates);
+  return rows.map(toCachedExchangeRate);
 }
