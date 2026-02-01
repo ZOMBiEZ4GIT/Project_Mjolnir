@@ -34,8 +34,8 @@
         "Lint passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "API endpoints created with ensureUser helper to handle foreign key constraint"
     },
     {
       "id": "US-003",

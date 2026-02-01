@@ -45,6 +45,7 @@
 
 - Query helpers in `lib/queries/`:
   - `snapshots.ts` - getLatestSnapshots() and getLatestSnapshotForHolding() for fetching most recent snapshots
+  - `users.ts` - ensureUser(), getUserPreferences(), updateUserPreferences() for user management
 
 - Calculation helpers in `lib/calculations/`:
   - `super-returns.ts` - calculateInvestmentReturns() and calculateMonthlyInvestmentReturns() for super fund performance
@@ -117,5 +118,17 @@ Started: 2026-02-02
   - The currencyEnum already exists in the schema, so we can reuse it
   - Schema follows existing patterns: uuid id, timestamp fields, relations
   - Unique constraint on user_id ensures one preference per user
+---
+
+## 2026-02-02 - US-002
+- Implemented user preferences API endpoints
+- Files changed:
+  - `app/api/preferences/route.ts` - GET and PATCH handlers for preferences
+  - `lib/queries/users.ts` - Helper functions for user management
+- **Learnings for future iterations:**
+  - The user_preferences table has a foreign key to users table - must ensure user exists before creating preferences
+  - Created ensureUser() helper to upsert user records when needed
+  - API follows existing patterns: Clerk auth, error handling with { errors: { field: message } } format
+  - Preferences API returns { displayCurrency, updatedAt } to match acceptance criteria
 ---
 
