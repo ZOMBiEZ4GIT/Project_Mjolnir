@@ -163,3 +163,15 @@ Started: 2026-02-01
   - When using `inArray()` with Drizzle enum columns, must use `as const` on the values array
 
 ---
+
+## 2026-02-01 - US-006
+- Implemented net worth API endpoint in `app/api/net-worth/route.ts`
+- Files changed: app/api/net-worth/route.ts (new file)
+- **Learnings for future iterations:**
+  - API endpoint pattern: `auth()` from `@clerk/nextjs/server` for authentication, return 401 if no userId
+  - Net worth API returns JSON with: netWorth, totalAssets, totalDebt, breakdown, staleHoldings, hasStaleData, calculatedAt
+  - `calculatedAt` is converted to ISO string for JSON serialization
+  - `?refresh=true` query param is documented but currently all calculations are fresh (no caching)
+  - Error handling wraps the calculation in try/catch, returns 500 on failure
+
+---
