@@ -12,10 +12,21 @@ import type { Holding } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
 
-async function fetchHoldings(includeDormant: boolean): Promise<Holding[]> {
-  const url = includeDormant
-    ? "/api/holdings?include_dormant=true"
-    : "/api/holdings";
+// Extended holding type with cost basis data
+export interface HoldingWithCostBasis extends Holding {
+  quantity: number | null;
+  costBasis: number | null;
+  avgCost: number | null;
+}
+
+async function fetchHoldings(includeDormant: boolean): Promise<HoldingWithCostBasis[]> {
+  const params = new URLSearchParams();
+  if (includeDormant) {
+    params.set("include_dormant", "true");
+  }
+  params.set("include_cost_basis", "true");
+
+  const url = `/api/holdings?${params.toString()}`;
   const response = await fetch(url);
   if (!response.ok) {
     if (response.status === 401) {

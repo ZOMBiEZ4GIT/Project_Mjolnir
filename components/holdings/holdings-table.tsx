@@ -5,6 +5,7 @@ import { Pencil, Trash2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Holding } from "@/lib/db/schema";
+import type { HoldingWithCostBasis } from "@/app/(dashboard)/holdings/page";
 import {
   Table,
   TableBody,
@@ -47,11 +48,11 @@ const HOLDING_TYPE_ORDER: Holding["type"][] = [
 ];
 
 interface HoldingsTableProps {
-  holdings: Holding[];
+  holdings: HoldingWithCostBasis[];
 }
 
-function groupHoldingsByType(holdings: Holding[]): Map<Holding["type"], Holding[]> {
-  const groups = new Map<Holding["type"], Holding[]>();
+function groupHoldingsByType(holdings: HoldingWithCostBasis[]): Map<Holding["type"], HoldingWithCostBasis[]> {
+  const groups = new Map<Holding["type"], HoldingWithCostBasis[]>();
 
   for (const holding of holdings) {
     const existing = groups.get(holding.type) || [];
@@ -61,9 +62,38 @@ function groupHoldingsByType(holdings: Holding[]): Map<Holding["type"], Holding[
   return groups;
 }
 
+/**
+ * Format a number as currency (without symbol, just formatting)
+ */
+function formatCurrency(value: number | null): string {
+  if (value === null || value === 0) return "—";
+  return value.toLocaleString("en-AU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/**
+ * Format quantity with appropriate decimal places
+ */
+function formatQuantity(value: number | null): string {
+  if (value === null || value === 0) return "—";
+  // Use more decimals for crypto (often fractional), fewer for stocks
+  if (value < 1) {
+    return value.toLocaleString("en-AU", {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 8,
+    });
+  }
+  return value.toLocaleString("en-AU", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 4,
+  });
+}
+
 export function HoldingsTable({ holdings }: HoldingsTableProps) {
-  const [editingHolding, setEditingHolding] = useState<Holding | null>(null);
-  const [deletingHolding, setDeletingHolding] = useState<Holding | null>(null);
+  const [editingHolding, setEditingHolding] = useState<HoldingWithCostBasis | null>(null);
+  const [deletingHolding, setDeletingHolding] = useState<HoldingWithCostBasis | null>(null);
   const groupedHoldings = groupHoldingsByType(holdings);
   const queryClient = useQueryClient();
 
@@ -160,14 +190,14 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
 
 interface HoldingsTypeSectionProps {
   type: Holding["type"];
-  holdings: Holding[];
-  onEdit: (holding: Holding) => void;
-  onDelete: (holding: Holding) => void;
+  holdings: HoldingWithCostBasis[];
+  onEdit: (holding: HoldingWithCostBasis) => void;
+  onDelete: (holding: HoldingWithCostBasis) => void;
 }
 
 function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeSectionProps) {
   const label = HOLDING_TYPE_LABELS[type];
-  const showSymbol = type === "stock" || type === "etf" || type === "crypto";
+  const isTradeable = type === "stock" || type === "etf" || type === "crypto";
 
   return (
     <section>
@@ -180,10 +210,17 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
           <TableHeader>
             <TableRow className="border-gray-800 hover:bg-transparent">
               <TableHead className="text-gray-400">Name</TableHead>
-              {showSymbol && (
+              {isTradeable && (
                 <TableHead className="text-gray-400">Symbol</TableHead>
               )}
               <TableHead className="text-gray-400">Currency</TableHead>
+              {isTradeable && (
+                <>
+                  <TableHead className="text-gray-400 text-right">Quantity</TableHead>
+                  <TableHead className="text-gray-400 text-right">Cost Basis</TableHead>
+                  <TableHead className="text-gray-400 text-right">Avg Cost</TableHead>
+                </>
+              )}
               <TableHead className="text-gray-400">Status</TableHead>
               <TableHead className="text-gray-400 w-[100px]">Actions</TableHead>
             </TableRow>
@@ -197,7 +234,7 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
                 <TableCell className="text-white font-medium">
                   {holding.name}
                 </TableCell>
-                {showSymbol && (
+                {isTradeable && (
                   <TableCell className="text-gray-300">
                     {holding.symbol || "—"}
                   </TableCell>
@@ -205,6 +242,19 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
                 <TableCell className="text-gray-300">
                   {holding.currency}
                 </TableCell>
+                {isTradeable && (
+                  <>
+                    <TableCell className="text-gray-300 text-right font-mono">
+                      {formatQuantity(holding.quantity)}
+                    </TableCell>
+                    <TableCell className="text-gray-300 text-right font-mono">
+                      {formatCurrency(holding.costBasis)}
+                    </TableCell>
+                    <TableCell className="text-gray-300 text-right font-mono">
+                      {formatCurrency(holding.avgCost)}
+                    </TableCell>
+                  </>
+                )}
                 <TableCell>
                   {holding.isDormant ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">
