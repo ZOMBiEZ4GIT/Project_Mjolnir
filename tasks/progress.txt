@@ -225,3 +225,16 @@ Started: 2026-02-01
   - formatMarketValue uses CURRENCY_SYMBOLS mapping for consistent currency display
   - MarketValueCell receives both quantity and price data via props to calculate value on render
 ---
+
+## 2026-02-01 - US-014
+- What was implemented: Unrealized gain/loss column for tradeable holdings in the holdings list
+- Files changed:
+  - `components/holdings/holdings-table.tsx` - Added calculateGainLoss, formatGainLossAmount, formatGainLossPercent helpers, GainLossCell component, Gain/Loss table header and cell
+- **Learnings for future iterations:**
+  - GainLossCell follows same pattern as PriceCell and MarketValueCell for loading/error states
+  - Gain/Loss column added after Market Value column for tradeable holdings
+  - calculateGainLoss returns null if marketValue is null, costBasis is null, or costBasis is 0
+  - formatGainLossAmount uses absolute value and adds sign prefix (+/-) for display
+  - Green (text-green-400) for gains, red (text-red-400) for losses - consistent color scheme
+  - Browser verification shows 401 for API calls when not authenticated - this is expected behavior
+---

@@ -250,7 +250,7 @@
         "Verify in browser using Playwright"
       ],
       "priority": 14,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
