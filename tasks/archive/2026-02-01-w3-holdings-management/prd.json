@@ -1,0 +1,265 @@
+{
+  "id": "w3-holdings-management",
+  "title": "W-3 Holdings Management",
+  "branchName": "feature/w3-holdings-management",
+  "description": "Full CRUD functionality for holdings - the central registry of all assets being tracked. Includes list view with grouping by type, modal-based forms for adding/editing, and dormant holdings support.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create holdings database schema",
+      "description": "As a developer, I need the holdings table in the database so holdings can be persisted.",
+      "acceptanceCriteria": [
+        "Create `holdings` table with Drizzle schema in `lib/db/schema.ts`",
+        "Fields: id (uuid), type (enum: stock, etf, crypto, super, cash, debt), name (text), symbol (text, nullable), currency (enum: AUD, NZD, USD), exchange (text, nullable), is_dormant (boolean, default false), created_at (timestamp), updated_at (timestamp), deleted_at (timestamp, nullable for soft delete)",
+        "Generate migration with `npm run db:generate`",
+        "Migration runs successfully with `npm run db:migrate`",
+        "Typecheck passes (`npm run build`)",
+        "Lint passes (`npm run lint`)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Holdings schema already existed. Added NZX to exchange enum, generated initial migration, fixed ESLint config for v9+"
+    },
+    {
+      "id": "US-002",
+      "title": "Create holdings API - GET endpoints",
+      "description": "As a developer, I need API endpoints to retrieve holdings so the frontend can display them.",
+      "acceptanceCriteria": [
+        "Create `app/api/holdings/route.ts` with GET handler",
+        "GET /api/holdings returns all non-deleted holdings",
+        "Supports `include_dormant=true` query param to include dormant holdings",
+        "Create `app/api/holdings/[id]/route.ts` with GET handler",
+        "GET /api/holdings/[id] returns single holding by ID or 404 if not found",
+        "Both routes require Clerk authentication (return 401 if not authenticated)",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Added GET endpoints with Clerk auth. Created lib/db/index.ts with lazy-initialized database connection using Proxy pattern. Installed @clerk/nextjs package."
+    },
+    {
+      "id": "US-003",
+      "title": "Create holdings API - POST endpoint",
+      "description": "As a developer, I need an API endpoint to create holdings so users can add new assets.",
+      "acceptanceCriteria": [
+        "Add POST handler to `app/api/holdings/route.ts`",
+        "Validates required fields: type, name, currency",
+        "Validates symbol is required for stock, etf, crypto types",
+        "Validates exchange is required for stock, etf types",
+        "Returns 201 with created holding on success",
+        "Returns 400 with validation errors on invalid input",
+        "Requires Clerk authentication",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Added POST handler with validation for required fields based on holding type. Returns 400 with field-level errors object on validation failure."
+    },
+    {
+      "id": "US-004",
+      "title": "Create holdings API - PATCH and DELETE endpoints",
+      "description": "As a developer, I need API endpoints to update and delete holdings.",
+      "acceptanceCriteria": [
+        "Add PATCH handler to `app/api/holdings/[id]/route.ts`",
+        "PATCH updates holding fields (except type which is immutable)",
+        "Returns 200 with updated holding on success",
+        "Add DELETE handler to `app/api/holdings/[id]/route.ts`",
+        "DELETE performs soft delete (sets deleted_at timestamp)",
+        "Returns 200 on successful deletion",
+        "Both return 404 if holding not found",
+        "Both require Clerk authentication",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Added PATCH handler with validation for currency and exchange values. PATCH updates any provided fields except type (immutable). Added DELETE handler that performs soft delete by setting deletedAt timestamp. Both handlers check that holding exists and belongs to the authenticated user before modifying."
+    },
+    {
+      "id": "US-005",
+      "title": "Create holdings list page structure",
+      "description": "As Roland, I want to see a holdings list page so I can view my tracked assets.",
+      "acceptanceCriteria": [
+        "Create page at `app/(dashboard)/holdings/page.tsx`",
+        "Page fetches holdings from API using TanStack Query",
+        "Shows loading state while fetching",
+        "Shows empty state message when no holdings exist",
+        "Page is protected (requires authentication)",
+        "Add `export const dynamic = 'force-dynamic'`",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Created holdings page with TanStack Query. Added QueryProvider and ClerkProvider wrappers to app layout. Created useAuthSafe hook to handle auth state. Page shows loading, unauthenticated, error, empty, and list states."
+    },
+    {
+      "id": "US-006",
+      "title": "Display holdings in grouped table",
+      "description": "As Roland, I want to see my holdings grouped by type so I can understand my portfolio at a glance.",
+      "acceptanceCriteria": [
+        "Display holdings in table format using shadcn/ui Table component",
+        "Group holdings by type with section headers (Stocks, ETFs, Crypto, Super, Cash, Debt)",
+        "Show count of holdings per type in section header",
+        "Table columns: Name, Symbol (if applicable), Currency, Status (active/dormant)",
+        "Empty sections are hidden (only show types that have holdings)",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Created HoldingsTable component with HOLDING_TYPE_ORDER for consistent display order. Symbol column shown only for tradeable types (stock, etf, crypto). Status badges show Active (green) or Dormant (gray). Browser verification confirmed auth protection works; UI display needs manual verification when logged in."
+    },
+    {
+      "id": "US-007",
+      "title": "Add holding modal - base structure",
+      "description": "As Roland, I want to add new holdings via a modal dialog so I can quickly add assets.",
+      "acceptanceCriteria": [
+        "Add 'Add Holding' button to holdings list page",
+        "Clicking button opens shadcn/ui Dialog modal",
+        "Modal has holding type selector (radio group or select)",
+        "Cancel button closes modal without saving",
+        "Modal uses accessible patterns (focus trap, escape to close)",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Created AddHoldingDialog component with shadcn/ui Dialog. Added radio group type selector with all 6 holding types. Button added to both empty and list states on holdings page. Dialog uses radix-ui primitives for accessibility (focus trap, escape to close)."
+    },
+    {
+      "id": "US-008",
+      "title": "Add holding form - tradeable assets",
+      "description": "As Roland, I want to add stocks, ETFs, and crypto with their specific fields.",
+      "acceptanceCriteria": [
+        "When type is stock/etf/crypto, show fields: Name, Symbol, Currency (select), Exchange (select for stock/etf only)",
+        "Exchange options: ASX, NZX, NYSE, NASDAQ",
+        "Crypto type hides exchange field",
+        "Symbol field validates format: ASX requires `.AX` suffix, NZX requires `.NZ` suffix",
+        "Save button calls POST /api/holdings",
+        "Success: closes modal, invalidates holdings query (refetches list), shows success toast",
+        "Error: displays validation errors inline",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Extended AddHoldingDialog with step 2 form for tradeable assets. Added Input, Select, Sonner (toast) shadcn/ui components. Form validates symbol format for ASX (.AX) and NZX (.NZ). Uses TanStack Query mutation for API calls with toast notifications for success/error."
+    },
+    {
+      "id": "US-009",
+      "title": "Add holding form - snapshot assets",
+      "description": "As Roland, I want to add super funds, cash accounts, and debt.",
+      "acceptanceCriteria": [
+        "When type is super/cash/debt, show fields: Name, Currency (select)",
+        "No symbol or exchange fields for these types",
+        "Super type shows optional 'Is Dormant' checkbox",
+        "Save button calls POST /api/holdings",
+        "Success: closes modal, invalidates holdings query, shows success toast",
+        "Error: displays validation errors inline",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Extended AddHoldingDialog with snapshot asset support. Snapshot types (super/cash/debt) show only Name and Currency fields. Added Is Dormant checkbox for super type with shadcn/ui Checkbox component. Context-specific placeholder text for each holding type."
+    },
+    {
+      "id": "US-010",
+      "title": "Edit holding modal",
+      "description": "As Roland, I want to edit existing holdings so I can correct mistakes or update names.",
+      "acceptanceCriteria": [
+        "Add edit button/icon to each holding row in table",
+        "Clicking edit opens modal pre-populated with holding data",
+        "Holding type is displayed but not editable (read-only)",
+        "Save button calls PATCH /api/holdings/[id]",
+        "Success: closes modal, invalidates holdings query, shows success toast",
+        "Error: displays validation errors inline",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Created EditHoldingDialog component with pre-populated form data. Type field displayed as read-only with muted styling. Added edit button with Pencil icon to each row in HoldingsTable. Uses TanStack Query mutation for PATCH API call with toast notifications."
+    },
+    {
+      "id": "US-011",
+      "title": "Delete holding with confirmation",
+      "description": "As Roland, I want to delete holdings I no longer need.",
+      "acceptanceCriteria": [
+        "Add delete button/icon to each holding row",
+        "Clicking delete opens confirmation dialog (shadcn/ui AlertDialog)",
+        "Confirmation dialog shows holding name and asks 'Are you sure?'",
+        "Confirming calls DELETE /api/holdings/[id]",
+        "Success: closes dialog, invalidates holdings query, shows success toast",
+        "Holding disappears from list after deletion",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Added Trash2 icon button next to edit button in each row. AlertDialog shows holding name with 'Are you sure?' confirmation. Delete mutation calls DELETE API and invalidates holdings query on success. Red delete button with loading state during deletion."
+    },
+    {
+      "id": "US-012",
+      "title": "Dormant holdings filter",
+      "description": "As Roland, I want to hide dormant holdings by default but optionally show them.",
+      "acceptanceCriteria": [
+        "Add toggle/checkbox 'Show dormant holdings' above holdings table",
+        "Dormant holdings hidden by default (toggle off)",
+        "When toggle on, dormant holdings appear with muted styling (lower opacity or gray badge)",
+        "Filter state persists in URL search params (?show_dormant=true)",
+        "API call includes include_dormant param based on toggle state",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Added shadcn/ui Switch component with Label for the toggle. State persists in URL via useSearchParams and useRouter. API call passes include_dormant query param. Dormant holdings display with opacity-60 in table rows."
+    },
+    {
+      "id": "US-013",
+      "title": "Mark holding as dormant toggle",
+      "description": "As Roland, I want to mark holdings as dormant from the edit modal.",
+      "acceptanceCriteria": [
+        "Add 'Mark as Dormant' toggle/checkbox in edit modal",
+        "Toggle updates is_dormant field via PATCH API",
+        "Holding visibility changes based on dormant filter state",
+        "Toast confirms dormant status change",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "Added 'Mark as Dormant' checkbox to EditHoldingDialog component. Form includes isDormant state with toggle. PATCH API includes isDormant field when changed. Toast shows specific message for dormant status changes: 'Holding marked as dormant' or 'Holding marked as active'."
+    },
+    {
+      "id": "US-014",
+      "title": "Holdings navigation from dashboard",
+      "description": "As Roland, I want to access the holdings list from the dashboard navigation.",
+      "acceptanceCriteria": [
+        "Add 'Holdings' link to dashboard header/navigation",
+        "Link navigates to `/holdings` route",
+        "Current page is highlighted in navigation (active state)",
+        "Navigation consistent across dashboard pages",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "Created DashboardNav client component with Dashboard and Holdings links. Uses usePathname for active state highlighting. Added to dashboard layout header. Active links show white text, inactive show gray-400 with hover transition."
+    }
+  ]
+}

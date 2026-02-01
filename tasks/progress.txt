@@ -15,12 +15,14 @@
 - Auth pages use `(auth)` route group; dashboard uses `(dashboard)` route group
 
 - Drizzle migrations are stored in `drizzle/` directory and should be committed to git
-- The holdings schema already exists in `lib/db/schema.ts` with all required fields
+- The holdings schema exists in `lib/db/schema.ts` with all required fields
+- Transactions schema exists with action enum: BUY, SELL, DIVIDEND, SPLIT
 
 - TanStack Query provider is in `components/providers/query-provider.tsx` - wrap layouts with QueryProvider
 - ClerkProvider wrapper is in `components/providers/clerk-provider.tsx` - handles missing Clerk keys gracefully
 - Use `useAuthSafe` hook from `lib/hooks/use-auth-safe.ts` for client-side auth state that works with/without Clerk
 - Holdings page is at `/holdings` using `app/(dashboard)/holdings/page.tsx`
+- Transactions page is at `/transactions` using `app/(dashboard)/transactions/page.tsx`
 
 - Toast notifications use Sonner - import `toast` from `sonner` and use `toast.success()` / `toast.error()`
 - Toaster component is in root layout; for dark mode only, hardcode `theme="dark"` in Sonner component
@@ -29,272 +31,250 @@
 - Navigation items defined in array for easy extension
 - ESLint no-case-declarations: wrap switch case blocks containing `const`/`let` declarations in braces `{ }`
 
----
-
-# W-4 Transaction Tracking Progress Log
-
-## 2026-02-01 - US-001
-- What was implemented:
-  - Updated transactionActionEnum to include DIVIDEND and SPLIT action types
-  - Modified transactions table decimal precision from (20,8) to (18,8) per acceptance criteria
-  - Added updatedAt timestamp field with default now()
-  - Added deletedAt timestamp field for soft delete support
-- Files changed:
-  - lib/db/schema.ts - schema updates
-  - drizzle/0001_silly_silver_surfer.sql - generated migration
-  - drizzle/meta/_journal.json - migration metadata
-  - drizzle/meta/0001_snapshot.json - schema snapshot
-- **Learnings for future iterations:**
-  - The transactions table already existed in schema.ts from a previous epic, only needed updates
-  - Migration cannot be run without DATABASE_URL - this is expected for local dev without DB connection
-  - npm dependencies may need to be installed if node_modules is missing (`npm install`)
----
-
-## 2026-02-01 - US-002
-- What was implemented:
-  - Created GET /api/transactions endpoint with holding_id filter support
-  - Created GET /api/transactions/[id] endpoint for single transaction retrieval
-  - Both endpoints join with holdings table to include holding name/symbol
-  - Auth enforced via Clerk - returns 401 if not authenticated
-  - User ownership validated via holdings.userId join
-  - Results sorted by date descending (newest first)
-- Files changed:
-  - app/api/transactions/route.ts - GET handler for listing transactions
-  - app/api/transactions/[id]/route.ts - GET handler for single transaction
-- **Learnings for future iterations:**
-  - Use innerJoin with holdings table to both include holding info AND validate user ownership
-  - Next.js 16 uses `params: Promise<{ id: string }>` pattern for dynamic route params
-  - Follow existing holdings API patterns for consistency (error formats, auth checks)
----
-
-## 2026-02-01 - US-003
-- What was implemented:
-  - Added POST handler to /api/transactions for creating new transactions
-  - Full validation: required fields, date format (YYYY-MM-DD), numeric fields
-  - Holding validation: checks existence, user ownership, tradeable type (stock/etf/crypto only)
-  - Returns 201 with created transaction on success
-  - Returns 400 with errors object on validation failure
-- Files changed:
-  - app/api/transactions/route.ts - added POST handler with validation
-- **Learnings for future iterations:**
-  - Follow holdings API pattern for POST endpoints: try/catch JSON parse, errors object for validation
-  - NewTransaction type uses strings for decimal fields (quantity, unitPrice, fees)
-  - Tradeable types are stock, etf, crypto - other types (super, cash, debt) use snapshots instead
----
-
-## 2026-02-01 - US-004
-- What was implemented:
-  - Created `lib/calculations/quantity.ts` with `calculateQuantityHeld(holdingId)` function
-  - Handles BUY (adds to quantity), SELL (subtracts), SPLIT (multiplies), DIVIDEND (no effect)
-  - Processes transactions chronologically (ordered by date ascending)
-  - Only includes non-deleted transactions (filters by deletedAt IS NULL)
-- Files changed:
-  - lib/calculations/quantity.ts - new file
-- **Learnings for future iterations:**
-  - `lib/calculations/` directory exists but was empty - meant for calculation helper functions
+- API patterns:
+  - Use innerJoin with holdings to validate user ownership AND include holding info
+  - Return 409 Conflict for duplicate prevention (unique constraint violations)
+  - Return 400 with `{ errors: { field: "message" } }` for validation errors
   - Decimal fields from Drizzle come as strings, need Number() conversion for arithmetic
-  - SPLIT ratio stored in quantity field (e.g., 2:1 split = quantity of 2, multiplies holdings)
+
+- Calculation helpers in `lib/calculations/`:
+  - `quantity.ts` - calculateQuantityHeld for tradeable holdings
+  - `cost-basis.ts` - calculateCostBasis with FIFO methodology
+
+- Snapshots and contributions schema: uses `employer_contrib`/`employee_contrib` (not `employer_contribution`) for DB column names to avoid migration renames
+
+- Query helpers in `lib/queries/`:
+  - `snapshots.ts` - getLatestSnapshots() and getLatestSnapshotForHolding() for fetching most recent snapshots
+
+- Calculation helpers in `lib/calculations/`:
+  - `super-returns.ts` - calculateInvestmentReturns() and calculateMonthlyInvestmentReturns() for super fund performance
+
+- Check-in status API at `/api/check-in/status` returns holdings needing current month snapshots
+- Dashboard components in `components/check-in/` for monthly check-in workflow
+- Quote paths with parentheses in bash git commands: `git add "app/(dashboard)/..."`
+
+- Edit modals pattern: components/[domain]/edit-[entity]-modal.tsx structure
+- For related entity editing (e.g., contributions for super snapshots), fetch existing data with useQuery and handle create/update based on existence
+
 ---
 
-## 2026-02-01 - US-005
-- What was implemented:
-  - Added SELL quantity validation to POST handler in /api/transactions
-  - Imports and uses calculateQuantityHeld helper to get current holdings
-  - Validates sell quantity doesn't exceed current holdings for SELL action
-  - Returns 400 with errors.quantity = "Sell quantity exceeds holdings" if exceeded
-- Files changed:
-  - app/api/transactions/route.ts - added SELL validation logic
-- **Learnings for future iterations:**
-  - Validation for SELL should run after holding validation passes (needs valid holding_id)
-  - Also check !errors.quantity to avoid redundant validation if quantity already invalid
-  - calculateQuantityHeld is reusable for both API validation and UI display
----
+# W-5 Snapshot Tracking Progress Log
 
-## 2026-02-01 - US-006
-- What was implemented:
-  - Added PATCH handler to /api/transactions/[id] for updating transactions
-  - PATCH allows updating: date, quantity, unit_price, fees, notes
-  - PATCH validates SELL quantity against holdings EXCLUDING current transaction
-  - Added DELETE handler that performs soft delete (sets deleted_at timestamp)
-  - Both endpoints verify transaction exists and belongs to user via holdings join
-  - Both return 404 if transaction not found, 401 if not authenticated
+## 2026-02-01 - US-017
+- What was implemented: Edit snapshot modal with contributions support for super holdings
 - Files changed:
-  - app/api/transactions/[id]/route.ts - added PATCH and DELETE handlers
+  - components/snapshots/edit-snapshot-modal.tsx (new file)
+  - components/ui/textarea.tsx (new shadcn component)
+  - app/(dashboard)/snapshots/page.tsx - added edit button and modal integration
 - **Learnings for future iterations:**
-  - For PATCH SELL validation, must exclude current transaction from quantity calculation to avoid double-counting
-  - Use `ne(transactions.id, id)` from drizzle-orm to exclude a specific record
-  - Soft delete should set both deletedAt AND updatedAt timestamps
-  - Don't import calculateQuantityHeld if doing inline calculation - avoids lint errors for unused imports
----
-
-## 2026-02-01 - US-007
-- What was implemented:
-  - Created `lib/calculations/cost-basis.ts` with `calculateCostBasis(holdingId)` function
-  - Returns `{ costBasis: number, quantity: number, lots: Lot[] }`
-  - FIFO methodology: BUY creates new lots, SELL consumes from oldest lots first
-  - SPLIT adjusts all existing lots proportionally (quantity * ratio, price / ratio)
-  - DIVIDEND does not affect cost basis
-  - Only includes non-deleted transactions (filters by deletedAt IS NULL)
-  - Exported `Lot` and `CostBasisResult` interfaces for type safety
-- Files changed:
-  - lib/calculations/cost-basis.ts - new file
-- **Learnings for future iterations:**
-  - ESLint no-case-declarations rule requires wrapping case blocks with lexical declarations (`const`, `let`) in braces `{ }`
-  - SPLIT affects both lot.quantity AND lot.unitPrice to maintain total value invariant
-  - Filter out lots with remainingQuantity <= 0 before returning to only show active lots
-  - Cost basis pattern mirrors quantity calculation but tracks individual lots instead of running total
+  - Create separate domain modal components: components/[domain]/edit-[entity]-modal.tsx
+  - When editing an entity that may have related data (e.g., contributions), fetch related data in modal with useQuery
+  - For create/update decision: check if related entity exists, then call POST or PATCH accordingly
+  - Use `npx shadcn@latest add [component]` to add missing UI components
+  - Table action buttons: use Button variant="ghost" size="icon" for compact icon buttons
+  - Use selectedSnapshot state pattern: set when row clicked, clear on modal close
 ---
 
 ## 2026-02-01 - US-008
-- What was implemented:
-  - Added 'Transactions' link to dashboard navigation in `components/dashboard/nav.tsx`
-  - Link navigates to `/transactions` route
-  - Active state already handled by existing `isActive` logic comparing pathname to href
+- What was implemented: Latest snapshot helper functions for efficient lookups
 - Files changed:
-  - components/dashboard/nav.tsx - added Transactions entry to navItems array
+  - lib/queries/snapshots.ts (new file)
 - **Learnings for future iterations:**
-  - Navigation extension is simple: just add entry to navItems array with { href, label }
-  - Active state styling is handled by existing isActive comparison
+  - Use subquery pattern for "get latest per group": MAX(date) grouped by holdingId, then join back to get full records
+  - Query helpers should take userId for ownership validation consistency
+  - Return Map<string, T> for O(1) lookup when caller needs to access by key
+  - Define SnapshotWithHolding interface extending base Snapshot type for joined results
+---
+
+## 2026-02-01 - US-007
+- What was implemented: Contributions GET, PATCH, DELETE endpoints for individual records
+- Files changed:
+  - app/api/contributions/[id]/route.ts - all three handlers
+- **Learnings for future iterations:**
+  - Same pattern as snapshots/[id]: GET for single, PATCH for update, DELETE for soft delete
+---
+
+## 2026-02-01 - US-006
+- What was implemented: Contributions GET and POST endpoints
+- Files changed:
+  - app/api/contributions/route.ts - GET and POST handlers
+- **Learnings for future iterations:**
+  - Contributions only for "super" type holdings (not cash/debt)
+  - Default contribution amounts to "0" when not provided
+---
+
+## 2026-02-01 - US-005
+- What was implemented: Snapshots PATCH and DELETE endpoints
+- Files changed:
+  - app/api/snapshots/[id]/route.ts - added PATCH and DELETE handlers
+- **Learnings for future iterations:**
+  - Keep existing select structure for ownership check, then build separate update object
+  - Soft delete pattern: set deletedAt and updatedAt timestamps
+---
+
+## 2026-02-01 - US-004
+- What was implemented: Snapshots POST endpoint with validation and duplicate prevention
+- Files changed:
+  - app/api/snapshots/route.ts - added POST handler
+- **Learnings for future iterations:**
+  - Date normalization helper: normalizeToFirstOfMonth() converts any date to YYYY-MM-01
+  - Month validation: isValidSnapshotMonth() checks current or previous month only
+  - Validate holding type with snapshotTypes = ["super", "cash", "debt"]
+---
+
+## 2026-02-01 - US-003
+- What was implemented: Snapshots API GET endpoints
+- Files changed:
+  - app/api/snapshots/route.ts - GET /api/snapshots with ?holding_id filter
+  - app/api/snapshots/[id]/route.ts - GET /api/snapshots/[id] single snapshot
+- **Learnings for future iterations:**
+  - Use innerJoin with holdings table to validate user ownership AND include holding info in response
+  - Pattern: select specific fields from join to create clean response object with holdingName, holdingType
+---
+
+## 2026-02-01 - US-001 & US-002
+- What was implemented: Added updated_at, deleted_at fields to snapshots and contributions tables; added unique constraint on contributions(holding_id, date)
+- Files changed:
+  - lib/db/schema.ts - added missing fields to snapshots and contributions
+  - drizzle/0001_white_scream.sql - generated migration
+  - drizzle/meta/_journal.json, drizzle/meta/0001_snapshot.json - migration metadata
+- **Learnings for future iterations:**
+  - Schema already existed from W-1 scaffolding; only needed to add soft delete support
+  - Keep DB column names as `employer_contrib`/`employee_contrib` (not renamed) to avoid interactive drizzle-kit prompts
+  - Migration generation requires no interactive input when not renaming columns
 ---
 
 ## 2026-02-01 - US-009
-- What was implemented:
-  - Created transactions list page at `app/(dashboard)/transactions/page.tsx`
-  - Table with columns: Date, Holding, Action, Quantity, Unit Price, Fees, Total
-  - Total calculation: BUY = (qty * price) + fees, SELL = (qty * price) - fees, SPLIT = 0
-  - Color-coded action badges: green (BUY/DIVIDEND), red (SELL), blue (SPLIT)
-  - Loading states: auth loading, data fetching, error state, empty state
-  - Protected via `useAuthSafe` hook and `enabled: isLoaded && isSignedIn` on query
+- What was implemented: Investment returns calculation for super funds
 - Files changed:
-  - app/(dashboard)/transactions/page.tsx - new page file
+  - lib/calculations/super-returns.ts (new file)
 - **Learnings for future iterations:**
-  - Follow holdings page pattern: useAuthSafe hook, multiple loading/error/empty states
-  - SPLIT transactions display quantity as "X:1" ratio format (e.g., "2:1" for 2-for-1 split)
-  - Use `font-mono` class for numeric columns to align digits properly
-  - Format dates with toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })
-  - Transaction API returns `holding` nested object with name, symbol, type, currency, exchange
+  - Calculation helpers go in `lib/calculations/` directory
+  - Super investment returns formula: (new_balance - old_balance) - employer_contrib - employee_contrib
+  - Functions require userId for ownership validation (consistent with query helpers)
+  - Drizzle returns decimal fields as strings, use Number() for arithmetic
+  - Missing contributions should default to 0 (not error)
+  - Added calculateMonthlyInvestmentReturns() convenience wrapper for common use case
 ---
 
 ## 2026-02-01 - US-010
-- What was implemented:
-  - Added holding filter dropdown to transactions page (fetches tradeable holdings: stock, etf, crypto)
-  - Added action type filter with options: All, BUY, SELL, DIVIDEND, SPLIT
-  - Filters persist in URL search params (?holding_id=&action=)
-  - Updated GET /api/transactions to support `?action=` filter parameter
-  - Empty state messaging changes based on whether filters are applied
+- What was implemented: Added Snapshots link to dashboard navigation
 - Files changed:
-  - app/api/transactions/route.ts - added action filter support to GET endpoint
-  - app/(dashboard)/transactions/page.tsx - added filter controls, URL param persistence
+  - components/dashboard/nav.tsx - added Snapshots to navItems array
 - **Learnings for future iterations:**
-  - Use `useSearchParams` and `useRouter` from next/navigation for URL param filtering (same pattern as holdings page)
-  - Radix Select requires a non-empty value; use "all" as placeholder value and convert to null for API
-  - Fetch holdings with `?include_dormant=true` then filter client-side to get all tradeable types
-  - Filter controls should be shown even during loading/error states so users can still adjust them
-  - Query key should include filter values to refetch when filters change: `["transactions", { holdingId, action }]`
+  - Navigation is simple: just add to navItems array with href and label
+  - Active state styling already handled by usePathname comparison
 ---
 
 ## 2026-02-01 - US-011
-- What was implemented:
-  - Created `components/transactions/add-transaction-dialog.tsx` with AddTransactionDialog component
-  - Modal uses shadcn/ui Dialog with holding selector and action type selector
-  - Holding selector fetches tradeable holdings (stock, etf, crypto) via existing API
-  - Action type selector uses RadioGroup with 4 options: BUY, SELL, DIVIDEND, SPLIT
-  - Cancel button and X close button both close modal and reset state
-  - Added "Add Transaction" button to transactions page header (both empty state and table view)
+- What was implemented: Snapshots list page with table, filters, and loading/empty states
 - Files changed:
-  - components/transactions/add-transaction-dialog.tsx - new file
-  - app/(dashboard)/transactions/page.tsx - added AddTransactionDialog import and button
+  - app/(dashboard)/snapshots/page.tsx (new file)
 - **Learnings for future iterations:**
-  - Follow add-holding-dialog.tsx pattern for modal structure and state management
-  - Use `enabled: open` on useQuery to only fetch when dialog is open
-  - RadioGroup with peer-data-[state=checked] creates nice selectable cards like holdings type selector
-  - Modal should reset state in handleClose function (called by both cancel and onOpenChange)
-  - Export types like TransactionAction for reuse in form components in later stories
+  - List pages follow same pattern: useAuthSafe + TanStack Query + filter dropdowns
+  - Client-side type filtering when API doesn't support it directly (filter after fetch)
+  - Format dates with toLocaleDateString("en-AU", { month: "long", year: "numeric" })
+  - Currency formatting: use symbols map (AUD→A$, NZD→NZ$, USD→US$)
+  - Dark mode styling: bg-gray-800 border-gray-700 for Select components
+  - Define SnapshotWithHolding interface for API responses with joined holding data
 ---
 
 ## 2026-02-01 - US-012
-- What was implemented:
-  - Added step 2 to AddTransactionDialog for BUY/SELL transaction forms
-  - Form fields: Date (date picker), Quantity, Unit Price, Fees (optional), Notes (optional)
-  - Currency auto-filled from holding (read-only display)
-  - Calculated total displayed: (quantity x unit_price) +/- fees
-  - For SELL: shows current quantity held, validates against it, warns when selling all
-  - Save calls POST /api/transactions with toast on success/error
-  - Created /api/holdings/[id]/quantity endpoint to fetch current holdings for SELL validation
+- What was implemented: Dashboard check-in prompt card showing when monthly snapshots needed
 - Files changed:
-  - components/transactions/add-transaction-dialog.tsx - added step 2 BUY/SELL form
-  - app/api/holdings/[id]/quantity/route.ts - new file for quantity endpoint
+  - app/api/check-in/status/route.ts (new file) - API to detect holdings needing current month snapshot
+  - components/check-in/check-in-prompt-card.tsx (new file) - Client component with TanStack Query
+  - app/(dashboard)/dashboard/page.tsx - Integrated CheckInPromptCard component
+  - lib/hooks/use-auth-safe.ts - Fixed conditional hook to work without Clerk configured
 - **Learnings for future iterations:**
-  - Use `useMemo` for calculated values that depend on form state (e.g., total, isSellingAll, exceedsHoldings)
-  - For client-side validation before server submission, check computed values like `exceedsHoldings`
-  - Fetch quantity only when SELL is selected and step 2 is shown: `enabled: open && step === 2 && selectedAction === "SELL"`
-  - Reset form data when going back to step 1 to prevent stale values
-  - Use parseFloat for form values since input type="number" still returns strings
-  - Placeholder for DIVIDEND/SPLIT forms makes it clear those are deferred to next story
+  - useAuthSafe hook must check clerkPubKey BEFORE calling useAuth() to avoid "useAuth outside ClerkProvider" error
+  - Dashboard cards use pattern: fetch status API → conditionally render based on response
+  - Card hidden when `needsCheckIn: false` or on loading/error (graceful degradation)
+  - Quote paths with parentheses in bash git commands: `git add "app/(dashboard)/..."`
+  - Check-in status API returns: needsCheckIn, holdingsToUpdate, totalSnapshotHoldings, currentMonth, holdings[]
 ---
 
 ## 2026-02-01 - US-013
-- What was implemented:
-  - Added DIVIDEND form to AddTransactionDialog with fields: Date, Shares Held, Dividend Per Share, Notes
-  - DIVIDEND form shows calculated total dividend (quantity x unit_price) with green color styling
-  - DIVIDEND form hides fees field (auto-set to 0 on submission)
-  - Added SPLIT form with fields: Date, Split Ratio (X:1 format), Notes
-  - SPLIT form includes explanation: "A 2:1 split doubles your shares and halves the price"
-  - SPLIT form auto-sets unit_price and fees to 0 on submission
-  - Updated handleSubmit validation to handle action-specific field requirements
-  - Updated calculatedTotal to include DIVIDEND calculation
+- What was implemented: Monthly check-in modal base structure with month selector and grouped holdings
 - Files changed:
-  - components/transactions/add-transaction-dialog.tsx - added DIVIDEND and SPLIT step 2 forms
+  - components/check-in/check-in-modal.tsx (new file) - Modal with Dialog, month selector, grouped holdings display
+  - components/check-in/check-in-prompt-card.tsx - Integrated modal trigger with useState
+  - app/api/check-in/status/route.ts - Added ?month= query param support for current/previous month filtering
 - **Learnings for future iterations:**
-  - Different action types have different required/optional fields - use conditional validation in handleSubmit
-  - For SPLIT ratio display, use "X : 1" format with separate input and text label
-  - Use colored backgrounds (bg-blue-500/10, border-blue-500/20) for informational callouts
-  - Dynamic help text based on form values (e.g., showing what a specific ratio means) improves UX
-  - Boolean flags like `isDividend`, `isSplit` make conditional rendering cleaner than nested ternaries
+  - Modal components take open/onOpenChange props for controlled state from parent
+  - Use useMemo to group data by type with a typeOrder array for consistent ordering
+  - Reset modal state (selectedMonth, updatedHoldingIds) in handleOpenChange when closing
+  - API month filtering: validate YYYY-MM-01 format and restrict to current/previous month only
+  - NextRequest param required for accessing searchParams: `GET(request: NextRequest)`
 ---
 
 ## 2026-02-01 - US-014
-- What was implemented:
-  - Created `components/transactions/edit-transaction-dialog.tsx` with EditTransactionDialog component
-  - Form pre-populated with existing transaction data via useEffect when dialog opens
-  - Holding and action type displayed read-only (cannot be changed after creation)
-  - For SELL edits: calculates "available to sell" as current holdings + original sell quantity
-  - SELL validation shows warning when selling all, error when exceeding available
-  - Created `components/transactions/delete-transaction-dialog.tsx` with DeleteTransactionDialog component
-  - Delete dialog uses AlertDialog (from shadcn/ui) for confirmation
-  - Shows transaction details: holding, date, action, quantity, total
-  - Includes yellow warning: "Deleting this transaction will affect cost basis calculations"
-  - Added Edit/Delete icon buttons to each transaction row in table (SVG icons, ghost buttons)
-  - Both dialogs use useMutation with onSuccess invalidation and toast notifications
+- What was implemented: Super holdings entry in check-in modal with balance input and optional contributions
 - Files changed:
-  - components/transactions/edit-transaction-dialog.tsx - new file
-  - components/transactions/delete-transaction-dialog.tsx - new file
-  - app/(dashboard)/transactions/page.tsx - added state, imports, icon buttons, and dialog rendering
+  - components/check-in/check-in-modal.tsx - Added SuperHoldingEntry component and state management
 - **Learnings for future iterations:**
-  - For SELL edit validation: "available quantity" = current holdings + original transaction quantity (to allow reducing but not exceeding)
-  - Use useEffect with dependency on `open` and `transaction` to reset form state when dialog opens
-  - AlertDialog from shadcn/ui is better for destructive confirmations than Dialog
-  - SVG icons inline work well for small action buttons without needing a icon library
-  - Conditional dialog rendering pattern: `{editTransaction && <EditTransactionDialog ... />}` ensures dialog only mounts when needed
+  - Create separate sub-components (like SuperHoldingEntry) for complex form sections within modals
+  - Use Record<string, DataType> for form state when managing multiple dynamic entries
+  - Expandable sections: use ChevronDown/ChevronRight icons from lucide-react with button toggle
+  - Currency symbols map: AUD→A$, NZD→NZ$, USD→US$ for display
+  - Track "updated" state based on whether required fields (balance) have values
+  - Export interfaces (SuperHoldingData) for use in future stories (save functionality)
 ---
 
 ## 2026-02-01 - US-015
-- What was implemented:
-  - Updated GET /api/holdings with optional `?include_cost_basis=true` parameter
-  - For tradeable holdings (stock, etf, crypto), calculates quantity, cost basis, and avg cost using calculateCostBasis helper
-  - Non-tradeable holdings (super, cash, debt) return null for these fields
-  - Created `HoldingWithCostBasis` interface extending `Holding` with quantity, costBasis, avgCost fields
-  - Updated `holdings-table.tsx` to display Quantity, Cost Basis, Avg Cost columns for tradeable types only
-  - Added formatQuantity (with more decimals for crypto) and formatCurrency helper functions
-  - Shows dash (—) for zero/null values to indicate no transactions
+- What was implemented: Cash and debt holding entries in check-in modal
 - Files changed:
-  - app/api/holdings/route.ts - added include_cost_basis parameter and cost basis calculation
-  - app/(dashboard)/holdings/page.tsx - added HoldingWithCostBasis interface, updated fetch URL
-  - components/holdings/holdings-table.tsx - added new columns, helper functions, updated types
+  - components/check-in/check-in-modal.tsx - Added CashHoldingEntry and DebtHoldingEntry components
 - **Learnings for future iterations:**
-  - Use `?include_cost_basis=true` query param pattern to optionally include computed data (avoids extra DB queries when not needed)
-  - Export types from page components if needed by child components (like HoldingWithCostBasis exported from holdings/page.tsx)
-  - formatQuantity should use more decimal places for values < 1 (common in crypto) vs whole units (stocks)
-  - Conditional columns in tables: add both header and body cells inside same `{isTradeable && (<>...</>)}` block
+  - BalanceHoldingData interface for simpler holdings (just balance, no contributions)
+  - Cash and debt use same pattern: name label + balance input with currency symbol
+  - Debt section requires explanatory text above holdings for user clarity
+  - Reuse patterns from SuperHoldingEntry (currency symbols, state management) for consistency
+  - Each holding type needs its own state (superHoldingsData, cashHoldingsData, debtHoldingsData)
+  - Reset all state types when month changes or modal closes
 ---
 
+## 2026-02-01 - US-016
+- What was implemented: Check-in modal save and complete functionality
+- Files changed:
+  - app/api/check-in/save/route.ts (new file) - Batch save API endpoint
+  - components/check-in/check-in-modal.tsx - Added Save All button, validation, and mutation
+- **Learnings for future iterations:**
+  - Batch API endpoints reduce multiple round trips - process all entries in single request
+  - useMutation from TanStack Query with onSuccess/onError for clean save flow
+  - Invalidate multiple query keys on success: check-in-holdings, check-in-status, snapshots, contributions, holdings
+  - Add error prop to entry components for inline validation display
+  - Use conditional border styling: `${error ? "border-red-500" : "border-gray-700"}`
+  - toast from sonner for success/error notifications
+  - Loader2 from lucide-react with animate-spin for loading state
+  - Disable buttons during mutation with isPending
+---
+
+
+## 2026-02-01 - US-018
+- What was implemented: Delete snapshot with confirmation dialog, including associated contribution deletion
+- Files changed:
+  - components/snapshots/delete-snapshot-dialog.tsx (new file) - AlertDialog with snapshot details and delete confirmation
+  - app/api/snapshots/[id]/route.ts - Updated DELETE handler to also soft-delete associated contributions for super holdings
+  - app/(dashboard)/snapshots/page.tsx - Added Trash2 button and DeleteSnapshotDialog integration
+- **Learnings for future iterations:**
+  - Delete dialogs use AlertDialog from shadcn/ui (not Dialog) for confirmation pattern
+  - For cascading deletes, update the API to handle related entities (contributions when deleting super snapshots)
+  - Use yellow warning color (text-yellow-400, bg-yellow-400/10) for important user warnings
+  - Mutation isPending state can disable both Cancel and Action buttons during delete operation
+  - Table action buttons: wrap multiple buttons in `<div className="flex justify-end gap-1">` for proper spacing
+---
+
+## 2026-02-01 - US-019
+- What was implemented: Display holdings with latest balance for snapshot holdings (super, cash, debt)
+- Files changed:
+  - app/api/holdings/route.ts - Added `include_latest_snapshot` query param to include latest snapshot data
+  - app/(dashboard)/holdings/page.tsx - Updated to request holdings with latest snapshots
+  - components/holdings/holdings-table.tsx - Added Balance column with stale indicator for snapshot types
+- **Learnings for future iterations:**
+  - API pattern: use query params for optional data inclusion (`include_latest_snapshot=true`)
+  - For efficient "latest per group" queries: use subquery with MAX() grouped by holdingId, then join back
+  - Stale indicator pattern: compare dates in frontend helper function for UI flexibility
+  - Export TypeScript interfaces from table components for type reuse in pages
+  - AlertTriangle icon from lucide-react for warning indicators
+---

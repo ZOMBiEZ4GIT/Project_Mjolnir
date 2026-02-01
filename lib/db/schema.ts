@@ -86,10 +86,12 @@ export const snapshots = pgTable(
       .references(() => holdings.id)
       .notNull(),
     date: date("date").notNull(),
-    balance: decimal("balance", { precision: 20, scale: 2 }).notNull(),
+    balance: decimal("balance", { precision: 18, scale: 2 }).notNull(),
     currency: currencyEnum("currency").notNull(),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }), // Soft delete
   },
   (table) => ({
     // Unique constraint: one snapshot per holding per date
@@ -101,17 +103,26 @@ export const snapshots = pgTable(
 // CONTRIBUTIONS
 // =============================================================================
 
-export const contributions = pgTable("contributions", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  holdingId: uuid("holding_id")
-    .references(() => holdings.id)
-    .notNull(),
-  date: date("date").notNull(),
-  employerContrib: decimal("employer_contrib", { precision: 20, scale: 2 }).default("0").notNull(),
-  employeeContrib: decimal("employee_contrib", { precision: 20, scale: 2 }).default("0").notNull(),
-  notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const contributions = pgTable(
+  "contributions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    holdingId: uuid("holding_id")
+      .references(() => holdings.id)
+      .notNull(),
+    date: date("date").notNull(),
+    employerContrib: decimal("employer_contrib", { precision: 18, scale: 2 }).default("0").notNull(),
+    employeeContrib: decimal("employee_contrib", { precision: 18, scale: 2 }).default("0").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }), // Soft delete
+  },
+  (table) => ({
+    // Unique constraint: one contribution per holding per date
+    uniqueHoldingDate: unique().on(table.holdingId, table.date),
+  })
+);
 
 // =============================================================================
 // PRICE CACHE

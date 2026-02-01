@@ -1,11 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Holding } from "@/lib/db/schema";
-import type { HoldingWithCostBasis } from "@/app/(dashboard)/holdings/page";
 import {
   Table,
   TableBody,
@@ -47,12 +46,44 @@ const HOLDING_TYPE_ORDER: Holding["type"][] = [
   "debt",
 ];
 
-interface HoldingsTableProps {
-  holdings: HoldingWithCostBasis[];
+// Types that are tradeable (show quantity, cost basis)
+const TRADEABLE_TYPES = ["stock", "etf", "crypto"] as const;
+
+// Types that use snapshot-based balance tracking
+const SNAPSHOT_TYPES = ["super", "cash", "debt"] as const;
+
+// Currency symbol mapping
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  AUD: "A$",
+  NZD: "NZ$",
+  USD: "US$",
+};
+
+// Latest snapshot data shape from API
+interface LatestSnapshot {
+  id: string;
+  holdingId: string;
+  date: string;
+  balance: string;
+  currency: string;
 }
 
-function groupHoldingsByType(holdings: HoldingWithCostBasis[]): Map<Holding["type"], HoldingWithCostBasis[]> {
-  const groups = new Map<Holding["type"], HoldingWithCostBasis[]>();
+// Holding with both cost basis and snapshot data
+export interface HoldingWithData extends Holding {
+  // Cost basis data (for tradeable holdings)
+  quantity: number | null;
+  costBasis: number | null;
+  avgCost: number | null;
+  // Snapshot data (for snapshot holdings)
+  latestSnapshot: LatestSnapshot | null;
+}
+
+interface HoldingsTableProps {
+  holdings: HoldingWithData[];
+}
+
+function groupHoldingsByType(holdings: HoldingWithData[]): Map<Holding["type"], HoldingWithData[]> {
+  const groups = new Map<Holding["type"], HoldingWithData[]>();
 
   for (const holding of holdings) {
     const existing = groups.get(holding.type) || [];
@@ -60,6 +91,42 @@ function groupHoldingsByType(holdings: HoldingWithCostBasis[]): Map<Holding["typ
   }
 
   return groups;
+}
+
+/**
+ * Check if a snapshot date is stale (older than 2 months from now)
+ */
+function isSnapshotStale(dateString: string): boolean {
+  const snapshotDate = new Date(dateString);
+  const now = new Date();
+
+  // Calculate 2 months ago
+  const twoMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+
+  return snapshotDate < twoMonthsAgo;
+}
+
+/**
+ * Format balance as currency
+ */
+function formatBalance(balance: string, currency: string): string {
+  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  const num = Number(balance);
+  return `${symbol}${num.toLocaleString("en-AU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+/**
+ * Format date as "Month Year" (e.g., "Jan 2026")
+ */
+function formatSnapshotDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-AU", {
+    month: "short",
+    year: "numeric",
+  });
 }
 
 /**
@@ -92,8 +159,8 @@ function formatQuantity(value: number | null): string {
 }
 
 export function HoldingsTable({ holdings }: HoldingsTableProps) {
-  const [editingHolding, setEditingHolding] = useState<HoldingWithCostBasis | null>(null);
-  const [deletingHolding, setDeletingHolding] = useState<HoldingWithCostBasis | null>(null);
+  const [editingHolding, setEditingHolding] = useState<HoldingWithData | null>(null);
+  const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
   const groupedHoldings = groupHoldingsByType(holdings);
   const queryClient = useQueryClient();
 
@@ -190,14 +257,15 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
 
 interface HoldingsTypeSectionProps {
   type: Holding["type"];
-  holdings: HoldingWithCostBasis[];
-  onEdit: (holding: HoldingWithCostBasis) => void;
-  onDelete: (holding: HoldingWithCostBasis) => void;
+  holdings: HoldingWithData[];
+  onEdit: (holding: HoldingWithData) => void;
+  onDelete: (holding: HoldingWithData) => void;
 }
 
 function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeSectionProps) {
   const label = HOLDING_TYPE_LABELS[type];
-  const isTradeable = type === "stock" || type === "etf" || type === "crypto";
+  const isTradeable = TRADEABLE_TYPES.includes(type as (typeof TRADEABLE_TYPES)[number]);
+  const isSnapshotType = SNAPSHOT_TYPES.includes(type as (typeof SNAPSHOT_TYPES)[number]);
 
   return (
     <section>
@@ -213,6 +281,9 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
               {isTradeable && (
                 <TableHead className="text-gray-400">Symbol</TableHead>
               )}
+              {isSnapshotType && (
+                <TableHead className="text-gray-400">Balance</TableHead>
+              )}
               <TableHead className="text-gray-400">Currency</TableHead>
               {isTradeable && (
                 <>
@@ -226,70 +297,98 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
             </TableRow>
           </TableHeader>
           <TableBody>
-            {holdings.map((holding) => (
-              <TableRow
-                key={holding.id}
-                className={`border-gray-800 ${holding.isDormant ? "opacity-60" : ""}`}
-              >
-                <TableCell className="text-white font-medium">
-                  {holding.name}
-                </TableCell>
-                {isTradeable && (
-                  <TableCell className="text-gray-300">
-                    {holding.symbol || "—"}
+            {holdings.map((holding) => {
+              const snapshot = holding.latestSnapshot;
+              const isStale = snapshot ? isSnapshotStale(snapshot.date) : false;
+
+              return (
+                <TableRow
+                  key={holding.id}
+                  className={`border-gray-800 ${holding.isDormant ? "opacity-60" : ""}`}
+                >
+                  <TableCell className="text-white font-medium">
+                    {holding.name}
                   </TableCell>
-                )}
-                <TableCell className="text-gray-300">
-                  {holding.currency}
-                </TableCell>
-                {isTradeable && (
-                  <>
-                    <TableCell className="text-gray-300 text-right font-mono">
-                      {formatQuantity(holding.quantity)}
+                  {isTradeable && (
+                    <TableCell className="text-gray-300">
+                      {holding.symbol || "—"}
                     </TableCell>
-                    <TableCell className="text-gray-300 text-right font-mono">
-                      {formatCurrency(holding.costBasis)}
-                    </TableCell>
-                    <TableCell className="text-gray-300 text-right font-mono">
-                      {formatCurrency(holding.avgCost)}
-                    </TableCell>
-                  </>
-                )}
-                <TableCell>
-                  {holding.isDormant ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">
-                      Dormant
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-900 text-green-300">
-                      Active
-                    </span>
                   )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-gray-400 hover:text-white"
-                      onClick={() => onEdit(holding)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      <span className="sr-only">Edit {holding.name}</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-gray-400 hover:text-red-500"
-                      onClick={() => onDelete(holding)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete {holding.name}</span>
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                  {isSnapshotType && (
+                    <TableCell>
+                      {snapshot ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-white">
+                            {formatBalance(snapshot.balance, snapshot.currency)}
+                          </span>
+                          <span
+                            className={`text-xs flex items-center gap-1 ${
+                              isStale ? "text-yellow-400" : "text-gray-500"
+                            }`}
+                          >
+                            {isStale && (
+                              <AlertTriangle className="h-3 w-3" />
+                            )}
+                            as of {formatSnapshotDate(snapshot.date)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 text-sm">No data</span>
+                      )}
+                    </TableCell>
+                  )}
+                  <TableCell className="text-gray-300">
+                    {holding.currency}
+                  </TableCell>
+                  {isTradeable && (
+                    <>
+                      <TableCell className="text-gray-300 text-right font-mono">
+                        {formatQuantity(holding.quantity)}
+                      </TableCell>
+                      <TableCell className="text-gray-300 text-right font-mono">
+                        {formatCurrency(holding.costBasis)}
+                      </TableCell>
+                      <TableCell className="text-gray-300 text-right font-mono">
+                        {formatCurrency(holding.avgCost)}
+                      </TableCell>
+                    </>
+                  )}
+                  <TableCell>
+                    {holding.isDormant ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">
+                        Dormant
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-900 text-green-300">
+                        Active
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-400 hover:text-white"
+                        onClick={() => onEdit(holding)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Edit {holding.name}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-400 hover:text-red-500"
+                        onClick={() => onDelete(holding)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete {holding.name}</span>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
