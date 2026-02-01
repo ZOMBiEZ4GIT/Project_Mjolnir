@@ -251,3 +251,23 @@ Started: 2026-02-01
   - Browser verification shows error states correctly when not authenticated - component is integrated properly
 
 ---
+
+## 2026-02-02 - US-012
+- Implemented dashboard net worth history chart in `components/dashboard/net-worth-chart.tsx`
+- Installed `recharts` package (also completes US-017)
+- Files changed: components/dashboard/net-worth-chart.tsx (new file), app/(dashboard)/dashboard/page.tsx, package.json, package-lock.json
+- **Learnings for future iterations:**
+  - NetWorthChart follows same pattern as other dashboard components: TanStack Query + useAuthSafe hook
+  - Uses `["net-worth-history", 12]` query key for 12-month history data
+  - Recharts components: LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  - Custom tooltip component for dark mode styling - pass via `content={<CustomTooltip />}` prop
+  - Currency formatting uses `notation: "compact"` for Y-axis labels (e.g., "$1.2M")
+  - Y-axis domain calculation adds 10% padding above and below data range
+  - Data comes from `/api/net-worth/history?months=12` - returns array in chronological order
+  - ChartDataPoint intermediate type transforms API response to Recharts format with displayMonth
+  - Line styling: `strokeWidth={2}`, `dot={{ fill: "#10B981", r: 4 }}`, `activeDot` for hover state
+  - CartesianGrid uses `vertical={false}` for cleaner appearance with horizontal lines only
+  - Empty state shows helpful message about data appearing after first month of tracking
+  - Chart height set via parent div `h-64` with `ResponsiveContainer width="100%" height="100%"`
+
+---
