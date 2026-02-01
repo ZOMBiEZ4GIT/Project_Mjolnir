@@ -250,6 +250,42 @@ function formatMarketValue(value: number | null, currency: string): string {
   })}`;
 }
 
+/**
+ * Calculate unrealized gain/loss (Market Value - Cost Basis)
+ */
+function calculateGainLoss(
+  marketValue: number | null,
+  costBasis: number | null
+): { amount: number; percent: number } | null {
+  if (marketValue === null || costBasis === null || costBasis === 0) {
+    return null;
+  }
+  const amount = marketValue - costBasis;
+  const percent = ((marketValue / costBasis) - 1) * 100;
+  return { amount, percent };
+}
+
+/**
+ * Format gain/loss amount with sign
+ */
+function formatGainLossAmount(amount: number, currency: string): string {
+  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  const sign = amount >= 0 ? "+" : "";
+  const absValue = Math.abs(amount).toLocaleString("en-AU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${sign}${symbol}${absValue}`;
+}
+
+/**
+ * Format gain/loss percentage with sign
+ */
+function formatGainLossPercent(percent: number): string {
+  const sign = percent >= 0 ? "+" : "";
+  return `${sign}${percent.toFixed(2)}%`;
+}
+
 export function HoldingsTable({ holdings, prices, pricesLoading }: HoldingsTableProps) {
   const [editingHolding, setEditingHolding] = useState<HoldingWithData | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
@@ -470,6 +506,66 @@ function MarketValueCell({ quantity, holdingId, holdingCurrency, prices, pricesL
   );
 }
 
+/**
+ * GainLossCell component displays unrealized gain/loss (Market Value - Cost Basis).
+ */
+interface GainLossCellProps {
+  quantity: number | null;
+  costBasis: number | null;
+  holdingId: string;
+  holdingCurrency: string;
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
+}
+
+function GainLossCell({ quantity, costBasis, holdingId, holdingCurrency, prices, pricesLoading }: GainLossCellProps) {
+  // Loading state
+  if (pricesLoading) {
+    return <span className="text-gray-500 text-sm">Loading...</span>;
+  }
+
+  // No quantity - cannot calculate market value
+  if (quantity === null || quantity === 0) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  // No cost basis - cannot calculate gain/loss
+  if (costBasis === null || costBasis === 0) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  // No price data available
+  const priceData = prices?.get(holdingId);
+  if (!priceData) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  const { price, currency } = priceData;
+  const displayCurrency = currency || holdingCurrency;
+  const marketValue = calculateMarketValue(quantity, price);
+  const gainLoss = calculateGainLoss(marketValue, costBasis);
+
+  if (!gainLoss) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  const isPositive = gainLoss.amount >= 0;
+  const colorClass = isPositive ? "text-green-400" : "text-red-400";
+
+  return (
+    <div className="flex flex-col gap-0.5 items-end">
+      {/* Amount */}
+      <span className={`font-mono ${colorClass}`}>
+        {formatGainLossAmount(gainLoss.amount, displayCurrency)}
+      </span>
+      {/* Percentage */}
+      <span className={`text-xs ${colorClass}`}>
+        {formatGainLossPercent(gainLoss.percent)}
+      </span>
+    </div>
+  );
+}
+
 function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, onDelete }: HoldingsTypeSectionProps) {
   const label = HOLDING_TYPE_LABELS[type];
   const isTradeable = TRADEABLE_TYPES.includes(type as (typeof TRADEABLE_TYPES)[number]);
@@ -498,6 +594,7 @@ function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, on
                   <TableHead className="text-gray-400 text-right">Quantity</TableHead>
                   <TableHead className="text-gray-400 text-right">Price</TableHead>
                   <TableHead className="text-gray-400 text-right">Market Value</TableHead>
+                  <TableHead className="text-gray-400 text-right">Gain/Loss</TableHead>
                   <TableHead className="text-gray-400 text-right">Cost Basis</TableHead>
                   <TableHead className="text-gray-400 text-right">Avg Cost</TableHead>
                 </>
@@ -566,6 +663,16 @@ function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, on
                       <TableCell className="text-right">
                         <MarketValueCell
                           quantity={holding.quantity}
+                          holdingId={holding.id}
+                          holdingCurrency={holding.currency}
+                          prices={prices}
+                          pricesLoading={pricesLoading}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <GainLossCell
+                          quantity={holding.quantity}
+                          costBasis={holding.costBasis}
                           holdingId={holding.id}
                           holdingCurrency={holding.currency}
                           prices={prices}
