@@ -312,8 +312,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "EditSnapshotModal component in components/snapshots/. Uses PATCH for snapshot update. Super holdings can create/update contributions. Added shadcn Textarea component. Edit button with Pencil icon in table Actions column."
     },
     {
       "id": "US-018",

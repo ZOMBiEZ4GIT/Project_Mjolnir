@@ -53,9 +53,27 @@
 - Dashboard components in `components/check-in/` for monthly check-in workflow
 - Quote paths with parentheses in bash git commands: `git add "app/(dashboard)/..."`
 
+- Edit modals pattern: components/[domain]/edit-[entity]-modal.tsx structure
+- For related entity editing (e.g., contributions for super snapshots), fetch existing data with useQuery and handle create/update based on existence
+
 ---
 
 # W-5 Snapshot Tracking Progress Log
+
+## 2026-02-01 - US-017
+- What was implemented: Edit snapshot modal with contributions support for super holdings
+- Files changed:
+  - components/snapshots/edit-snapshot-modal.tsx (new file)
+  - components/ui/textarea.tsx (new shadcn component)
+  - app/(dashboard)/snapshots/page.tsx - added edit button and modal integration
+- **Learnings for future iterations:**
+  - Create separate domain modal components: components/[domain]/edit-[entity]-modal.tsx
+  - When editing an entity that may have related data (e.g., contributions), fetch related data in modal with useQuery
+  - For create/update decision: check if related entity exists, then call POST or PATCH accordingly
+  - Use `npx shadcn@latest add [component]` to add missing UI components
+  - Table action buttons: use Button variant="ghost" size="icon" for compact icon buttons
+  - Use selectedSnapshot state pattern: set when row clicked, clear on modal close
+---
 
 ## 2026-02-01 - US-008
 - What was implemented: Latest snapshot helper functions for efficient lookups
