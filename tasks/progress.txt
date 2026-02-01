@@ -87,6 +87,10 @@
   - Uses carry-forward for snapshots (most recent on or before date)
   - Tradeable uses current prices (historical prices not stored) - values are estimates
 
+- Top performers calculation in `lib/calculations/performers.ts`:
+  - `getTopPerformers(userId, limit)` returns gainers and losers based on unrealized gain/loss
+  - Drizzle `inArray()` with enum columns requires `as const` on values array for type safety
+
 ---
 
 # W-7 Net Worth Calculation Progress Log
@@ -142,5 +146,20 @@ Started: 2026-02-01
   - Pre-fetches all prices into a Map for efficiency when calculating multiple months
   - Month ends calculated with `getMonthEnd(year, month)` using the "day 0 of next month" trick
   - Returns data points in chronological order (oldest first)
+
+---
+
+## 2026-02-01 - US-005
+- Implemented top performers calculation in `lib/calculations/performers.ts`
+- Files changed: lib/calculations/performers.ts (new file)
+- **Learnings for future iterations:**
+  - `getTopPerformers(userId, limit)` returns `TopPerformersResult` with `gainers: Performer[]` and `losers: Performer[]`
+  - Performer type includes: holdingId, name, symbol, gainLoss, gainLossPercent, type, currentValue, costBasis
+  - Only tradeable holdings (stock, etf, crypto) are included - snapshot-based holdings don't have cost basis
+  - Holdings without position, price, or cost basis are excluded (return null from calculation)
+  - Uses `calculateCostBasis()` from cost-basis.ts for FIFO cost calculation
+  - Gainers sorted by gainLoss descending (biggest gain first)
+  - Losers sorted by gainLoss ascending (biggest loss first, i.e., most negative)
+  - When using `inArray()` with Drizzle enum columns, must use `as const` on the values array
 
 ---
