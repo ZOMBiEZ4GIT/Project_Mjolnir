@@ -271,3 +271,36 @@ Started: 2026-02-01
   - Chart height set via parent div `h-64` with `ResponsiveContainer width="100%" height="100%"`
 
 ---
+
+## 2026-02-02 - US-013
+- Implemented dashboard top performers section in `components/dashboard/top-performers.tsx`
+- Files changed: components/dashboard/top-performers.tsx (new file), app/(dashboard)/dashboard/page.tsx
+- **Learnings for future iterations:**
+  - TopPerformers follows same pattern as other dashboard components: TanStack Query + useAuthSafe hook
+  - Uses `["top-performers"]` query key for performers data from `/api/net-worth/performers?limit=5`
+  - Grid layout: `grid-cols-1 md:grid-cols-2` for side-by-side gainers/losers on desktop
+  - PerformerRow component links to `/holdings/:holdingId` for detail navigation
+  - Color scheme: `text-emerald-400` for gainers, `text-red-400` for losers
+  - Sign formatting: gainers show `+$X,XXX.XX` / `+X.XX%`, losers show `-$X,XXX.XX` / `-X.XX%`
+  - Icons: TrendingUp for gainers section, TrendingDown for losers section
+  - Empty state handles both no data and partial data (one list empty, other has items)
+  - Hover effect on rows: `hover:bg-gray-700/50 transition-colors`
+
+---
+
+## 2026-02-02 - US-014
+- Implemented stale data warning banner in `components/dashboard/stale-data-warning.tsx`
+- Files changed: components/dashboard/stale-data-warning.tsx (new file), app/(dashboard)/dashboard/page.tsx
+- **Learnings for future iterations:**
+  - StaleDataWarning follows same pattern as other dashboard components: TanStack Query + useAuthSafe hook
+  - Uses same `["net-worth"]` query key as other components for shared cache
+  - Component returns null when: not authenticated, loading, error, or no stale data
+  - Collapsible/expandable UI with `useState(false)` for `isExpanded` state
+  - StaleReason types: `price_expired`, `no_price`, `snapshot_old`, `no_snapshot`
+  - Icon mapping: DollarSign for price-related, Clock for snapshot-related stale reasons
+  - Yellow color scheme: `border-yellow-600/50`, `bg-yellow-900/20`, `text-yellow-400/500`
+  - Each stale holding row links to `/holdings/:holdingId` and shows refresh/view action buttons
+  - Footer provides contextual help: "Use refresh button" for prices, "Complete check-in" for snapshots
+  - `formatTimeAgo` handles months for very old snapshots (> 60 days)
+
+---
