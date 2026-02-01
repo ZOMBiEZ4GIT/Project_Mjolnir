@@ -222,3 +222,16 @@ Started: 2026-02-01
   - Browser verification requires local DATABASE_URL configuration; manual verification may be needed
 
 ---
+
+## 2026-02-01 - US-010
+- Implemented dashboard total assets and debt cards in `components/dashboard/summary-cards.tsx`
+- Files changed: components/dashboard/summary-cards.tsx (new file), app/(dashboard)/dashboard/page.tsx
+- **Learnings for future iterations:**
+  - SummaryCards follows same pattern as NetWorthHero: TanStack Query + useAuthSafe hook
+  - For debt cards, positive change (increased debt) shows as negative indicator (red) - flip the indicator logic with `accentColor` prop
+  - Reuses same API endpoints as hero card: `/api/net-worth` and `/api/net-worth/history?months=2`
+  - Grid layout: `grid-cols-1 md:grid-cols-2` for responsive 2-column on desktop, stacked on mobile
+  - CardSkeleton component for consistent loading states across both cards
+  - Dashboard page now integrates NetWorthHero and SummaryCards - these can share the same TanStack Query cache keys
+
+---

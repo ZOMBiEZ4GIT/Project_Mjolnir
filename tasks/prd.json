@@ -179,7 +179,7 @@
         "Verify in browser using Playwright"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
