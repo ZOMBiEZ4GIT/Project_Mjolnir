@@ -56,10 +56,39 @@
 - Edit modals pattern: components/[domain]/edit-[entity]-modal.tsx structure
 - For related entity editing (e.g., contributions for super snapshots), fetch existing data with useQuery and handle create/update based on existence
 
+- Neon MCP tools can be used to run migrations when DATABASE_URL is not configured locally
+- Migration snapshot chain: each snapshot's prevId must point to the previous migration's id to avoid collision errors
+
 ---
 
 # W-6 Live Prices & Caching Progress Log
 
 Started: 2026-02-01
 
+---
+
+## 2026-02-01 - US-001
+- What was implemented: Price cache database schema with all required fields
+- Files changed:
+  - `lib/db/schema.ts` - Added priceCacheSourceEnum and updated priceCache table with change_percent, change_absolute, source, and unique constraint on symbol
+  - `drizzle/0003_slim_cyclops.sql` - Migration file for new fields
+  - `drizzle/meta/0002_snapshot.json` - Fixed prevId to point to 0001 (was causing collision)
+  - `drizzle/meta/0003_snapshot.json` - New snapshot for migration 0003
+  - `drizzle/meta/_journal.json` - Updated with new migration entry
+- **Learnings for future iterations:**
+  - Database was empty - had to apply all migrations (0000, 0001, 0002, 0003) via Neon MCP tools
+  - Migration 0002 and 0001 both had same prevId pointing to 0000 - this was a collision error. Fixed by updating 0002's prevId to point to 0001's id
+  - Use `mcp__neon__run_sql_transaction` to apply multiple SQL statements in sequence
+---
+
+## 2026-02-01 - US-002
+- What was implemented: Exchange rate cache database schema for currency conversion
+- Files changed:
+  - `lib/db/schema.ts` - Added exchangeRates table with id, from_currency, to_currency, rate, fetched_at fields and unique constraint on currency pair
+  - `drizzle/0004_lazy_radioactive_man.sql` - Migration file for new table
+  - `drizzle/meta/0004_snapshot.json` - Snapshot for migration 0004
+  - `drizzle/meta/_journal.json` - Updated with new migration entry
+- **Learnings for future iterations:**
+  - Drizzle migrations tracking table doesn't exist in this project's Neon database - migrations are applied directly via MCP tools
+  - Use `mcp__neon__describe_table_schema` to verify table creation with columns and constraints
 ---
