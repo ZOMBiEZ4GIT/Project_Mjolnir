@@ -235,3 +235,19 @@ Started: 2026-02-01
   - Dashboard page now integrates NetWorthHero and SummaryCards - these can share the same TanStack Query cache keys
 
 ---
+
+## 2026-02-01 - US-011
+- Implemented dashboard asset allocation cards in `components/dashboard/asset-allocation.tsx`
+- Files changed: components/dashboard/asset-allocation.tsx (new file), app/(dashboard)/dashboard/page.tsx
+- **Learnings for future iterations:**
+  - AssetAllocation component follows same pattern as other dashboard components: TanStack Query + useAuthSafe hook
+  - Uses same `["net-worth"]` query key as NetWorthHero and SummaryCards for shared cache
+  - Asset type icons: TrendingUp (stocks), Landmark (etf), Bitcoin (crypto), PiggyBank (super), Banknote (cash)
+  - Progress bars use `bg-{color}-500` with percentage width via inline style
+  - Icon container uses `bg-opacity-20` for subtle background tint
+  - Breakdown data comes from `/api/net-worth` response - already includes `breakdown` array with asset types
+  - Sorts breakdown by `totalValue` descending to show largest allocations first
+  - Calculates percentage from `item.totalValue / totalAssets * 100` (API doesn't pre-calculate this)
+  - Browser verification shows error states correctly when not authenticated - component is integrated properly
+
+---
