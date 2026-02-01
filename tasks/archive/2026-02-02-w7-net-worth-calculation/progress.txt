@@ -1,0 +1,334 @@
+## Codebase Patterns
+- Project uses Next.js 16+ App Router with TypeScript
+- Drizzle ORM is already installed (`drizzle-orm`, `drizzle-kit`, `@neondatabase/serverless`)
+- shadcn/ui components available in `components/ui`
+- Dark mode only - no light mode support
+- Quality checks: `npm run build` and `npm run lint`
+- ESLint 9 with flat config format (eslint.config.mjs) - do not use .eslintrc.json
+- Next.js 16 doesn't have `next lint` command - use `eslint .` directly
+
+- Database module uses lazy initialization via Proxy to avoid build-time errors when DATABASE_URL is not set
+- Use `sql` template tag from drizzle-orm for raw SQL queries with `db.execute(sql\`...\`)`
+- ClerkProvider conditionally renders based on NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to allow builds without Clerk keys
+- Use `export const dynamic = "force-dynamic"` for pages/layouts that use Clerk components
+- Dashboard routes at `/dashboard` and `/profile` are protected; landing page `/` is public
+- Auth pages use `(auth)` route group; dashboard uses `(dashboard)` route group
+
+- Drizzle migrations are stored in `drizzle/` directory and should be committed to git
+- The holdings schema exists in `lib/db/schema.ts` with all required fields
+- Transactions schema exists with action enum: BUY, SELL, DIVIDEND, SPLIT
+
+- TanStack Query provider is in `components/providers/query-provider.tsx` - wrap layouts with QueryProvider
+- ClerkProvider wrapper is in `components/providers/clerk-provider.tsx` - handles missing Clerk keys gracefully
+- Use `useAuthSafe` hook from `lib/hooks/use-auth-safe.ts` for client-side auth state that works with/without Clerk
+- Holdings page is at `/holdings` using `app/(dashboard)/holdings/page.tsx`
+- Transactions page is at `/transactions` using `app/(dashboard)/transactions/page.tsx`
+
+- Toast notifications use Sonner - import `toast` from `sonner` and use `toast.success()` / `toast.error()`
+- Toaster component is in root layout; for dark mode only, hardcode `theme="dark"` in Sonner component
+
+- Dashboard navigation uses `components/dashboard/nav.tsx` with usePathname for active state
+- Navigation items defined in array for easy extension
+- ESLint no-case-declarations: wrap switch case blocks containing `const`/`let` declarations in braces `{ }`
+
+- API patterns:
+  - Use innerJoin with holdings to validate user ownership AND include holding info
+  - Return 409 Conflict for duplicate prevention (unique constraint violations)
+  - Return 400 with `{ errors: { field: "message" } }` for validation errors
+  - Decimal fields from Drizzle come as strings, need Number() conversion for arithmetic
+
+- Calculation helpers in `lib/calculations/`:
+  - `quantity.ts` - calculateQuantityHeld for tradeable holdings
+  - `cost-basis.ts` - calculateCostBasis with FIFO methodology
+
+- Snapshots and contributions schema: uses `employer_contrib`/`employee_contrib` (not `employer_contribution`) for DB column names to avoid migration renames
+
+- Query helpers in `lib/queries/`:
+  - `snapshots.ts` - getLatestSnapshots() and getLatestSnapshotForHolding() for fetching most recent snapshots
+
+- Calculation helpers in `lib/calculations/`:
+  - `super-returns.ts` - calculateInvestmentReturns() and calculateMonthlyInvestmentReturns() for super fund performance
+
+- Check-in status API at `/api/check-in/status` returns holdings needing current month snapshots
+- Dashboard components in `components/check-in/` for monthly check-in workflow
+- Quote paths with parentheses in bash git commands: `git add "app/(dashboard)/..."`
+
+- Edit modals pattern: components/[domain]/edit-[entity]-modal.tsx structure
+- For related entity editing (e.g., contributions for super snapshots), fetch existing data with useQuery and handle create/update based on existence
+
+- Neon MCP tools can be used to run migrations when DATABASE_URL is not configured locally
+- Migration snapshot chain: each snapshot's prevId must point to the previous migration's id to avoid collision errors
+
+- Price services in `lib/services/`:
+  - `yahoo-finance.ts` - fetchStockPrice() with normalizeSymbol() for ASX/NZX suffixes
+  - `coingecko.ts` - fetchCryptoPrice() using symbol-to-ID mapping
+  - `exchange-rates.ts` - getExchangeRate() with 1-hour cache
+  - `price-cache.ts` - getCachedPrice(), setCachedPrice() with 15-minute TTL
+  - `price-fetcher.ts` - fetchPrice() unified interface routing to correct provider
+  - `crypto-symbols.ts` - getCoinGeckoId() mapping for 60+ tokens
+
+- Holdings table in `components/holdings/holdings-table.tsx` includes:
+  - PriceCell with stale/error indicators and retry button
+  - MarketValueCell calculating quantity x price
+  - GainLossCell showing unrealized gain/loss with percentage
+
+- Net worth calculation in `lib/calculations/net-worth.ts`:
+  - `calculateNetWorth(userId)` returns NetWorthResult with netWorth, totalAssets, totalDebt, breakdown by type
+  - `calculateAssetBreakdown(userId)` returns AssetBreakdown with percentage for each type and holding
+  - Uses `calculateQuantityHeld()` for tradeable assets, `getLatestSnapshots()` for snapshot-based assets
+  - All values converted to AUD via `getExchangeRate()`
+  - Carry-forward logic: stale data is used for calculations with `StaleHolding[]` tracking
+  - Tradeable staleness: 15-minute price TTL via `isCacheValid()`
+  - Snapshot staleness: 2-month threshold (SNAPSHOT_STALE_THRESHOLD_MS)
+
+- Historical net worth calculation in `lib/calculations/net-worth-history.ts`:
+  - `calculateHistoricalNetWorth(userId, months)` returns HistoricalNetWorthResult with history array
+  - HistoryPoint: { date, netWorth, totalAssets, totalDebt }
+  - Uses carry-forward for snapshots (most recent on or before date)
+  - Tradeable uses current prices (historical prices not stored) - values are estimates
+
+- Top performers calculation in `lib/calculations/performers.ts`:
+  - `getTopPerformers(userId, limit)` returns gainers and losers based on unrealized gain/loss
+  - Drizzle `inArray()` with enum columns requires `as const` on values array for type safety
+
+- Dashboard components in `components/dashboard/`:
+  - Client components using TanStack Query for data fetching from API routes
+  - Pattern: fetch data from API, show loading skeleton, then render content
+  - Use `useAuthSafe` hook to check `isLoaded && isSignedIn` before enabling queries
+  - Currency formatting: `Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" })`
+  - Icons from `lucide-react` (TrendingUp, TrendingDown, AlertTriangle, etc.)
+
+---
+
+# W-7 Net Worth Calculation Progress Log
+
+Started: 2026-02-01
+
+---
+
+## 2026-02-01 - US-001
+- Implemented net worth calculation service in `lib/calculations/net-worth.ts`
+- Files changed: lib/calculations/net-worth.ts (new file)
+- **Learnings for future iterations:**
+  - Net worth calculation reuses existing helpers: `calculateQuantityHeld()`, `getLatestSnapshots()`, `getCachedPrice()`, `getExchangeRate()`
+  - Breakdown includes both per-type grouping AND per-holding details
+  - Debt is tracked separately from assets (debtBreakdown field)
+  - Holdings with no cached price are included in breakdown with value=0 for visibility
+
+---
+
+## 2026-02-01 - US-002
+- Implemented `calculateAssetBreakdown(userId)` function in `lib/calculations/net-worth.ts`
+- Files changed: lib/calculations/net-worth.ts
+- **Learnings for future iterations:**
+  - Added new types: `HoldingWithPercentage`, `AssetBreakdownItem`, `AssetBreakdown`
+  - Assets sorted by value descending
+  - Debt treated as separate category (percentage = 100% since it's its own group)
+  - `addHoldingPercentages()` helper to calculate percentage within a group
+
+---
+
+## 2026-02-01 - US-003
+- Implemented carry-forward logic for missing data in `lib/calculations/net-worth.ts`
+- Files changed: lib/calculations/net-worth.ts
+- **Learnings for future iterations:**
+  - Added `StaleHolding` type with `StaleReason` union: `price_expired`, `no_price`, `snapshot_old`, `no_snapshot`
+  - `NetWorthResult` now includes `staleHoldings: StaleHolding[]` and `hasStaleData: boolean`
+  - Tradeable: uses `isCacheValid()` from price-cache.ts to check 15-minute TTL
+  - Snapshots: 2-month staleness threshold (SNAPSHOT_STALE_THRESHOLD_MS constant)
+  - Helper functions now return result objects with both `holdingValue` and `staleHolding` fields
+  - Even stale data is used for calculations - staleness is tracked for UI warnings, not exclusion
+
+---
+
+## 2026-02-01 - US-004
+- Implemented historical net worth calculation in `lib/calculations/net-worth-history.ts`
+- Files changed: lib/calculations/net-worth-history.ts (new file)
+- **Learnings for future iterations:**
+  - Historical net worth is in separate file from current net worth (net-worth-history.ts vs net-worth.ts)
+  - `calculateHistoricalNetWorth(userId, months)` returns `HistoricalNetWorthResult` with `history: HistoryPoint[]` and `generatedAt`
+  - Uses `calculateQuantityHeldAsOf(holdingId, asOfDate)` - similar to `calculateQuantityHeld` but filters transactions up to date
+  - Uses `getSnapshotAsOf(holdingId, asOfDate)` - finds most recent snapshot on or before the date (carry-forward)
+  - Tradeable assets use current price (historical prices not stored) - this is an estimate, not actual historical value
+  - Pre-fetches all prices into a Map for efficiency when calculating multiple months
+  - Month ends calculated with `getMonthEnd(year, month)` using the "day 0 of next month" trick
+  - Returns data points in chronological order (oldest first)
+
+---
+
+## 2026-02-01 - US-005
+- Implemented top performers calculation in `lib/calculations/performers.ts`
+- Files changed: lib/calculations/performers.ts (new file)
+- **Learnings for future iterations:**
+  - `getTopPerformers(userId, limit)` returns `TopPerformersResult` with `gainers: Performer[]` and `losers: Performer[]`
+  - Performer type includes: holdingId, name, symbol, gainLoss, gainLossPercent, type, currentValue, costBasis
+  - Only tradeable holdings (stock, etf, crypto) are included - snapshot-based holdings don't have cost basis
+  - Holdings without position, price, or cost basis are excluded (return null from calculation)
+  - Uses `calculateCostBasis()` from cost-basis.ts for FIFO cost calculation
+  - Gainers sorted by gainLoss descending (biggest gain first)
+  - Losers sorted by gainLoss ascending (biggest loss first, i.e., most negative)
+  - When using `inArray()` with Drizzle enum columns, must use `as const` on the values array
+
+---
+
+## 2026-02-01 - US-006
+- Implemented net worth API endpoint in `app/api/net-worth/route.ts`
+- Files changed: app/api/net-worth/route.ts (new file)
+- **Learnings for future iterations:**
+  - API endpoint pattern: `auth()` from `@clerk/nextjs/server` for authentication, return 401 if no userId
+  - Net worth API returns JSON with: netWorth, totalAssets, totalDebt, breakdown, staleHoldings, hasStaleData, calculatedAt
+  - `calculatedAt` is converted to ISO string for JSON serialization
+  - `?refresh=true` query param is documented but currently all calculations are fresh (no caching)
+  - Error handling wraps the calculation in try/catch, returns 500 on failure
+
+---
+
+## 2026-02-01 - US-007
+- Implemented net worth history API endpoint in `app/api/net-worth/history/route.ts`
+- Files changed: app/api/net-worth/history/route.ts (new file)
+- **Learnings for future iterations:**
+  - History API is a nested route under `/api/net-worth/history/`
+  - Supports `?months=N` query param with validation (positive integer, max 60)
+  - Converts Date objects to ISO strings for JSON response
+  - Maps `HistoryPoint[]` to serializable format (date as string)
+  - Same auth pattern as main net-worth endpoint: `auth()` from Clerk, return 401 if no userId
+
+---
+
+## 2026-02-01 - US-008
+- Implemented top performers API endpoint in `app/api/net-worth/performers/route.ts`
+- Files changed: app/api/net-worth/performers/route.ts (new file)
+- **Learnings for future iterations:**
+  - Performers API is a nested route under `/api/net-worth/performers/`
+  - Supports `?limit=N` query param with validation (positive integer, max 20)
+  - Returns `{ gainers: Performer[], losers: Performer[], calculatedAt }` - all Performer fields pass through as-is
+  - Consistent pattern with other net-worth APIs: auth from Clerk, 401 for unauthorized, 500 for errors
+
+---
+
+## 2026-02-01 - US-009
+- Implemented dashboard hero net worth card in `components/dashboard/net-worth-hero.tsx`
+- Files changed: components/dashboard/net-worth-hero.tsx (new file)
+- **Learnings for future iterations:**
+  - Dashboard components use `useAuthSafe` hook for client-side auth state that works with/without Clerk
+  - Net worth hero fetches data from `/api/net-worth` and `/api/net-worth/history?months=2` for change calculation
+  - Change from last month calculated by comparing current net worth to second-to-last history point
+  - History API returns data in chronological order (oldest first), so last item is most recent
+  - Currency formatting uses `Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" })`
+  - TrendingUp/TrendingDown icons from lucide-react for positive/negative change indicators
+  - Stale data warning uses AlertTriangle icon with yellow-500 color
+  - Loading skeleton uses `animate-pulse` class with gray-700 background placeholders
+  - Error state uses red-700 border with red-900/20 background
+  - Browser verification requires local DATABASE_URL configuration; manual verification may be needed
+
+---
+
+## 2026-02-01 - US-010
+- Implemented dashboard total assets and debt cards in `components/dashboard/summary-cards.tsx`
+- Files changed: components/dashboard/summary-cards.tsx (new file), app/(dashboard)/dashboard/page.tsx
+- **Learnings for future iterations:**
+  - SummaryCards follows same pattern as NetWorthHero: TanStack Query + useAuthSafe hook
+  - For debt cards, positive change (increased debt) shows as negative indicator (red) - flip the indicator logic with `accentColor` prop
+  - Reuses same API endpoints as hero card: `/api/net-worth` and `/api/net-worth/history?months=2`
+  - Grid layout: `grid-cols-1 md:grid-cols-2` for responsive 2-column on desktop, stacked on mobile
+  - CardSkeleton component for consistent loading states across both cards
+  - Dashboard page now integrates NetWorthHero and SummaryCards - these can share the same TanStack Query cache keys
+
+---
+
+## 2026-02-01 - US-011
+- Implemented dashboard asset allocation cards in `components/dashboard/asset-allocation.tsx`
+- Files changed: components/dashboard/asset-allocation.tsx (new file), app/(dashboard)/dashboard/page.tsx
+- **Learnings for future iterations:**
+  - AssetAllocation component follows same pattern as other dashboard components: TanStack Query + useAuthSafe hook
+  - Uses same `["net-worth"]` query key as NetWorthHero and SummaryCards for shared cache
+  - Asset type icons: TrendingUp (stocks), Landmark (etf), Bitcoin (crypto), PiggyBank (super), Banknote (cash)
+  - Progress bars use `bg-{color}-500` with percentage width via inline style
+  - Icon container uses `bg-opacity-20` for subtle background tint
+  - Breakdown data comes from `/api/net-worth` response - already includes `breakdown` array with asset types
+  - Sorts breakdown by `totalValue` descending to show largest allocations first
+  - Calculates percentage from `item.totalValue / totalAssets * 100` (API doesn't pre-calculate this)
+  - Browser verification shows error states correctly when not authenticated - component is integrated properly
+
+---
+
+## 2026-02-02 - US-012
+- Implemented dashboard net worth history chart in `components/dashboard/net-worth-chart.tsx`
+- Installed `recharts` package (also completes US-017)
+- Files changed: components/dashboard/net-worth-chart.tsx (new file), app/(dashboard)/dashboard/page.tsx, package.json, package-lock.json
+- **Learnings for future iterations:**
+  - NetWorthChart follows same pattern as other dashboard components: TanStack Query + useAuthSafe hook
+  - Uses `["net-worth-history", 12]` query key for 12-month history data
+  - Recharts components: LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  - Custom tooltip component for dark mode styling - pass via `content={<CustomTooltip />}` prop
+  - Currency formatting uses `notation: "compact"` for Y-axis labels (e.g., "$1.2M")
+  - Y-axis domain calculation adds 10% padding above and below data range
+  - Data comes from `/api/net-worth/history?months=12` - returns array in chronological order
+  - ChartDataPoint intermediate type transforms API response to Recharts format with displayMonth
+  - Line styling: `strokeWidth={2}`, `dot={{ fill: "#10B981", r: 4 }}`, `activeDot` for hover state
+  - CartesianGrid uses `vertical={false}` for cleaner appearance with horizontal lines only
+  - Empty state shows helpful message about data appearing after first month of tracking
+  - Chart height set via parent div `h-64` with `ResponsiveContainer width="100%" height="100%"`
+
+---
+
+## 2026-02-02 - US-013
+- Implemented dashboard top performers section in `components/dashboard/top-performers.tsx`
+- Files changed: components/dashboard/top-performers.tsx (new file), app/(dashboard)/dashboard/page.tsx
+- **Learnings for future iterations:**
+  - TopPerformers follows same pattern as other dashboard components: TanStack Query + useAuthSafe hook
+  - Uses `["top-performers"]` query key for performers data from `/api/net-worth/performers?limit=5`
+  - Grid layout: `grid-cols-1 md:grid-cols-2` for side-by-side gainers/losers on desktop
+  - PerformerRow component links to `/holdings/:holdingId` for detail navigation
+  - Color scheme: `text-emerald-400` for gainers, `text-red-400` for losers
+  - Sign formatting: gainers show `+$X,XXX.XX` / `+X.XX%`, losers show `-$X,XXX.XX` / `-X.XX%`
+  - Icons: TrendingUp for gainers section, TrendingDown for losers section
+  - Empty state handles both no data and partial data (one list empty, other has items)
+  - Hover effect on rows: `hover:bg-gray-700/50 transition-colors`
+
+---
+
+## 2026-02-02 - US-014
+- Implemented stale data warning banner in `components/dashboard/stale-data-warning.tsx`
+- Files changed: components/dashboard/stale-data-warning.tsx (new file), app/(dashboard)/dashboard/page.tsx
+- **Learnings for future iterations:**
+  - StaleDataWarning follows same pattern as other dashboard components: TanStack Query + useAuthSafe hook
+  - Uses same `["net-worth"]` query key as other components for shared cache
+  - Component returns null when: not authenticated, loading, error, or no stale data
+  - Collapsible/expandable UI with `useState(false)` for `isExpanded` state
+  - StaleReason types: `price_expired`, `no_price`, `snapshot_old`, `no_snapshot`
+  - Icon mapping: DollarSign for price-related, Clock for snapshot-related stale reasons
+  - Yellow color scheme: `border-yellow-600/50`, `bg-yellow-900/20`, `text-yellow-400/500`
+  - Each stale holding row links to `/holdings/:holdingId` and shows refresh/view action buttons
+  - Footer provides contextual help: "Use refresh button" for prices, "Complete check-in" for snapshots
+  - `formatTimeAgo` handles months for very old snapshots (> 60 days)
+
+---
+
+## 2026-02-02 - US-015
+- Implemented dashboard refresh functionality in `components/dashboard/dashboard-header.tsx`
+- Files changed: components/dashboard/dashboard-header.tsx (new file), app/(dashboard)/dashboard/page.tsx
+- **Learnings for future iterations:**
+  - DashboardHeader is a client component that receives userName prop from server component
+  - Refresh button calls POST /api/prices to refresh all tradeable holding prices
+  - Uses `useMutation` from TanStack Query for the refresh operation
+  - On success, invalidates multiple query keys: `["net-worth"]`, `["net-worth-history"]`, `["top-performers"]`, `["holdings"]`, `["prices"]`
+  - Loading state uses `animate-spin` class on the RefreshCw icon during refresh
+  - Toast notifications via Sonner: `toast.success()` with optional `description` for partial failures
+  - Handles three outcomes: all success, partial success (some errors), no tradeable holdings
+  - Server component passes `user?.firstName` to client component for personalized welcome message
+
+---
+
+## 2026-02-02 - US-016
+- Dashboard page already complete from prior story implementations
+- Files verified: app/(dashboard)/dashboard/page.tsx
+- **Learnings for future iterations:**
+  - Dashboard page was iteratively updated as each component was implemented (US-009 through US-015)
+  - No placeholder text exists - was removed during US-009 implementation
+  - All dashboard components integrated: NetWorthHero, SummaryCards, AssetAllocation, NetWorthChart, TopPerformers, StaleDataWarning, DashboardHeader
+  - Responsive layout achieved via grid classes: `grid-cols-1 md:grid-cols-2` in component CSS
+  - CheckInPromptCard also included for monthly check-in workflow
+  - Browser verification confirmed components stack on mobile (375px width)
+
+---
