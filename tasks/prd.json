@@ -115,8 +115,8 @@
         "Lint passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Validates holding is super type; defaults contribution amounts to 0"
     },
     {
       "id": "US-007",

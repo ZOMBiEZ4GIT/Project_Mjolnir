@@ -47,6 +47,15 @@
 
 # W-5 Snapshot Tracking Progress Log
 
+## 2026-02-01 - US-006
+- What was implemented: Contributions GET and POST endpoints
+- Files changed:
+  - app/api/contributions/route.ts - GET and POST handlers
+- **Learnings for future iterations:**
+  - Contributions only for "super" type holdings (not cash/debt)
+  - Default contribution amounts to "0" when not provided
+---
+
 ## 2026-02-01 - US-005
 - What was implemented: Snapshots PATCH and DELETE endpoints
 - Files changed:
