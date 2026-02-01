@@ -138,3 +138,15 @@ Started: 2026-02-01
   - Export DEFAULT_PRICE_CACHE_TTL_MINUTES constant (15 minutes) for reuse by other services
   - Include helper types CachedPrice (output) and PriceDataToCache (input) for type safety
 ---
+
+## 2026-02-01 - US-007
+- What was implemented: Exchange rate cache service with 1-hour TTL
+- Files changed:
+  - `lib/services/exchange-rates.ts` - Added getCachedRate, getExchangeRate (with caching), isExchangeRateCacheValid, getAllCachedRates, and internal setCachedRate functions
+- **Learnings for future iterations:**
+  - Follow the same caching pattern as price-cache.ts for consistency
+  - getExchangeRate is the main public function that consumers should use - handles cache check + fetch + update automatically
+  - setCachedRate is internal (not exported) because only getExchangeRate should update the cache
+  - Exchange rate cache TTL is 60 minutes (1 hour), exported as DEFAULT_EXCHANGE_RATE_TTL_MINUTES
+  - Use `and()` from drizzle-orm to combine multiple eq() conditions for composite key lookups
+---
