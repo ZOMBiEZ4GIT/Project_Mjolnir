@@ -43,9 +43,23 @@
 
 - Snapshots and contributions schema: uses `employer_contrib`/`employee_contrib` (not `employer_contribution`) for DB column names to avoid migration renames
 
+- Query helpers in `lib/queries/`:
+  - `snapshots.ts` - getLatestSnapshots() and getLatestSnapshotForHolding() for fetching most recent snapshots
+
 ---
 
 # W-5 Snapshot Tracking Progress Log
+
+## 2026-02-01 - US-008
+- What was implemented: Latest snapshot helper functions for efficient lookups
+- Files changed:
+  - lib/queries/snapshots.ts (new file)
+- **Learnings for future iterations:**
+  - Use subquery pattern for "get latest per group": MAX(date) grouped by holdingId, then join back to get full records
+  - Query helpers should take userId for ownership validation consistency
+  - Return Map<string, T> for O(1) lookup when caller needs to access by key
+  - Define SnapshotWithHolding interface extending base Snapshot type for joined results
+---
 
 ## 2026-02-01 - US-007
 - What was implemented: Contributions GET, PATCH, DELETE endpoints for individual records

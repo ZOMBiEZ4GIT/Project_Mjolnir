@@ -148,8 +148,8 @@
         "Lint passes"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Uses efficient subquery to find max dates per holding, then joins for full snapshot data. Functions require userId for ownership validation."
     },
     {
       "id": "US-009",
