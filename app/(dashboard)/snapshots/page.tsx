@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
@@ -18,6 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Pencil } from "lucide-react";
+import { EditSnapshotModal } from "@/components/snapshots/edit-snapshot-modal";
 import type { Holding } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -93,6 +97,22 @@ export default function SnapshotsPage() {
 
   const holdingFilter = searchParams.get("holding_id") || "";
   const typeFilter = searchParams.get("type") || "";
+
+  // Edit modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedSnapshot, setSelectedSnapshot] = useState<SnapshotWithHolding | null>(null);
+
+  const handleEditClick = (snapshot: SnapshotWithHolding) => {
+    setSelectedSnapshot(snapshot);
+    setEditModalOpen(true);
+  };
+
+  const handleEditModalClose = (open: boolean) => {
+    setEditModalOpen(open);
+    if (!open) {
+      setSelectedSnapshot(null);
+    }
+  };
 
   const handleHoldingFilterChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -314,6 +334,7 @@ export default function SnapshotsPage() {
               <TableHead className="text-gray-300">Type</TableHead>
               <TableHead className="text-gray-300 text-right">Balance</TableHead>
               <TableHead className="text-gray-300">Currency</TableHead>
+              <TableHead className="text-gray-300 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -330,11 +351,29 @@ export default function SnapshotsPage() {
                   {formatBalance(snapshot.balance, snapshot.currency)}
                 </TableCell>
                 <TableCell className="text-gray-300">{snapshot.currency}</TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEditClick(snapshot)}
+                    className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">Edit</span>
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
+
+      {/* Edit Snapshot Modal */}
+      <EditSnapshotModal
+        snapshot={selectedSnapshot}
+        open={editModalOpen}
+        onOpenChange={handleEditModalClose}
+      />
     </div>
   );
 }
