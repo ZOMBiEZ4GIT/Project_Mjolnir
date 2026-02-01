@@ -92,3 +92,38 @@ Started: 2026-02-01
   - Drizzle migrations tracking table doesn't exist in this project's Neon database - migrations are applied directly via MCP tools
   - Use `mcp__neon__describe_table_schema` to verify table creation with columns and constraints
 ---
+
+## 2026-02-01 - US-003
+- What was implemented: Yahoo Finance price service for fetching stock/ETF prices
+- Files changed:
+  - `lib/services/yahoo-finance.ts` - Created new service with fetchStockPrice function, PriceData interface, YahooFinanceError class, and normalizeSymbol helper
+  - `package.json` - Added yahoo-finance2 dependency
+  - `package-lock.json` - Updated with yahoo-finance2 and transitive dependencies
+- **Learnings for future iterations:**
+  - yahoo-finance2 `quote()` function returns `regularMarketPrice`, `currency`, `regularMarketChange`, and `regularMarketChangePercent`
+  - ASX symbols need .AX suffix, NZX symbols need .NZ suffix - US markets need no suffix
+  - The `lib/services/` directory was empty before this - first service created here
+---
+
+## 2026-02-01 - US-004
+- What was implemented: CoinGecko price service for fetching cryptocurrency prices
+- Files changed:
+  - `lib/services/coingecko.ts` - Created new service with fetchCryptoPrice function, CoinGeckoError class, getCoinGeckoId helper, and symbol mapping for top 50 cryptocurrencies
+- **Learnings for future iterations:**
+  - CoinGecko uses slug-style IDs like "bitcoin", "ethereum", not ticker symbols - need mapping
+  - Pro API uses different base URL (`pro-api.coingecko.com`) and requires `x-cg-pro-api-key` header
+  - Free tier returns 429 status on rate limit - handle gracefully with descriptive error
+  - Use `Record<string, string>` instead of `HeadersInit` type to avoid ESLint no-undef errors with DOM types
+  - CoinGecko `/simple/price` endpoint returns price in USD and 24h change percent - calculate absolute change from those
+---
+
+## 2026-02-01 - US-005
+- What was implemented: Exchange rate service for fetching currency conversion rates
+- Files changed:
+  - `lib/services/exchange-rates.ts` - Created new service with fetchExchangeRate function, ExchangeRateError class, support for USD/AUD, NZD/AUD, USD/NZD pairs and their inverses
+- **Learnings for future iterations:**
+  - exchangerate-api.com has free tier at `open.er-api.com` (1500 requests/month) and authenticated tier at `v6.exchangerate-api.com`
+  - API returns `conversion_rates` object with currency codes as keys (e.g., `{ "AUD": 1.53, "NZD": 1.68 }`)
+  - Same currency conversion (AUD to AUD) can short-circuit to return 1 without API call
+  - Follow same error handling pattern as CoinGecko service for consistency
+---
