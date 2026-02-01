@@ -6,6 +6,7 @@ import { AssetAllocation } from "@/components/dashboard/asset-allocation";
 import { NetWorthChart } from "@/components/dashboard/net-worth-chart";
 import { TopPerformers } from "@/components/dashboard/top-performers";
 import { StaleDataWarning } from "@/components/dashboard/stale-data-warning";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-white mb-4">
-        Welcome{user?.firstName ? `, ${user.firstName}` : ""}
-      </h1>
+      <DashboardHeader userName={user?.firstName} />
 
       {/* Net Worth Hero Card */}
       <div className="mb-6">
