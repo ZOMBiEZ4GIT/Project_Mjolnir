@@ -251,3 +251,15 @@ Started: 2026-02-01
   - Empty state also shows a disabled Refresh Prices button for UI consistency
   - Browser verification requires authentication - expected 401 when not signed in
 ---
+
+## 2026-02-01 - US-016
+- What was implemented: Auto-refresh prices on page load when cached prices are stale
+- Files changed:
+  - `app/(dashboard)/holdings/page.tsx` - Added useEffect, useRef imports; hasStalePrice helper function; backgroundRefreshMutation for silent auto-refresh; useEffect to trigger auto-refresh on mount; subtle "Updating prices..." indicator
+- **Learnings for future iterations:**
+  - Use separate useMutation for background refresh (no toasts) vs manual refresh (with toasts)
+  - useRef with autoRefreshTriggered.current prevents duplicate auto-refresh calls
+  - hasStalePrice helper iterates priceMap values checking isStale boolean
+  - Subtle indicator uses smaller text-xs and gray-400 color to be non-intrusive
+  - isRefreshing combines both mutation states to disable refresh button during either type of refresh
+---
