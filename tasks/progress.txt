@@ -238,3 +238,16 @@ Started: 2026-02-01
   - Green (text-green-400) for gains, red (text-red-400) for losses - consistent color scheme
   - Browser verification shows 401 for API calls when not authenticated - this is expected behavior
 ---
+
+## 2026-02-01 - US-015
+- What was implemented: Refresh prices button on holdings page header
+- Files changed:
+  - `app/(dashboard)/holdings/page.tsx` - Added RefreshCw icon import, PriceRefreshResult interface, refreshPrices function, useMutation for refresh, and Refresh Prices button in header
+- **Learnings for future iterations:**
+  - useMutation from TanStack Query used for refresh action with onSuccess/onError handlers
+  - Button shows animated RefreshCw icon with `animate-spin` class during pending state
+  - queryClient.invalidateQueries({ queryKey: ["prices"] }) used to trigger refetch after successful refresh
+  - Toast messages differentiate between: all success, partial failure, all failure, and no holdings to refresh
+  - Empty state also shows a disabled Refresh Prices button for UI consistency
+  - Browser verification requires authentication - expected 401 when not signed in
+---
