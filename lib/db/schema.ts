@@ -32,6 +32,21 @@ export const users = pgTable("users", {
 });
 
 // =============================================================================
+// USER PREFERENCES
+// =============================================================================
+
+export const userPreferences = pgTable("user_preferences", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id")
+    .references(() => users.id)
+    .notNull()
+    .unique(), // One preference record per user
+  displayCurrency: currencyEnum("display_currency").default("AUD").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// =============================================================================
 // HOLDINGS
 // =============================================================================
 
@@ -164,8 +179,16 @@ export const exchangeRates = pgTable(
 // RELATIONS
 // =============================================================================
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   holdings: many(holdings),
+  preferences: one(userPreferences),
+}));
+
+export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [userPreferences.userId],
+    references: [users.id],
+  }),
 }));
 
 export const holdingsRelations = relations(holdings, ({ one, many }) => ({
@@ -205,6 +228,9 @@ export const contributionsRelations = relations(contributions, ({ one }) => ({
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+export type UserPreferences = typeof userPreferences.$inferSelect;
+export type NewUserPreferences = typeof userPreferences.$inferInsert;
 
 export type Holding = typeof holdings.$inferSelect;
 export type NewHolding = typeof holdings.$inferInsert;
