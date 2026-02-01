@@ -1,7 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
+import { RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { HoldingsTable, type HoldingWithData, type PriceData } from "@/components/holdings/holdings-table";
 import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
@@ -71,10 +73,40 @@ async function fetchPrices(): Promise<Map<string, PriceData>> {
   return priceMap;
 }
 
+/**
+ * Refresh result from the API.
+ */
+interface PriceRefreshResult {
+  holdingId: string;
+  symbol: string;
+  price: number | null;
+  currency: string | null;
+  changePercent: number | null;
+  isStale: boolean;
+  error?: string;
+}
+
+async function refreshPrices(): Promise<PriceRefreshResult[]> {
+  const response = await fetch("/api/prices/refresh", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Unauthorized");
+    }
+    throw new Error("Failed to refresh prices");
+  }
+  return response.json();
+}
+
 export default function HoldingsPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const showDormant = searchParams.get("show_dormant") === "true";
 
@@ -108,6 +140,35 @@ export default function HoldingsPage() {
     enabled: isLoaded && isSignedIn,
     // Prices can refetch independently without blocking holdings display
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Mutation for refreshing prices
+  const refreshMutation = useMutation({
+    mutationFn: refreshPrices,
+    onSuccess: (results) => {
+      // Count successes and failures
+      const failures = results.filter((r) => r.error);
+      const successes = results.filter((r) => !r.error && r.price !== null);
+
+      // Invalidate prices query to refetch updated cached prices
+      queryClient.invalidateQueries({ queryKey: ["prices"] });
+
+      // Show appropriate toast
+      if (failures.length === 0 && successes.length > 0) {
+        toast.success(`Refreshed ${successes.length} price${successes.length === 1 ? "" : "s"}`);
+      } else if (failures.length > 0 && successes.length > 0) {
+        toast.warning(
+          `Refreshed ${successes.length} price${successes.length === 1 ? "" : "s"}, ${failures.length} failed`
+        );
+      } else if (failures.length > 0 && successes.length === 0) {
+        toast.error(`Failed to refresh ${failures.length} price${failures.length === 1 ? "" : "s"}`);
+      } else if (results.length === 0) {
+        toast.info("No tradeable holdings to refresh");
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to refresh prices");
+    },
   });
 
   // Show loading while Clerk auth is loading
@@ -164,9 +225,19 @@ export default function HoldingsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-white">Holdings</h1>
-          <AddHoldingDialog>
-            <Button>Add Holding</Button>
-          </AddHoldingDialog>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              disabled
+              className="gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Refresh Prices
+            </Button>
+            <AddHoldingDialog>
+              <Button>Add Holding</Button>
+            </AddHoldingDialog>
+          </div>
         </div>
         <div className="flex items-center gap-2 mb-4">
           <Switch
@@ -195,9 +266,22 @@ export default function HoldingsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">Holdings</h1>
-        <AddHoldingDialog>
-          <Button>Add Holding</Button>
-        </AddHoldingDialog>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => refreshMutation.mutate()}
+            disabled={refreshMutation.isPending}
+            className="gap-2"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`}
+            />
+            {refreshMutation.isPending ? "Refreshing..." : "Refresh Prices"}
+          </Button>
+          <AddHoldingDialog>
+            <Button>Add Holding</Button>
+          </AddHoldingDialog>
+        </div>
       </div>
       <div className="flex items-center gap-2 mb-4">
         <Switch
