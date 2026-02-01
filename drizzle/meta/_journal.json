@@ -12,8 +12,15 @@
     {
       "idx": 1,
       "version": "7",
+      "when": 1769894007063,
+      "tag": "0001_silly_silver_surfer",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
       "when": 1769915567207,
-      "tag": "0001_white_scream",
+      "tag": "0002_white_scream",
       "breakpoints": true
     }
   ]

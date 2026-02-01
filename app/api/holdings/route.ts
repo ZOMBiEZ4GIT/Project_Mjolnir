@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { holdings, snapshots, type NewHolding } from "@/lib/db/schema";
+import { holdings, snapshots, type NewHolding, type Holding } from "@/lib/db/schema";
 import { eq, isNull, and, sql } from "drizzle-orm";
+import { calculateCostBasis } from "@/lib/calculations/cost-basis";
 
 // Valid holding types
 const holdingTypes = ["stock", "etf", "crypto", "super", "cash", "debt"] as const;
@@ -13,9 +14,27 @@ const exchanges = ["ASX", "NZX", "NYSE", "NASDAQ"] as const;
 const tradeableTypes = ["stock", "etf", "crypto"] as const;
 // Types that require an exchange
 const exchangeRequiredTypes = ["stock", "etf"] as const;
+// Snapshot types that use balance tracking
+const snapshotTypes = ["super", "cash", "debt"] as const;
 
 type HoldingType = (typeof holdingTypes)[number];
 type Currency = (typeof currencies)[number];
+
+// Extended holding type with cost basis and snapshot data
+interface HoldingWithData extends Holding {
+  // Cost basis data (for tradeable holdings)
+  quantity: number | null;
+  costBasis: number | null;
+  avgCost: number | null;
+  // Snapshot data (for snapshot holdings)
+  latestSnapshot: {
+    id: string;
+    holdingId: string;
+    date: string;
+    balance: string;
+    currency: string;
+  } | null;
+}
 
 interface CreateHoldingBody {
   type?: string;
@@ -27,9 +46,6 @@ interface CreateHoldingBody {
   notes?: string;
 }
 
-// Snapshot types that use balance tracking
-const snapshotTypes = ["super", "cash", "debt"] as const;
-
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
 
@@ -39,6 +55,7 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const includeDormant = searchParams.get("include_dormant") === "true";
+  const includeCostBasis = searchParams.get("include_cost_basis") === "true";
   const includeLatestSnapshot = searchParams.get("include_latest_snapshot") === "true";
 
   const conditions = [
@@ -55,71 +72,100 @@ export async function GET(request: NextRequest) {
     .from(holdings)
     .where(and(...conditions));
 
-  // If not requesting snapshots, return just the holdings
-  if (!includeLatestSnapshot) {
+  // If neither cost basis nor snapshots requested, return just holdings
+  if (!includeCostBasis && !includeLatestSnapshot) {
     return NextResponse.json(result);
   }
 
-  // Get latest snapshots for all snapshot-type holdings
-  const snapshotHoldingIds = result
-    .filter((h) => snapshotTypes.includes(h.type as (typeof snapshotTypes)[number]))
-    .map((h) => h.id);
+  // Get latest snapshots for snapshot-type holdings if requested
+  let snapshotMap = new Map<string, {
+    id: string;
+    holdingId: string;
+    date: string;
+    balance: string;
+    currency: string;
+  }>();
 
-  if (snapshotHoldingIds.length === 0) {
-    return NextResponse.json(
-      result.map((h) => ({ ...h, latestSnapshot: null }))
-    );
+  if (includeLatestSnapshot) {
+    const snapshotHoldingIds = result
+      .filter((h) => snapshotTypes.includes(h.type as (typeof snapshotTypes)[number]))
+      .map((h) => h.id);
+
+    if (snapshotHoldingIds.length > 0) {
+      // Use a subquery to find the max date for each holding
+      const latestDates = db
+        .select({
+          holdingId: snapshots.holdingId,
+          maxDate: sql<string>`MAX(${snapshots.date})`.as("max_date"),
+        })
+        .from(snapshots)
+        .where(
+          and(
+            sql`${snapshots.holdingId} IN (${sql.join(
+              snapshotHoldingIds.map((id) => sql`${id}`),
+              sql`, `
+            )})`,
+            isNull(snapshots.deletedAt)
+          )
+        )
+        .groupBy(snapshots.holdingId)
+        .as("latest_dates");
+
+      const latestSnapshots = await db
+        .select({
+          id: snapshots.id,
+          holdingId: snapshots.holdingId,
+          date: snapshots.date,
+          balance: snapshots.balance,
+          currency: snapshots.currency,
+        })
+        .from(snapshots)
+        .innerJoin(
+          latestDates,
+          and(
+            eq(snapshots.holdingId, latestDates.holdingId),
+            eq(snapshots.date, latestDates.maxDate)
+          )
+        )
+        .where(isNull(snapshots.deletedAt));
+
+      snapshotMap = new Map(
+        latestSnapshots.map((s) => [s.holdingId, s])
+      );
+    }
   }
 
-  // Use a subquery to find the max date for each holding
-  const latestDates = db
-    .select({
-      holdingId: snapshots.holdingId,
-      maxDate: sql<string>`MAX(${snapshots.date})`.as("max_date"),
-    })
-    .from(snapshots)
-    .where(
-      and(
-        sql`${snapshots.holdingId} IN (${sql.join(
-          snapshotHoldingIds.map((id) => sql`${id}`),
-          sql`, `
-        )})`,
-        isNull(snapshots.deletedAt)
-      )
-    )
-    .groupBy(snapshots.holdingId)
-    .as("latest_dates");
+  // Build the response with cost basis and/or snapshots
+  const holdingsWithData: HoldingWithData[] = await Promise.all(
+    result.map(async (holding) => {
+      const isTradeable = tradeableTypes.includes(holding.type as (typeof tradeableTypes)[number]);
+      const isSnapshot = snapshotTypes.includes(holding.type as (typeof snapshotTypes)[number]);
 
-  const latestSnapshots = await db
-    .select({
-      id: snapshots.id,
-      holdingId: snapshots.holdingId,
-      date: snapshots.date,
-      balance: snapshots.balance,
-      currency: snapshots.currency,
-    })
-    .from(snapshots)
-    .innerJoin(
-      latestDates,
-      and(
-        eq(snapshots.holdingId, latestDates.holdingId),
-        eq(snapshots.date, latestDates.maxDate)
-      )
-    )
-    .where(isNull(snapshots.deletedAt));
+      let quantity: number | null = null;
+      let costBasis: number | null = null;
+      let avgCost: number | null = null;
 
-  // Create a map for O(1) lookup
-  const snapshotMap = new Map(
-    latestSnapshots.map((s) => [s.holdingId, s])
+      // Calculate cost basis for tradeable types if requested
+      if (includeCostBasis && isTradeable) {
+        const costBasisResult = await calculateCostBasis(holding.id);
+        quantity = costBasisResult.quantity;
+        costBasis = costBasisResult.costBasis;
+        avgCost = costBasisResult.quantity > 0
+          ? costBasisResult.costBasis / costBasisResult.quantity
+          : null;
+      }
+
+      return {
+        ...holding,
+        quantity,
+        costBasis,
+        avgCost,
+        latestSnapshot: isSnapshot ? snapshotMap.get(holding.id) || null : null,
+      };
+    })
   );
 
-  // Merge holdings with their latest snapshots
-  const holdingsWithSnapshots = result.map((h) => ({
-    ...h,
-    latestSnapshot: snapshotMap.get(h.id) || null,
-  }));
-
-  return NextResponse.json(holdingsWithSnapshots);
+  return NextResponse.json(holdingsWithData);
 }
 
 export async function POST(request: NextRequest) {

@@ -1,5 +1,5 @@
 {
-  "id": "d74e8d7e-2f69-4119-bafd-d73a94cdd30c",
+  "id": "06cc9118-b4b4-42d2-bcc1-423ac57cb579",
   "prevId": "b80cf790-1f13-4ffd-9fd6-e5d4b06b6fdc",
   "version": "7",
   "dialect": "postgresql",
@@ -29,14 +29,14 @@
         },
         "employer_contrib": {
           "name": "employer_contrib",
-          "type": "numeric(20, 2)",
+          "type": "numeric(18, 2)",
           "primaryKey": false,
           "notNull": true,
           "default": "'0'"
         },
         "employee_contrib": {
           "name": "employee_contrib",
-          "type": "numeric(20, 2)",
+          "type": "numeric(18, 2)",
           "primaryKey": false,
           "notNull": true,
           "default": "'0'"
@@ -53,6 +53,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -72,7 +85,16 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "contributions_holding_id_date_unique": {
+          "name": "contributions_holding_id_date_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "holding_id",
+            "date"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -260,7 +282,7 @@
         },
         "balance": {
           "name": "balance",
-          "type": "numeric(20, 2)",
+          "type": "numeric(18, 2)",
           "primaryKey": false,
           "notNull": true
         },
@@ -283,6 +305,19 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -348,19 +383,19 @@
         },
         "quantity": {
           "name": "quantity",
-          "type": "numeric(18, 8)",
+          "type": "numeric(20, 8)",
           "primaryKey": false,
           "notNull": true
         },
         "unit_price": {
           "name": "unit_price",
-          "type": "numeric(18, 8)",
+          "type": "numeric(20, 8)",
           "primaryKey": false,
           "notNull": true
         },
         "fees": {
           "name": "fees",
-          "type": "numeric(18, 8)",
+          "type": "numeric(20, 8)",
           "primaryKey": false,
           "notNull": true,
           "default": "'0'"
@@ -384,19 +419,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "deleted_at": {
-          "name": "deleted_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {},
@@ -497,9 +519,7 @@
       "schema": "public",
       "values": [
         "BUY",
-        "SELL",
-        "DIVIDEND",
-        "SPLIT"
+        "SELL"
       ]
     }
   },

@@ -46,6 +46,9 @@ const HOLDING_TYPE_ORDER: Holding["type"][] = [
   "debt",
 ];
 
+// Types that are tradeable (show quantity, cost basis)
+const TRADEABLE_TYPES = ["stock", "etf", "crypto"] as const;
+
 // Types that use snapshot-based balance tracking
 const SNAPSHOT_TYPES = ["super", "cash", "debt"] as const;
 
@@ -65,17 +68,22 @@ interface LatestSnapshot {
   currency: string;
 }
 
-// Holding with optional latest snapshot
-export interface HoldingWithSnapshot extends Holding {
+// Holding with both cost basis and snapshot data
+export interface HoldingWithData extends Holding {
+  // Cost basis data (for tradeable holdings)
+  quantity: number | null;
+  costBasis: number | null;
+  avgCost: number | null;
+  // Snapshot data (for snapshot holdings)
   latestSnapshot: LatestSnapshot | null;
 }
 
 interface HoldingsTableProps {
-  holdings: HoldingWithSnapshot[];
+  holdings: HoldingWithData[];
 }
 
-function groupHoldingsByType(holdings: HoldingWithSnapshot[]): Map<Holding["type"], HoldingWithSnapshot[]> {
-  const groups = new Map<Holding["type"], HoldingWithSnapshot[]>();
+function groupHoldingsByType(holdings: HoldingWithData[]): Map<Holding["type"], HoldingWithData[]> {
+  const groups = new Map<Holding["type"], HoldingWithData[]>();
 
   for (const holding of holdings) {
     const existing = groups.get(holding.type) || [];
@@ -111,7 +119,7 @@ function formatBalance(balance: string, currency: string): string {
 }
 
 /**
- * Format date as "Month Year" (e.g., "January 2026")
+ * Format date as "Month Year" (e.g., "Jan 2026")
  */
 function formatSnapshotDate(dateString: string): string {
   const date = new Date(dateString);
@@ -121,9 +129,38 @@ function formatSnapshotDate(dateString: string): string {
   });
 }
 
+/**
+ * Format a number as currency (without symbol, just formatting)
+ */
+function formatCurrency(value: number | null): string {
+  if (value === null || value === 0) return "—";
+  return value.toLocaleString("en-AU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/**
+ * Format quantity with appropriate decimal places
+ */
+function formatQuantity(value: number | null): string {
+  if (value === null || value === 0) return "—";
+  // Use more decimals for crypto (often fractional), fewer for stocks
+  if (value < 1) {
+    return value.toLocaleString("en-AU", {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 8,
+    });
+  }
+  return value.toLocaleString("en-AU", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 4,
+  });
+}
+
 export function HoldingsTable({ holdings }: HoldingsTableProps) {
-  const [editingHolding, setEditingHolding] = useState<HoldingWithSnapshot | null>(null);
-  const [deletingHolding, setDeletingHolding] = useState<HoldingWithSnapshot | null>(null);
+  const [editingHolding, setEditingHolding] = useState<HoldingWithData | null>(null);
+  const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
   const groupedHoldings = groupHoldingsByType(holdings);
   const queryClient = useQueryClient();
 
@@ -220,15 +257,15 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
 
 interface HoldingsTypeSectionProps {
   type: Holding["type"];
-  holdings: HoldingWithSnapshot[];
-  onEdit: (holding: HoldingWithSnapshot) => void;
-  onDelete: (holding: HoldingWithSnapshot) => void;
+  holdings: HoldingWithData[];
+  onEdit: (holding: HoldingWithData) => void;
+  onDelete: (holding: HoldingWithData) => void;
 }
 
 function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeSectionProps) {
   const label = HOLDING_TYPE_LABELS[type];
-  const showSymbol = type === "stock" || type === "etf" || type === "crypto";
-  const showBalance = SNAPSHOT_TYPES.includes(type as (typeof SNAPSHOT_TYPES)[number]);
+  const isTradeable = TRADEABLE_TYPES.includes(type as (typeof TRADEABLE_TYPES)[number]);
+  const isSnapshotType = SNAPSHOT_TYPES.includes(type as (typeof SNAPSHOT_TYPES)[number]);
 
   return (
     <section>
@@ -241,13 +278,20 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
           <TableHeader>
             <TableRow className="border-gray-800 hover:bg-transparent">
               <TableHead className="text-gray-400">Name</TableHead>
-              {showSymbol && (
+              {isTradeable && (
                 <TableHead className="text-gray-400">Symbol</TableHead>
               )}
-              {showBalance && (
+              {isSnapshotType && (
                 <TableHead className="text-gray-400">Balance</TableHead>
               )}
               <TableHead className="text-gray-400">Currency</TableHead>
+              {isTradeable && (
+                <>
+                  <TableHead className="text-gray-400 text-right">Quantity</TableHead>
+                  <TableHead className="text-gray-400 text-right">Cost Basis</TableHead>
+                  <TableHead className="text-gray-400 text-right">Avg Cost</TableHead>
+                </>
+              )}
               <TableHead className="text-gray-400">Status</TableHead>
               <TableHead className="text-gray-400 w-[100px]">Actions</TableHead>
             </TableRow>
@@ -265,12 +309,12 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
                   <TableCell className="text-white font-medium">
                     {holding.name}
                   </TableCell>
-                  {showSymbol && (
+                  {isTradeable && (
                     <TableCell className="text-gray-300">
                       {holding.symbol || "—"}
                     </TableCell>
                   )}
-                  {showBalance && (
+                  {isSnapshotType && (
                     <TableCell>
                       {snapshot ? (
                         <div className="flex flex-col gap-0.5">
@@ -296,6 +340,19 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
                   <TableCell className="text-gray-300">
                     {holding.currency}
                   </TableCell>
+                  {isTradeable && (
+                    <>
+                      <TableCell className="text-gray-300 text-right font-mono">
+                        {formatQuantity(holding.quantity)}
+                      </TableCell>
+                      <TableCell className="text-gray-300 text-right font-mono">
+                        {formatCurrency(holding.costBasis)}
+                      </TableCell>
+                      <TableCell className="text-gray-300 text-right font-mono">
+                        {formatCurrency(holding.avgCost)}
+                      </TableCell>
+                    </>
+                  )}
                   <TableCell>
                     {holding.isDormant ? (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">

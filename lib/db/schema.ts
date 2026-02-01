@@ -16,7 +16,7 @@ export const holdingTypeEnum = pgEnum("holding_type", [
 
 export const currencyEnum = pgEnum("currency", ["AUD", "NZD", "USD"]);
 
-export const transactionActionEnum = pgEnum("transaction_action", ["BUY", "SELL"]);
+export const transactionActionEnum = pgEnum("transaction_action", ["BUY", "SELL", "DIVIDEND", "SPLIT"]);
 
 export const exchangeEnum = pgEnum("exchange", ["ASX", "NZX", "NYSE", "NASDAQ"]);
 
@@ -64,12 +64,14 @@ export const transactions = pgTable("transactions", {
     .notNull(),
   date: date("date").notNull(),
   action: transactionActionEnum("action").notNull(),
-  quantity: decimal("quantity", { precision: 20, scale: 8 }).notNull(),
-  unitPrice: decimal("unit_price", { precision: 20, scale: 8 }).notNull(),
-  fees: decimal("fees", { precision: 20, scale: 8 }).default("0").notNull(),
+  quantity: decimal("quantity", { precision: 18, scale: 8 }).notNull(),
+  unitPrice: decimal("unit_price", { precision: 18, scale: 8 }).notNull(),
+  fees: decimal("fees", { precision: 18, scale: 8 }).default("0").notNull(),
   currency: currencyEnum("currency").notNull(),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }), // Soft delete
 });
 
 // =============================================================================

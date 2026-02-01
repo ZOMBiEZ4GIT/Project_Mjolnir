@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
-import { HoldingsTable, type HoldingWithSnapshot } from "@/components/holdings/holdings-table";
+import { HoldingsTable, type HoldingWithData } from "@/components/holdings/holdings-table";
 import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -11,11 +11,12 @@ import { Label } from "@/components/ui/label";
 
 export const dynamic = "force-dynamic";
 
-async function fetchHoldings(includeDormant: boolean): Promise<HoldingWithSnapshot[]> {
+async function fetchHoldings(includeDormant: boolean): Promise<HoldingWithData[]> {
   const params = new URLSearchParams();
   if (includeDormant) {
     params.set("include_dormant", "true");
   }
+  params.set("include_cost_basis", "true");
   params.set("include_latest_snapshot", "true");
 
   const url = `/api/holdings?${params.toString()}`;
