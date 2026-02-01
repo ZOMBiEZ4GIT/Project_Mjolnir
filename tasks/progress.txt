@@ -47,6 +47,16 @@
 
 # W-5 Snapshot Tracking Progress Log
 
+## 2026-02-01 - US-004
+- What was implemented: Snapshots POST endpoint with validation and duplicate prevention
+- Files changed:
+  - app/api/snapshots/route.ts - added POST handler
+- **Learnings for future iterations:**
+  - Date normalization helper: normalizeToFirstOfMonth() converts any date to YYYY-MM-01
+  - Month validation: isValidSnapshotMonth() checks current or previous month only
+  - Validate holding type with snapshotTypes = ["super", "cash", "debt"]
+---
+
 ## 2026-02-01 - US-003
 - What was implemented: Snapshots API GET endpoints
 - Files changed:

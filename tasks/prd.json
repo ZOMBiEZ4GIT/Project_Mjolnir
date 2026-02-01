@@ -78,8 +78,8 @@
         "Lint passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Date normalized to first of month; validates holding is snapshot type; 409 for duplicates"
     },
     {
       "id": "US-005",
