@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Holding } from "@/lib/db/schema";
@@ -78,8 +78,21 @@ export interface HoldingWithData extends Holding {
   latestSnapshot: LatestSnapshot | null;
 }
 
+// Price data for a holding
+export interface PriceData {
+  price: number;
+  currency: string;
+  changePercent: number | null;
+  changeAbsolute: number | null;
+  fetchedAt: Date | null;
+  isStale: boolean;
+  error?: string;
+}
+
 interface HoldingsTableProps {
   holdings: HoldingWithData[];
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
 }
 
 function groupHoldingsByType(holdings: HoldingWithData[]): Map<Holding["type"], HoldingWithData[]> {
@@ -158,7 +171,64 @@ function formatQuantity(value: number | null): string {
   });
 }
 
-export function HoldingsTable({ holdings }: HoldingsTableProps) {
+/**
+ * Format price with currency symbol
+ */
+function formatPrice(price: number, currency: string): string {
+  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  return `${symbol}${price.toLocaleString("en-AU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+/**
+ * Format change percent with sign and color indicator
+ */
+function formatChangePercent(percent: number): { text: string; isPositive: boolean } {
+  const sign = percent >= 0 ? "+" : "";
+  return {
+    text: `${sign}${percent.toFixed(2)}%`,
+    isPositive: percent >= 0,
+  };
+}
+
+/**
+ * Format change absolute value with sign
+ */
+function formatChangeAbsolute(value: number, currency: string): string {
+  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  const absValue = Math.abs(value).toLocaleString("en-AU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${symbol}${absValue}`;
+}
+
+/**
+ * Format a date as "X ago" (e.g., "5 min ago", "2 hours ago")
+ */
+function formatTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSeconds = Math.floor(diffMs / 1000);
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  const diffHours = Math.floor(diffMinutes / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMinutes < 1) {
+    return "just now";
+  }
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min ago`;
+  }
+  if (diffHours < 24) {
+    return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
+  }
+  return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
+}
+
+export function HoldingsTable({ holdings, prices, pricesLoading }: HoldingsTableProps) {
   const [editingHolding, setEditingHolding] = useState<HoldingWithData | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
   const groupedHoldings = groupHoldingsByType(holdings);
@@ -209,6 +279,8 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
               key={type}
               type={type}
               holdings={typeHoldings}
+              prices={prices}
+              pricesLoading={pricesLoading}
               onEdit={setEditingHolding}
               onDelete={setDeletingHolding}
             />
@@ -258,11 +330,86 @@ export function HoldingsTable({ holdings }: HoldingsTableProps) {
 interface HoldingsTypeSectionProps {
   type: Holding["type"];
   holdings: HoldingWithData[];
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
   onEdit: (holding: HoldingWithData) => void;
   onDelete: (holding: HoldingWithData) => void;
 }
 
-function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeSectionProps) {
+/**
+ * PriceCell component displays current price with change and staleness indicators.
+ */
+interface PriceCellProps {
+  holdingId: string;
+  holdingCurrency: string;
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
+}
+
+function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading }: PriceCellProps) {
+  // Loading state
+  if (pricesLoading) {
+    return <span className="text-gray-500 text-sm">Loading...</span>;
+  }
+
+  // No price data available
+  const priceData = prices?.get(holdingId);
+  if (!priceData) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  const { price, currency, changePercent, changeAbsolute, fetchedAt, isStale, error } = priceData;
+  const displayCurrency = currency || holdingCurrency;
+
+  // Format change display
+  const hasChange = changePercent !== null && changeAbsolute !== null;
+  const changeInfo = hasChange ? formatChangePercent(changePercent) : null;
+
+  return (
+    <div className="flex flex-col gap-0.5 items-end">
+      {/* Main price */}
+      <span className="text-white font-mono">
+        {formatPrice(price, displayCurrency)}
+      </span>
+
+      {/* Change indicator */}
+      {hasChange && changeInfo && (
+        <span
+          className={`text-xs flex items-center gap-0.5 ${
+            changeInfo.isPositive ? "text-green-400" : "text-red-400"
+          }`}
+        >
+          {changeInfo.isPositive ? (
+            <TrendingUp className="h-3 w-3" />
+          ) : (
+            <TrendingDown className="h-3 w-3" />
+          )}
+          {changeInfo.text}
+          {changeAbsolute !== null && (
+            <span className="text-gray-400 ml-1">
+              ({formatChangeAbsolute(changeAbsolute, displayCurrency)})
+            </span>
+          )}
+        </span>
+      )}
+
+      {/* Staleness/timestamp indicator */}
+      <span
+        className={`text-xs flex items-center gap-0.5 ${
+          isStale || error ? "text-yellow-400" : "text-gray-500"
+        }`}
+      >
+        {isStale && <AlertTriangle className="h-3 w-3" />}
+        {error && !isStale && <AlertTriangle className="h-3 w-3" />}
+        {!isStale && !error && fetchedAt && <Clock className="h-3 w-3" />}
+        {fetchedAt ? formatTimeAgo(fetchedAt) : "unknown"}
+        {error && <span className="ml-1">(error)</span>}
+      </span>
+    </div>
+  );
+}
+
+function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, onDelete }: HoldingsTypeSectionProps) {
   const label = HOLDING_TYPE_LABELS[type];
   const isTradeable = TRADEABLE_TYPES.includes(type as (typeof TRADEABLE_TYPES)[number]);
   const isSnapshotType = SNAPSHOT_TYPES.includes(type as (typeof SNAPSHOT_TYPES)[number]);
@@ -288,6 +435,7 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
               {isTradeable && (
                 <>
                   <TableHead className="text-gray-400 text-right">Quantity</TableHead>
+                  <TableHead className="text-gray-400 text-right">Price</TableHead>
                   <TableHead className="text-gray-400 text-right">Cost Basis</TableHead>
                   <TableHead className="text-gray-400 text-right">Avg Cost</TableHead>
                 </>
@@ -344,6 +492,14 @@ function HoldingsTypeSection({ type, holdings, onEdit, onDelete }: HoldingsTypeS
                     <>
                       <TableCell className="text-gray-300 text-right font-mono">
                         {formatQuantity(holding.quantity)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <PriceCell
+                          holdingId={holding.id}
+                          holdingCurrency={holding.currency}
+                          prices={prices}
+                          pricesLoading={pricesLoading}
+                        />
                       </TableCell>
                       <TableCell className="text-gray-300 text-right font-mono">
                         {formatCurrency(holding.costBasis)}

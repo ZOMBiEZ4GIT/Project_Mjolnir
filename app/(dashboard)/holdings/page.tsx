@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
-import { HoldingsTable, type HoldingWithData } from "@/components/holdings/holdings-table";
+import { HoldingsTable, type HoldingWithData, type PriceData } from "@/components/holdings/holdings-table";
 import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -28,6 +28,47 @@ async function fetchHoldings(includeDormant: boolean): Promise<HoldingWithData[]
     throw new Error("Failed to fetch holdings");
   }
   return response.json();
+}
+
+/**
+ * Cached price data from the API.
+ */
+interface CachedPriceResult {
+  holdingId: string;
+  symbol: string;
+  price: number | null;
+  currency: string | null;
+  changePercent: number | null;
+  changeAbsolute: number | null;
+  fetchedAt: string | null;
+  isStale: boolean;
+}
+
+async function fetchPrices(): Promise<Map<string, PriceData>> {
+  const response = await fetch("/api/prices");
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Unauthorized");
+    }
+    throw new Error("Failed to fetch prices");
+  }
+  const results: CachedPriceResult[] = await response.json();
+
+  // Convert to a map by holding ID
+  const priceMap = new Map<string, PriceData>();
+  for (const result of results) {
+    if (result.price !== null) {
+      priceMap.set(result.holdingId, {
+        price: result.price,
+        currency: result.currency ?? "AUD",
+        changePercent: result.changePercent,
+        changeAbsolute: result.changeAbsolute,
+        fetchedAt: result.fetchedAt ? new Date(result.fetchedAt) : null,
+        isStale: result.isStale,
+      });
+    }
+  }
+  return priceMap;
 }
 
 export default function HoldingsPage() {
@@ -55,6 +96,18 @@ export default function HoldingsPage() {
     queryKey: ["holdings", { showDormant }],
     queryFn: () => fetchHoldings(showDormant),
     enabled: isLoaded && isSignedIn,
+  });
+
+  // Fetch prices for tradeable holdings
+  const {
+    data: priceMap,
+    isLoading: pricesLoading,
+  } = useQuery({
+    queryKey: ["prices"],
+    queryFn: fetchPrices,
+    enabled: isLoaded && isSignedIn,
+    // Prices can refetch independently without blocking holdings display
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   // Show loading while Clerk auth is loading
@@ -156,7 +209,7 @@ export default function HoldingsPage() {
           Show dormant holdings
         </Label>
       </div>
-      <HoldingsTable holdings={holdings} />
+      <HoldingsTable holdings={holdings} prices={priceMap} pricesLoading={pricesLoading} />
     </div>
   );
 }
