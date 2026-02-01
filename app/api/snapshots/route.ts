@@ -1,8 +1,41 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { snapshots, holdings } from "@/lib/db/schema";
+import { snapshots, holdings, type NewSnapshot } from "@/lib/db/schema";
 import { eq, isNull, and, desc } from "drizzle-orm";
+
+// Valid snapshot types (non-tradeable holdings)
+const snapshotTypes = ["super", "cash", "debt"] as const;
+const currencies = ["AUD", "NZD", "USD"] as const;
+
+type Currency = (typeof currencies)[number];
+
+interface CreateSnapshotBody {
+  holding_id?: string;
+  date?: string;
+  balance?: string | number;
+  currency?: string;
+  notes?: string;
+}
+
+// Normalize date to first of month (YYYY-MM-01)
+function normalizeToFirstOfMonth(dateStr: string): string {
+  const date = new Date(dateStr);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
+}
+
+// Check if date is current or previous month
+function isValidSnapshotMonth(dateStr: string): boolean {
+  const now = new Date();
+  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+  const snapshotDate = new Date(dateStr);
+  const snapshotMonth = new Date(snapshotDate.getFullYear(), snapshotDate.getMonth(), 1);
+
+  return snapshotMonth.getTime() === currentMonth.getTime() ||
+         snapshotMonth.getTime() === previousMonth.getTime();
+}
 
 export async function GET(request: NextRequest) {
   const { userId } = await auth();
@@ -45,4 +78,124 @@ export async function GET(request: NextRequest) {
     .orderBy(desc(snapshots.date));
 
   return NextResponse.json(result);
+}
+
+export async function POST(request: NextRequest) {
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let body: CreateSnapshotBody;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid JSON body" },
+      { status: 400 }
+    );
+  }
+
+  const errors: Record<string, string> = {};
+
+  // Validate required fields
+  if (!body.holding_id) {
+    errors.holding_id = "Holding ID is required";
+  }
+
+  if (!body.date) {
+    errors.date = "Date is required";
+  } else if (isNaN(Date.parse(body.date))) {
+    errors.date = "Invalid date format";
+  } else if (!isValidSnapshotMonth(body.date)) {
+    errors.date = "Date must be current or previous month";
+  }
+
+  if (body.balance === undefined || body.balance === null || body.balance === "") {
+    errors.balance = "Balance is required";
+  } else if (isNaN(Number(body.balance))) {
+    errors.balance = "Balance must be a number";
+  }
+
+  if (!body.currency) {
+    errors.currency = "Currency is required";
+  } else if (!currencies.includes(body.currency as Currency)) {
+    errors.currency = `Currency must be one of: ${currencies.join(", ")}`;
+  }
+
+  // Return early if basic validation fails
+  if (Object.keys(errors).length > 0) {
+    return NextResponse.json({ errors }, { status: 400 });
+  }
+
+  // Validate holding exists, belongs to user, and is a snapshot type
+  const holdingResult = await db
+    .select()
+    .from(holdings)
+    .where(
+      and(
+        eq(holdings.id, body.holding_id!),
+        eq(holdings.userId, userId),
+        isNull(holdings.deletedAt)
+      )
+    );
+
+  if (holdingResult.length === 0) {
+    return NextResponse.json(
+      { errors: { holding_id: "Holding not found" } },
+      { status: 400 }
+    );
+  }
+
+  const holding = holdingResult[0];
+  if (!snapshotTypes.includes(holding.type as (typeof snapshotTypes)[number])) {
+    return NextResponse.json(
+      { errors: { holding_id: "Holding must be of type super, cash, or debt" } },
+      { status: 400 }
+    );
+  }
+
+  // Normalize date to first of month
+  const normalizedDate = normalizeToFirstOfMonth(body.date!);
+
+  // Check for duplicate (same holding, same month)
+  const existingSnapshot = await db
+    .select()
+    .from(snapshots)
+    .where(
+      and(
+        eq(snapshots.holdingId, body.holding_id!),
+        eq(snapshots.date, normalizedDate),
+        isNull(snapshots.deletedAt)
+      )
+    );
+
+  if (existingSnapshot.length > 0) {
+    return NextResponse.json(
+      { error: "Snapshot already exists for this holding and month" },
+      { status: 409 }
+    );
+  }
+
+  // Create the snapshot
+  const newSnapshot: NewSnapshot = {
+    holdingId: body.holding_id!,
+    date: normalizedDate,
+    balance: String(body.balance),
+    currency: body.currency as Currency,
+    notes: body.notes?.trim() || null,
+  };
+
+  const [created] = await db.insert(snapshots).values(newSnapshot).returning();
+
+  // Return with holding info
+  return NextResponse.json(
+    {
+      ...created,
+      holdingName: holding.name,
+      holdingType: holding.type,
+    },
+    { status: 201 }
+  );
 }
