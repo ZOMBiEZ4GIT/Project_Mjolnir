@@ -228,6 +228,28 @@ function formatTimeAgo(date: Date): string {
   return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
 }
 
+/**
+ * Calculate market value (quantity x price)
+ */
+function calculateMarketValue(quantity: number | null, price: number | null): number | null {
+  if (quantity === null || quantity === 0 || price === null) {
+    return null;
+  }
+  return quantity * price;
+}
+
+/**
+ * Format market value with currency symbol
+ */
+function formatMarketValue(value: number | null, currency: string): string {
+  if (value === null) return "—";
+  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  return `${symbol}${value.toLocaleString("en-AU", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
 export function HoldingsTable({ holdings, prices, pricesLoading }: HoldingsTableProps) {
   const [editingHolding, setEditingHolding] = useState<HoldingWithData | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
@@ -409,6 +431,45 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading }: PriceC
   );
 }
 
+/**
+ * MarketValueCell component displays market value (quantity x price).
+ */
+interface MarketValueCellProps {
+  quantity: number | null;
+  holdingId: string;
+  holdingCurrency: string;
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
+}
+
+function MarketValueCell({ quantity, holdingId, holdingCurrency, prices, pricesLoading }: MarketValueCellProps) {
+  // Loading state
+  if (pricesLoading) {
+    return <span className="text-gray-500 text-sm">Loading...</span>;
+  }
+
+  // No quantity - cannot calculate market value
+  if (quantity === null || quantity === 0) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  // No price data available
+  const priceData = prices?.get(holdingId);
+  if (!priceData) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  const { price, currency } = priceData;
+  const displayCurrency = currency || holdingCurrency;
+  const marketValue = calculateMarketValue(quantity, price);
+
+  return (
+    <span className="text-white font-mono">
+      {formatMarketValue(marketValue, displayCurrency)}
+    </span>
+  );
+}
+
 function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, onDelete }: HoldingsTypeSectionProps) {
   const label = HOLDING_TYPE_LABELS[type];
   const isTradeable = TRADEABLE_TYPES.includes(type as (typeof TRADEABLE_TYPES)[number]);
@@ -436,6 +497,7 @@ function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, on
                 <>
                   <TableHead className="text-gray-400 text-right">Quantity</TableHead>
                   <TableHead className="text-gray-400 text-right">Price</TableHead>
+                  <TableHead className="text-gray-400 text-right">Market Value</TableHead>
                   <TableHead className="text-gray-400 text-right">Cost Basis</TableHead>
                   <TableHead className="text-gray-400 text-right">Avg Cost</TableHead>
                 </>
@@ -495,6 +557,15 @@ function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, on
                       </TableCell>
                       <TableCell className="text-right">
                         <PriceCell
+                          holdingId={holding.id}
+                          holdingCurrency={holding.currency}
+                          prices={prices}
+                          pricesLoading={pricesLoading}
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <MarketValueCell
+                          quantity={holding.quantity}
                           holdingId={holding.id}
                           holdingCurrency={holding.currency}
                           prices={prices}
