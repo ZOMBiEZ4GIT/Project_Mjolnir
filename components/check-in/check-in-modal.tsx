@@ -38,6 +38,11 @@ export interface SuperHoldingData {
   showContributions: boolean;
 }
 
+// Data structure for simple balance holdings (cash, debt)
+export interface BalanceHoldingData {
+  balance: string;
+}
+
 // Currency symbols for display
 const currencySymbols: Record<string, string> = {
   AUD: "A$",
@@ -95,6 +100,90 @@ interface SuperHoldingEntryProps {
   holding: HoldingToUpdate;
   data: SuperHoldingData;
   onDataChange: (holdingId: string, data: SuperHoldingData) => void;
+}
+
+// Props for cash holding entry component
+interface CashHoldingEntryProps {
+  holding: HoldingToUpdate;
+  data: BalanceHoldingData;
+  onDataChange: (holdingId: string, data: BalanceHoldingData) => void;
+}
+
+// Cash holding entry component with balance input
+function CashHoldingEntry({
+  holding,
+  data,
+  onDataChange,
+}: CashHoldingEntryProps) {
+  const currencySymbol = currencySymbols[holding.currency] || holding.currency;
+
+  const handleBalanceChange = (value: string) => {
+    onDataChange(holding.id, { balance: value });
+  };
+
+  return (
+    <div className="p-3 rounded-lg bg-gray-800 border border-gray-700">
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <span className="text-white font-medium">{holding.name}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-400">{currencySymbol}</span>
+          <Input
+            type="number"
+            placeholder="Balance"
+            value={data.balance}
+            onChange={(e) => handleBalanceChange(e.target.value)}
+            className="w-32 bg-gray-900 border-gray-600 text-white text-right"
+            step="0.01"
+            min="0"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Props for debt holding entry component
+interface DebtHoldingEntryProps {
+  holding: HoldingToUpdate;
+  data: BalanceHoldingData;
+  onDataChange: (holdingId: string, data: BalanceHoldingData) => void;
+}
+
+// Debt holding entry component with balance input (displayed and stored as positive)
+function DebtHoldingEntry({
+  holding,
+  data,
+  onDataChange,
+}: DebtHoldingEntryProps) {
+  const currencySymbol = currencySymbols[holding.currency] || holding.currency;
+
+  const handleBalanceChange = (value: string) => {
+    onDataChange(holding.id, { balance: value });
+  };
+
+  return (
+    <div className="p-3 rounded-lg bg-gray-800 border border-gray-700">
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <span className="text-white font-medium">{holding.name}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-400">{currencySymbol}</span>
+          <Input
+            type="number"
+            placeholder="Balance"
+            value={data.balance}
+            onChange={(e) => handleBalanceChange(e.target.value)}
+            className="w-32 bg-gray-900 border-gray-600 text-white text-right"
+            step="0.01"
+            min="0"
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Super holding entry component with balance input and optional contributions
@@ -233,6 +322,16 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     Record<string, SuperHoldingData>
   >({});
 
+  // State for cash holdings data
+  const [cashHoldingsData, setCashHoldingsData] = useState<
+    Record<string, BalanceHoldingData>
+  >({});
+
+  // State for debt holdings data
+  const [debtHoldingsData, setDebtHoldingsData] = useState<
+    Record<string, BalanceHoldingData>
+  >({});
+
   // Fetch holdings needing updates for selected month
   const { data, isLoading, error } = useQuery({
     queryKey: ["check-in-holdings", selectedMonth],
@@ -267,6 +366,8 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
       setUpdatedHoldingIds(new Set());
       setSelectedMonth(currentMonth);
       setSuperHoldingsData({});
+      setCashHoldingsData({});
+      setDebtHoldingsData({});
     }
     onOpenChange(newOpen);
   };
@@ -305,12 +406,68 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     );
   };
 
+  // Handler for updating cash holding data
+  const handleCashHoldingDataChange = (
+    holdingId: string,
+    newData: BalanceHoldingData
+  ) => {
+    setCashHoldingsData((prev) => ({
+      ...prev,
+      [holdingId]: newData,
+    }));
+
+    // Mark as updated if balance is entered
+    if (newData.balance && newData.balance.trim() !== "") {
+      setUpdatedHoldingIds((prev) => new Set([...prev, holdingId]));
+    } else {
+      setUpdatedHoldingIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(holdingId);
+        return newSet;
+      });
+    }
+  };
+
+  // Get or initialize cash holding data
+  const getCashHoldingData = (holdingId: string): BalanceHoldingData => {
+    return cashHoldingsData[holdingId] || { balance: "" };
+  };
+
+  // Handler for updating debt holding data
+  const handleDebtHoldingDataChange = (
+    holdingId: string,
+    newData: BalanceHoldingData
+  ) => {
+    setDebtHoldingsData((prev) => ({
+      ...prev,
+      [holdingId]: newData,
+    }));
+
+    // Mark as updated if balance is entered
+    if (newData.balance && newData.balance.trim() !== "") {
+      setUpdatedHoldingIds((prev) => new Set([...prev, holdingId]));
+    } else {
+      setUpdatedHoldingIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(holdingId);
+        return newSet;
+      });
+    }
+  };
+
+  // Get or initialize debt holding data
+  const getDebtHoldingData = (holdingId: string): BalanceHoldingData => {
+    return debtHoldingsData[holdingId] || { balance: "" };
+  };
+
   // Handle month change
   const handleMonthChange = (month: string) => {
     setSelectedMonth(month);
     // Reset updated holdings and data when month changes
     setUpdatedHoldingIds(new Set());
     setSuperHoldingsData({});
+    setCashHoldingsData({});
+    setDebtHoldingsData({});
   };
 
   return (
@@ -382,6 +539,12 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                   <h3 className="text-lg font-semibold text-white border-b border-gray-700 pb-2">
                     {typeLabels[type] || type}
                   </h3>
+                  {/* Debt section explanatory text */}
+                  {type === "debt" && (
+                    <p className="text-sm text-gray-400">
+                      Enter as positive number (e.g., 5000 for $5,000 owed)
+                    </p>
+                  )}
                   <div className="space-y-2">
                     {holdings.map((holding) => {
                       // Render SuperHoldingEntry for super type
@@ -396,22 +559,31 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                         );
                       }
 
-                      // Default rendering for cash/debt (to be updated in later story)
-                      return (
-                        <div
-                          key={holding.id}
-                          className="flex items-center justify-between p-3 rounded-lg bg-gray-800 border border-gray-700"
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="text-white font-medium">
-                              {holding.name}
-                            </span>
-                          </div>
-                          <span className="text-sm text-gray-400">
-                            {holding.currency}
-                          </span>
-                        </div>
-                      );
+                      // Render CashHoldingEntry for cash type
+                      if (type === "cash") {
+                        return (
+                          <CashHoldingEntry
+                            key={holding.id}
+                            holding={holding}
+                            data={getCashHoldingData(holding.id)}
+                            onDataChange={handleCashHoldingDataChange}
+                          />
+                        );
+                      }
+
+                      // Render DebtHoldingEntry for debt type
+                      if (type === "debt") {
+                        return (
+                          <DebtHoldingEntry
+                            key={holding.id}
+                            holding={holding}
+                            data={getDebtHoldingData(holding.id)}
+                            onDataChange={handleDebtHoldingDataChange}
+                          />
+                        );
+                      }
+
+                      return null;
                     })}
                   </div>
                 </div>
