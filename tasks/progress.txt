@@ -187,3 +187,14 @@ Started: 2026-02-01
   - Same auth pattern as main net-worth endpoint: `auth()` from Clerk, return 401 if no userId
 
 ---
+
+## 2026-02-01 - US-008
+- Implemented top performers API endpoint in `app/api/net-worth/performers/route.ts`
+- Files changed: app/api/net-worth/performers/route.ts (new file)
+- **Learnings for future iterations:**
+  - Performers API is a nested route under `/api/net-worth/performers/`
+  - Supports `?limit=N` query param with validation (positive integer, max 20)
+  - Returns `{ gainers: Performer[], losers: Performer[], calculatedAt }` - all Performer fields pass through as-is
+  - Consistent pattern with other net-worth APIs: auth from Clerk, 401 for unauthorized, 500 for errors
+
+---
