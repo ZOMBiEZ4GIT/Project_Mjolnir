@@ -263,3 +263,16 @@ Started: 2026-02-01
   - Subtle indicator uses smaller text-xs and gray-400 color to be non-intrusive
   - isRefreshing combines both mutation states to disable refresh button during either type of refresh
 ---
+
+## 2026-02-01 - US-017
+- What was implemented: Individual holding price refresh with retry functionality
+- Files changed:
+  - `app/(dashboard)/holdings/page.tsx` - Added useState, useCallback imports; retryingPriceIds state for tracking in-progress retries; handleRetryPrice callback for single-holding refresh; updated refreshPrices to accept optional holdingIds array; passed onRetryPrice and retryingPriceIds to HoldingsTable
+  - `components/holdings/holdings-table.tsx` - Added RotateCw icon import; new props onRetryPrice and retryingPriceIds to HoldingsTable, HoldingsTypeSection, and PriceCellProps; PriceCell shows retry button for errors and spinner/text during retry
+- **Learnings for future iterations:**
+  - Use a Set<string> for tracking in-progress retries - allows O(1) lookup and easy add/delete
+  - useCallback for handleRetryPrice since it's passed as a prop to child components
+  - POST /api/prices/refresh already supports `holding_ids` array in request body for selective refresh
+  - PriceCell retry button uses small padding (p-0.5) and hover:bg-gray-700 for subtle interaction
+  - RotateCw icon with animate-spin class provides consistent loading indicator
+---
