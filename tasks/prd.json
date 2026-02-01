@@ -292,8 +292,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Batch save API at /api/check-in/save. Validates all balances before saving. Shows red border and error text for missing fields. Toast success message with count. Query invalidation for check-in, snapshots, contributions, and holdings."
     },
     {
       "id": "US-017",

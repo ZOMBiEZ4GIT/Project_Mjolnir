@@ -216,3 +216,19 @@
   - Reset all state types when month changes or modal closes
 ---
 
+## 2026-02-01 - US-016
+- What was implemented: Check-in modal save and complete functionality
+- Files changed:
+  - app/api/check-in/save/route.ts (new file) - Batch save API endpoint
+  - components/check-in/check-in-modal.tsx - Added Save All button, validation, and mutation
+- **Learnings for future iterations:**
+  - Batch API endpoints reduce multiple round trips - process all entries in single request
+  - useMutation from TanStack Query with onSuccess/onError for clean save flow
+  - Invalidate multiple query keys on success: check-in-holdings, check-in-status, snapshots, contributions, holdings
+  - Add error prop to entry components for inline validation display
+  - Use conditional border styling: `${error ? "border-red-500" : "border-gray-700"}`
+  - toast from sonner for success/error notifications
+  - Loader2 from lucide-react with animate-spin for loading state
+  - Disable buttons during mutation with isPending
+---
+
