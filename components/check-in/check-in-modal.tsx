@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 
 // Holding data from check-in status API
 interface HoldingToUpdate {
@@ -95,11 +96,40 @@ const typeLabels: Record<string, string> = {
 // Type order for grouping
 const typeOrder = ["super", "cash", "debt"];
 
+// Check-in save request body
+interface CheckInSaveBody {
+  month: string;
+  super?: { holdingId: string; balance: string; employerContrib?: string; employeeContrib?: string }[];
+  cash?: { holdingId: string; balance: string }[];
+  debt?: { holdingId: string; balance: string }[];
+}
+
+// Save check-in data
+async function saveCheckIn(body: CheckInSaveBody): Promise<{
+  success: boolean;
+  snapshotsCreated: number;
+  contributionsCreated: number;
+}> {
+  const response = await fetch("/api/check-in/save", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const data = await response.json();
+    throw new Error(data.error || "Failed to save check-in");
+  }
+
+  return response.json();
+}
+
 // Props for SuperHoldingEntry component
 interface SuperHoldingEntryProps {
   holding: HoldingToUpdate;
   data: SuperHoldingData;
   onDataChange: (holdingId: string, data: SuperHoldingData) => void;
+  error?: string;
 }
 
 // Props for cash holding entry component
@@ -107,6 +137,7 @@ interface CashHoldingEntryProps {
   holding: HoldingToUpdate;
   data: BalanceHoldingData;
   onDataChange: (holdingId: string, data: BalanceHoldingData) => void;
+  error?: string;
 }
 
 // Cash holding entry component with balance input
@@ -114,6 +145,7 @@ function CashHoldingEntry({
   holding,
   data,
   onDataChange,
+  error,
 }: CashHoldingEntryProps) {
   const currencySymbol = currencySymbols[holding.currency] || holding.currency;
 
@@ -122,10 +154,11 @@ function CashHoldingEntry({
   };
 
   return (
-    <div className="p-3 rounded-lg bg-gray-800 border border-gray-700">
+    <div className={`p-3 rounded-lg bg-gray-800 border ${error ? "border-red-500" : "border-gray-700"}`}>
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <span className="text-white font-medium">{holding.name}</span>
+          {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-400">{currencySymbol}</span>
@@ -134,7 +167,7 @@ function CashHoldingEntry({
             placeholder="Balance"
             value={data.balance}
             onChange={(e) => handleBalanceChange(e.target.value)}
-            className="w-32 bg-gray-900 border-gray-600 text-white text-right"
+            className={`w-32 bg-gray-900 text-white text-right ${error ? "border-red-500" : "border-gray-600"}`}
             step="0.01"
             min="0"
           />
@@ -149,6 +182,7 @@ interface DebtHoldingEntryProps {
   holding: HoldingToUpdate;
   data: BalanceHoldingData;
   onDataChange: (holdingId: string, data: BalanceHoldingData) => void;
+  error?: string;
 }
 
 // Debt holding entry component with balance input (displayed and stored as positive)
@@ -156,6 +190,7 @@ function DebtHoldingEntry({
   holding,
   data,
   onDataChange,
+  error,
 }: DebtHoldingEntryProps) {
   const currencySymbol = currencySymbols[holding.currency] || holding.currency;
 
@@ -164,10 +199,11 @@ function DebtHoldingEntry({
   };
 
   return (
-    <div className="p-3 rounded-lg bg-gray-800 border border-gray-700">
+    <div className={`p-3 rounded-lg bg-gray-800 border ${error ? "border-red-500" : "border-gray-700"}`}>
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <span className="text-white font-medium">{holding.name}</span>
+          {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-400">{currencySymbol}</span>
@@ -176,7 +212,7 @@ function DebtHoldingEntry({
             placeholder="Balance"
             value={data.balance}
             onChange={(e) => handleBalanceChange(e.target.value)}
-            className="w-32 bg-gray-900 border-gray-600 text-white text-right"
+            className={`w-32 bg-gray-900 text-white text-right ${error ? "border-red-500" : "border-gray-600"}`}
             step="0.01"
             min="0"
           />
@@ -191,6 +227,7 @@ function SuperHoldingEntry({
   holding,
   data,
   onDataChange,
+  error,
 }: SuperHoldingEntryProps) {
   const currencySymbol = currencySymbols[holding.currency] || holding.currency;
 
@@ -214,7 +251,7 @@ function SuperHoldingEntry({
   };
 
   return (
-    <div className="p-3 rounded-lg bg-gray-800 border border-gray-700 space-y-3">
+    <div className={`p-3 rounded-lg bg-gray-800 border ${error ? "border-red-500" : "border-gray-700"} space-y-3`}>
       {/* Holding name and balance input row */}
       <div className="flex items-center gap-4">
         <div className="flex-1">
@@ -226,6 +263,7 @@ function SuperHoldingEntry({
               </span>
             )}
           </div>
+          {error && <p className="text-xs text-red-400">{error}</p>}
         </div>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-400">{currencySymbol}</span>
@@ -234,7 +272,7 @@ function SuperHoldingEntry({
             placeholder="Balance"
             value={data.balance}
             onChange={(e) => handleBalanceChange(e.target.value)}
-            className="w-32 bg-gray-900 border-gray-600 text-white text-right"
+            className={`w-32 bg-gray-900 text-white text-right ${error ? "border-red-500" : "border-gray-600"}`}
             step="0.01"
             min="0"
           />
@@ -305,6 +343,7 @@ function SuperHoldingEntry({
 
 export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const queryClient = useQueryClient();
 
   // Month selector: current or previous month
   const currentMonth = getFirstOfMonth(new Date());
@@ -316,6 +355,9 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
   const [updatedHoldingIds, setUpdatedHoldingIds] = useState<Set<string>>(
     new Set()
   );
+
+  // Validation errors for inline display
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   // State for super holdings data
   const [superHoldingsData, setSuperHoldingsData] = useState<
@@ -368,6 +410,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
       setSuperHoldingsData({});
       setCashHoldingsData({});
       setDebtHoldingsData({});
+      setValidationErrors({});
     }
     onOpenChange(newOpen);
   };
@@ -468,6 +511,113 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     setSuperHoldingsData({});
     setCashHoldingsData({});
     setDebtHoldingsData({});
+    setValidationErrors({});
+  };
+
+  // Save mutation
+  const saveMutation = useMutation({
+    mutationFn: saveCheckIn,
+    onSuccess: (result) => {
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: ["check-in-holdings"] });
+      queryClient.invalidateQueries({ queryKey: ["check-in-status"] });
+      queryClient.invalidateQueries({ queryKey: ["snapshots"] });
+      queryClient.invalidateQueries({ queryKey: ["contributions"] });
+      queryClient.invalidateQueries({ queryKey: ["holdings"] });
+
+      // Show success toast
+      const count = result.snapshotsCreated;
+      toast.success(
+        `Check-in complete! ${count} snapshot${count !== 1 ? "s" : ""} saved.`
+      );
+
+      // Close modal
+      handleOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to save check-in");
+    },
+  });
+
+  // Validate all entries and save
+  const handleSaveAll = () => {
+    const errors: Record<string, string> = {};
+
+    // Validate all holdings have balances
+    for (const holding of data?.holdings || []) {
+      if (holding.type === "super") {
+        const entryData = getSuperHoldingData(holding.id);
+        if (!entryData.balance || entryData.balance.trim() === "") {
+          errors[holding.id] = "Balance is required";
+        }
+      } else if (holding.type === "cash") {
+        const entryData = getCashHoldingData(holding.id);
+        if (!entryData.balance || entryData.balance.trim() === "") {
+          errors[holding.id] = "Balance is required";
+        }
+      } else if (holding.type === "debt") {
+        const entryData = getDebtHoldingData(holding.id);
+        if (!entryData.balance || entryData.balance.trim() === "") {
+          errors[holding.id] = "Balance is required";
+        }
+      }
+    }
+
+    setValidationErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      toast.error("Please fill in all required balances");
+      return;
+    }
+
+    // Build the save request body
+    const body: CheckInSaveBody = {
+      month: selectedMonth,
+    };
+
+    // Collect super entries
+    const superEntries = (data?.holdings || [])
+      .filter((h) => h.type === "super")
+      .map((h) => {
+        const entryData = getSuperHoldingData(h.id);
+        return {
+          holdingId: h.id,
+          balance: entryData.balance,
+          employerContrib: entryData.employerContrib || undefined,
+          employeeContrib: entryData.employeeContrib || undefined,
+        };
+      });
+
+    if (superEntries.length > 0) {
+      body.super = superEntries;
+    }
+
+    // Collect cash entries
+    const cashEntries = (data?.holdings || [])
+      .filter((h) => h.type === "cash")
+      .map((h) => ({
+        holdingId: h.id,
+        balance: getCashHoldingData(h.id).balance,
+      }));
+
+    if (cashEntries.length > 0) {
+      body.cash = cashEntries;
+    }
+
+    // Collect debt entries
+    const debtEntries = (data?.holdings || [])
+      .filter((h) => h.type === "debt")
+      .map((h) => ({
+        holdingId: h.id,
+        balance: getDebtHoldingData(h.id).balance,
+      }));
+
+    if (debtEntries.length > 0) {
+      body.debt = debtEntries;
+    }
+
+    // Execute the mutation
+    saveMutation.mutate(body);
   };
 
   return (
@@ -555,6 +705,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                             holding={holding}
                             data={getSuperHoldingData(holding.id)}
                             onDataChange={handleSuperHoldingDataChange}
+                            error={validationErrors[holding.id]}
                           />
                         );
                       }
@@ -567,6 +718,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                             holding={holding}
                             data={getCashHoldingData(holding.id)}
                             onDataChange={handleCashHoldingDataChange}
+                            error={validationErrors[holding.id]}
                           />
                         );
                       }
@@ -579,6 +731,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                             holding={holding}
                             data={getDebtHoldingData(holding.id)}
                             onDataChange={handleDebtHoldingDataChange}
+                            error={validationErrors[holding.id]}
                           />
                         );
                       }
@@ -592,15 +745,32 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
           </div>
         )}
 
-        {/* Footer with Skip Button */}
+        {/* Footer with Skip and Save All Buttons */}
         <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-gray-700">
           <Button
             variant="outline"
             onClick={() => handleOpenChange(false)}
             className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            disabled={saveMutation.isPending}
           >
             Skip
           </Button>
+          {totalHoldings > 0 && (
+            <Button
+              onClick={handleSaveAll}
+              disabled={saveMutation.isPending || updatedCount === 0}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {saveMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save All"
+              )}
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>
