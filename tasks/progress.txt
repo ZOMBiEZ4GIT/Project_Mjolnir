@@ -132,3 +132,14 @@ Started: 2026-02-02
   - Preferences API returns { displayCurrency, updatedAt } to match acceptance criteria
 ---
 
+## 2026-02-02 - US-003
+- Implemented currency conversion utility
+- Files changed:
+  - `lib/utils/currency.ts` - New file with convertCurrency function and types
+- **Learnings for future iterations:**
+  - Currency utilities are in `lib/utils/` directory (separate from `lib/utils.ts` which has shadcn utility)
+  - Uses AUD as intermediary for cross-currency conversions (e.g., USD→NZD goes via AUD)
+  - ExchangeRates type: `{ "USD/AUD": number, "NZD/AUD": number }` - rates represent how many AUD per 1 foreign unit
+  - Rounds to 2 decimal places for display consistency
+---
+
