@@ -304,3 +304,18 @@ Started: 2026-02-01
   - `formatTimeAgo` handles months for very old snapshots (> 60 days)
 
 ---
+
+## 2026-02-02 - US-015
+- Implemented dashboard refresh functionality in `components/dashboard/dashboard-header.tsx`
+- Files changed: components/dashboard/dashboard-header.tsx (new file), app/(dashboard)/dashboard/page.tsx
+- **Learnings for future iterations:**
+  - DashboardHeader is a client component that receives userName prop from server component
+  - Refresh button calls POST /api/prices to refresh all tradeable holding prices
+  - Uses `useMutation` from TanStack Query for the refresh operation
+  - On success, invalidates multiple query keys: `["net-worth"]`, `["net-worth-history"]`, `["top-performers"]`, `["holdings"]`, `["prices"]`
+  - Loading state uses `animate-spin` class on the RefreshCw icon during refresh
+  - Toast notifications via Sonner: `toast.success()` with optional `description` for partial failures
+  - Handles three outcomes: all success, partial success (some errors), no tradeable holdings
+  - Server component passes `user?.firstName` to client component for personalized welcome message
+
+---
