@@ -213,3 +213,15 @@ Started: 2026-02-01
   - Clock icon for fresh prices, AlertTriangle for stale/error prices
   - Browser verification shows 401 when not authenticated - expected behavior
 ---
+
+## 2026-02-01 - US-013
+- What was implemented: Market Value column for tradeable holdings in the holdings list
+- Files changed:
+  - `components/holdings/holdings-table.tsx` - Added calculateMarketValue and formatMarketValue helpers, MarketValueCell component, Market Value table header and cell
+- **Learnings for future iterations:**
+  - MarketValueCell follows same pattern as PriceCell for loading/error states
+  - Market Value column added after Price column for tradeable holdings
+  - calculateMarketValue handles null quantity and null price gracefully by returning null
+  - formatMarketValue uses CURRENCY_SYMBOLS mapping for consistent currency display
+  - MarketValueCell receives both quantity and price data via props to calculate value on render
+---
