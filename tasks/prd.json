@@ -96,8 +96,8 @@
         "Lint passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "PATCH only allows balance and notes updates; DELETE performs soft delete"
     },
     {
       "id": "US-006",

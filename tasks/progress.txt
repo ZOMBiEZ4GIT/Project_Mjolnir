@@ -47,6 +47,15 @@
 
 # W-5 Snapshot Tracking Progress Log
 
+## 2026-02-01 - US-005
+- What was implemented: Snapshots PATCH and DELETE endpoints
+- Files changed:
+  - app/api/snapshots/[id]/route.ts - added PATCH and DELETE handlers
+- **Learnings for future iterations:**
+  - Keep existing select structure for ownership check, then build separate update object
+  - Soft delete pattern: set deletedAt and updatedAt timestamps
+---
+
 ## 2026-02-01 - US-004
 - What was implemented: Snapshots POST endpoint with validation and duplicate prevention
 - Files changed:
