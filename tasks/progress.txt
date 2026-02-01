@@ -198,3 +198,18 @@ Started: 2026-02-01
   - Returns isStale: true if any cached rate is older than 1 hour (DEFAULT_EXCHANGE_RATE_TTL_MINUTES)
   - fetchedAt returns the oldest timestamp among all cached rates
 ---
+
+## 2026-02-01 - US-012
+- What was implemented: Price display column for tradeable holdings in the holdings list
+- Files changed:
+  - `app/(dashboard)/holdings/page.tsx` - Added fetchPrices function, useQuery for prices, and pass prices to HoldingsTable
+  - `components/holdings/holdings-table.tsx` - Added PriceData interface, PriceCell component, Price column, and helper functions for formatting
+- **Learnings for future iterations:**
+  - PriceData interface exported from holdings-table.tsx for use by holdings page
+  - Price column added after Quantity column for tradeable holdings
+  - PriceCell component handles loading, no-data, and error states independently
+  - formatTimeAgo helper converts Date to relative time ("5 min ago", "2 hours ago")
+  - TrendingUp/TrendingDown icons from lucide-react for change direction
+  - Clock icon for fresh prices, AlertTriangle for stale/error prices
+  - Browser verification shows 401 when not authenticated - expected behavior
+---
