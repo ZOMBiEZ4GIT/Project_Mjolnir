@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { snapshots, holdings } from "@/lib/db/schema";
+import { snapshots, holdings, contributions } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 
 export async function GET(
@@ -152,10 +152,13 @@ export async function DELETE(
 
   const { id } = await params;
 
-  // Check if snapshot exists and belongs to user
+  // Check if snapshot exists and belongs to user, get holdingId and date
   const existing = await db
     .select({
       id: snapshots.id,
+      holdingId: snapshots.holdingId,
+      date: snapshots.date,
+      holdingType: holdings.type,
     })
     .from(snapshots)
     .innerJoin(holdings, eq(snapshots.holdingId, holdings.id))
@@ -172,14 +175,34 @@ export async function DELETE(
     return NextResponse.json({ error: "Snapshot not found" }, { status: 404 });
   }
 
-  // Soft delete by setting deletedAt timestamp
+  const snapshot = existing[0];
+  const now = new Date();
+
+  // Soft delete the snapshot
   await db
     .update(snapshots)
     .set({
-      deletedAt: new Date(),
-      updatedAt: new Date(),
+      deletedAt: now,
+      updatedAt: now,
     })
     .where(eq(snapshots.id, id));
+
+  // For super holdings, also soft delete the associated contribution if it exists
+  if (snapshot.holdingType === "super") {
+    await db
+      .update(contributions)
+      .set({
+        deletedAt: now,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(contributions.holdingId, snapshot.holdingId),
+          eq(contributions.date, snapshot.date),
+          isNull(contributions.deletedAt)
+        )
+      );
+  }
 
   return NextResponse.json({ success: true });
 }

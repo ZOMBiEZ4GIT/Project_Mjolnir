@@ -20,8 +20,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { EditSnapshotModal } from "@/components/snapshots/edit-snapshot-modal";
+import { DeleteSnapshotDialog } from "@/components/snapshots/delete-snapshot-dialog";
 import type { Holding } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -102,6 +103,10 @@ export default function SnapshotsPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedSnapshot, setSelectedSnapshot] = useState<SnapshotWithHolding | null>(null);
 
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [snapshotToDelete, setSnapshotToDelete] = useState<SnapshotWithHolding | null>(null);
+
   const handleEditClick = (snapshot: SnapshotWithHolding) => {
     setSelectedSnapshot(snapshot);
     setEditModalOpen(true);
@@ -111,6 +116,18 @@ export default function SnapshotsPage() {
     setEditModalOpen(open);
     if (!open) {
       setSelectedSnapshot(null);
+    }
+  };
+
+  const handleDeleteClick = (snapshot: SnapshotWithHolding) => {
+    setSnapshotToDelete(snapshot);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteDialogClose = (open: boolean) => {
+    setDeleteDialogOpen(open);
+    if (!open) {
+      setSnapshotToDelete(null);
     }
   };
 
@@ -352,15 +369,26 @@ export default function SnapshotsPage() {
                 </TableCell>
                 <TableCell className="text-gray-300">{snapshot.currency}</TableCell>
                 <TableCell className="text-right">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleEditClick(snapshot)}
-                    className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
-                  >
-                    <Pencil className="h-4 w-4" />
-                    <span className="sr-only">Edit</span>
-                  </Button>
+                  <div className="flex justify-end gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEditClick(snapshot)}
+                      className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Edit</span>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteClick(snapshot)}
+                      className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-gray-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Delete</span>
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -373,6 +401,13 @@ export default function SnapshotsPage() {
         snapshot={selectedSnapshot}
         open={editModalOpen}
         onOpenChange={handleEditModalClose}
+      />
+
+      {/* Delete Snapshot Dialog */}
+      <DeleteSnapshotDialog
+        snapshot={snapshotToDelete}
+        open={deleteDialogOpen}
+        onOpenChange={handleDeleteDialogClose}
       />
     </div>
   );
