@@ -276,3 +276,24 @@ Started: 2026-02-01
   - PriceCell retry button uses small padding (p-0.5) and hover:bg-gray-700 for subtle interaction
   - RotateCw icon with animate-spin class provides consistent loading indicator
 ---
+
+## 2026-02-01 - US-018
+- What was implemented: Symbol-to-CoinGecko ID mapping module
+- Files changed:
+  - `lib/services/crypto-symbols.ts` - Created new module with SYMBOL_TO_COINGECKO_ID mapping for 60+ cryptocurrencies, getCoinGeckoId, getSymbolFromCoinGeckoId, isKnownCryptoSymbol, and getAllKnownSymbols functions
+  - `lib/services/coingecko.ts` - Updated to import and re-export getCoinGeckoId from crypto-symbols.ts, removed duplicate mapping
+- **Learnings for future iterations:**
+  - The mapping was already embedded in coingecko.ts - extracting to a separate module allows for better organization and reuse
+  - Use `export { foo } from "./module"` for re-export combined with `import { foo } from "./module"` for local use
+  - Added additional tokens beyond top 50: POL (Polygon's new ticker), SUI, SEI, PEPE, WIF for newer popular tokens
+---
+
+## 2026-02-01 - US-019
+- What was implemented: Environment variables documentation for price APIs
+- Files changed:
+  - `.env.example` - Added COINGECKO_API_KEY and EXCHANGE_RATE_API_KEY with comments explaining free vs paid tiers and links to get keys
+- **Learnings for future iterations:**
+  - Both CoinGecko and ExchangeRate-API have free tiers that work without API keys
+  - Document both the free limits and where to upgrade for higher limits
+  - Use OPTIONAL comment to indicate keys are not required
+---
