@@ -117,3 +117,19 @@ Started: 2026-02-03
   - Keep styling consistent across error pages for cohesive UX
 ---
 
+## 2026-02-03 - US-005
+- Added mobile navigation menu using Sheet component from shadcn/ui
+- Created `components/dashboard/mobile-nav.tsx` with hamburger menu button
+- Menu slides out from left side with all navigation links
+- Links automatically close the drawer when clicked via `onClick={() => setOpen(false)}`
+- Hamburger button visible on mobile (below md breakpoint), hidden on desktop
+- Desktop nav (`DashboardNav`) hidden on mobile, visible on md and above
+- Updated `app/(dashboard)/layout.tsx` to include MobileNav component
+- Files changed: `app/(dashboard)/layout.tsx` (modified), `components/dashboard/mobile-nav.tsx` (created), `components/ui/sheet.tsx` (installed)
+- **Learnings for future iterations:**
+  - Install shadcn/ui components with `npx shadcn@latest add [component] --yes`
+  - Use `md:hidden` and `hidden md:block` for responsive show/hide patterns
+  - Sheet component has `side` prop for drawer direction (left, right, top, bottom)
+  - Control Sheet open state with `open` and `onOpenChange` props
+---
+
