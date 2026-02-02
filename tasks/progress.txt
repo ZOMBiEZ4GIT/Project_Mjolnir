@@ -251,3 +251,30 @@ Started: 2026-02-02
   - Test endpoints should provide detailed feedback about what happened
 ---
 
+## 2026-02-02 - US-012: Add unsubscribe link to emails
+- Created `lib/services/unsubscribe-token.ts` with HMAC-based token system:
+  - `generateUnsubscribeToken()` - creates signed token from userId (base64url:signature format)
+  - `verifyUnsubscribeToken()` - validates token using timing-safe comparison
+  - `generateUnsubscribeUrl()` - builds full URL with encoded token
+  - Uses CLERK_SECRET_KEY as fallback signing secret
+- Created `app/api/email/unsubscribe/route.ts`:
+  - GET endpoint that validates token from query params
+  - Disables emailReminders in userPreferences for the user
+  - Redirects to /unsubscribed with success/error status
+- Created `app/unsubscribed/page.tsx` confirmation page:
+  - Success state with green CheckCircle icon
+  - Error states (missing_token, invalid_token, user_not_found) with appropriate icons
+  - Links to Settings page and Dashboard
+  - Dark mode styling consistent with app
+- Updated `lib/services/reminders.ts`:
+  - Now generates unsubscribe URL using `generateUnsubscribeUrl(userId)`
+  - Passes unsubscribeUrl to CheckInReminderEmail component
+- Files changed: `lib/services/unsubscribe-token.ts`, `app/api/email/unsubscribe/route.ts`, `app/unsubscribed/page.tsx`, `lib/services/reminders.ts`
+- **Learnings for future iterations:**
+  - Use `crypto.timingSafeEqual()` for constant-time signature comparison (security best practice)
+  - Use base64url encoding (not base64) for URL-safe tokens
+  - Token format: `base64url(data):signature` allows easy extraction while remaining tamper-proof
+  - Redirect-based APIs (like unsubscribe) should use GET method for compatibility with email clients
+  - Error handling in redirect flows: use query params to pass status to confirmation page
+---
+
