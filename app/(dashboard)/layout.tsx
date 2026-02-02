@@ -2,6 +2,7 @@ import { UserButton } from "@clerk/nextjs";
 import { DashboardNav } from "@/components/dashboard/nav";
 import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { DashboardErrorBoundary } from "@/components/dashboard/dashboard-error-boundary";
+import { CommandMenu } from "@/components/command-menu";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,7 @@ export default function DashboardLayout({
       <main className="flex-1">
           <DashboardErrorBoundary>{children}</DashboardErrorBoundary>
         </main>
+      <CommandMenu />
     </div>
   );
 }
