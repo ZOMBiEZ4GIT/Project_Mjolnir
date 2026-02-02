@@ -196,3 +196,19 @@ Started: 2026-02-02
   - Disable dependent controls (like day selector) when parent toggle is off
 ---
 
+## 2026-02-02 - US-009: Create settings page
+- Created `app/(dashboard)/settings/page.tsx` with:
+  - Currency preferences section (display currency selector, show native currency toggle)
+  - Email reminders section (integrates existing EmailPreferences component)
+  - Page header with Settings icon
+  - Consistent card styling: `rounded-lg border border-gray-700 bg-gray-800/50 p-6`
+- Added "Settings" to dashboard navigation in `components/dashboard/nav.tsx`
+- Currency preferences use existing `useCurrency` hook and `CurrencySelector` component
+- Files changed: `app/(dashboard)/settings/page.tsx`, `components/dashboard/nav.tsx`
+- **Learnings for future iterations:**
+  - Settings page uses "use client" directive for currency context hooks
+  - Card styling pattern: `rounded-lg border border-gray-700 bg-gray-800/50 p-6`
+  - Dashboard navigation items defined in `navItems` array in `components/dashboard/nav.tsx`
+  - Currency selector can use `compact={false}` for full-width display
+---
+
