@@ -270,6 +270,7 @@ export function EditHoldingDialog({
                 setFormData({ ...formData, name: e.target.value });
                 if (errors.name) setErrors({ ...errors, name: undefined });
               }}
+              className={errors.name ? "border-red-500 focus-visible:ring-red-500" : ""}
             />
             {errors.name && (
               <p className="text-sm text-red-500">{errors.name}</p>
@@ -287,6 +288,7 @@ export function EditHoldingDialog({
                   setFormData({ ...formData, symbol: e.target.value });
                   if (errors.symbol) setErrors({ ...errors, symbol: undefined });
                 }}
+                className={errors.symbol ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
               {errors.symbol && (
                 <p className="text-sm text-red-500">{errors.symbol}</p>
@@ -305,7 +307,10 @@ export function EditHoldingDialog({
                   setErrors({ ...errors, currency: undefined });
               }}
             >
-              <SelectTrigger id="edit-currency">
+              <SelectTrigger
+                id="edit-currency"
+                className={errors.currency ? "border-red-500 focus:ring-red-500" : ""}
+              >
                 <SelectValue placeholder="Select currency" />
               </SelectTrigger>
               <SelectContent>
@@ -340,7 +345,10 @@ export function EditHoldingDialog({
                     });
                 }}
               >
-                <SelectTrigger id="edit-exchange">
+                <SelectTrigger
+                  id="edit-exchange"
+                  className={errors.exchange ? "border-red-500 focus:ring-red-500" : ""}
+                >
                   <SelectValue placeholder="Select exchange" />
                 </SelectTrigger>
                 <SelectContent>
