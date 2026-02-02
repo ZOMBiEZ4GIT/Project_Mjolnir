@@ -343,6 +343,7 @@ export function EditTransactionDialog({
                 setFormData({ ...formData, date: e.target.value });
                 if (errors.date) setErrors({ ...errors, date: undefined });
               }}
+              className={errors.date ? "border-red-500 focus-visible:ring-red-500" : ""}
             />
             {errors.date && <p className="text-sm text-red-500">{errors.date}</p>}
           </div>
@@ -365,7 +366,7 @@ export function EditTransactionDialog({
                     if (errors.quantity)
                       setErrors({ ...errors, quantity: undefined });
                   }}
-                  className="w-24"
+                  className={`w-24 ${errors.quantity ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                 />
                 <span className="text-muted-foreground">: 1</span>
               </div>
@@ -382,6 +383,7 @@ export function EditTransactionDialog({
                   if (errors.quantity)
                     setErrors({ ...errors, quantity: undefined });
                 }}
+                className={errors.quantity ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
             )}
             {errors.quantity && (
@@ -447,6 +449,7 @@ export function EditTransactionDialog({
                   if (errors.unit_price)
                     setErrors({ ...errors, unit_price: undefined });
                 }}
+                className={errors.unit_price ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
               {errors.unit_price && (
                 <p className="text-sm text-red-500">{errors.unit_price}</p>
@@ -469,6 +472,7 @@ export function EditTransactionDialog({
                   setFormData({ ...formData, fees: e.target.value });
                   if (errors.fees) setErrors({ ...errors, fees: undefined });
                 }}
+                className={errors.fees ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
               {errors.fees && <p className="text-sm text-red-500">{errors.fees}</p>}
             </div>

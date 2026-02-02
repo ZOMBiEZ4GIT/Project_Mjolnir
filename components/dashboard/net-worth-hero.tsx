@@ -235,7 +235,7 @@ export function NetWorthHero() {
     })) ?? [];
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gradient-to-br from-gray-800 to-gray-900 p-8">
+    <div className="rounded-lg border border-gray-700 bg-gradient-to-br from-gray-800 to-gray-900 p-6 sm:p-8">
       {/* Header with stale data warning */}
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">
@@ -251,22 +251,26 @@ export function NetWorthHero() {
 
       {/* Net Worth Value with Sparkline */}
       <div className="flex items-center gap-4 mb-4">
-        <div className="text-4xl md:text-5xl font-bold text-white">
+        <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">
           {formatCurrency(netWorthData.netWorth, displayCurrency)}
         </div>
-        {!isLoadingHistory && <Sparkline data={sparklineData} />}
+        {!isLoadingHistory && (
+          <div className="hidden sm:block">
+            <Sparkline data={sparklineData} />
+          </div>
+        )}
       </div>
 
       {/* Change from last month */}
       {hasHistoricalData && (
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex flex-wrap items-center gap-2 mb-2">
           {isPositiveChange ? (
-            <TrendingUp className="h-5 w-5 text-green-500" />
+            <TrendingUp className="h-5 w-5 text-green-500 shrink-0" />
           ) : (
-            <TrendingDown className="h-5 w-5 text-red-500" />
+            <TrendingDown className="h-5 w-5 text-red-500 shrink-0" />
           )}
           <span
-            className={`text-lg font-semibold ${
+            className={`text-base sm:text-lg font-semibold ${
               isPositiveChange ? "text-green-500" : "text-red-500"
             }`}
           >

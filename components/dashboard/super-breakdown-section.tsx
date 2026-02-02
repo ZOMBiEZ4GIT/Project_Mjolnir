@@ -32,7 +32,7 @@ async function fetchSuperHoldings(): Promise<SuperBreakdownResponse> {
  */
 function SectionSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
       <div className="animate-pulse">
         <div className="h-5 w-64 bg-gray-700 rounded mb-6" />
         <div className="h-64 bg-gray-700/50 rounded flex items-end justify-around px-4 pb-4">

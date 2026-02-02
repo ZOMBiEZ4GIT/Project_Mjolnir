@@ -297,6 +297,7 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
                     setFormData({ ...formData, name: e.target.value });
                     if (errors.name) setErrors({ ...errors, name: undefined });
                   }}
+                  className={errors.name ? "border-red-500 focus-visible:ring-red-500" : ""}
                 />
                 {errors.name && (
                   <p className="text-sm text-red-500">{errors.name}</p>
@@ -323,6 +324,7 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
                       setFormData({ ...formData, symbol: e.target.value });
                       if (errors.symbol) setErrors({ ...errors, symbol: undefined });
                     }}
+                    className={errors.symbol ? "border-red-500 focus-visible:ring-red-500" : ""}
                   />
                   {errors.symbol && (
                     <p className="text-sm text-red-500">{errors.symbol}</p>
@@ -340,7 +342,10 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
                     if (errors.currency) setErrors({ ...errors, currency: undefined });
                   }}
                 >
-                  <SelectTrigger id="currency">
+                  <SelectTrigger
+                    id="currency"
+                    className={errors.currency ? "border-red-500 focus:ring-red-500" : ""}
+                  >
                     <SelectValue placeholder="Select currency" />
                   </SelectTrigger>
                   <SelectContent>
@@ -369,7 +374,10 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
                       if (errors.symbol) setErrors({ ...errors, exchange: undefined, symbol: undefined });
                     }}
                   >
-                    <SelectTrigger id="exchange">
+                    <SelectTrigger
+                      id="exchange"
+                      className={errors.exchange ? "border-red-500 focus:ring-red-500" : ""}
+                    >
                       <SelectValue placeholder="Select exchange" />
                     </SelectTrigger>
                     <SelectContent>

@@ -1,7 +1,8 @@
 "use client";
 
-import { Settings, Globe, Bell } from "lucide-react";
+import { Settings, Globe, Bell, Keyboard } from "lucide-react";
 import { EmailPreferences } from "@/components/settings/email-preferences";
+import { SettingsSkeleton } from "@/components/settings/settings-skeleton";
 import { CurrencySelector } from "@/components/ui/currency-selector";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { Switch } from "@/components/ui/switch";
@@ -25,6 +26,10 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold text-white">Settings</h1>
       </div>
 
+      {/* Show skeleton while preferences are loading */}
+      {isLoading ? (
+        <SettingsSkeleton />
+      ) : (
       <div className="space-y-8 max-w-2xl">
         {/* Currency Preferences Section */}
         <section className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
@@ -83,7 +88,64 @@ export default function SettingsPage() {
 
           <EmailPreferences />
         </section>
+
+        {/* Keyboard Shortcuts Section */}
+        <section className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Keyboard className="h-5 w-5 text-gray-400" />
+            <h2 className="text-lg font-semibold text-white">Keyboard Shortcuts</h2>
+          </div>
+
+          <div className="space-y-4 pl-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-300 text-sm font-medium">
+                  Open Command Menu
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Quick navigation to any page
+                </p>
+              </div>
+              <kbd className="inline-flex items-center gap-1 rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs font-mono text-gray-300">
+                <span className="text-xs">⌘</span>K
+              </kbd>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-300 text-sm font-medium">
+                  Close Dialog
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Close any open modal or dialog
+                </p>
+              </div>
+              <kbd className="inline-flex items-center rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs font-mono text-gray-300">
+                Esc
+              </kbd>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-300 text-sm font-medium">
+                  Submit Form
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Submit focused form (standard browser behavior)
+                </p>
+              </div>
+              <kbd className="inline-flex items-center rounded border border-gray-600 bg-gray-700 px-2 py-1 text-xs font-mono text-gray-300">
+                Enter
+              </kbd>
+            </div>
+
+            <p className="text-xs text-gray-500 pt-2 border-t border-gray-700">
+              On Windows/Linux, use <kbd className="inline rounded border border-gray-600 bg-gray-700 px-1 text-xs font-mono">Ctrl</kbd> instead of <kbd className="inline rounded border border-gray-600 bg-gray-700 px-1 text-xs font-mono">⌘</kbd>
+            </p>
+          </div>
+        </section>
       </div>
+      )}
     </div>
   );
 }

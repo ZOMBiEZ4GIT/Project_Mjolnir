@@ -1,61 +1,10 @@
 import { currentUser } from "@clerk/nextjs/server";
-import { CheckInPromptCard } from "@/components/check-in/check-in-prompt-card";
-import { NetWorthHero } from "@/components/dashboard/net-worth-hero";
-import { SummaryCards } from "@/components/dashboard/summary-cards";
-import { AssetAllocation } from "@/components/dashboard/asset-allocation";
-import { CurrencyExposure } from "@/components/dashboard/currency-exposure";
-import { NetWorthChart } from "@/components/dashboard/net-worth-chart";
-import { TopPerformers } from "@/components/dashboard/top-performers";
-import { StaleDataWarning } from "@/components/dashboard/stale-data-warning";
-import { DashboardHeader } from "@/components/dashboard/dashboard-header";
-import { SuperBreakdownSection } from "@/components/dashboard/super-breakdown-section";
+import { DashboardContent } from "@/components/dashboard/dashboard-content";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const user = await currentUser();
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <DashboardHeader userName={user?.firstName} />
-
-      {/* Net Worth Hero Card */}
-      <div className="mb-6">
-        <NetWorthHero />
-      </div>
-
-      {/* Stale Data Warning Banner */}
-      <div className="mb-6">
-        <StaleDataWarning />
-      </div>
-
-      {/* Summary Cards: Total Assets and Total Debt */}
-      <div className="mb-6">
-        <SummaryCards />
-      </div>
-
-      {/* Asset Allocation and Currency Exposure side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <AssetAllocation />
-        <CurrencyExposure />
-      </div>
-
-      {/* Superannuation Growth Breakdown - only shows if user has super holdings */}
-      <div className="mb-6">
-        <SuperBreakdownSection />
-      </div>
-
-      {/* Net Worth History Chart */}
-      <div className="mb-6">
-        <NetWorthChart />
-      </div>
-
-      {/* Top Performers: Gainers and Losers */}
-      <div className="mb-6">
-        <TopPerformers />
-      </div>
-
-      <CheckInPromptCard />
-    </div>
-  );
+  return <DashboardContent userName={user?.firstName} />;
 }

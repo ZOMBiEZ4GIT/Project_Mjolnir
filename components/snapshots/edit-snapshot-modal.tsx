@@ -146,6 +146,13 @@ export function EditSnapshotModal({
   const [employerContrib, setEmployerContrib] = useState("");
   const [employeeContrib, setEmployeeContrib] = useState("");
 
+  // Form errors
+  const [errors, setErrors] = useState<{
+    balance?: string;
+    employerContrib?: string;
+    employeeContrib?: string;
+  }>({});
+
   // Fetch contribution if this is a super holding
   const { data: contribution, isLoading: isLoadingContribution } = useQuery({
     queryKey: ["contribution", snapshot?.holdingId, snapshot?.date],
@@ -158,6 +165,7 @@ export function EditSnapshotModal({
     if (snapshot) {
       setBalance(snapshot.balance);
       setNotes(snapshot.notes || "");
+      setErrors({});
     }
   }, [snapshot]);
 
@@ -197,6 +205,38 @@ export function EditSnapshotModal({
 
   const handleSave = async () => {
     if (!snapshot) return;
+
+    // Validate form
+    const newErrors: typeof errors = {};
+
+    // Validate balance
+    const balanceNum = parseFloat(balance);
+    if (!balance || isNaN(balanceNum)) {
+      newErrors.balance = "Balance is required";
+    } else if (balanceNum < 0 && snapshot.holdingType !== "debt") {
+      newErrors.balance = "Balance must be non-negative";
+    }
+
+    // Validate contributions if shown
+    if (showContributions) {
+      if (employerContrib) {
+        const empNum = parseFloat(employerContrib);
+        if (isNaN(empNum) || empNum < 0) {
+          newErrors.employerContrib = "Must be a non-negative number";
+        }
+      }
+      if (employeeContrib) {
+        const eeNum = parseFloat(employeeContrib);
+        if (isNaN(eeNum) || eeNum < 0) {
+          newErrors.employeeContrib = "Must be a non-negative number";
+        }
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
 
     try {
       // Update snapshot
@@ -296,12 +336,20 @@ export function EditSnapshotModal({
                 <Input
                   type="number"
                   value={balance}
-                  onChange={(e) => setBalance(e.target.value)}
-                  className="bg-gray-800 border-gray-600 text-white text-right"
+                  onChange={(e) => {
+                    setBalance(e.target.value);
+                    if (errors.balance) setErrors({ ...errors, balance: undefined });
+                  }}
+                  className={`bg-gray-800 border-gray-600 text-white text-right ${
+                    errors.balance ? "border-red-500 focus-visible:ring-red-500" : ""
+                  }`}
                   step="0.01"
                   min="0"
                 />
               </div>
+              {errors.balance && (
+                <p className="text-sm text-red-500">{errors.balance}</p>
+              )}
             </div>
 
             {/* Notes input */}
@@ -346,47 +394,63 @@ export function EditSnapshotModal({
 
                     {showContributions && (
                       <div className="mt-3 pl-4 space-y-3 border-l-2 border-gray-700">
-                        <div className="flex items-center justify-between">
-                          <label className="text-sm text-gray-300">
-                            Employer Contribution
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-400">
-                              {currencySymbol}
-                            </span>
-                            <Input
-                              type="number"
-                              placeholder="0.00"
-                              value={employerContrib}
-                              onChange={(e) =>
-                                setEmployerContrib(e.target.value)
-                              }
-                              className="w-28 bg-gray-800 border-gray-600 text-white text-right"
-                              step="0.01"
-                              min="0"
-                            />
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm text-gray-300">
+                              Employer Contribution
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-400">
+                                {currencySymbol}
+                              </span>
+                              <Input
+                                type="number"
+                                placeholder="0.00"
+                                value={employerContrib}
+                                onChange={(e) => {
+                                  setEmployerContrib(e.target.value);
+                                  if (errors.employerContrib) setErrors({ ...errors, employerContrib: undefined });
+                                }}
+                                className={`w-28 bg-gray-800 border-gray-600 text-white text-right ${
+                                  errors.employerContrib ? "border-red-500 focus-visible:ring-red-500" : ""
+                                }`}
+                                step="0.01"
+                                min="0"
+                              />
+                            </div>
                           </div>
+                          {errors.employerContrib && (
+                            <p className="text-xs text-red-500 text-right">{errors.employerContrib}</p>
+                          )}
                         </div>
-                        <div className="flex items-center justify-between">
-                          <label className="text-sm text-gray-300">
-                            Employee Contribution
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-400">
-                              {currencySymbol}
-                            </span>
-                            <Input
-                              type="number"
-                              placeholder="0.00"
-                              value={employeeContrib}
-                              onChange={(e) =>
-                                setEmployeeContrib(e.target.value)
-                              }
-                              className="w-28 bg-gray-800 border-gray-600 text-white text-right"
-                              step="0.01"
-                              min="0"
-                            />
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm text-gray-300">
+                              Employee Contribution
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-400">
+                                {currencySymbol}
+                              </span>
+                              <Input
+                                type="number"
+                                placeholder="0.00"
+                                value={employeeContrib}
+                                onChange={(e) => {
+                                  setEmployeeContrib(e.target.value);
+                                  if (errors.employeeContrib) setErrors({ ...errors, employeeContrib: undefined });
+                                }}
+                                className={`w-28 bg-gray-800 border-gray-600 text-white text-right ${
+                                  errors.employeeContrib ? "border-red-500 focus-visible:ring-red-500" : ""
+                                }`}
+                                step="0.01"
+                                min="0"
+                              />
+                            </div>
                           </div>
+                          {errors.employeeContrib && (
+                            <p className="text-xs text-red-500 text-right">{errors.employeeContrib}</p>
+                          )}
                         </div>
                       </div>
                     )}

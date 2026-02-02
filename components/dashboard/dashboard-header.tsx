@@ -97,11 +97,11 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
   };
 
   return (
-    <div className="flex items-center justify-between mb-4">
-      <h1 className="text-3xl font-bold text-white">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+      <h1 className="text-2xl sm:text-3xl font-bold text-white">
         Welcome{userName ? `, ${userName}` : ""}
       </h1>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
         <FxRatesDisplay mode="compact" />
         <CurrencySelector />
         <Button
@@ -114,7 +114,8 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
           <RefreshCw
             className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
           />
-          {isRefreshing ? "Refreshing..." : "Refresh"}
+          <span className="hidden sm:inline">{isRefreshing ? "Refreshing..." : "Refresh"}</span>
+          <span className="sm:hidden">{isRefreshing ? "..." : ""}</span>
         </Button>
       </div>
     </div>

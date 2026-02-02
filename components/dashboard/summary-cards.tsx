@@ -74,7 +74,7 @@ function formatPercentage(value: number): string {
  */
 function CardSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
       <div className="animate-pulse">
         <div className="h-4 w-20 bg-gray-700 rounded mb-3" />
         <div className="h-8 w-40 bg-gray-700 rounded mb-3" />
@@ -116,7 +116,7 @@ function SummaryCard({
     accentColor === "green" ? isPositiveChange : !isPositiveChange;
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">
@@ -126,20 +126,20 @@ function SummaryCard({
       </div>
 
       {/* Value */}
-      <div className="text-2xl md:text-3xl font-bold text-white mb-2">
+      <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2">
         {formatCurrency(value, currency)}
       </div>
 
       {/* Change from last month */}
       {hasChange && (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
           {showPositiveIndicator ? (
-            <TrendingUp className="h-4 w-4 text-green-500" />
+            <TrendingUp className="h-4 w-4 text-green-500 shrink-0" />
           ) : (
-            <TrendingDown className="h-4 w-4 text-red-500" />
+            <TrendingDown className="h-4 w-4 text-red-500 shrink-0" />
           )}
           <span
-            className={`text-sm font-medium ${
+            className={`text-xs sm:text-sm font-medium ${
               showPositiveIndicator ? "text-green-500" : "text-red-500"
             }`}
           >

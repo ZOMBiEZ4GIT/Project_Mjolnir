@@ -16,8 +16,8 @@
         "Lint passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented error boundary with Card styling, retry button, and console logging"
     },
     {
       "id": "US-002",
@@ -31,8 +31,8 @@
         "Lint passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added DashboardErrorBoundary wrapper to layout, created SectionErrorBoundary for individual sections, wrapped all 9 dashboard sections with their own boundaries"
     },
     {
       "id": "US-003",
@@ -48,8 +48,8 @@
         "Lint passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created app/error.tsx with Card-styled error UI, Try again and Go to Dashboard buttons, dev-only error details"
     },
     {
       "id": "US-004",
@@ -64,8 +64,8 @@
         "Lint passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created app/not-found.tsx with Card-styled 404 UI consistent with error.tsx styling"
     },
     {
       "id": "US-005",
@@ -81,8 +81,8 @@
         "Lint passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created MobileNav component using Sheet from shadcn/ui, hamburger visible on mobile via md: breakpoint"
     },
     {
       "id": "US-006",
@@ -97,8 +97,8 @@
         "Lint passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added responsive padding (p-4 sm:p-6) to all dashboard cards, made header and check-in prompt stack on mobile, adjusted text sizes for small screens"
     },
     {
       "id": "US-007",
@@ -113,8 +113,8 @@
         "Lint passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added overflow-x-auto for horizontal scrolling, sticky Name column, progressive column hiding using sm:/md:/lg: breakpoints, compact action buttons on mobile"
     },
     {
       "id": "US-008",
@@ -128,8 +128,8 @@
         "Lint passes"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added overflow-x-auto, sticky Date column, progressive column hiding (sm:/md:/lg:), smaller action buttons on mobile, responsive footer totals"
     },
     {
       "id": "US-009",
@@ -144,8 +144,8 @@
         "Lint passes"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created SettingsSkeleton component matching both currency and email preference section layouts, shows during isLoading state from useCurrency"
     },
     {
       "id": "US-010",
@@ -159,8 +159,8 @@
         "Lint passes"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Enhanced RecentImports skeleton to match actual import record layout: status icon, filename row with icon + text + badge, stats row with count + clock + timestamp"
     },
     {
       "id": "US-011",
@@ -176,8 +176,8 @@
         "Lint passes"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created ApiError class with status, message, type, userMessage, and details. Includes handleApiError for catch blocks, createApiErrorResponse for API routes, factory methods fromResponse and fromUnknown. Logs errors with context and returns user-friendly messages for common HTTP status codes."
     },
     {
       "id": "US-012",
@@ -192,8 +192,8 @@
         "Lint passes"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/utils/retry.ts with withRetry utility and isTransientError helper. Integrated into fetchPrice in price-fetcher.ts with 3 retries, exponential backoff starting at 1000ms, logging on retry attempts, and fallback to cached price on exhaustion."
     },
     {
       "id": "US-013",
@@ -208,8 +208,8 @@
         "Lint passes"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added border-red-500 and focus-visible:ring-red-500 styling to all form inputs (Input and SelectTrigger) when errors exist. Updated add/edit holding dialogs, add/edit transaction dialogs (all action types), and edit snapshot modal. Errors clear when field values change."
     },
     {
       "id": "US-014",
@@ -225,8 +225,8 @@
         "Lint passes"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created DeleteHoldingDialog component with detailed holding info (name, type, symbol, currency, quantity, cost basis, balance). Shows warning about associated data deletion. DeleteTransactionDialog and DeleteSnapshotDialog already existed with detailed confirmations."
     },
     {
       "id": "US-015",
@@ -241,8 +241,8 @@
         "Lint passes"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created CommandMenu component using cmdk/shadcn command. Cmd/Ctrl+K opens quick navigation palette with all pages. Escape handled by Radix UI dialogs. Enter form submit is standard browser behavior. Added keyboard shortcuts documentation section to settings page."
     },
     {
       "id": "US-016",
@@ -257,8 +257,8 @@
         "Lint passes"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created reusable EmptyState component with icon, title, description, and optional action. Updated holdings, transactions, and snapshots pages with consistent empty states including icons (Briefcase, ArrowLeftRight, Camera) and helpful CTAs. Filter-active empty states show Filter icon with clear filters button."
     }
   ]
 }

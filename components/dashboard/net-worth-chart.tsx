@@ -312,7 +312,7 @@ export function NetWorthChart() {
   // Empty state
   if (chartData.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
             Net Worth History
@@ -354,7 +354,7 @@ export function NetWorthChart() {
   };
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
           Net Worth History

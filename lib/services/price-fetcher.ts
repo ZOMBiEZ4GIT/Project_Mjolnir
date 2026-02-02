@@ -20,6 +20,7 @@ import {
   CachedPrice,
   PriceDataToCache,
 } from "./price-cache";
+import { withRetry, isTransientError } from "@/lib/utils/retry";
 
 /**
  * Result of a price fetch operation.
@@ -151,9 +152,23 @@ export async function fetchPrice(
     }
   }
 
-  // Attempt to fetch fresh price
+  // Attempt to fetch fresh price with retry logic
   try {
-    const priceData = await fetchPriceFromProvider(holding);
+    const priceData = await withRetry(
+      () => fetchPriceFromProvider(holding),
+      {
+        maxRetries: 3,
+        initialDelayMs: 1000,
+        backoffMultiplier: 2,
+        isRetryable: isTransientError,
+        onRetry: (attempt, error, delayMs) => {
+          console.log(
+            `[PriceFetcher] Retry ${attempt} for ${cacheSymbol} after ${delayMs}ms:`,
+            error instanceof Error ? error.message : "Unknown error"
+          );
+        },
+      }
+    );
 
     // Update cache
     const cacheData: PriceDataToCache = {
@@ -175,7 +190,12 @@ export async function fetchPrice(
       isStale: false,
     };
   } catch (error) {
-    // On fetch failure, try to return stale cached price
+    // All retries failed - log and try to return stale cached price
+    console.log(
+      `[PriceFetcher] All retries exhausted for ${cacheSymbol}:`,
+      error instanceof Error ? error.message : "Unknown error"
+    );
+
     const cached = await getCachedPrice(cacheSymbol);
     if (cached) {
       const errorMessage = getErrorMessage(error);

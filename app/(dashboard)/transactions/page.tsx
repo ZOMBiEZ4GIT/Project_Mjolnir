@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ArrowLeftRight, Filter } from "lucide-react";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
 import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
 import { DeleteTransactionDialog } from "@/components/transactions/delete-transaction-dialog";
@@ -396,29 +398,42 @@ export default function TransactionsPage() {
 
   // Show empty state
   if (!transactions || transactions.length === 0) {
+    const hasFilters = selectedHoldingId || selectedAction || selectedCurrency !== "all";
+
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-white">Transactions</h1>
-          <AddTransactionDialog>
-            <Button>Add Transaction</Button>
-          </AddTransactionDialog>
+          {!hasFilters && (
+            <AddTransactionDialog>
+              <Button>Add Transaction</Button>
+            </AddTransactionDialog>
+          )}
         </div>
-        <FilterControls />
-        <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
-          <div className="text-gray-400">
-            <p className="text-lg">
-              {selectedHoldingId || selectedAction || selectedCurrency !== "all"
-                ? "No transactions match your filters"
-                : "No transactions yet"}
-            </p>
-            <p className="text-sm mt-2">
-              {selectedHoldingId || selectedAction || selectedCurrency !== "all"
-                ? "Try adjusting your filters to see more transactions."
-                : "Add your first transaction to start tracking your portfolio."}
-            </p>
-          </div>
-        </div>
+        {hasFilters && <FilterControls />}
+        <EmptyState
+          icon={hasFilters ? Filter : ArrowLeftRight}
+          title={hasFilters ? "No transactions match your filters" : "No transactions yet"}
+          description={
+            hasFilters
+              ? "Try adjusting your filters to see more transactions, or clear all filters to view everything."
+              : "Add your first transaction to start tracking your portfolio activity. Record buys, sells, dividends, and stock splits."
+          }
+          action={
+            hasFilters ? (
+              <Button
+                variant="outline"
+                onClick={() => updateFilters(null, null, "all")}
+              >
+                Clear all filters
+              </Button>
+            ) : (
+              <AddTransactionDialog>
+                <Button size="lg">Add your first transaction</Button>
+              </AddTransactionDialog>
+            )
+          }
+        />
       </div>
     );
   }
@@ -433,18 +448,18 @@ export default function TransactionsPage() {
         </AddTransactionDialog>
       </div>
       <FilterControls />
-      <div className="rounded-lg border border-gray-800 overflow-hidden">
+      <div className="rounded-lg border border-gray-800 overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-gray-800 hover:bg-transparent">
-              <TableHead className="text-gray-400">Date</TableHead>
-              <TableHead className="text-gray-400">Holding</TableHead>
+              <TableHead className="text-gray-400 sticky left-0 bg-gray-950 z-10">Date</TableHead>
+              <TableHead className="text-gray-400 hidden sm:table-cell">Holding</TableHead>
               <TableHead className="text-gray-400">Action</TableHead>
-              <TableHead className="text-gray-400 text-right">Quantity</TableHead>
-              <TableHead className="text-gray-400 text-right">Unit Price</TableHead>
-              <TableHead className="text-gray-400 text-right">Fees</TableHead>
+              <TableHead className="text-gray-400 text-right hidden md:table-cell">Quantity</TableHead>
+              <TableHead className="text-gray-400 text-right hidden sm:table-cell">Unit Price</TableHead>
+              <TableHead className="text-gray-400 text-right hidden lg:table-cell">Fees</TableHead>
               <TableHead className="text-gray-400 text-right">Total</TableHead>
-              <TableHead className="text-gray-400 text-right w-24">Actions</TableHead>
+              <TableHead className="text-gray-400 text-right w-[80px] sm:w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -452,27 +467,33 @@ export default function TransactionsPage() {
               const total = calculateTotal(transaction);
               return (
                 <TableRow key={transaction.id} className="border-gray-800">
-                  <TableCell className="text-gray-300">
-                    {formatDate(transaction.date)}
+                  <TableCell className="text-gray-300 sticky left-0 bg-gray-950 z-10">
+                    <div className="flex flex-col">
+                      <span>{formatDate(transaction.date)}</span>
+                      {/* Show holding name on mobile only (since Holding column is hidden) */}
+                      <span className="text-xs text-gray-500 sm:hidden">
+                        {transaction.holding.symbol || transaction.holding.name}
+                      </span>
+                    </div>
                   </TableCell>
-                  <TableCell className="text-white font-medium">
+                  <TableCell className="text-white font-medium hidden sm:table-cell">
                     {transaction.holding.symbol || transaction.holding.name}
                     {transaction.holding.symbol && (
-                      <span className="text-gray-500 text-sm ml-2">
+                      <span className="text-gray-500 text-sm ml-2 hidden md:inline">
                         {transaction.holding.name}
                       </span>
                     )}
                   </TableCell>
                   <TableCell>
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getActionColorClass(
+                      className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium ${getActionColorClass(
                         transaction.action
                       )}`}
                     >
                       {transaction.action}
                     </span>
                   </TableCell>
-                  <TableCell className="text-gray-300 text-right font-mono">
+                  <TableCell className="text-gray-300 text-right font-mono hidden md:table-cell">
                     {transaction.action === "SPLIT"
                       ? `${transaction.quantity}:1`
                       : Number(transaction.quantity).toLocaleString("en-AU", {
@@ -480,7 +501,7 @@ export default function TransactionsPage() {
                           maximumFractionDigits: 8,
                         })}
                   </TableCell>
-                  <TableCell className="text-gray-300 text-right font-mono">
+                  <TableCell className="text-gray-300 text-right font-mono hidden sm:table-cell">
                     {transaction.action === "SPLIT" ? (
                       "—"
                     ) : (
@@ -492,7 +513,7 @@ export default function TransactionsPage() {
                       />
                     )}
                   </TableCell>
-                  <TableCell className="text-gray-300 text-right font-mono">
+                  <TableCell className="text-gray-300 text-right font-mono hidden lg:table-cell">
                     {transaction.action === "SPLIT" ||
                     Number(transaction.fees) === 0 ? (
                       "—"
@@ -518,24 +539,25 @@ export default function TransactionsPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-0.5 sm:gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 text-gray-400 hover:text-white"
+                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-gray-400 hover:text-white"
                         onClick={() => setEditTransaction(transaction)}
                       >
                         <span className="sr-only">Edit</span>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
+                          width="14"
+                          height="14"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
+                          className="sm:w-4 sm:h-4"
                         >
                           <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                           <path d="m15 5 4 4" />
@@ -544,20 +566,21 @@ export default function TransactionsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 w-8 p-0 text-gray-400 hover:text-red-400"
+                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-gray-400 hover:text-red-400"
                         onClick={() => setDeleteTransaction(transaction)}
                       >
                         <span className="sr-only">Delete</span>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
+                          width="14"
+                          height="14"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
                           strokeWidth="2"
                           strokeLinecap="round"
                           strokeLinejoin="round"
+                          className="sm:w-4 sm:h-4"
                         >
                           <path d="M3 6h18" />
                           <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
@@ -575,54 +598,60 @@ export default function TransactionsPage() {
           {aggregatedTotals && (
             <TableFooter className="border-t border-gray-700">
               <TableRow className="bg-gray-900/50 hover:bg-gray-900/50">
-                <TableCell colSpan={4} className="text-gray-400 text-sm">
+                <TableCell className="text-gray-400 text-sm sticky left-0 bg-gray-900/50 z-10">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">Totals</span>
                     {aggregatedTotals.hasMixedCurrencies && (
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-gray-500 hidden sm:inline">
                         (converted to {displayCurrency})
                       </span>
                     )}
                   </div>
                 </TableCell>
-                <TableCell colSpan={3} className="text-right">
+                {/* Hidden cells to match responsive column visibility */}
+                <TableCell className="hidden sm:table-cell" />
+                <TableCell />
+                <TableCell className="hidden md:table-cell" />
+                <TableCell className="hidden sm:table-cell" />
+                <TableCell className="hidden lg:table-cell" />
+                <TableCell className="text-right">
                   <div className="flex flex-col gap-1 text-sm">
-                    <div className="flex justify-end items-center gap-4">
-                      <span className="text-gray-400">Buys:</span>
+                    <div className="flex justify-end items-center gap-2 sm:gap-4">
+                      <span className="text-gray-400 text-xs sm:text-sm">Buys:</span>
                       <CurrencyDisplay
                         amount={aggregatedTotals.totalBuys}
                         currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
                         isLoading={currencyLoading}
-                        className="text-red-400 font-mono"
+                        className="text-red-400 font-mono text-xs sm:text-sm"
                       />
                     </div>
-                    <div className="flex justify-end items-center gap-4">
-                      <span className="text-gray-400">Sells:</span>
+                    <div className="flex justify-end items-center gap-2 sm:gap-4">
+                      <span className="text-gray-400 text-xs sm:text-sm">Sells:</span>
                       <CurrencyDisplay
                         amount={aggregatedTotals.totalSells}
                         currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
                         isLoading={currencyLoading}
-                        className="text-green-400 font-mono"
+                        className="text-green-400 font-mono text-xs sm:text-sm"
                       />
                     </div>
                     {aggregatedTotals.totalDividends > 0 && (
-                      <div className="flex justify-end items-center gap-4">
-                        <span className="text-gray-400">Dividends:</span>
+                      <div className="flex justify-end items-center gap-2 sm:gap-4">
+                        <span className="text-gray-400 text-xs sm:text-sm">Dividends:</span>
                         <CurrencyDisplay
                           amount={aggregatedTotals.totalDividends}
                           currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
                           isLoading={currencyLoading}
-                          className="text-green-400 font-mono"
+                          className="text-green-400 font-mono text-xs sm:text-sm"
                         />
                       </div>
                     )}
-                    <div className="flex justify-end items-center gap-4 pt-1 border-t border-gray-700">
-                      <span className="text-gray-300 font-medium">Net Cash Flow:</span>
+                    <div className="flex justify-end items-center gap-2 sm:gap-4 pt-1 border-t border-gray-700">
+                      <span className="text-gray-300 font-medium text-xs sm:text-sm">Net:</span>
                       <CurrencyDisplay
                         amount={aggregatedTotals.netCashFlow}
                         currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
                         isLoading={currencyLoading}
-                        className={`font-mono font-bold ${aggregatedTotals.netCashFlow >= 0 ? "text-green-400" : "text-red-400"}`}
+                        className={`font-mono font-bold text-xs sm:text-sm ${aggregatedTotals.netCashFlow >= 0 ? "text-green-400" : "text-red-400"}`}
                       />
                     </div>
                   </div>

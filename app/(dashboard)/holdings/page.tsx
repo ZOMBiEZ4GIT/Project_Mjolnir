@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Briefcase, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { HoldingsTable, type HoldingWithData, type PriceData, type GroupByValue } from "@/components/holdings/holdings-table";
@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { NativeCurrencyToggle } from "@/components/ui/native-currency-toggle";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -337,43 +338,17 @@ export default function HoldingsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-white">Holdings</h1>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              disabled
-              className="gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh Prices
-            </Button>
+        </div>
+        <EmptyState
+          icon={Briefcase}
+          title="No holdings yet"
+          description="Add your first holding to start tracking your net worth. You can add stocks, ETFs, crypto, superannuation, cash, and debt."
+          action={
             <AddHoldingDialog>
-              <Button>Add Holding</Button>
+              <Button size="lg">Add your first holding</Button>
             </AddHoldingDialog>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 mb-4">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="show-dormant-empty"
-              checked={showDormant}
-              onCheckedChange={handleShowDormantChange}
-            />
-            <Label htmlFor="show-dormant-empty" className="text-gray-300 cursor-pointer text-sm">
-              Show dormant holdings
-            </Label>
-          </div>
-          <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
-          <GroupBySelector value={groupBy} onChange={handleGroupByChange} />
-          <NativeCurrencyToggle />
-        </div>
-        <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
-          <div className="text-gray-400">
-            <p className="text-lg">No holdings yet</p>
-            <p className="text-sm mt-2">
-              Add your first holding to start tracking your net worth.
-            </p>
-          </div>
-        </div>
+          }
+        />
       </div>
     );
   }
@@ -401,7 +376,7 @@ export default function HoldingsPage() {
             </AddHoldingDialog>
           </div>
         </div>
-        <div className="flex items-center gap-4 mb-4">
+        <div className="flex flex-wrap items-center gap-4 mb-4">
           <div className="flex items-center gap-2">
             <Switch
               id="show-dormant-filtered"
@@ -416,14 +391,19 @@ export default function HoldingsPage() {
           <GroupBySelector value={groupBy} onChange={handleGroupByChange} />
           <NativeCurrencyToggle />
         </div>
-        <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
-          <div className="text-gray-400">
-            <p className="text-lg">No {currencyFilter} holdings found</p>
-            <p className="text-sm mt-2">
-              Try selecting a different currency filter or &quot;All Currencies&quot;.
-            </p>
-          </div>
-        </div>
+        <EmptyState
+          icon={Filter}
+          title={`No ${currencyFilter} holdings found`}
+          description="Try selecting a different currency filter or 'All Currencies' to see your holdings."
+          action={
+            <Button
+              variant="outline"
+              onClick={() => handleCurrencyFilterChange("all")}
+            >
+              Show all currencies
+            </Button>
+          }
+        />
       </div>
     );
   }

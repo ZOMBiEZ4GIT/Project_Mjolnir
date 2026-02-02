@@ -51,8 +51,8 @@ export function CheckInPromptCard() {
   }
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-      <div className="flex items-start justify-between">
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h3 className="text-lg font-semibold text-white">
             Monthly Check-in
@@ -69,7 +69,7 @@ export function CheckInPromptCard() {
             {data.totalSnapshotHoldings} holdings already updated
           </p>
         </div>
-        <Button className="shrink-0" onClick={() => setIsModalOpen(true)}>
+        <Button className="shrink-0 w-full sm:w-auto" onClick={() => setIsModalOpen(true)}>
           Start Check-in
         </Button>
       </div>

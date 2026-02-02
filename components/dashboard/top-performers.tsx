@@ -45,7 +45,7 @@ function formatPercent(value: number): string {
  */
 function PerformersSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
       <div className="animate-pulse">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Gainers skeleton */}
@@ -194,7 +194,7 @@ export function TopPerformers() {
   // Empty state when no tradeable holdings with performance data
   if (hasNoData) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
         <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-4">
           Top Performers
         </h3>
@@ -211,7 +211,7 @@ export function TopPerformers() {
   }
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Top Gainers */}
         <div>
