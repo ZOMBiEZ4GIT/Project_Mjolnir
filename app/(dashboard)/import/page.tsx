@@ -7,6 +7,7 @@ import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { FileUpload } from "@/components/import/file-upload";
 import { ImportResults, type ImportError } from "@/components/import/import-results";
 import { ImportProgress } from "@/components/import/import-progress";
+import { RecentImports, type ImportHistoryRecord } from "@/components/import/recent-imports";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -53,6 +54,32 @@ export default function ImportPage() {
   const [snapshotResults, setSnapshotResults] = React.useState<ImportSummary | null>(null);
   const [snapshotLoading, setSnapshotLoading] = React.useState(false);
   const [snapshotRowCount, setSnapshotRowCount] = React.useState<number | undefined>(undefined);
+
+  // Recent imports state
+  const [recentImports, setRecentImports] = React.useState<ImportHistoryRecord[]>([]);
+  const [recentImportsLoading, setRecentImportsLoading] = React.useState(true);
+
+  // Fetch recent imports
+  const fetchRecentImports = React.useCallback(async () => {
+    try {
+      const response = await fetch("/api/import/history?limit=5");
+      if (response.ok) {
+        const data = await response.json();
+        setRecentImports(data.imports);
+      }
+    } catch (error) {
+      console.error("Failed to fetch recent imports:", error);
+    } finally {
+      setRecentImportsLoading(false);
+    }
+  }, []);
+
+  // Fetch recent imports on mount and after successful imports
+  React.useEffect(() => {
+    if (isSignedIn) {
+      fetchRecentImports();
+    }
+  }, [isSignedIn, fetchRecentImports]);
 
   // Helper to count CSV rows (excluding header)
   const countCsvRows = async (file: File): Promise<number> => {
@@ -108,6 +135,9 @@ export default function ImportPage() {
       } else {
         toast.error("No transactions were imported");
       }
+
+      // Refresh recent imports list
+      fetchRecentImports();
     } catch (error) {
       toast.error("Failed to import transactions");
       console.error("Transaction import error:", error);
@@ -147,6 +177,9 @@ export default function ImportPage() {
       } else {
         toast.error("No snapshots were imported");
       }
+
+      // Refresh recent imports list
+      fetchRecentImports();
     } catch (error) {
       toast.error("Failed to import snapshots");
       console.error("Snapshot import error:", error);
@@ -327,6 +360,12 @@ export default function ImportPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Recent Imports Section */}
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold text-white mb-4">Recent Imports</h2>
+        <RecentImports imports={recentImports} isLoading={recentImportsLoading} />
       </div>
     </div>
   );
