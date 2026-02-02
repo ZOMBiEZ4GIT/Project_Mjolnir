@@ -8,16 +8,10 @@
 - Next.js 16 doesn't have `next lint` command - use `eslint .` directly
 
 - Database module uses lazy initialization via Proxy to avoid build-time errors when DATABASE_URL is not set
-- Use `sql` template tag from drizzle-orm for raw SQL queries with `db.execute(sql\`...\`)`
 - ClerkProvider conditionally renders based on NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to allow builds without Clerk keys
 - Use `export const dynamic = "force-dynamic"` for pages/layouts that use Clerk components
 - Dashboard routes at `/dashboard` and `/profile` are protected; landing page `/` is public
 - Auth pages use `(auth)` route group; dashboard uses `(dashboard)` route group
-
-- Drizzle migrations are stored in `drizzle/` directory and should be committed to git
-- The holdings schema exists in `lib/db/schema.ts` with all required fields
-- Transactions schema exists with action enum: BUY, SELL, DIVIDEND, SPLIT
-- Snapshots and contributions schemas exist for super/cash/debt tracking
 
 - TanStack Query provider is in `components/providers/query-provider.tsx` - wrap layouts with QueryProvider
 - ClerkProvider wrapper is in `components/providers/clerk-provider.tsx` - handles missing Clerk keys gracefully
@@ -28,216 +22,34 @@
 
 - Dashboard navigation uses `components/dashboard/nav.tsx` with usePathname for active state
 - Settings page exists at `/settings` for user preferences
+- Import page exists at `/import` for CSV imports
 
-- API patterns:
-  - Use innerJoin with holdings to validate user ownership AND include holding info
-  - Return 409 Conflict for duplicate prevention (unique constraint violations)
-  - Return 400 with `{ errors: { field: "message" } }` for validation errors
-  - Decimal fields from Drizzle come as strings, need Number() conversion for arithmetic
-  - Multipart form data: use request.formData() to get files
+- Error Handling Patterns (from CLAUDE.md):
+  - Price API down: Show last cached price with "as of X ago" badge
+  - Unknown symbol: Show error on holding form, prevent save
+  - Invalid ticker: Show validation error, suggest correct format (e.g., `.AX` for ASX)
+  - Auth failure: Redirect to Clerk sign-in
+  - DB error: Generic "something went wrong" + error logging
 
-- Existing holdings types: stock, etf, crypto, super, cash, debt
-- Holdings have: symbol, name, currency (AUD/NZD/USD), exchange, is_dormant flag
-- Transactions have: date, action (BUY/SELL/DIVIDEND/SPLIT), quantity, unit_price, fees, currency
-- Snapshots have: date, balance, currency (for super/cash/debt)
-- Contributions have: date, employer_contrib, employee_contrib (for super only)
+- Design Principles:
+  - Dark mode only - no light mode
+  - Information density - show meaningful data; minimize empty space
+  - Scannable - key metrics visible without scrolling
+  - Mobile responsive - usable on phone for quick balance checks
 
-- CSV Import format (from CLAUDE.md):
-  - Transactions: date,symbol,action,quantity,unit_price,fees,currency,exchange,notes
-  - Super Snapshots: date,fund_name,balance,employer_contrib,employee_contrib,currency
-  - Import should be idempotent - re-running doesn't create duplicates
+- Existing components:
+  - shadcn/ui: Button, Input, Select, Table, Card, Progress, Tooltip, Switch, Dialog, Sheet
+  - Chart components in `components/charts/`: ChartSkeleton, ChartError, ChartExportButton
+  - Dashboard components with loading skeletons already implemented
 
----
-
-# W-11 Data Import Progress Log
-
-Started: 2026-02-02
+- Tailwind responsive breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
+- Use responsive classes like `hidden md:block` or `grid-cols-1 md:grid-cols-2`
 
 ---
 
-## 2026-02-02 - US-001
-- Implemented CSV parsing utility at `lib/import/csv-parser.ts`
-- Files created: `lib/import/csv-parser.ts`
-- **Learnings for future iterations:**
-  - CSVRow type is `Record<string, string | null>` - column names as keys, values as strings or null
-  - parseCSV function handles: headers, quoted values, newlines in fields, empty values -> null
-  - The parser trims whitespace from field values and headers
----
+# W-12 Polish & Error Handling Progress Log
 
-## 2026-02-02 - US-002
-- Implemented transaction import validator at `lib/import/validators/transaction-validator.ts`
-- Files created: `lib/import/validators/transaction-validator.ts`
-- **Learnings for future iterations:**
-  - TransactionRow interface: date (string), symbol (string), action (BUY|SELL|DIVIDEND), quantity (number), unitPrice (number), fees (number|null), currency/exchange/notes (string|null)
-  - ValidationResult interface: { valid: boolean, errors: string[], data: TransactionRow | null }
-  - validateTransactionRow takes a CSVRow and optional rowNumber for error messages
-  - Validates date format YYYY-MM-DD, action is case-insensitive (converts to uppercase)
-  - parseNumber helper removes commas for numbers like "1,000.50"
-  - PRD specifies BUY, SELL, DIVIDEND for import (schema also has SPLIT but not for import)
----
+Started: 2026-02-03
 
-## 2026-02-02 - US-003
-- Implemented snapshot import validator at `lib/import/validators/snapshot-validator.ts`
-- Files created: `lib/import/validators/snapshot-validator.ts`
-- **Learnings for future iterations:**
-  - SnapshotRow interface: date (string), fundName (string), balance (number), employerContrib (number|null), employeeContrib (number|null), currency (string|null)
-  - Same ValidationResult interface pattern as transaction validator
-  - validateSnapshotRow takes CSVRow with field names: date, fund_name, balance, employer_contrib, employee_contrib, currency
-  - Balance can be negative (for debt) or zero - no positivity constraint unlike transaction amounts
-  - Contribution fields (employer/employee) must be non-negative if provided
-  - Both validators share same date validation (YYYY-MM-DD) and parseNumber helper pattern
----
-
-## 2026-02-02 - US-004
-- Implemented transaction import service at `lib/import/transaction-importer.ts`
-- Files created: `lib/import/transaction-importer.ts`
-- **Learnings for future iterations:**
-  - ImportResult interface: { imported: number, skipped: number, errors: ImportError[] }
-  - ImportError interface: { row: number, message: string, data?: TransactionRow }
-  - importTransactions(userId, rows) takes validated TransactionRow[] from US-002
-  - Auto-creates holdings by symbol if not exists - uses symbol suffix (.AX -> ASX, .NZ -> NZX) to determine type
-  - Duplicate detection: same holdingId + date + action + quantity (as string comparison in Drizzle)
-  - Holding cache used to avoid repeated DB lookups for same symbol
-  - Decimal fields stored as strings in Drizzle (quantity, unitPrice, fees use String())
-  - Default currency is AUD if not provided in CSV row
----
-
-## 2026-02-02 - US-005
-- Implemented snapshot import service at `lib/import/snapshot-importer.ts`
-- Files created: `lib/import/snapshot-importer.ts`
-- **Learnings for future iterations:**
-  - importSnapshots(userId, rows) takes validated SnapshotRow[] from US-003
-  - Auto-creates holdings by fund_name (case-insensitive match) with type determined by keywords:
-    - "super", "retirement", "pension", "kiwisaver" -> super
-    - "debt", "loan", "credit", "mortgage", "hecs", "help" -> debt
-    - Default -> cash
-  - Duplicate detection: same holdingId + date (simpler than transactions since no action/quantity)
-  - Creates contributions record for super holdings if employer/employee contrib provided (uses upsert pattern)
-  - Holding cache uses lowercase fund name as key for case-insensitive matching
-  - Shares ImportResult and ImportError interfaces with transaction importer
----
-
-## 2026-02-02 - US-006
-- Implemented transaction import API endpoint at `app/api/import/transactions/route.ts`
-- Files created: `app/api/import/transactions/route.ts`
-- **Learnings for future iterations:**
-  - POST accepts multipart form data via `request.formData()`
-  - File extracted with `formData.get("file")` - must check `file instanceof File`
-  - File content read via `file.text()` - returns Promise<string>
-  - Flow: parse CSV -> validate rows -> import valid rows -> combine validation errors with import errors
-  - Response format: { total, imported, skipped, errors } matching ImportSummary interface
-  - Validation errors counted in `skipped` (invalid rows that couldn't be imported)
-  - Clerk auth via `import { auth } from "@clerk/nextjs/server"` and `const { userId } = await auth()`
-  - Return 401 for unauthorized, 400 for missing/invalid file
----
-
-## 2026-02-02 - US-007
-- Implemented snapshot import API endpoint at `app/api/import/snapshots/route.ts`
-- Files created: `app/api/import/snapshots/route.ts`
-- **Learnings for future iterations:**
-  - Follows identical pattern to transaction import endpoint (US-006)
-  - Uses validateSnapshotRows from snapshot-validator and importSnapshots from snapshot-importer
-  - ImportSummary interface and response format consistent with transactions endpoint
-  - Both import endpoints now complete - UI components can call either:
-    - POST /api/import/transactions (multipart form with CSV file)
-    - POST /api/import/snapshots (multipart form with CSV file)
----
-
-## 2026-02-02 - US-008
-- Implemented file upload component at `components/import/file-upload.tsx`
-- Files created: `components/import/file-upload.tsx`
-- **Learnings for future iterations:**
-  - FileUpload component props: onFileSelect (callback with File), onFileClear (optional), accept (default ".csv"), disabled, className
-  - Drag-and-drop handled via onDragOver/onDragLeave/onDrop events
-  - Click to browse via hidden input ref, triggered by clicking the drop zone
-  - Validates .csv file type by checking file extension (.csv) or MIME type (text/csv, application/csv)
-  - Shows selected file name + size after selection, with X button to clear
-  - Uses lucide-react icons: Upload, FileText, X
-  - Error state shown when non-CSV file is dropped/selected
-  - Uses shadcn Button component for clear button
----
-
-## 2026-02-02 - US-009
-- Implemented import results component at `components/import/import-results.tsx`
-- Files created: `components/import/import-results.tsx`
-- **Learnings for future iterations:**
-  - ImportResults component props: imported (number), skipped (number), errors (ImportError[]), className
-  - ImportError interface: { row: number, message: string } - matches API response format
-  - Color coding: imported (emerald-500/green), skipped (yellow-500), errors (destructive/red)
-  - Expandable error list using local state with ChevronDown/ChevronUp toggle
-  - Success state shows CheckCircle2 icon and "Import Complete" text when imported > 0 and no errors
-  - Uses lucide-react icons: CheckCircle2, AlertCircle, AlertTriangle, ChevronDown, ChevronUp
-  - Error list shows "Row X" badge + error message for each error
-  - Works with both transaction and snapshot import API responses
----
-
-## 2026-02-02 - US-010
-- Implemented import page at `app/(dashboard)/import/page.tsx`
-- Added Import link to dashboard navigation in `components/dashboard/nav.tsx`
-- Added shadcn card component `components/ui/card.tsx`
-- Files created/modified: `app/(dashboard)/import/page.tsx`, `components/dashboard/nav.tsx`, `components/ui/card.tsx`
-- **Learnings for future iterations:**
-  - Import page uses two Card sections: Import Transactions and Import Snapshots
-  - Each section has FileUpload + ImportResults components with local state
-  - ImportSummary interface: { total, imported, skipped, errors } - matches API response
-  - Uses toast.success/warning/error from sonner based on import results
-  - CSV format examples shown in pre tags with text-xs text-gray-400 styling
-  - Dashboard navigation is defined in `components/dashboard/nav.tsx` as `navItems` array
-  - Card component from shadcn added via `npx shadcn@latest add card -y`
-  - Page follows existing patterns: useAuthSafe for auth, dynamic="force-dynamic", container layout
----
-
-## 2026-02-02 - US-011
-- Implemented import progress indicator with animated progress bar
-- Added `components/import/import-progress.tsx` - shows progress bar + "Processing X rows..." message
-- Added `components/ui/progress.tsx` - shadcn Progress component (radix-ui/react-progress)
-- Updated `app/(dashboard)/import/page.tsx` - integrated ImportProgress, row counting on file select
-- Files created/modified: `components/import/import-progress.tsx`, `components/ui/progress.tsx`, `app/(dashboard)/import/page.tsx`
-- **Learnings for future iterations:**
-  - ImportProgress component props: isLoading (boolean), rowCount (number|undefined), progress (number|undefined), className
-  - Uses indeterminate progress animation when no actual progress value provided (simulates 0-90% over time)
-  - Row counting done on file select via file.text().split("\n") - subtracts 1 for header row
-  - Import button hidden during loading (not just disabled) - shows progress bar instead
-  - Progress component from shadcn: `npx shadcn@latest add progress -y` (uses @radix-ui/react-progress)
-  - Loader2 icon with animate-spin class for spinning animation
----
-
-## 2026-02-02 - US-012
-- Implemented CSV template download buttons for transactions and snapshots
-- Files modified: `app/(dashboard)/import/page.tsx`
-- **Learnings for future iterations:**
-  - CSV download uses Blob with "text/csv;charset=utf-8;" MIME type and URL.createObjectURL
-  - Download triggered by creating temporary anchor element with download attribute
-  - Template constants defined at module level: TRANSACTIONS_TEMPLATE, SNAPSHOTS_TEMPLATE
-  - Button styled with variant="ghost" size="sm" for compact integration with format example section
-  - Download icon from lucide-react used for visual indicator
-  - Templates include header row + one example data row to help users understand format
----
-
-## 2026-02-02 - US-013
-- Implemented import history tracking with database table and API updates
-- Files created: `drizzle/0009_lethal_reaper.sql` (migration)
-- Files modified: `lib/db/schema.ts`, `app/api/import/transactions/route.ts`, `app/api/import/snapshots/route.ts`
-- **Learnings for future iterations:**
-  - import_history table has: id, user_id, type (transactions|snapshots), filename, total, imported, skipped, errors_json, created_at
-  - New enum `importTypeEnum` added for type field with values: "transactions", "snapshots"
-  - errors_json stores JSON array of errors as text (nullable - null when no errors)
-  - Import history record saved after summary is built but before API returns
-  - Relations added: users has many importHistory, importHistory belongs to user
-  - Type exports added: ImportHistory, NewImportHistory
----
-
-## 2026-02-02 - US-014
-- Implemented recent imports display on import page
-- Files created: `app/api/import/history/route.ts`, `components/import/recent-imports.tsx`
-- Files modified: `app/(dashboard)/import/page.tsx`, `package.json` (added date-fns)
-- **Learnings for future iterations:**
-  - Import history API at GET /api/import/history?limit=N returns { imports: ImportHistoryRecord[] }
-  - RecentImports component displays history with: filename, type badge, imported/skipped counts, relative timestamp
-  - Uses date-fns formatDistanceToNow for human-readable timestamps ("2 hours ago")
-  - Expandable error details when clicking on imports with errors (uses expandedId state)
-  - Empty state shows Inbox icon with "No imports yet" message
-  - Recent imports refresh after each successful import via fetchRecentImports callback
-  - errorsJson field parsed from string back to array when returning from API
 ---
 
