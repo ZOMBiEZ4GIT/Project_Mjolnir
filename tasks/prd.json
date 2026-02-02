@@ -125,8 +125,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created CurrencySelector component with Select dropdown, DollarSign icon, compact/full modes, and loading skeleton."
     },
     {
       "id": "US-008",

@@ -34,6 +34,11 @@
   - Props: amount, currency, showNative?, nativeCurrency?, nativeAmount?, isLoading?, compact?
   - Tooltip shows ISO code on hover; skeleton for loading state
   - Import: `import { CurrencyDisplay } from "@/components/ui/currency-display"`
+- CurrencySelector component in `components/ui/currency-selector.tsx`:
+  - Dropdown for switching display currency preference
+  - Uses useCurrency() hook for state and API updates
+  - Props: className?, showLoadingState?, compact?
+  - Import: `import { CurrencySelector } from "@/components/ui/currency-selector"`
 - Navigation items defined in array for easy extension
 - ESLint no-case-declarations: wrap switch case blocks containing `const`/`let` declarations in braces `{ }`
 
@@ -197,5 +202,18 @@ Started: 2026-02-02
   - Fetches from `/api/preferences` and `/api/exchange-rates` on mount when authenticated
   - `convert(amount, fromCurrency)` function handles rates unavailable gracefully (returns original)
   - Import pattern: `import { CurrencyProvider, useCurrency } from "@/components/providers/currency-provider"`
+---
+
+## 2026-02-02 - US-007
+- Implemented CurrencySelector component for display currency switching
+- Files changed:
+  - `components/ui/currency-selector.tsx` - New dropdown selector component
+- **Learnings for future iterations:**
+  - CurrencySelector uses shadcn/ui Select component with custom trigger
+  - Uses useCurrency() hook from CurrencyProvider for state and API updates
+  - Two display modes: compact (currency code only) and full (symbol + code + label)
+  - DollarSign icon from lucide-react indicates currency context
+  - setDisplayCurrency handles optimistic updates automatically (via CurrencyProvider)
+  - Import: `import { CurrencySelector } from "@/components/ui/currency-selector"`
 ---
 
