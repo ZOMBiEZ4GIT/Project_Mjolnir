@@ -377,3 +377,34 @@ Started: 2026-02-02
   - Currency badges provide clear visual indication without needing CurrencyDisplay component (for input forms vs display tables)
 ---
 
+## 2026-02-02 - US-018
+- Implemented FX rate display on dashboard header
+- Files changed:
+  - `components/ui/fx-rates-display.tsx` - New component with compact and inline display modes
+  - `components/dashboard/dashboard-header.tsx` - Added FxRatesDisplay to toolbar
+- **Learnings for future iterations:**
+  - FxRatesDisplay component supports two modes: "compact" (icon with tooltip) and "inline" (full card)
+  - Uses useCurrency() hook to access rates, isStale, and ratesFetchedAt
+  - formatRelativeTime helper converts timestamps to "X minutes ago" / "X hours ago" format
+  - Exchange rates displayed with 4 decimal places via toFixed(4)
+  - Stale rate indicator uses amber color and AlertTriangle icon
+  - Component handles loading (skeleton), error (unavailable), and normal states
+  - Import: `import { FxRatesDisplay } from "@/components/ui/fx-rates-display"`
+---
+
+## 2026-02-02 - US-019
+- Created documentation for future historical FX rates support
+- Files changed:
+  - `docs/future-historical-fx.md` - Comprehensive design document
+- **Key design decisions documented:**
+  - exchange_rate_history schema with daily granularity
+  - Unique constraint on (fromCurrency, toCurrency, date) pair
+  - Decimal(18, 8) precision for accurate rate storage
+  - Data collection via daily cron job recommended
+  - Carry-forward logic for missing historical rates
+  - Calculation changes for net worth history and cost basis
+  - Migration path in 3 phases: Schema/Collection, Optional Features, Capital Gains
+  - API provider comparison (Open Exchange Rates, Fixer.io, RBA)
+- **No implementation** - documentation only for future reference
+---
+
