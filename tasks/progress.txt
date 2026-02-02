@@ -153,3 +153,58 @@ Started: 2026-02-03
   - Use `flex-wrap` on control groups to prevent overflow
 ---
 
+## 2026-02-03 - US-007
+- Made holdings table responsive for mobile viewing
+- Added `overflow-x-auto` to table container for horizontal scrolling
+- Made Name column sticky (`sticky left-0 bg-gray-950 z-10`) so it stays visible while scrolling
+- Progressive column visibility using Tailwind responsive classes:
+  - Always visible: Name, Market Value/Balance, Actions
+  - Hidden on mobile, visible sm+ (640px+): Symbol, Price, Type, Status
+  - Hidden on mobile/tablet, visible md+ (768px+): Quantity, Gain/Loss
+  - Hidden until lg+ (1024px+): Currency, Cost Basis, Avg Cost
+- Reduced action button sizes on mobile (`h-7 w-7 sm:h-8 sm:w-8`)
+- Applied same responsive patterns to both HoldingsTypeSection and HoldingsCurrencySection components
+- Files changed: `components/holdings/holdings-table.tsx`
+- **Learnings for future iterations:**
+  - Use `sticky left-0 bg-[background-color] z-10` to keep a column visible while table scrolls
+  - `hidden sm:table-cell` pattern works for responsive table columns
+  - Progressive disclosure: show most important data on mobile, reveal more as screen grows
+  - For tables with many columns, prioritize: identifier (name) + primary value + actions
+---
+
+## 2026-02-03 - US-008
+- Made transactions table responsive for mobile viewing
+- Added `overflow-x-auto` to table container for horizontal scrolling
+- Made Date column sticky (`sticky left-0 bg-gray-950 z-10`) so it stays visible while scrolling
+- Added holding name below date on mobile (since Holding column is hidden on mobile)
+- Progressive column visibility using Tailwind responsive classes:
+  - Always visible: Date, Action, Total, Actions
+  - Hidden on mobile, visible sm+ (640px+): Holding, Unit Price
+  - Hidden until md+ (768px+): Quantity
+  - Hidden until lg+ (1024px+): Fees
+- Reduced action button sizes on mobile (`h-7 w-7 sm:h-8 sm:w-8`)
+- Made footer totals responsive with smaller text and gaps on mobile
+- Updated footer to use individual TableCells with responsive visibility instead of colspan
+- Files changed: `app/(dashboard)/transactions/page.tsx`
+- **Learnings for future iterations:**
+  - For tables with hidden columns, show summary info in the sticky/always-visible column (e.g., holding name under date)
+  - When using sticky columns in footer, can't use colspan - use individual cells with matching visibility classes
+  - Use `text-xs sm:text-sm` pattern for responsive footer/summary text
+  - Abbreviate labels on mobile (e.g., "Net Cash Flow" → "Net:")
+---
+
+## 2026-02-03 - US-009
+- Added loading skeleton to settings page
+- Created `components/settings/settings-skeleton.tsx` component matching both section layouts
+- Currency Preferences skeleton: Globe icon placeholder, Display Currency row with selector placeholder, Show Native Currency row with toggle placeholder
+- Email Preferences skeleton: Bell icon placeholder, email address row, toggle row, day selector row, helper text, test email button placeholder
+- Updated `app/(dashboard)/settings/page.tsx` to show SettingsSkeleton when `isLoading` is true from useCurrency
+- Uses animate-pulse on all skeleton elements for loading animation
+- Files changed: `components/settings/settings-skeleton.tsx` (created), `app/(dashboard)/settings/page.tsx` (modified)
+- **Learnings for future iterations:**
+  - Create skeleton components that match the exact layout of the content they replace
+  - Use consistent skeleton sizing (h-4 for text, h-5 for icons, h-9 for inputs/selects, h-5 w-9 rounded-full for switches)
+  - useCurrency's isLoading covers both preferences and exchange rates loading
+  - EmailPreferences already has its own internal skeleton, so page-level skeleton replaces both sections together
+---
+

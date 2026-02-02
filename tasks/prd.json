@@ -113,8 +113,8 @@
         "Lint passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added overflow-x-auto for horizontal scrolling, sticky Name column, progressive column hiding using sm:/md:/lg: breakpoints, compact action buttons on mobile"
     },
     {
       "id": "US-008",
@@ -128,8 +128,8 @@
         "Lint passes"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added overflow-x-auto, sticky Date column, progressive column hiding (sm:/md:/lg:), smaller action buttons on mobile, responsive footer totals"
     },
     {
       "id": "US-009",
@@ -144,8 +144,8 @@
         "Lint passes"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created SettingsSkeleton component matching both currency and email preference section layouts, shows during isLoading state from useCurrency"
     },
     {
       "id": "US-010",
