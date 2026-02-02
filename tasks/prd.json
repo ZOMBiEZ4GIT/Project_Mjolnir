@@ -176,8 +176,8 @@
         "Lint passes"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created HoldingPriceChart component using Recharts with dual Y-axis (price on left, quantity on right). Price shown as blue line, quantity as purple dashed step-line. Created holding detail page at /holdings/[id] with summary cards, chart, and notes section. Updated API to support include_cost_basis and include_latest_snapshot params for single holding fetch."
     },
     {
       "id": "US-012",

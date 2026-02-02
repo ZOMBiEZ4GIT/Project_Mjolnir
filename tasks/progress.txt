@@ -265,3 +265,21 @@ Started: 2026-02-02
   - Time range selector remains visible in both view modes since AssetsVsDebtChart receives filtered history data
 ---
 
+## 2026-02-02 - US-011
+- Added holding detail page with price chart for tradeable assets
+- Files changed:
+  - `app/(dashboard)/holdings/[id]/page.tsx` (new file)
+  - `components/holdings/holding-price-chart.tsx` (new file)
+  - `app/api/holdings/[id]/route.ts` (updated)
+- **Learnings for future iterations:**
+  - Dual Y-axis pattern: use yAxisId prop on Line/Area components and corresponding yAxisId on YAxis
+  - Left axis for price (yAxisId="price"), right axis for quantity (yAxisId="quantity")
+  - Step-line for quantity changes: use type="stepAfter" on Line component for discrete changes
+  - Dashed line style: strokeDasharray="5 5" creates dashed line
+  - Dynamic route params in Next.js 16: use `use(params)` to unwrap the Promise
+  - API query params for single resource: Add support for include_cost_basis and include_latest_snapshot
+  - Use Drizzle desc() for ORDER BY DESC
+  - Single data point handling: show data card instead of empty chart when only one transaction exists
+  - Build chart data by iterating transactions chronologically and calculating running totals
+---
+
