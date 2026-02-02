@@ -1,12 +1,55 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
+interface ExportCounts {
+  holdings: number;
+}
+
+function downloadFile(url: string) {
+  // Create a temporary anchor element to trigger the download
+  const link = document.createElement("a");
+  link.href = url;
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
 export default function ExportPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const [counts, setCounts] = useState<ExportCounts>({ holdings: 0 });
+  const [isLoadingCounts, setIsLoadingCounts] = useState(true);
+
+  // Fetch counts when user is signed in
+  useEffect(() => {
+    async function fetchCounts() {
+      if (!isSignedIn) return;
+
+      try {
+        // Fetch holdings count (include dormant for export)
+        const holdingsRes = await fetch("/api/holdings?include_dormant=true");
+        if (holdingsRes.ok) {
+          const holdingsData = await holdingsRes.json();
+          setCounts(prev => ({ ...prev, holdings: holdingsData.length }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch export counts:", error);
+      } finally {
+        setIsLoadingCounts(false);
+      }
+    }
+
+    if (isLoaded && isSignedIn) {
+      fetchCounts();
+    }
+  }, [isLoaded, isSignedIn]);
 
   // Show loading while Clerk auth is loading
   if (!isLoaded) {
@@ -47,9 +90,37 @@ export default function ExportPage() {
               Export all your holdings including stocks, ETFs, crypto, super, cash, and debt.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {/* US-010: Holdings export buttons and count will be added here */}
-            <p className="text-sm text-gray-500">Export options coming soon...</p>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-400">
+              {isLoadingCounts ? (
+                "Loading..."
+              ) : (
+                <>
+                  <span className="font-semibold text-white">{counts.holdings}</span>{" "}
+                  {counts.holdings === 1 ? "holding" : "holdings"} to export
+                </>
+              )}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadFile("/api/export/holdings?format=csv")}
+                disabled={isLoadingCounts || counts.holdings === 0}
+              >
+                <Download className="h-4 w-4" />
+                Download CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadFile("/api/export/holdings?format=json")}
+                disabled={isLoadingCounts || counts.holdings === 0}
+              >
+                <Download className="h-4 w-4" />
+                Download JSON
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
