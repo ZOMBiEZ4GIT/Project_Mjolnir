@@ -103,3 +103,17 @@ Started: 2026-02-03
   - Use consistent styling with ErrorBoundary for cohesive error UX
 ---
 
+## 2026-02-03 - US-004
+- Created not-found page at `app/not-found.tsx`
+- Next.js convention: not-found.tsx handles 404 responses
+- Uses Card component with muted border styling (neutral, not error-colored)
+- Shows "Page not found" message with "Go to Dashboard" link
+- Consistent dark mode styling matching error.tsx
+- Server component (no "use client" needed since no interactivity beyond Link)
+- Files changed: `app/not-found.tsx` (created)
+- **Learnings for future iterations:**
+  - Next.js not-found.tsx can be a server component (unlike error.tsx)
+  - Use neutral styling for 404 (border-muted) vs error styling (border-destructive)
+  - Keep styling consistent across error pages for cohesive UX
+---
+
