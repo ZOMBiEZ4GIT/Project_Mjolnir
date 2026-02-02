@@ -85,10 +85,12 @@
   - GainLossCell showing unrealized gain/loss with percentage
 
 - Net worth calculation in `lib/calculations/net-worth.ts`:
-  - `calculateNetWorth(userId)` returns NetWorthResult with netWorth, totalAssets, totalDebt, breakdown by type
-  - `calculateAssetBreakdown(userId)` returns AssetBreakdown with percentage for each type and holding
+  - `calculateNetWorth(userId, { displayCurrency? })` returns NetWorthResult with netWorth, totalAssets, totalDebt, breakdown by type
+  - `calculateAssetBreakdown(userId, { displayCurrency? })` returns AssetBreakdown with percentage for each type and holding
+  - Both functions accept optional `displayCurrency` param (AUD, NZD, USD) - defaults to AUD
+  - Both functions return `displayCurrency` and `ratesUsed` for transparency
   - Uses `calculateQuantityHeld()` for tradeable assets, `getLatestSnapshots()` for snapshot-based assets
-  - All values converted to AUD via `getExchangeRate()`
+  - HoldingValue.value is in display currency; HoldingValue.valueNative is original currency
   - Carry-forward logic: stale data is used for calculations with `StaleHolding[]` tracking
   - Tradeable staleness: 15-minute price TTL via `isCacheValid()`
   - Snapshot staleness: 2-month threshold (SNAPSHOT_STALE_THRESHOLD_MS)
@@ -227,5 +229,20 @@ Started: 2026-02-02
   - CurrencySelector uses compact mode by default which fits well in toolbar
   - Changing currency will trigger CurrencyProvider optimistic update, which re-renders all components using useCurrency()
   - Actual dashboard value conversion happens in US-009/US-010 (net worth calculations + dashboard updates)
+---
+
+## 2026-02-02 - US-009
+- Updated net worth calculations to support multi-currency display
+- Files changed:
+  - `lib/calculations/net-worth.ts` - Added displayCurrency parameter and ratesUsed to both functions
+- **Learnings for future iterations:**
+  - `calculateNetWorth(userId, { displayCurrency: "USD" })` - optional second param for display currency
+  - `calculateAssetBreakdown(userId, { displayCurrency: "USD" })` - same pattern
+  - Both functions now return `displayCurrency` and `ratesUsed` (ExchangeRates type) for transparency
+  - `fetchExchangeRates()` helper fetches both USD/AUD and NZD/AUD rates concurrently
+  - `convertToDisplayCurrency(value, fromCurrency, toCurrency, rates)` uses convertCurrency utility
+  - Helper functions `calculateTradeableValue` and `calculateSnapshotValue` now take rates and displayCurrency
+  - Pre-fetch quantities and prices in maps for better performance (avoid await in loop)
+  - HoldingValue.value is now in display currency, HoldingValue.valueNative is still native currency
 ---
 

@@ -159,8 +159,8 @@
         "Lint passes"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added displayCurrency parameter to calculateNetWorth and calculateAssetBreakdown, returns ratesUsed for transparency"
     },
     {
       "id": "US-010",
