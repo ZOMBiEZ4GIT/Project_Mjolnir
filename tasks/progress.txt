@@ -240,3 +240,16 @@ Started: 2026-02-02
   - History API with months=2 provides current and previous month for MoM calculation
 ---
 
+## 2026-02-02 - US-009
+- Created AssetsVsDebtChart component for comparing assets vs debt over time
+- Files changed: `components/dashboard/assets-vs-debt-chart.tsx` (new file)
+- **Learnings for future iterations:**
+  - Recharts ComposedChart allows mixing Area and Line components in same chart
+  - History API already provides totalAssets, totalDebt, netWorth fields - no API changes needed
+  - Use stackId for areas that should stack (or different stackIds to overlay without stacking)
+  - Green (#10B981) for assets, red (#EF4444) for debt, white (#FFFFFF) for net worth line
+  - Custom tooltip can access all data via payload[0].payload for cross-series display
+  - fillOpacity (0.6) on areas provides transparency to see overlapping regions
+  - Component receives data as prop from parent - allows reuse with existing data fetching
+---
+
