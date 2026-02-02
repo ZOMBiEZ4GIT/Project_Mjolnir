@@ -333,3 +333,19 @@ Started: 2026-02-02
   - Subtotal calculates: tradeable (quantity x price) + snapshot (latest balance), debt subtracts
 ---
 
+## 2026-02-02 - US-015
+- Implemented currency exposure breakdown on dashboard
+- Files changed:
+  - `lib/calculations/net-worth.ts` - Added calculateCurrencyExposure function with types
+  - `app/api/currency-exposure/route.ts` - New API endpoint for currency exposure
+  - `components/dashboard/currency-exposure.tsx` - New CurrencyExposure component
+  - `app/(dashboard)/dashboard/page.tsx` - Added CurrencyExposure side-by-side with AssetAllocation
+- **Learnings for future iterations:**
+  - calculateCurrencyExposure groups holdings by native currency (not type)
+  - Debt is excluded from currency exposure calculations
+  - CurrencyExposure component uses progress bars with flag emojis for visual representation
+  - Dashboard layout uses grid (lg:grid-cols-2) for side-by-side Asset Allocation and Currency Exposure
+  - API follows same pattern as net-worth: displayCurrency query param, returns ratesUsed for transparency
+  - Color scheme: AUD=green, NZD=blue, USD=amber for differentiation
+---
+

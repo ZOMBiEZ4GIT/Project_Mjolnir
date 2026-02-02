@@ -266,8 +266,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added calculateCurrencyExposure function, /api/currency-exposure endpoint, CurrencyExposure component with progress bars and flags. Displayed side-by-side with Asset Allocation on dashboard."
     },
     {
       "id": "US-016",
