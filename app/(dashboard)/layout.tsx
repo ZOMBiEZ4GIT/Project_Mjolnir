@@ -1,5 +1,6 @@
 import { UserButton } from "@clerk/nextjs";
 import { DashboardNav } from "@/components/dashboard/nav";
+import { DashboardErrorBoundary } from "@/components/dashboard/dashboard-error-boundary";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,9 @@ export default function DashboardLayout({
           )}
         </div>
       </header>
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+          <DashboardErrorBoundary>{children}</DashboardErrorBoundary>
+        </main>
     </div>
   );
 }
