@@ -14,6 +14,7 @@ import {
   type HoldingsSummary,
 } from "@/components/emails/check-in-reminder";
 import { render } from "@react-email/components";
+import { generateUnsubscribeUrl } from "./unsubscribe-token";
 
 // Valid snapshot types (non-tradeable holdings)
 const snapshotTypes = ["super", "cash", "debt"] as const;
@@ -207,6 +208,9 @@ export async function sendCheckInReminder(
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const checkInUrl = `${appUrl}/dashboard`;
 
+  // Generate unsubscribe URL with signed token
+  const unsubscribeUrl = generateUnsubscribeUrl(userId);
+
   // Render the email template to HTML
   const emailHtml = await render(
     CheckInReminderEmail({
@@ -214,7 +218,7 @@ export async function sendCheckInReminder(
       currentMonth: status.currentMonth,
       holdings: status.summary,
       checkInUrl,
-      // Unsubscribe URL will be added in a later story (US-012)
+      unsubscribeUrl,
     })
   );
 
