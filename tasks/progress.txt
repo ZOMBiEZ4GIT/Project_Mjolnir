@@ -276,3 +276,37 @@ Started: 2026-02-02
   - Pattern: cell components receive displayCurrency, convert function, and currencyLoading as props from parent section
 ---
 
+## 2026-02-02 - US-012
+- Implemented native currency toggle option for holdings page
+- Files changed:
+  - `lib/db/schema.ts` - Added showNativeCurrency boolean field to userPreferences table
+  - `drizzle/0006_spotty_lucky_pierre.sql` - Migration for new column
+  - `app/api/preferences/route.ts` - Extended PATCH to accept showNativeCurrency, updated response
+  - `lib/queries/users.ts` - Updated updateUserPreferences to accept partial updates
+  - `components/providers/currency-provider.tsx` - Added showNativeCurrency state and setShowNativeCurrency
+  - `components/ui/native-currency-toggle.tsx` - New toggle component using Switch
+  - `app/(dashboard)/holdings/page.tsx` - Added NativeCurrencyToggle to toolbar
+  - `components/holdings/holdings-table.tsx` - Extended cell components to support showNativeCurrency prop
+- **Learnings for future iterations:**
+  - updateUserPreferences now takes an object `{ displayCurrency?, showNativeCurrency? }` for partial updates
+  - CurrencyProvider has two separate mutations for displayCurrency and showNativeCurrency to allow independent updates
+  - NativeCurrencyToggle uses inline skeleton styles (span with animate-pulse) since Skeleton component doesn't exist
+  - When showNativeCurrency=true, cells display native currency directly without conversion or native indicator
+  - showNativeCurrency affects individual holding values, but totals still use display currency for aggregation
+---
+
+## 2026-02-02 - US-013
+- Implemented currency filter on holdings list
+- Files changed:
+  - `components/holdings/currency-filter.tsx` - New CurrencyFilter component with Select dropdown
+  - `app/(dashboard)/holdings/page.tsx` - Added currency filter with URL param persistence
+- **Learnings for future iterations:**
+  - CurrencyFilter component exports both component and type: `import { CurrencyFilter, type CurrencyFilterValue }`
+  - Filter values are: "all" | "AUD" | "NZD" | "USD"
+  - URL param pattern: `/holdings?currency=AUD` - "all" removes the param entirely
+  - Filter state read from searchParams with validation: check if value is in allowed list before using
+  - useMemo for filtering: `filteredHoldings = holdings.filter(h => h.currency === currencyFilter)`
+  - Separate empty state for "no holdings" vs "no holdings matching filter"
+  - Filter integrates with existing show_dormant switch - both can be active simultaneously
+---
+

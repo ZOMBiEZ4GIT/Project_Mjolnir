@@ -212,8 +212,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added showNativeCurrency to user_preferences, CurrencyProvider, and NativeCurrencyToggle component. Holdings table cells respect toggle."
     },
     {
       "id": "US-013",
@@ -230,8 +230,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created CurrencyFilter component with Select dropdown. Filter state persists in URL ?currency= param. Works with existing show_dormant filter."
     },
     {
       "id": "US-014",
