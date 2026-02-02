@@ -16,8 +16,8 @@
         "Lint passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added TimeRangeSelector component with URL param persistence using Next.js useSearchParams/useRouter"
     },
     {
       "id": "US-002",
@@ -32,8 +32,8 @@
         "Lint passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added Sparkline component using Recharts LineChart. Shows last 6 months of history, green if overall increase, red if decrease. Integrated into NetWorthHero component next to the net worth value."
     },
     {
       "id": "US-003",
@@ -48,8 +48,8 @@
         "Lint passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added AssetAllocationPieChart component using Recharts PieChart. Donut style with inner radius for cleaner look. Custom tooltip shows percentage, value, and holding count. Custom legend with compact values."
     },
     {
       "id": "US-004",
@@ -64,8 +64,8 @@
         "Lint passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added ViewToggle component to AssetAllocation with Bars/Pie options. Uses localStorage (asset-allocation-view key) for persistence. Integrated pie chart view using Recharts PieChart with custom tooltip and legend. Default is bars view."
     },
     {
       "id": "US-005",
@@ -80,8 +80,8 @@
         "Lint passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created /api/super/breakdown endpoint with holdingId (optional) and months (default 12) query params. Returns breakdown array with employer/employee contributions and calculated investment returns per month. Aggregates across all super holdings when no holdingId specified."
     },
     {
       "id": "US-006",
@@ -96,8 +96,8 @@
         "Lint passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created SuperGrowthChart component using Recharts AreaChart with stackId for stacked areas. Shows cumulative contributions and investment returns over time. Accepts optional holdingId prop to show single fund or aggregate all super. Custom tooltip shows breakdown of all three components. Uses currency provider for multi-currency support."
     },
     {
       "id": "US-007",
@@ -112,8 +112,8 @@
         "Lint passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created SuperBreakdownSection wrapper component that checks for super holdings before rendering. If no super holdings exist, the section is completely hidden. If holdings exist but no breakdown data, SuperGrowthChart shows its built-in empty state. Section placed between Asset Allocation/Currency Exposure and Net Worth History Chart."
     },
     {
       "id": "US-008",
@@ -128,8 +128,8 @@
         "Lint passes"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Feature already implemented in summary-cards.tsx during W-7 dashboard work. SummaryCard component shows change amount and percentage with TrendingUp/TrendingDown icons, uses history API for previous month comparison, handles debt invertion for positive/negative indicators."
     },
     {
       "id": "US-009",
@@ -144,8 +144,8 @@
         "Lint passes"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created AssetsVsDebtChart component using Recharts ComposedChart. Shows assets as green area, debt as red area, with net worth as white line overlay. Custom tooltip displays all three values. Component accepts data prop from existing history API (totalAssets, totalDebt, netWorth fields already provided)."
     },
     {
       "id": "US-010",
@@ -160,8 +160,8 @@
         "Lint passes"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added ChartViewToggle component to NetWorthChart with Net Worth and Assets vs Debt options. Uses localStorage (net-worth-chart-view key) for persistence. Integrates AssetsVsDebtChart component when that view is selected. Default is net worth line chart view. Both toggles (view mode and time range) are displayed in responsive header."
     },
     {
       "id": "US-011",
@@ -176,8 +176,8 @@
         "Lint passes"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created HoldingPriceChart component using Recharts with dual Y-axis (price on left, quantity on right). Price shown as blue line, quantity as purple dashed step-line. Created holding detail page at /holdings/[id] with summary cards, chart, and notes section. Updated API to support include_cost_basis and include_latest_snapshot params for single holding fetch."
     },
     {
       "id": "US-012",
@@ -192,8 +192,8 @@
         "Lint passes"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created SuperBalanceHistoryChart component using Recharts ComposedChart. Balance shown as white line (left Y-axis), contributions as stacked bars (employer=blue, employee=green, returns=purple) on right Y-axis. Custom tooltip shows balance and monthly contribution breakdown. Handles empty state and single-data-point cases. Integrated into holding detail page for super holdings only."
     },
     {
       "id": "US-013",
@@ -208,8 +208,8 @@
         "Lint passes"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created reusable ChartSkeleton (bar/pie/line variants) and ChartError (with retry button) components in components/charts/. Updated all chart components to use these: NetWorthChart, SuperGrowthChart, AssetAllocationPieChart, HoldingPriceChart, SuperBalanceHistoryChart. Retry uses TanStack Query invalidateQueries() for data refetch."
     },
     {
       "id": "US-014",
@@ -224,8 +224,8 @@
         "Lint passes"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created ChartExportButton reusable component using html2canvas. Added export buttons to all major charts: NetWorthChart, SuperGrowthChart, AssetAllocation, HoldingPriceChart, SuperBalanceHistoryChart. Filename format: {chart-type}-YYYY-MM-DD.png. Uses gray-800 background for consistent dark mode exports."
     }
   ]
 }

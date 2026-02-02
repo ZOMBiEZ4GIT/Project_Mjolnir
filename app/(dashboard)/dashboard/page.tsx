@@ -8,6 +8,7 @@ import { NetWorthChart } from "@/components/dashboard/net-worth-chart";
 import { TopPerformers } from "@/components/dashboard/top-performers";
 import { StaleDataWarning } from "@/components/dashboard/stale-data-warning";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { SuperBreakdownSection } from "@/components/dashboard/super-breakdown-section";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,11 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <AssetAllocation />
         <CurrencyExposure />
+      </div>
+
+      {/* Superannuation Growth Breakdown - only shows if user has super holdings */}
+      <div className="mb-6">
+        <SuperBreakdownSection />
       </div>
 
       {/* Net Worth History Chart */}

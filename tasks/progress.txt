@@ -133,11 +133,213 @@
   - Custom tooltip pattern: `<Tooltip content={<CustomTooltip currency={displayCurrency} />} />`
   - Dark mode colors: stroke="#374151" for grid, fill="#9CA3AF" for axis text
 
+- URL param persistence in client components:
+  - Use `useSearchParams`, `useRouter`, `usePathname` from `next/navigation`
+  - Create params with `new URLSearchParams(searchParams.toString())`
+  - Update URL with `router.replace(newUrl, { scroll: false })` to avoid scroll jump
+  - Remove param if default value to keep URLs clean
+
 ---
 
 # W-9 Charts & Visualisation Progress Log
 
 Started: 2026-02-02
 
+---
+
+## 2026-02-02 - US-001
+- Implemented time range selector for net worth chart
+- Files changed: `components/dashboard/net-worth-chart.tsx`
+- **Learnings for future iterations:**
+  - URL param persistence pattern: use useSearchParams + useRouter.replace with scroll: false
+  - TanStack Query refetches automatically when queryKey changes (months param)
+  - Time range selector uses simple button group with Tailwind styling for dark mode
+  - Keep URL clean by removing param when it matches default value
+---
+
+## 2026-02-02 - US-002
+- Added mini sparkline to net worth hero card
+- Files changed: `components/dashboard/net-worth-hero.tsx`
+- **Learnings for future iterations:**
+  - Sparkline pattern: Use Recharts LineChart with no axes, grid, or dots for minimal display
+  - Set `isAnimationActive={false}` for sparklines to avoid unnecessary animation
+  - Sparkline color based on trend: compare first and last values, green for increase, red for decrease
+  - Increased history fetch from 2 to 6 months for sparkline data (SPARKLINE_MONTHS constant)
+  - Wrap sparkline in flex container with gap-4 to position next to main value
+---
+
+## 2026-02-02 - US-003
+- Created AssetAllocationPieChart component using Recharts PieChart
+- Files changed: `components/dashboard/asset-allocation-pie-chart.tsx`
+- **Learnings for future iterations:**
+  - Recharts PieChart components: PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer
+  - Use hex colors for Recharts fills (not Tailwind classes): stock=#3B82F6, etf=#8B5CF6, crypto=#F97316, super=#10B981, cash=#06B6D4
+  - Donut chart style: use innerRadius and outerRadius props on Pie component
+  - Custom Legend with content prop for full styling control
+  - PieDataPoint interface holds both display data (name, percentage) and raw data (type, value, count)
+  - Filter out zero-value slices before rendering to avoid empty segments
+  - paddingAngle prop adds spacing between pie slices for cleaner look
+---
+
+## 2026-02-02 - US-004
+- Added chart type toggle to asset allocation (Bars | Pie views)
+- Files changed: `components/dashboard/asset-allocation.tsx`
+- **Learnings for future iterations:**
+  - ViewToggle pattern: Button group with conditional styling based on selected state
+  - localStorage persistence: Use STORAGE_KEY constant, read on mount with useEffect, write on change
+  - When consolidating similar components, keep one source of data fetching and render conditionally
+  - Icons for toggles: Use lucide-react BarChart3 and PieChartIcon (not PieChart to avoid Recharts conflict)
+  - Type safety: Define ViewMode = "bars" | "pie" and validate localStorage values before setting state
+---
+
+## 2026-02-02 - US-005
+- Created super growth breakdown API endpoint at /api/super/breakdown
+- Files changed: `app/api/super/breakdown/route.ts` (new file)
+- **Learnings for future iterations:**
+  - API pattern for aggregated data: Build maps keyed by holdingId then date for efficient lookup
+  - Investment returns calculation: balance_change - employer_contrib - employee_contrib
+  - When aggregating across holdings, calculate investment returns per-holding then sum (not on aggregated totals)
+  - Date filtering in Drizzle: use gte() and lte() with date strings in YYYY-MM-DD format
+  - For APIs that return breakdown data, include holdings metadata in response for frontend display
+  - MonthlyBreakdown interface: date, employerContrib, employeeContrib, investmentReturns, balance, optionally holdingId/holdingName
+---
+
+## 2026-02-02 - US-006
+- Created SuperGrowthChart component using Recharts stacked area chart
+- Files changed: `components/dashboard/super-growth-chart.tsx` (new file)
+- **Learnings for future iterations:**
+  - Recharts AreaChart with stackId prop creates proper stacked areas (use same stackId="1" for all areas to stack)
+  - Calculate cumulative values before passing to chart for "growth over time" visualization
+  - fillOpacity prop on Area component controls transparency (0.8 looks good for stacked areas)
+  - Custom Legend content prop accepts payload with {value, color} - use value to map to display names
+  - SuperGrowthChart accepts optional holdingId to show single fund or aggregate all super holdings
+  - Pattern: empty state checks for both no holdings and no breakdown data separately
+---
+
+## 2026-02-02 - US-007
+- Added super breakdown section to dashboard with conditional rendering
+- Files changed: `app/(dashboard)/dashboard/page.tsx`, `components/dashboard/super-breakdown-section.tsx` (new file)
+- **Learnings for future iterations:**
+  - Wrapper component pattern: Create a Section component that conditionally renders based on data availability
+  - For "only show if data exists" requirement, wrapper component returns null when no data
+  - Reuse existing APIs with minimal params (months=1) to check for existence efficiently
+  - Section placement: between Asset Allocation and Net Worth Chart as per acceptance criteria
+  - The inner chart component (SuperGrowthChart) handles its own empty data states, wrapper handles existence check
+  - staleTime on TanStack Query (5 minutes) for holdings check since holdings don't change often
+---
+
+## 2026-02-02 - US-008
+- Verified monthly change indicators already implemented in summary cards
+- Files verified: `components/dashboard/summary-cards.tsx`
+- Feature was implemented during W-7 (dashboard work) - no new code changes needed
+- All acceptance criteria met: MoM badges, percentage display, green/red colors, history-based calculation
+- **Learnings for future iterations:**
+  - Check existing code thoroughly before implementing - features may already exist from prior epic work
+  - SummaryCard component pattern: accepts previousValue prop, handles change calculation internally
+  - Debt card inverts positive/negative indicators (debt increase = bad = red)
+  - History API with months=2 provides current and previous month for MoM calculation
+---
+
+## 2026-02-02 - US-009
+- Created AssetsVsDebtChart component for comparing assets vs debt over time
+- Files changed: `components/dashboard/assets-vs-debt-chart.tsx` (new file)
+- **Learnings for future iterations:**
+  - Recharts ComposedChart allows mixing Area and Line components in same chart
+  - History API already provides totalAssets, totalDebt, netWorth fields - no API changes needed
+  - Use stackId for areas that should stack (or different stackIds to overlay without stacking)
+  - Green (#10B981) for assets, red (#EF4444) for debt, white (#FFFFFF) for net worth line
+  - Custom tooltip can access all data via payload[0].payload for cross-series display
+  - fillOpacity (0.6) on areas provides transparency to see overlapping regions
+  - Component receives data as prop from parent - allows reuse with existing data fetching
+---
+
+## 2026-02-02 - US-010
+- Added chart view toggle to net worth section (Net Worth / Assets vs Debt)
+- Files changed: `components/dashboard/net-worth-chart.tsx`
+- **Learnings for future iterations:**
+  - View toggle pattern: ChartViewToggle component with ChartViewMode type ("networth" | "assetsvsdebt")
+  - localStorage persistence: CHART_VIEW_STORAGE_KEY constant, read on mount with useEffect, write on change
+  - Import LineChartIcon from lucide-react (not LineChart to avoid Recharts conflict)
+  - AssetsVsDebtChart is imported and passed historyData.history prop directly (data already available from parent fetch)
+  - Responsive header layout: flex-col on mobile, flex-row on sm:+ with gap-3 for proper spacing of both toggles
+  - Time range selector remains visible in both view modes since AssetsVsDebtChart receives filtered history data
+---
+
+## 2026-02-02 - US-011
+- Added holding detail page with price chart for tradeable assets
+- Files changed:
+  - `app/(dashboard)/holdings/[id]/page.tsx` (new file)
+  - `components/holdings/holding-price-chart.tsx` (new file)
+  - `app/api/holdings/[id]/route.ts` (updated)
+- **Learnings for future iterations:**
+  - Dual Y-axis pattern: use yAxisId prop on Line/Area components and corresponding yAxisId on YAxis
+  - Left axis for price (yAxisId="price"), right axis for quantity (yAxisId="quantity")
+  - Step-line for quantity changes: use type="stepAfter" on Line component for discrete changes
+  - Dashed line style: strokeDasharray="5 5" creates dashed line
+  - Dynamic route params in Next.js 16: use `use(params)` to unwrap the Promise
+  - API query params for single resource: Add support for include_cost_basis and include_latest_snapshot
+  - Use Drizzle desc() for ORDER BY DESC
+  - Single data point handling: show data card instead of empty chart when only one transaction exists
+  - Build chart data by iterating transactions chronologically and calculating running totals
+---
+
+## 2026-02-02 - US-012
+- Added super detail chart with balance history and contribution breakdown
+- Files changed:
+  - `components/holdings/super-balance-history-chart.tsx` (new file)
+  - `app/(dashboard)/holdings/[id]/page.tsx` (updated)
+- **Learnings for future iterations:**
+  - ComposedChart allows mixing Bar and Line components with separate Y-axes (like in US-009 with AssetsVsDebtChart)
+  - Use yAxisId="balance" for line, yAxisId="contrib" for bars to separate scales
+  - Stacked bars pattern: use stackId="contrib" on all Bar components for same category
+  - For negative values in stacked bars (e.g., negative investment returns), domain needs to include negative range
+  - Reuse existing API endpoints (/api/super/breakdown) with holdingId param for single-holding data
+  - Pattern for "only show for X type": add const (SUPER_TYPE = "super") and isSuper check, then conditional render
+  - Currency conversion: use convert() from useCurrency() hook to transform values to display currency
+  - Single data point handling: show info card with key metrics instead of empty/broken chart
+---
+
+## 2026-02-02 - US-013
+- Added reusable loading and error state components for all charts
+- Files changed:
+  - `components/charts/chart-skeleton.tsx` (new file)
+  - `components/charts/chart-error.tsx` (new file)
+  - `components/charts/index.ts` (new file)
+  - `components/dashboard/net-worth-chart.tsx` (updated)
+  - `components/dashboard/super-growth-chart.tsx` (updated)
+  - `components/dashboard/asset-allocation-pie-chart.tsx` (updated)
+  - `components/holdings/holding-price-chart.tsx` (updated)
+  - `components/holdings/super-balance-history-chart.tsx` (updated)
+- **Learnings for future iterations:**
+  - Centralize reusable UI patterns in dedicated directories (components/charts/ for chart utilities)
+  - ChartSkeleton supports variant prop (bar/pie/line) for different chart type skeletons
+  - ChartError accepts onRetry callback for retry functionality
+  - withContainer prop adds card-style border/background wrapper when needed
+  - Use TanStack Query's invalidateQueries() for retry - triggers immediate refetch
+  - useCallback() wraps retry handlers to prevent unnecessary re-renders
+  - Delete inline skeleton functions when migrating to reusable components
+  - Export patterns: create index.ts for barrel exports from component directories
+---
+
+## 2026-02-02 - US-014
+- Added chart export functionality to all major charts
+- Files changed:
+  - `components/charts/chart-export-button.tsx` (new file)
+  - `components/charts/index.ts` (updated)
+  - `components/dashboard/net-worth-chart.tsx` (updated)
+  - `components/dashboard/super-growth-chart.tsx` (updated)
+  - `components/dashboard/asset-allocation.tsx` (updated)
+  - `components/holdings/holding-price-chart.tsx` (updated)
+  - `components/holdings/super-balance-history-chart.tsx` (updated)
+  - `package.json` (added html2canvas dependency)
+- **Learnings for future iterations:**
+  - html2canvas is the simplest approach for exporting React charts as images (no native recharts export)
+  - ChartExportButton pattern: wrap chart in div with ref, pass ref and filename to component
+  - Use scale: 2 in html2canvas options for higher resolution exports
+  - Set backgroundColor to match app theme (gray-800 = #1f2937 for dark mode)
+  - Filename format: {chart-type}-YYYY-MM-DD.png provides clear identification
+  - Loading state with Loader2 icon shows export progress
+  - Export button placed in chart header alongside other controls (toggles, selectors)
+  - For charts without header (detail pages), add flex justify-end container for export button
 ---
 

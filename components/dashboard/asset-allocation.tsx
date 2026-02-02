@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -10,7 +11,22 @@ import {
   Bitcoin,
   PiggyBank,
   Banknote,
+  BarChart3,
+  PieChartIcon,
 } from "lucide-react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
+import { ChartExportButton } from "@/components/charts";
+
+type ViewMode = "bars" | "pie";
+
+const STORAGE_KEY = "asset-allocation-view";
 
 interface HoldingValue {
   id: string;
@@ -115,6 +131,26 @@ function getAssetColor(type: string): string {
 }
 
 /**
+ * Returns the hex color for an asset type (for Recharts).
+ */
+function getAssetHexColor(type: string): string {
+  switch (type) {
+    case "stock":
+      return "#3B82F6"; // blue-500
+    case "etf":
+      return "#8B5CF6"; // purple-500
+    case "crypto":
+      return "#F97316"; // orange-500
+    case "super":
+      return "#10B981"; // emerald-500
+    case "cash":
+      return "#06B6D4"; // cyan-500
+    default:
+      return "#6B7280"; // gray-500
+  }
+}
+
+/**
  * Loading skeleton for asset allocation.
  */
 function AllocationSkeleton() {
@@ -194,20 +230,158 @@ function AllocationItem({
 }
 
 /**
+ * Pie chart data point interface.
+ */
+interface PieDataPoint {
+  name: string;
+  type: string;
+  value: number;
+  percentage: number;
+  count: number;
+}
+
+/**
+ * Custom tooltip component for the pie chart.
+ */
+interface PieTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    payload: PieDataPoint;
+  }>;
+  currency: Currency;
+}
+
+function PieChartTooltip({ active, payload, currency }: PieTooltipProps) {
+  if (!active || !payload || payload.length === 0) {
+    return null;
+  }
+
+  const data = payload[0].payload;
+  return (
+    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-lg">
+      <p className="text-white font-medium mb-1">{data.name}</p>
+      <p className="text-gray-300 text-sm">
+        {formatCurrency(data.value, currency)}
+      </p>
+      <p className="text-gray-400 text-sm">
+        {data.percentage.toFixed(1)}% of portfolio
+      </p>
+      <p className="text-gray-500 text-xs mt-1">
+        {data.count} holding{data.count !== 1 ? "s" : ""}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Custom legend for the pie chart.
+ */
+interface LegendPayload {
+  value: string;
+  type: string;
+  color: string;
+  payload: PieDataPoint;
+}
+
+interface CustomLegendProps {
+  payload?: LegendPayload[];
+  currency: Currency;
+}
+
+function PieChartLegend({ payload, currency }: CustomLegendProps) {
+  if (!payload) return null;
+
+  return (
+    <div className="flex flex-wrap justify-center gap-4 mt-4">
+      {payload.map((entry) => (
+        <div key={entry.value} className="flex items-center gap-2">
+          <div
+            className="w-3 h-3 rounded-full"
+            style={{ backgroundColor: entry.color }}
+          />
+          <span className="text-gray-300 text-sm">
+            {entry.value}{" "}
+            <span className="text-gray-500">
+              ({formatCurrency(entry.payload.value, currency, { compact: true })})
+            </span>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * View mode toggle button group.
+ */
+interface ViewToggleProps {
+  viewMode: ViewMode;
+  onChange: (mode: ViewMode) => void;
+}
+
+function ViewToggle({ viewMode, onChange }: ViewToggleProps) {
+  return (
+    <div className="flex items-center gap-1 bg-gray-700/50 rounded-lg p-1">
+      <button
+        onClick={() => onChange("bars")}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          viewMode === "bars"
+            ? "bg-gray-600 text-white"
+            : "text-gray-400 hover:text-white"
+        }`}
+        title="Bar chart view"
+      >
+        <BarChart3 className="h-4 w-4" />
+        Bars
+      </button>
+      <button
+        onClick={() => onChange("pie")}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          viewMode === "pie"
+            ? "bg-gray-600 text-white"
+            : "text-gray-400 hover:text-white"
+        }`}
+        title="Pie chart view"
+      >
+        <PieChartIcon className="h-4 w-4" />
+        Pie
+      </button>
+    </div>
+  );
+}
+
+/**
  * Asset Allocation Component
  *
  * Displays a breakdown of assets by type (Stocks, ETFs, Crypto, Super, Cash).
- * Each type shows:
- * - Icon and name
- * - Value in the user's display currency
- * - Percentage of total assets
- * - Visual progress bar for percentage
+ * Supports two view modes:
+ * - Bars: Progress bars showing each asset type's percentage
+ * - Pie: Donut chart showing asset allocation
  *
+ * View preference is persisted in localStorage.
  * Sorted by value descending. Debt is shown separately (not included here).
  */
 export function AssetAllocation() {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading } = useCurrency();
+  const chartRef = useRef<HTMLDivElement>(null);
+
+  // View mode state with localStorage persistence
+  const [viewMode, setViewMode] = useState<ViewMode>("bars");
+
+  // Load preference from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "bars" || stored === "pie") {
+      setViewMode(stored);
+    }
+  }, []);
+
+  // Handle view mode change
+  const handleViewModeChange = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem(STORAGE_KEY, mode);
+  };
 
   const {
     data: netWorthData,
@@ -250,9 +424,12 @@ export function AssetAllocation() {
   if (sortedBreakdown.length === 0) {
     return (
       <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-4">
-          Asset Allocation
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+            Asset Allocation
+          </h3>
+          <ViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
+        </div>
         <p className="text-gray-500 text-center py-8">
           No assets to display. Add holdings to see your allocation.
         </p>
@@ -260,26 +437,81 @@ export function AssetAllocation() {
     );
   }
 
+  // Prepare pie chart data
+  const pieData: PieDataPoint[] = sortedBreakdown
+    .filter((item) => item.totalValue > 0)
+    .map((item) => ({
+      name: getAssetDisplayName(item.type),
+      type: item.type,
+      value: item.totalValue,
+      percentage: totalAssets > 0 ? (item.totalValue / totalAssets) * 100 : 0,
+      count: item.count,
+    }));
+
   return (
     <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-      <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-6">
-        Asset Allocation
-      </h3>
-      <div className="space-y-5">
-        {sortedBreakdown.map((item) => {
-          const percentage =
-            totalAssets > 0 ? (item.totalValue / totalAssets) * 100 : 0;
-          return (
-            <AllocationItem
-              key={item.type}
-              type={item.type}
-              totalValue={item.totalValue}
-              percentage={percentage}
-              count={item.count}
-              currency={displayCurrency}
-            />
-          );
-        })}
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+          Asset Allocation
+        </h3>
+        <div className="flex items-center gap-2">
+          <ChartExportButton
+            chartRef={chartRef}
+            filename="asset-allocation"
+          />
+          <ViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
+        </div>
+      </div>
+
+      <div ref={chartRef}>
+        {viewMode === "bars" ? (
+          <div className="space-y-5">
+            {sortedBreakdown.map((item) => {
+              const percentage =
+                totalAssets > 0 ? (item.totalValue / totalAssets) * 100 : 0;
+              return (
+                <AllocationItem
+                  key={item.type}
+                  type={item.type}
+                  totalValue={item.totalValue}
+                  percentage={percentage}
+                  count={item.count}
+                  currency={displayCurrency}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={2}
+                  dataKey="value"
+                  nameKey="name"
+                >
+                  {pieData.map((entry) => (
+                    <Cell
+                      key={`cell-${entry.type}`}
+                      fill={getAssetHexColor(entry.type)}
+                      stroke="transparent"
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<PieChartTooltip currency={displayCurrency} />} />
+                <Legend
+                  content={<PieChartLegend currency={displayCurrency} />}
+                  verticalAlign="bottom"
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </div>
   );

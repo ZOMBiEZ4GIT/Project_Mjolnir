@@ -1,0 +1,308 @@
+"use client";
+
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
+import { ChartSkeleton, ChartError } from "@/components/charts";
+import { useCallback } from "react";
+
+interface HoldingValue {
+  id: string;
+  name: string;
+  symbol: string | null;
+  value: number;
+  currency: string;
+  valueNative: number;
+}
+
+interface AssetTypeBreakdown {
+  type: "stock" | "etf" | "crypto" | "super" | "cash";
+  totalValue: number;
+  count: number;
+  holdings: HoldingValue[];
+}
+
+interface NetWorthResponse {
+  netWorth: number;
+  totalAssets: number;
+  totalDebt: number;
+  breakdown: AssetTypeBreakdown[];
+  hasStaleData: boolean;
+  displayCurrency: Currency;
+  ratesUsed: ExchangeRates;
+  calculatedAt: string;
+}
+
+async function fetchNetWorth(displayCurrency: Currency): Promise<NetWorthResponse> {
+  const response = await fetch(`/api/net-worth?displayCurrency=${displayCurrency}`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch net worth");
+  }
+  return response.json();
+}
+
+/**
+ * Returns the display name for an asset type.
+ */
+function getAssetDisplayName(type: string): string {
+  switch (type) {
+    case "stock":
+      return "Stocks";
+    case "etf":
+      return "ETFs";
+    case "crypto":
+      return "Crypto";
+    case "super":
+      return "Superannuation";
+    case "cash":
+      return "Cash";
+    default:
+      return type;
+  }
+}
+
+/**
+ * Returns the hex color for an asset type (for Recharts).
+ * These correspond to the Tailwind color palette used in progress bars:
+ * - blue-500: #3B82F6
+ * - purple-500: #8B5CF6
+ * - orange-500: #F97316
+ * - emerald-500: #10B981
+ * - cyan-500: #06B6D4
+ */
+function getAssetHexColor(type: string): string {
+  switch (type) {
+    case "stock":
+      return "#3B82F6"; // blue-500
+    case "etf":
+      return "#8B5CF6"; // purple-500
+    case "crypto":
+      return "#F97316"; // orange-500
+    case "super":
+      return "#10B981"; // emerald-500
+    case "cash":
+      return "#06B6D4"; // cyan-500
+    default:
+      return "#6B7280"; // gray-500
+  }
+}
+
+
+interface PieDataPoint {
+  name: string;
+  type: string;
+  value: number;
+  percentage: number;
+  count: number;
+}
+
+/**
+ * Custom tooltip component for the pie chart.
+ */
+interface TooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    payload: PieDataPoint;
+  }>;
+  currency: Currency;
+}
+
+function CustomTooltip({ active, payload, currency }: TooltipProps) {
+  if (!active || !payload || payload.length === 0) {
+    return null;
+  }
+
+  const data = payload[0].payload;
+  return (
+    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-lg">
+      <p className="text-white font-medium mb-1">{data.name}</p>
+      <p className="text-gray-300 text-sm">
+        {formatCurrency(data.value, currency)}
+      </p>
+      <p className="text-gray-400 text-sm">
+        {data.percentage.toFixed(1)}% of portfolio
+      </p>
+      <p className="text-gray-500 text-xs mt-1">
+        {data.count} holding{data.count !== 1 ? "s" : ""}
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Custom legend component for the pie chart.
+ */
+interface LegendPayload {
+  value: string;
+  type: string;
+  color: string;
+  payload: PieDataPoint;
+}
+
+interface CustomLegendProps {
+  payload?: LegendPayload[];
+  currency: Currency;
+}
+
+function CustomLegend({ payload, currency }: CustomLegendProps) {
+  if (!payload) return null;
+
+  return (
+    <div className="flex flex-wrap justify-center gap-4 mt-4">
+      {payload.map((entry) => (
+        <div key={entry.value} className="flex items-center gap-2">
+          <div
+            className="w-3 h-3 rounded-full"
+            style={{ backgroundColor: entry.color }}
+          />
+          <span className="text-gray-300 text-sm">
+            {entry.value}{" "}
+            <span className="text-gray-500">
+              ({formatCurrency(entry.payload.value, currency, { compact: true })})
+            </span>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Asset Allocation Pie Chart Component
+ *
+ * Displays a pie chart showing asset allocation by type.
+ * Features:
+ * - Shows asset types: Stocks, ETFs, Crypto, Super, Cash
+ * - Each slice colored by asset type
+ * - Hover shows percentage and value
+ * - Legend with values
+ * - Dark mode styling
+ */
+export function AssetAllocationPieChart() {
+  const { isLoaded, isSignedIn } = useAuthSafe();
+  const { displayCurrency, isLoading: currencyLoading } = useCurrency();
+  const queryClient = useQueryClient();
+
+  const {
+    data: netWorthData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["net-worth", displayCurrency],
+    queryFn: () => fetchNetWorth(displayCurrency),
+    enabled: isLoaded && isSignedIn && !currencyLoading,
+    refetchInterval: 60 * 1000,
+  });
+
+  // Retry handler
+  const handleRetry = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["net-worth", displayCurrency] });
+  }, [queryClient, displayCurrency]);
+
+  // Show skeleton while loading or not authenticated
+  if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
+    return (
+      <ChartSkeleton
+        title="Asset Allocation"
+        variant="pie"
+        withContainer
+      />
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <ChartError
+        message="Failed to load asset allocation"
+        onRetry={handleRetry}
+        withContainer
+      />
+    );
+  }
+
+  // No data available
+  if (!netWorthData || !netWorthData.breakdown) {
+    return (
+      <ChartSkeleton
+        title="Asset Allocation"
+        variant="pie"
+        withContainer
+      />
+    );
+  }
+
+  const { breakdown, totalAssets } = netWorthData;
+
+  // Transform data for Recharts
+  const pieData: PieDataPoint[] = breakdown
+    .filter((item) => item.totalValue > 0)
+    .map((item) => ({
+      name: getAssetDisplayName(item.type),
+      type: item.type,
+      value: item.totalValue,
+      percentage: totalAssets > 0 ? (item.totalValue / totalAssets) * 100 : 0,
+      count: item.count,
+    }))
+    .sort((a, b) => b.value - a.value);
+
+  // Empty state
+  if (pieData.length === 0) {
+    return (
+      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-4">
+          Asset Allocation
+        </h3>
+        <p className="text-gray-500 text-center py-8">
+          No assets to display. Add holdings to see your allocation.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+      <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-6">
+        Asset Allocation
+      </h3>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={pieData}
+              cx="50%"
+              cy="50%"
+              innerRadius={60}
+              outerRadius={90}
+              paddingAngle={2}
+              dataKey="value"
+              nameKey="name"
+            >
+              {pieData.map((entry) => (
+                <Cell
+                  key={`cell-${entry.type}`}
+                  fill={getAssetHexColor(entry.type)}
+                  stroke="transparent"
+                />
+              ))}
+            </Pie>
+            <Tooltip content={<CustomTooltip currency={displayCurrency} />} />
+            <Legend
+              content={<CustomLegend currency={displayCurrency} />}
+              verticalAlign="bottom"
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
