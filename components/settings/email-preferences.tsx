@@ -3,9 +3,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
-import { Mail, Calendar } from "lucide-react";
+import { Mail, Calendar, Send, Loader2 } from "lucide-react";
 
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -52,6 +53,32 @@ async function updatePreferences(
     throw new Error(`Failed to update preferences: ${response.status}`);
   }
   return response.json();
+}
+
+/**
+ * Response from the test email API
+ */
+interface TestEmailResponse {
+  success: boolean;
+  message: string;
+  needsCheckIn: boolean;
+  holdingsToUpdate: number;
+  messageId?: string;
+  error?: string;
+}
+
+/**
+ * Sends a test email to the current user.
+ */
+async function sendTestEmail(): Promise<TestEmailResponse> {
+  const response = await fetch("/api/email/test", {
+    method: "POST",
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error ?? `Failed to send test email: ${response.status}`);
+  }
+  return data;
 }
 
 /**
@@ -178,6 +205,21 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
     },
   });
 
+  // Mutation for sending test email
+  const sendTestEmailMutation = useMutation({
+    mutationFn: sendTestEmail,
+    onSuccess: (data) => {
+      if (data.needsCheckIn) {
+        toast.success("Test email sent successfully! Check your inbox.");
+      } else {
+        toast.info("No email sent: all holdings are up to date for this month.");
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to send test email");
+    },
+  });
+
   const isLoading = !isUserLoaded || isPreferencesLoading;
 
   // Get user's primary email address
@@ -285,6 +327,32 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
             You&apos;ll receive an email reminder when your super, cash, or debt balances need updating.
           </p>
         )}
+
+        {/* Test email button */}
+        <div className="pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => sendTestEmailMutation.mutate()}
+            disabled={sendTestEmailMutation.isPending}
+            className="gap-2"
+          >
+            {sendTestEmailMutation.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                Send Test Email
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-gray-500 mt-1">
+            Send a test reminder email to verify your email configuration.
+          </p>
+        </div>
       </div>
     </div>
   );
