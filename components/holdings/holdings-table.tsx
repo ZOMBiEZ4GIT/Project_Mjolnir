@@ -92,12 +92,15 @@ export interface PriceData {
   error?: string;
 }
 
+export type GroupByValue = "type" | "currency";
+
 interface HoldingsTableProps {
   holdings: HoldingWithData[];
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
   onRetryPrice?: (holdingId: string) => void;
   retryingPriceIds?: Set<string>;
+  groupBy?: GroupByValue;
 }
 
 function groupHoldingsByType(holdings: HoldingWithData[]): Map<Holding["type"], HoldingWithData[]> {
@@ -106,6 +109,28 @@ function groupHoldingsByType(holdings: HoldingWithData[]): Map<Holding["type"], 
   for (const holding of holdings) {
     const existing = groups.get(holding.type) || [];
     groups.set(holding.type, [...existing, holding]);
+  }
+
+  return groups;
+}
+
+// Order for currency grouping display
+const CURRENCY_ORDER: Currency[] = ["AUD", "NZD", "USD"];
+
+// Currency labels for section headers
+const CURRENCY_LABELS: Record<Currency, string> = {
+  AUD: "Australian Dollar (AUD)",
+  NZD: "New Zealand Dollar (NZD)",
+  USD: "US Dollar (USD)",
+};
+
+function groupHoldingsByCurrency(holdings: HoldingWithData[]): Map<Currency, HoldingWithData[]> {
+  const groups = new Map<Currency, HoldingWithData[]>();
+
+  for (const holding of holdings) {
+    const currency = holding.currency as Currency;
+    const existing = groups.get(currency) || [];
+    groups.set(currency, [...existing, holding]);
   }
 
   return groups;
@@ -255,10 +280,11 @@ function formatGainLossPercent(percent: number): string {
   return `${sign}${percent.toFixed(2)}%`;
 }
 
-export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, retryingPriceIds }: HoldingsTableProps) {
+export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, retryingPriceIds, groupBy = "type" }: HoldingsTableProps) {
   const [editingHolding, setEditingHolding] = useState<HoldingWithData | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
-  const groupedHoldings = groupHoldingsByType(holdings);
+  const groupedByType = groupHoldingsByType(holdings);
+  const groupedByCurrency = groupHoldingsByCurrency(holdings);
   const queryClient = useQueryClient();
 
   // Get currency context for display currency conversion
@@ -296,32 +322,63 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
   return (
     <>
       <div className="space-y-8">
-        {HOLDING_TYPE_ORDER.map((type) => {
-          const typeHoldings = groupedHoldings.get(type);
+        {groupBy === "type" ? (
+          // Group by holding type
+          HOLDING_TYPE_ORDER.map((type) => {
+            const typeHoldings = groupedByType.get(type);
 
-          // Skip empty sections
-          if (!typeHoldings || typeHoldings.length === 0) {
-            return null;
-          }
+            // Skip empty sections
+            if (!typeHoldings || typeHoldings.length === 0) {
+              return null;
+            }
 
-          return (
-            <HoldingsTypeSection
-              key={type}
-              type={type}
-              holdings={typeHoldings}
-              prices={prices}
-              pricesLoading={pricesLoading}
-              onEdit={setEditingHolding}
-              onDelete={setDeletingHolding}
-              onRetryPrice={onRetryPrice}
-              retryingPriceIds={retryingPriceIds}
-              displayCurrency={displayCurrency}
-              convert={convert}
-              currencyLoading={currencyLoading}
-              showNativeCurrency={showNativeCurrency}
-            />
-          );
-        })}
+            return (
+              <HoldingsTypeSection
+                key={type}
+                type={type}
+                holdings={typeHoldings}
+                prices={prices}
+                pricesLoading={pricesLoading}
+                onEdit={setEditingHolding}
+                onDelete={setDeletingHolding}
+                onRetryPrice={onRetryPrice}
+                retryingPriceIds={retryingPriceIds}
+                displayCurrency={displayCurrency}
+                convert={convert}
+                currencyLoading={currencyLoading}
+                showNativeCurrency={showNativeCurrency}
+              />
+            );
+          })
+        ) : (
+          // Group by currency
+          CURRENCY_ORDER.map((currency) => {
+            const currencyHoldings = groupedByCurrency.get(currency);
+
+            // Skip empty sections
+            if (!currencyHoldings || currencyHoldings.length === 0) {
+              return null;
+            }
+
+            return (
+              <HoldingsCurrencySection
+                key={currency}
+                sectionCurrency={currency}
+                holdings={currencyHoldings}
+                prices={prices}
+                pricesLoading={pricesLoading}
+                onEdit={setEditingHolding}
+                onDelete={setDeletingHolding}
+                onRetryPrice={onRetryPrice}
+                retryingPriceIds={retryingPriceIds}
+                displayCurrency={displayCurrency}
+                convert={convert}
+                currencyLoading={currencyLoading}
+                showNativeCurrency={showNativeCurrency}
+              />
+            );
+          })
+        )}
       </div>
 
       {editingHolding && (
@@ -869,6 +926,307 @@ function HoldingsTypeSection({
                           currencyLoading={currencyLoading}
                           showNativeCurrency={showNativeCurrency}
                         />
+                      </TableCell>
+                    </>
+                  )}
+                  <TableCell>
+                    {holding.isDormant ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">
+                        Dormant
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-900 text-green-300">
+                        Active
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-400 hover:text-white"
+                        onClick={() => onEdit(holding)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Edit {holding.name}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-gray-400 hover:text-red-500"
+                        onClick={() => onDelete(holding)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete {holding.name}</span>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Calculate section subtotal for currency grouping.
+ * Includes tradeable holdings (quantity x price) and snapshot holdings (latest balance).
+ */
+function calculateSectionSubtotal(
+  holdings: HoldingWithData[],
+  prices?: Map<string, PriceData>
+): number {
+  let subtotal = 0;
+
+  for (const holding of holdings) {
+    const isTradeable = TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number]);
+    const isSnapshotType = SNAPSHOT_TYPES.includes(holding.type as (typeof SNAPSHOT_TYPES)[number]);
+
+    if (isTradeable) {
+      // Tradeable holding: quantity x price
+      const priceData = prices?.get(holding.id);
+      if (holding.quantity && priceData?.price) {
+        // Debt should be subtracted, but debt is snapshot-based so won't appear here
+        subtotal += holding.quantity * priceData.price;
+      }
+    } else if (isSnapshotType && holding.latestSnapshot) {
+      // Snapshot holding: latest balance
+      const balance = Number(holding.latestSnapshot.balance);
+      if (holding.type === "debt") {
+        // Debt is negative
+        subtotal -= balance;
+      } else {
+        subtotal += balance;
+      }
+    }
+  }
+
+  return subtotal;
+}
+
+interface HoldingsCurrencySectionProps {
+  sectionCurrency: Currency;
+  holdings: HoldingWithData[];
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
+  onEdit: (holding: HoldingWithData) => void;
+  onDelete: (holding: HoldingWithData) => void;
+  onRetryPrice?: (holdingId: string) => void;
+  retryingPriceIds?: Set<string>;
+  displayCurrency: Currency;
+  convert: (amount: number, fromCurrency: Currency) => number;
+  currencyLoading?: boolean;
+  showNativeCurrency?: boolean;
+}
+
+function HoldingsCurrencySection({
+  sectionCurrency,
+  holdings,
+  prices,
+  pricesLoading,
+  onEdit,
+  onDelete,
+  onRetryPrice,
+  retryingPriceIds,
+  displayCurrency,
+  convert,
+  currencyLoading,
+  showNativeCurrency,
+}: HoldingsCurrencySectionProps) {
+  const label = CURRENCY_LABELS[sectionCurrency];
+
+  // Calculate subtotal in section's currency
+  const subtotal = calculateSectionSubtotal(holdings, prices);
+
+  // Check if any holding in this section is tradeable (to show tradeable columns)
+  const hasTradeableHoldings = holdings.some((h) =>
+    TRADEABLE_TYPES.includes(h.type as (typeof TRADEABLE_TYPES)[number])
+  );
+
+  // Check if any holding in this section uses snapshots (to show balance column)
+  const hasSnapshotHoldings = holdings.some((h) =>
+    SNAPSHOT_TYPES.includes(h.type as (typeof SNAPSHOT_TYPES)[number])
+  );
+
+  return (
+    <section>
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-semibold text-white">
+          {label}{" "}
+          <span className="text-gray-400 font-normal">({holdings.length})</span>
+        </h2>
+        <div className="text-right">
+          <span className="text-gray-400 text-sm">Subtotal: </span>
+          {currencyLoading ? (
+            <span className="inline-block w-20 h-5 bg-gray-700 rounded animate-pulse" />
+          ) : (
+            <CurrencyDisplay
+              amount={subtotal}
+              currency={sectionCurrency}
+              className="text-white font-semibold"
+            />
+          )}
+        </div>
+      </div>
+      <div className="rounded-lg border border-gray-800 overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-gray-800 hover:bg-transparent">
+              <TableHead className="text-gray-400">Name</TableHead>
+              <TableHead className="text-gray-400">Type</TableHead>
+              {hasTradeableHoldings && (
+                <TableHead className="text-gray-400">Symbol</TableHead>
+              )}
+              {hasSnapshotHoldings && (
+                <TableHead className="text-gray-400">Balance</TableHead>
+              )}
+              {hasTradeableHoldings && (
+                <>
+                  <TableHead className="text-gray-400 text-right">Quantity</TableHead>
+                  <TableHead className="text-gray-400 text-right">Price</TableHead>
+                  <TableHead className="text-gray-400 text-right">Market Value</TableHead>
+                  <TableHead className="text-gray-400 text-right">Gain/Loss</TableHead>
+                  <TableHead className="text-gray-400 text-right">Cost Basis</TableHead>
+                  <TableHead className="text-gray-400 text-right">Avg Cost</TableHead>
+                </>
+              )}
+              <TableHead className="text-gray-400">Status</TableHead>
+              <TableHead className="text-gray-400 w-[100px]">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {holdings.map((holding) => {
+              const snapshot = holding.latestSnapshot;
+              const isStale = snapshot ? isSnapshotStale(snapshot.date) : false;
+              const isTradeable = TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number]);
+              const isSnapshotType = SNAPSHOT_TYPES.includes(holding.type as (typeof SNAPSHOT_TYPES)[number]);
+
+              return (
+                <TableRow
+                  key={holding.id}
+                  className={`border-gray-800 ${holding.isDormant ? "opacity-60" : ""}`}
+                >
+                  <TableCell className="text-white font-medium">
+                    {holding.name}
+                  </TableCell>
+                  <TableCell className="text-gray-300">
+                    {HOLDING_TYPE_LABELS[holding.type]}
+                  </TableCell>
+                  {hasTradeableHoldings && (
+                    <TableCell className="text-gray-300">
+                      {isTradeable ? (holding.symbol || "—") : "—"}
+                    </TableCell>
+                  )}
+                  {hasSnapshotHoldings && (
+                    <TableCell>
+                      {isSnapshotType && snapshot ? (
+                        <div className="flex flex-col gap-0.5">
+                          <span className="text-white">
+                            {formatBalance(snapshot.balance, snapshot.currency)}
+                          </span>
+                          <span
+                            className={`text-xs flex items-center gap-1 ${
+                              isStale ? "text-yellow-400" : "text-gray-500"
+                            }`}
+                          >
+                            {isStale && (
+                              <AlertTriangle className="h-3 w-3" />
+                            )}
+                            as of {formatSnapshotDate(snapshot.date)}
+                          </span>
+                        </div>
+                      ) : isSnapshotType ? (
+                        <span className="text-gray-500 text-sm">No data</span>
+                      ) : (
+                        <span className="text-gray-500 text-sm">—</span>
+                      )}
+                    </TableCell>
+                  )}
+                  {hasTradeableHoldings && (
+                    <>
+                      <TableCell className="text-gray-300 text-right font-mono">
+                        {isTradeable ? formatQuantity(holding.quantity) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isTradeable ? (
+                          <PriceCell
+                            holdingId={holding.id}
+                            holdingCurrency={holding.currency}
+                            prices={prices}
+                            pricesLoading={pricesLoading}
+                            onRetry={onRetryPrice ? () => onRetryPrice(holding.id) : undefined}
+                            isRetrying={retryingPriceIds?.has(holding.id)}
+                          />
+                        ) : (
+                          <span className="text-gray-500 text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isTradeable ? (
+                          <MarketValueCell
+                            quantity={holding.quantity}
+                            holdingId={holding.id}
+                            holdingCurrency={holding.currency}
+                            prices={prices}
+                            pricesLoading={pricesLoading}
+                            displayCurrency={displayCurrency}
+                            convert={convert}
+                            currencyLoading={currencyLoading}
+                            showNativeCurrency={showNativeCurrency}
+                          />
+                        ) : (
+                          <span className="text-gray-500 text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isTradeable ? (
+                          <GainLossCell
+                            quantity={holding.quantity}
+                            costBasis={holding.costBasis}
+                            holdingId={holding.id}
+                            holdingCurrency={holding.currency}
+                            prices={prices}
+                            pricesLoading={pricesLoading}
+                            displayCurrency={displayCurrency}
+                            convert={convert}
+                            currencyLoading={currencyLoading}
+                            showNativeCurrency={showNativeCurrency}
+                          />
+                        ) : (
+                          <span className="text-gray-500 text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isTradeable ? (
+                          <CostBasisCell
+                            costBasis={holding.costBasis}
+                            holdingCurrency={holding.currency as Currency}
+                            displayCurrency={displayCurrency}
+                            convert={convert}
+                            currencyLoading={currencyLoading}
+                            showNativeCurrency={showNativeCurrency}
+                          />
+                        ) : (
+                          <span className="text-gray-500 text-sm">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isTradeable ? (
+                          <CostBasisCell
+                            costBasis={holding.avgCost}
+                            holdingCurrency={holding.currency as Currency}
+                            displayCurrency={displayCurrency}
+                            convert={convert}
+                            currencyLoading={currencyLoading}
+                            showNativeCurrency={showNativeCurrency}
+                          />
+                        ) : (
+                          <span className="text-gray-500 text-sm">—</span>
+                        )}
                       </TableCell>
                     </>
                   )}

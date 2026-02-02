@@ -6,9 +6,10 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
-import { HoldingsTable, type HoldingWithData, type PriceData } from "@/components/holdings/holdings-table";
+import { HoldingsTable, type HoldingWithData, type PriceData, type GroupByValue } from "@/components/holdings/holdings-table";
 import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
 import { CurrencyFilter, type CurrencyFilterValue } from "@/components/holdings/currency-filter";
+import { GroupBySelector } from "@/components/holdings/group-by-selector";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -128,6 +129,10 @@ export default function HoldingsPage() {
   const currencyFilter: CurrencyFilterValue = currencyFilterParam && ["all", "AUD", "NZD", "USD"].includes(currencyFilterParam)
     ? currencyFilterParam
     : "all";
+  const groupByParam = searchParams.get("group_by") as GroupByValue | null;
+  const groupBy: GroupByValue = groupByParam && ["type", "currency"].includes(groupByParam)
+    ? groupByParam
+    : "type";
 
   const handleShowDormantChange = (checked: boolean) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -145,6 +150,16 @@ export default function HoldingsPage() {
       params.delete("currency");
     } else {
       params.set("currency", value);
+    }
+    router.push(`/holdings${params.toString() ? `?${params.toString()}` : ""}`);
+  };
+
+  const handleGroupByChange = (value: GroupByValue) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === "type") {
+      params.delete("group_by");
+    } else {
+      params.set("group_by", value);
     }
     router.push(`/holdings${params.toString() ? `?${params.toString()}` : ""}`);
   };
@@ -348,6 +363,7 @@ export default function HoldingsPage() {
             </Label>
           </div>
           <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
+          <GroupBySelector value={groupBy} onChange={handleGroupByChange} />
           <NativeCurrencyToggle />
         </div>
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
@@ -397,6 +413,7 @@ export default function HoldingsPage() {
             </Label>
           </div>
           <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
+          <GroupBySelector value={groupBy} onChange={handleGroupByChange} />
           <NativeCurrencyToggle />
         </div>
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
@@ -457,6 +474,7 @@ export default function HoldingsPage() {
           </Label>
         </div>
         <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
+        <GroupBySelector value={groupBy} onChange={handleGroupByChange} />
         <NativeCurrencyToggle />
       </div>
       <HoldingsTable
@@ -465,6 +483,7 @@ export default function HoldingsPage() {
         pricesLoading={pricesLoading}
         onRetryPrice={handleRetryPrice}
         retryingPriceIds={retryingPriceIds}
+        groupBy={groupBy}
       />
     </div>
   );
