@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown, RotateCw } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import type { Holding } from "@/lib/db/schema";
 import {
   Table,
@@ -14,17 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { EditHoldingDialog } from "./edit-holding-dialog";
+import { DeleteHoldingDialog } from "./delete-holding-dialog";
 import { CurrencyDisplay } from "@/components/ui/currency-display";
 import { useCurrency } from "@/components/providers/currency-provider";
 import type { Currency } from "@/lib/utils/currency";
@@ -285,39 +274,10 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
   const groupedByType = groupHoldingsByType(holdings);
   const groupedByCurrency = groupHoldingsByCurrency(holdings);
-  const queryClient = useQueryClient();
 
   // Get currency context for display currency conversion
   const { displayCurrency, convert, showNativeCurrency, isLoading: currencyLoading } = useCurrency();
 
-  const deleteMutation = useMutation({
-    mutationFn: async (holdingId: string) => {
-      const response = await fetch(`/api/holdings/${holdingId}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to delete holding");
-      }
-
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["holdings"] });
-      toast.success("Holding deleted successfully");
-      setDeletingHolding(null);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
-  });
-
-  const handleDelete = () => {
-    if (deletingHolding) {
-      deleteMutation.mutate(deletingHolding.id);
-    }
-  };
 
   return (
     <>
@@ -391,31 +351,13 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
         />
       )}
 
-      <AlertDialog
+      <DeleteHoldingDialog
+        holding={deletingHolding}
         open={!!deletingHolding}
         onOpenChange={(open) => {
           if (!open) setDeletingHolding(null);
         }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Holding</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{deletingHolding?.name}&quot;? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
-            >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      />
     </>
   );
 }
