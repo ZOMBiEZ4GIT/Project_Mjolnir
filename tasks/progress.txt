@@ -41,6 +41,12 @@
   - Import: `import { CurrencySelector } from "@/components/ui/currency-selector"`
 - Navigation items defined in array for easy extension
 - ESLint no-case-declarations: wrap switch case blocks containing `const`/`let` declarations in braces `{ }`
+- GroupBySelector component in `components/holdings/group-by-selector.tsx`:
+  - Dropdown for switching group by mode (Type or Currency)
+  - Export both component and type: `import { GroupBySelector, type GroupByValue }`
+  - GroupByValue: "type" | "currency"
+  - Import: `import { GroupBySelector } from "@/components/holdings/group-by-selector"`
+- HoldingsTable supports groupBy prop for switching between type and currency grouping
 
 - API patterns:
   - Use innerJoin with holdings to validate user ownership AND include holding info
@@ -308,5 +314,22 @@ Started: 2026-02-02
   - useMemo for filtering: `filteredHoldings = holdings.filter(h => h.currency === currencyFilter)`
   - Separate empty state for "no holdings" vs "no holdings matching filter"
   - Filter integrates with existing show_dormant switch - both can be active simultaneously
+---
+
+## 2026-02-02 - US-014
+- Implemented currency grouping option on holdings list
+- Files changed:
+  - `components/holdings/group-by-selector.tsx` - New GroupBySelector component with Select dropdown
+  - `components/holdings/holdings-table.tsx` - Added groupBy prop, groupHoldingsByCurrency function, HoldingsCurrencySection component
+  - `app/(dashboard)/holdings/page.tsx` - Added GroupBySelector with URL param persistence
+- **Learnings for future iterations:**
+  - GroupBySelector exports both component and type: `import { GroupBySelector, type GroupByValue }`
+  - GroupBy values are: "type" | "currency" (default is "type")
+  - URL param pattern: `/holdings?group_by=currency` - "type" removes the param entirely
+  - HoldingsTable now accepts `groupBy` prop to switch between type and currency grouping
+  - HoldingsCurrencySection shows subtotal per currency section using `calculateSectionSubtotal()`
+  - When grouping by currency, table shows mixed holding types with Type column visible
+  - hasTradeableHoldings and hasSnapshotHoldings determine which columns to show in currency sections
+  - Subtotal calculates: tradeable (quantity x price) + snapshot (latest balance), debt subtracts
 ---
 

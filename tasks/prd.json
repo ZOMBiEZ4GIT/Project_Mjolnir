@@ -248,8 +248,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created GroupBySelector component. HoldingsTable supports groupBy='type'|'currency' prop. Currency sections show subtotal in native currency. URL param ?group_by=currency persists state."
     },
     {
       "id": "US-015",
