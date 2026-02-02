@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency } from "@/lib/utils/currency";
@@ -17,6 +17,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { AssetsVsDebtChart } from "./assets-vs-debt-chart";
+import { ChartSkeleton, ChartError } from "@/components/charts";
 
 interface HistoryPoint {
   date: string;
@@ -74,28 +75,6 @@ function formatMonthFull(dateString: string): string {
   return date.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
 }
 
-/**
- * Loading skeleton for the chart.
- */
-function ChartSkeleton() {
-  return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-      <div className="animate-pulse">
-        <div className="h-5 w-40 bg-gray-700 rounded mb-6" />
-        <div className="h-64 bg-gray-700/50 rounded flex items-end justify-around px-4 pb-4">
-          {/* Fake bar chart skeleton */}
-          {[40, 60, 45, 70, 55, 80, 65, 90, 75, 85, 70, 95].map((h, i) => (
-            <div
-              key={i}
-              className="w-4 bg-gray-600 rounded-t"
-              style={{ height: `${h}%` }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface ChartDataPoint {
   date: string;
@@ -227,6 +206,7 @@ export function NetWorthChart() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
 
   // Chart view mode state with localStorage persistence
   const [chartViewMode, setChartViewMode] = useState<ChartViewMode>("networth");
@@ -283,23 +263,42 @@ export function NetWorthChart() {
     refetchInterval: 60 * 1000, // Refetch every minute
   });
 
+  // Retry handler
+  const handleRetry = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["net-worth-history", months] });
+  }, [queryClient, months]);
+
   // Show skeleton while loading or not authenticated
   if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
-    return <ChartSkeleton />;
+    return (
+      <ChartSkeleton
+        title="Net Worth History"
+        variant="line"
+        withContainer
+      />
+    );
   }
 
   // Show error state
   if (error) {
     return (
-      <div className="rounded-lg border border-red-700 bg-red-900/20 p-6">
-        <p className="text-red-400">Failed to load net worth history</p>
-      </div>
+      <ChartError
+        message="Failed to load net worth history"
+        onRetry={handleRetry}
+        withContainer
+      />
     );
   }
 
   // No data available
   if (!historyData || !historyData.history) {
-    return <ChartSkeleton />;
+    return (
+      <ChartSkeleton
+        title="Net Worth History"
+        variant="line"
+        withContainer
+      />
+    );
   }
 
   // Transform data for Recharts - convert from AUD to display currency

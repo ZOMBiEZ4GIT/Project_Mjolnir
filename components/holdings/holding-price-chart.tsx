@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency } from "@/lib/utils/currency";
@@ -14,6 +14,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { ChartSkeleton, ChartError } from "@/components/charts";
+import { useCallback } from "react";
 
 interface Transaction {
   id: string;
@@ -67,24 +69,6 @@ function formatDateFull(dateString: string): string {
   });
 }
 
-/**
- * Loading skeleton for the chart.
- */
-function ChartSkeleton() {
-  return (
-    <div className="animate-pulse">
-      <div className="h-64 bg-gray-700/50 rounded flex items-end justify-around px-4 pb-4">
-        {[40, 60, 45, 70, 55, 80, 65, 90, 75, 85, 70, 95].map((h, i) => (
-          <div
-            key={i}
-            className="w-4 bg-gray-600 rounded-t"
-            style={{ height: `${h}%` }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /**
  * Custom tooltip component for the chart.
@@ -147,6 +131,7 @@ export function HoldingPriceChart({
 }: HoldingPriceChartProps) {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { isLoading: currencyLoading } = useCurrency();
+  const queryClient = useQueryClient();
 
   const {
     data: transactions,
@@ -158,17 +143,23 @@ export function HoldingPriceChart({
     enabled: isLoaded && isSignedIn && !!holdingId,
   });
 
+  // Retry handler
+  const handleRetry = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["transactions", holdingId] });
+  }, [queryClient, holdingId]);
+
   // Show skeleton while loading
   if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
-    return <ChartSkeleton />;
+    return <ChartSkeleton variant="line" />;
   }
 
   // Show error state
   if (error) {
     return (
-      <div className="rounded-lg border border-red-700 bg-red-900/20 p-4">
-        <p className="text-red-400 text-sm">Failed to load transaction history</p>
-      </div>
+      <ChartError
+        message="Failed to load transaction history"
+        onRetry={handleRetry}
+      />
     );
   }
 

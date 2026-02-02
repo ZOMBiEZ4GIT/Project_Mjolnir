@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency } from "@/lib/utils/currency";
@@ -14,6 +14,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { ChartSkeleton, ChartError } from "@/components/charts";
+import { useCallback } from "react";
 
 interface MonthlyBreakdown {
   date: string;
@@ -76,27 +78,6 @@ function formatMonthFull(dateString: string): string {
   return date.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
 }
 
-/**
- * Loading skeleton for the chart.
- */
-function ChartSkeleton() {
-  return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-      <div className="animate-pulse">
-        <div className="h-5 w-64 bg-gray-700 rounded mb-6" />
-        <div className="h-64 bg-gray-700/50 rounded flex items-end justify-around px-4 pb-4">
-          {[30, 45, 35, 55, 40, 60, 50, 70, 55, 75, 60, 80].map((h, i) => (
-            <div
-              key={i}
-              className="w-4 bg-gray-600 rounded-t"
-              style={{ height: `${h}%` }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface ChartDataPoint {
   date: string;
@@ -247,6 +228,7 @@ export function SuperGrowthChart({
 }: SuperGrowthChartProps) {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
+  const queryClient = useQueryClient();
 
   const {
     data: breakdownData,
@@ -259,23 +241,42 @@ export function SuperGrowthChart({
     refetchInterval: 60 * 1000,
   });
 
+  // Retry handler
+  const handleRetry = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["super-breakdown", months, holdingId] });
+  }, [queryClient, months, holdingId]);
+
   // Show skeleton while loading or not authenticated
   if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
-    return <ChartSkeleton />;
+    return (
+      <ChartSkeleton
+        title="Superannuation Growth Breakdown"
+        variant="bar"
+        withContainer
+      />
+    );
   }
 
   // Show error state
   if (error) {
     return (
-      <div className="rounded-lg border border-red-700 bg-red-900/20 p-6">
-        <p className="text-red-400">Failed to load super breakdown</p>
-      </div>
+      <ChartError
+        message="Failed to load super breakdown"
+        onRetry={handleRetry}
+        withContainer
+      />
     );
   }
 
   // No data available
   if (!breakdownData || !breakdownData.breakdown) {
-    return <ChartSkeleton />;
+    return (
+      <ChartSkeleton
+        title="Superannuation Growth Breakdown"
+        variant="bar"
+        withContainer
+      />
+    );
   }
 
   const { breakdown, holdings } = breakdownData;

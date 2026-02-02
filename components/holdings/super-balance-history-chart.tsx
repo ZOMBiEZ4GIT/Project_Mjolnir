@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency } from "@/lib/utils/currency";
@@ -15,6 +15,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { ChartSkeleton, ChartError } from "@/components/charts";
+import { useCallback } from "react";
 
 interface MonthlyBreakdown {
   date: string;
@@ -78,24 +80,6 @@ function formatMonthFull(dateString: string): string {
   return date.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
 }
 
-/**
- * Loading skeleton for the chart.
- */
-function ChartSkeleton() {
-  return (
-    <div className="animate-pulse">
-      <div className="h-64 bg-gray-700/50 rounded flex items-end justify-around px-4 pb-4">
-        {[30, 45, 35, 55, 40, 60, 50, 70, 55, 75, 60, 80].map((h, i) => (
-          <div
-            key={i}
-            className="w-6 bg-gray-600 rounded-t"
-            style={{ height: `${h}%` }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 interface ChartDataPoint {
   date: string;
@@ -280,6 +264,7 @@ export function SuperBalanceHistoryChart({
 }: SuperBalanceHistoryChartProps) {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
+  const queryClient = useQueryClient();
 
   const {
     data: breakdownData,
@@ -292,23 +277,29 @@ export function SuperBalanceHistoryChart({
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
+  // Retry handler
+  const handleRetry = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["super-breakdown", months, holdingId] });
+  }, [queryClient, months, holdingId]);
+
   // Show skeleton while loading or not authenticated
   if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
-    return <ChartSkeleton />;
+    return <ChartSkeleton variant="bar" />;
   }
 
   // Show error state
   if (error) {
     return (
-      <div className="rounded-lg border border-red-700 bg-red-900/20 p-4">
-        <p className="text-red-400 text-sm">Failed to load balance history</p>
-      </div>
+      <ChartError
+        message="Failed to load balance history"
+        onRetry={handleRetry}
+      />
     );
   }
 
   // No data available
   if (!breakdownData || !breakdownData.breakdown) {
-    return <ChartSkeleton />;
+    return <ChartSkeleton variant="bar" />;
   }
 
   const { breakdown } = breakdownData;

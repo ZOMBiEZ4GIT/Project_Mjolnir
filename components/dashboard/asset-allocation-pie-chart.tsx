@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
@@ -12,6 +12,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { ChartSkeleton, ChartError } from "@/components/charts";
+import { useCallback } from "react";
 
 interface HoldingValue {
   id: string;
@@ -94,21 +96,6 @@ function getAssetHexColor(type: string): string {
   }
 }
 
-/**
- * Loading skeleton for the pie chart.
- */
-function PieChartSkeleton() {
-  return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-      <div className="animate-pulse">
-        <div className="h-5 w-32 bg-gray-700 rounded mb-6" />
-        <div className="h-64 flex items-center justify-center">
-          <div className="w-48 h-48 bg-gray-700 rounded-full" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 interface PieDataPoint {
   name: string;
@@ -203,6 +190,7 @@ function CustomLegend({ payload, currency }: CustomLegendProps) {
 export function AssetAllocationPieChart() {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading } = useCurrency();
+  const queryClient = useQueryClient();
 
   const {
     data: netWorthData,
@@ -215,23 +203,42 @@ export function AssetAllocationPieChart() {
     refetchInterval: 60 * 1000,
   });
 
+  // Retry handler
+  const handleRetry = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["net-worth", displayCurrency] });
+  }, [queryClient, displayCurrency]);
+
   // Show skeleton while loading or not authenticated
   if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
-    return <PieChartSkeleton />;
+    return (
+      <ChartSkeleton
+        title="Asset Allocation"
+        variant="pie"
+        withContainer
+      />
+    );
   }
 
   // Show error state
   if (error) {
     return (
-      <div className="rounded-lg border border-red-700 bg-red-900/20 p-6">
-        <p className="text-red-400">Failed to load asset allocation</p>
-      </div>
+      <ChartError
+        message="Failed to load asset allocation"
+        onRetry={handleRetry}
+        withContainer
+      />
     );
   }
 
   // No data available
   if (!netWorthData || !netWorthData.breakdown) {
-    return <PieChartSkeleton />;
+    return (
+      <ChartSkeleton
+        title="Asset Allocation"
+        variant="pie"
+        withContainer
+      />
+    );
   }
 
   const { breakdown, totalAssets } = netWorthData;
