@@ -5,6 +5,7 @@ import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
 import { AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
 
 interface HoldingValue {
   id: string;
@@ -53,12 +54,58 @@ async function fetchNetWorth(displayCurrency: Currency): Promise<NetWorthRespons
   return response.json();
 }
 
-async function fetchHistory(): Promise<HistoryResponse> {
-  const response = await fetch("/api/net-worth/history?months=2");
+async function fetchHistory(months: number): Promise<HistoryResponse> {
+  const response = await fetch(`/api/net-worth/history?months=${months}`);
   if (!response.ok) {
     throw new Error("Failed to fetch history");
   }
   return response.json();
+}
+
+/**
+ * Number of months of history to show in the sparkline.
+ */
+const SPARKLINE_MONTHS = 6;
+
+interface SparklineDataPoint {
+  netWorth: number;
+}
+
+/**
+ * Mini sparkline component showing net worth trend.
+ * Green if overall increase, red if decrease.
+ */
+interface SparklineProps {
+  data: SparklineDataPoint[];
+}
+
+function Sparkline({ data }: SparklineProps) {
+  if (data.length < 2) {
+    return null;
+  }
+
+  // Determine color based on overall trend (first vs last value)
+  const firstValue = data[0].netWorth;
+  const lastValue = data[data.length - 1].netWorth;
+  const isPositive = lastValue >= firstValue;
+  const strokeColor = isPositive ? "#10B981" : "#EF4444"; // green-500 / red-500
+
+  return (
+    <div className="h-10 w-24">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
+          <Line
+            type="monotone"
+            dataKey="netWorth"
+            stroke={strokeColor}
+            strokeWidth={2}
+            dot={false}
+            isAnimationActive={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }
 
 /**
@@ -133,8 +180,8 @@ export function NetWorthHero() {
   });
 
   const { data: historyData, isLoading: isLoadingHistory } = useQuery({
-    queryKey: ["net-worth-history", 2],
-    queryFn: fetchHistory,
+    queryKey: ["net-worth-history", SPARKLINE_MONTHS],
+    queryFn: () => fetchHistory(SPARKLINE_MONTHS),
     enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,
   });
@@ -181,6 +228,12 @@ export function NetWorthHero() {
   const isPositiveChange = changeAmount >= 0;
   const calculatedAt = new Date(netWorthData.calculatedAt);
 
+  // Prepare sparkline data - convert history to display currency
+  const sparklineData: SparklineDataPoint[] =
+    historyData?.history.map((point) => ({
+      netWorth: convert(point.netWorth, "AUD"),
+    })) ?? [];
+
   return (
     <div className="rounded-lg border border-gray-700 bg-gradient-to-br from-gray-800 to-gray-900 p-8">
       {/* Header with stale data warning */}
@@ -196,9 +249,12 @@ export function NetWorthHero() {
         )}
       </div>
 
-      {/* Net Worth Value */}
-      <div className="text-4xl md:text-5xl font-bold text-white mb-4">
-        {formatCurrency(netWorthData.netWorth, displayCurrency)}
+      {/* Net Worth Value with Sparkline */}
+      <div className="flex items-center gap-4 mb-4">
+        <div className="text-4xl md:text-5xl font-bold text-white">
+          {formatCurrency(netWorthData.netWorth, displayCurrency)}
+        </div>
+        {!isLoadingHistory && <Sparkline data={sparklineData} />}
       </div>
 
       {/* Change from last month */}
