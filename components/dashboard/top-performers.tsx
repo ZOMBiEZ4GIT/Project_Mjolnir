@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatCurrency, type Currency } from "@/lib/utils/currency";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import Link from "next/link";
 
@@ -28,19 +30,6 @@ async function fetchPerformers(): Promise<PerformersResponse> {
     throw new Error("Failed to fetch performers");
   }
   return response.json();
-}
-
-/**
- * Formats a number as Australian currency (AUD).
- */
-function formatCurrency(value: number): string {
-  const absValue = Math.abs(value);
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: "AUD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(absValue);
 }
 
 /**
@@ -107,11 +96,16 @@ function PerformersSkeleton() {
 interface PerformerRowProps {
   performer: Performer;
   isGainer: boolean;
+  currency: Currency;
+  convert: (amount: number, fromCurrency: Currency) => number;
 }
 
-function PerformerRow({ performer, isGainer }: PerformerRowProps) {
+function PerformerRow({ performer, isGainer, currency, convert }: PerformerRowProps) {
   const colorClass = isGainer ? "text-emerald-400" : "text-red-400";
   const sign = isGainer ? "+" : "-";
+
+  // Convert from AUD (API returns values in AUD) to display currency
+  const gainLossConverted = convert(performer.gainLoss, "AUD");
 
   return (
     <Link
@@ -125,7 +119,7 @@ function PerformerRow({ performer, isGainer }: PerformerRowProps) {
       <div className="text-right ml-4">
         <p className={`font-semibold ${colorClass}`}>
           {sign}
-          {formatCurrency(performer.gainLoss)}
+          {formatCurrency(Math.abs(gainLossConverted), currency)}
         </p>
         <p className={`text-sm ${colorClass}`}>
           {sign}
@@ -155,13 +149,14 @@ function EmptyPerformerList({ type }: { type: "gainers" | "losers" }) {
  * Displays the top 5 gainers and top 5 losers among tradeable holdings.
  * Features:
  * - Split view: gainers on left, losers on right
- * - Each row shows name, symbol, gain/loss amount, and percentage
+ * - Each row shows name, symbol, gain/loss amount (in display currency), and percentage
  * - Gainers displayed in green, losers in red
  * - Click on any row navigates to holding detail page
  * - Empty state when no tradeable holdings exist
  */
 export function TopPerformers() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
 
   const {
     data: performersData,
@@ -175,7 +170,7 @@ export function TopPerformers() {
   });
 
   // Show skeleton while loading or not authenticated
-  if (!isLoaded || !isSignedIn || isLoading) {
+  if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
     return <PerformersSkeleton />;
   }
 
@@ -233,6 +228,8 @@ export function TopPerformers() {
                   key={performer.holdingId}
                   performer={performer}
                   isGainer={true}
+                  currency={displayCurrency}
+                  convert={convert}
                 />
               ))}
             </div>
@@ -256,6 +253,8 @@ export function TopPerformers() {
                   key={performer.holdingId}
                   performer={performer}
                   isGainer={false}
+                  currency={displayCurrency}
+                  convert={convert}
                 />
               ))}
             </div>

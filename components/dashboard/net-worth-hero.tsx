@@ -2,13 +2,34 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
 import { AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
+
+interface HoldingValue {
+  id: string;
+  name: string;
+  symbol: string | null;
+  value: number;
+  currency: string;
+  valueNative: number;
+}
+
+interface AssetTypeBreakdown {
+  type: "stock" | "etf" | "crypto" | "super" | "cash";
+  totalValue: number;
+  count: number;
+  holdings: HoldingValue[];
+}
 
 interface NetWorthResponse {
   netWorth: number;
   totalAssets: number;
   totalDebt: number;
+  breakdown: AssetTypeBreakdown[];
   hasStaleData: boolean;
+  displayCurrency: Currency;
+  ratesUsed: ExchangeRates;
   calculatedAt: string;
 }
 
@@ -24,8 +45,8 @@ interface HistoryResponse {
   generatedAt: string;
 }
 
-async function fetchNetWorth(): Promise<NetWorthResponse> {
-  const response = await fetch("/api/net-worth");
+async function fetchNetWorth(displayCurrency: Currency): Promise<NetWorthResponse> {
+  const response = await fetch(`/api/net-worth?displayCurrency=${displayCurrency}`);
   if (!response.ok) {
     throw new Error("Failed to fetch net worth");
   }
@@ -38,18 +59,6 @@ async function fetchHistory(): Promise<HistoryResponse> {
     throw new Error("Failed to fetch history");
   }
   return response.json();
-}
-
-/**
- * Formats a number as Australian currency (AUD).
- */
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: "AUD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 /**
@@ -103,22 +112,23 @@ function HeroSkeleton() {
  *
  * Displays the user's total net worth prominently at the top of the dashboard.
  * Shows:
- * - Current net worth in AUD (large, formatted)
+ * - Current net worth in the user's display currency (large, formatted)
  * - Change from last month (amount and percentage, colored green/red)
  * - "as of" timestamp
  * - Stale data warning icon if applicable
  */
 export function NetWorthHero() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
 
   const {
     data: netWorthData,
     isLoading: isLoadingNetWorth,
     error: netWorthError,
   } = useQuery({
-    queryKey: ["net-worth"],
-    queryFn: fetchNetWorth,
-    enabled: isLoaded && isSignedIn,
+    queryKey: ["net-worth", displayCurrency],
+    queryFn: () => fetchNetWorth(displayCurrency),
+    enabled: isLoaded && isSignedIn && !currencyLoading,
     refetchInterval: 60 * 1000, // Refetch every minute
   });
 
@@ -130,7 +140,7 @@ export function NetWorthHero() {
   });
 
   // Show skeleton while loading or not authenticated
-  if (!isLoaded || !isSignedIn || isLoadingNetWorth) {
+  if (!isLoaded || !isSignedIn || isLoadingNetWorth || currencyLoading) {
     return <HeroSkeleton />;
   }
 
@@ -149,6 +159,7 @@ export function NetWorthHero() {
   }
 
   // Calculate change from last month
+  // Note: History is in AUD, so we convert to display currency for comparison
   let changeAmount = 0;
   let changePercent = 0;
   let hasHistoricalData = false;
@@ -158,9 +169,11 @@ export function NetWorthHero() {
     // and second to last is the previous month
     const previousMonth = historyData.history[historyData.history.length - 2];
     if (previousMonth && previousMonth.netWorth !== 0) {
-      changeAmount = netWorthData.netWorth - previousMonth.netWorth;
+      // Convert previous month's AUD value to display currency
+      const previousNetWorthConverted = convert(previousMonth.netWorth, "AUD");
+      changeAmount = netWorthData.netWorth - previousNetWorthConverted;
       changePercent =
-        (changeAmount / Math.abs(previousMonth.netWorth)) * 100;
+        (changeAmount / Math.abs(previousNetWorthConverted)) * 100;
       hasHistoricalData = true;
     }
   }
@@ -185,7 +198,7 @@ export function NetWorthHero() {
 
       {/* Net Worth Value */}
       <div className="text-4xl md:text-5xl font-bold text-white mb-4">
-        {formatCurrency(netWorthData.netWorth)}
+        {formatCurrency(netWorthData.netWorth, displayCurrency)}
       </div>
 
       {/* Change from last month */}
@@ -202,7 +215,7 @@ export function NetWorthHero() {
             }`}
           >
             {isPositiveChange ? "+" : ""}
-            {formatCurrency(changeAmount)} ({formatPercentage(changePercent)})
+            {formatCurrency(changeAmount, displayCurrency)} ({formatPercentage(changePercent)})
           </span>
           <span className="text-sm text-gray-500">from last month</span>
         </div>

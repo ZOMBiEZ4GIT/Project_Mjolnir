@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatCurrency, type Currency } from "@/lib/utils/currency";
 import {
   LineChart,
   Line,
@@ -30,41 +32,6 @@ async function fetchHistory(): Promise<HistoryResponse> {
     throw new Error("Failed to fetch history");
   }
   return response.json();
-}
-
-/**
- * Formats a number as Australian currency (AUD) for chart display.
- * Uses compact notation for large values (e.g., $1.2M).
- */
-function formatCurrencyCompact(value: number): string {
-  if (value >= 1000000) {
-    return new Intl.NumberFormat("en-AU", {
-      style: "currency",
-      currency: "AUD",
-      notation: "compact",
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    }).format(value);
-  }
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: "AUD",
-    notation: "compact",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-/**
- * Formats a number as full Australian currency (AUD) for tooltips.
- */
-function formatCurrencyFull(value: number): string {
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: "AUD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 /**
@@ -121,9 +88,10 @@ interface TooltipProps {
     value: number;
     payload: ChartDataPoint;
   }>;
+  currency: Currency;
 }
 
-function CustomTooltip({ active, payload }: TooltipProps) {
+function CustomTooltip({ active, payload, currency }: TooltipProps) {
   if (!active || !payload || payload.length === 0) {
     return null;
   }
@@ -135,7 +103,7 @@ function CustomTooltip({ active, payload }: TooltipProps) {
         {formatMonthFull(data.payload.date)}
       </p>
       <p className="text-white font-semibold text-lg">
-        {formatCurrencyFull(data.value)}
+        {formatCurrency(data.value, currency)}
       </p>
     </div>
   );
@@ -147,13 +115,18 @@ function CustomTooltip({ active, payload }: TooltipProps) {
  * Displays a line chart showing net worth over the last 12 months.
  * Features:
  * - X-axis: months (Jan, Feb, etc.)
- * - Y-axis: net worth value (auto-scaled)
+ * - Y-axis: net worth value (auto-scaled, in display currency)
  * - Hover shows exact value for that month
  * - Handles missing months gracefully
  * - Dark mode styling
+ *
+ * Note: Historical values are stored in AUD and converted to display currency
+ * for chart display. This uses current exchange rates, so historical USD values
+ * are estimates based on today's rates.
  */
 export function NetWorthChart() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
 
   const {
     data: historyData,
@@ -167,7 +140,7 @@ export function NetWorthChart() {
   });
 
   // Show skeleton while loading or not authenticated
-  if (!isLoaded || !isSignedIn || isLoading) {
+  if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
     return <ChartSkeleton />;
   }
 
@@ -185,11 +158,11 @@ export function NetWorthChart() {
     return <ChartSkeleton />;
   }
 
-  // Transform data for Recharts
+  // Transform data for Recharts - convert from AUD to display currency
   const chartData: ChartDataPoint[] = historyData.history.map((point) => ({
     date: point.date,
     displayMonth: formatMonth(point.date),
-    netWorth: point.netWorth,
+    netWorth: convert(point.netWorth, "AUD"),
   }));
 
   // Empty state
@@ -218,6 +191,11 @@ export function NetWorthChart() {
   const padding = range * 0.1 || maxValue * 0.1 || 1000;
   const yMin = Math.max(0, minValue - padding);
   const yMax = maxValue + padding;
+
+  // Create a formatter function for the Y-axis that uses the display currency
+  const formatCurrencyCompact = (value: number): string => {
+    return formatCurrency(value, displayCurrency, { compact: true });
+  };
 
   return (
     <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
@@ -251,7 +229,7 @@ export function NetWorthChart() {
               domain={[yMin, yMax]}
               width={70}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip currency={displayCurrency} />} />
             <Line
               type="monotone"
               dataKey="netWorth"
