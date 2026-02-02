@@ -16,8 +16,8 @@
         "Lint passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/export/holdings-exporter.ts with exportHoldingsCSV and exportHoldingsJSON functions"
     },
     {
       "id": "US-002",
@@ -32,8 +32,8 @@
         "Lint passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/export/transactions-exporter.ts with exportTransactionsCSV and exportTransactionsJSON functions. Uses TransactionWithSymbol type to include holding symbol in exports."
     },
     {
       "id": "US-003",
@@ -49,8 +49,8 @@
         "Lint passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/export/snapshots-exporter.ts with exportSnapshotsCSV and exportSnapshotsJSON functions. Uses SnapshotWithDetails interface extending Snapshot with holdingName and optional contribution fields."
     },
     {
       "id": "US-004",

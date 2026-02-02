@@ -54,3 +54,30 @@ Started: 2026-02-03
 
 ---
 
+## 2026-02-03 - US-001
+- Implemented holdings export utility with CSV and JSON export functions
+- Files created: lib/export/holdings-exporter.ts
+- **Learnings for future iterations:**
+  - Export utilities should map camelCase DB fields to snake_case for CSV/JSON consistency with import format
+  - CSV escaping handles commas, quotes, and newlines - wrapping in quotes and doubling internal quotes
+  - Use Holding type from @/lib/db/schema for type safety
+---
+
+## 2026-02-03 - US-002
+- Implemented transactions export utility with CSV and JSON export functions
+- Files created: lib/export/transactions-exporter.ts
+- **Learnings for future iterations:**
+  - Transactions require symbol from related holding for meaningful exports - created TransactionWithSymbol interface extending Transaction
+  - Follow same escapeCSVValue pattern and CSV_COLUMNS structure from holdings exporter for consistency
+  - CSV column order matches import format: date, symbol, action, quantity, unit_price, fees, currency, notes
+---
+
+## 2026-02-03 - US-003
+- Implemented snapshots export utility with CSV and JSON export functions
+- Files created: lib/export/snapshots-exporter.ts
+- **Learnings for future iterations:**
+  - Snapshots need holding name for meaningful exports - created SnapshotWithDetails interface extending Snapshot
+  - Contributions (employer_contrib, employee_contrib) are optional fields - may be present if snapshot corresponds to super holdings
+  - CSV columns: date, holding_name, balance, currency, employer_contrib, employee_contrib
+---
+
