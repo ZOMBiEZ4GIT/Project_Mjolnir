@@ -133,3 +133,23 @@ Started: 2026-02-03
   - Control Sheet open state with `open` and `onOpenChange` props
 ---
 
+## 2026-02-03 - US-006
+- Made dashboard cards stack and display properly on mobile devices
+- Added responsive padding `p-4 sm:p-6` to all dashboard card components
+- Updated dashboard header to stack vertically on small screens with `flex-col sm:flex-row`
+- Reduced net worth hero padding and text sizes on mobile (`text-3xl sm:text-4xl md:text-5xl`)
+- Hidden sparkline on very small screens with `hidden sm:block`
+- Made summary cards use smaller text on mobile (`text-xl sm:text-2xl`)
+- Made check-in prompt button full-width on mobile with stacking layout
+- Added `flex-wrap` to controls that could overflow on small screens
+- Adjusted container padding with `px-3 sm:px-4 py-4 sm:py-8`
+- Files changed: `components/dashboard/dashboard-content.tsx`, `components/dashboard/dashboard-header.tsx`, `components/dashboard/net-worth-hero.tsx`, `components/dashboard/summary-cards.tsx`, `components/dashboard/asset-allocation.tsx`, `components/dashboard/currency-exposure.tsx`, `components/dashboard/net-worth-chart.tsx`, `components/dashboard/top-performers.tsx`, `components/dashboard/super-breakdown-section.tsx`, `components/dashboard/super-growth-chart.tsx`, `components/dashboard/asset-allocation-pie-chart.tsx`, `components/check-in/check-in-prompt-card.tsx`
+- **Learnings for future iterations:**
+  - Use `p-4 sm:p-6` pattern for consistent responsive padding across cards
+  - Use `flex-col sm:flex-row` for layouts that should stack on mobile
+  - Use `text-xl sm:text-2xl md:text-3xl` pattern for responsive typography
+  - Hide non-essential UI elements on small screens with `hidden sm:block`
+  - Make buttons full-width on mobile with `w-full sm:w-auto`
+  - Use `flex-wrap` on control groups to prevent overflow
+---
+
