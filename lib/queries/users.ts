@@ -78,6 +78,8 @@ export async function getUserPreferences(
 interface UpdatePreferencesInput {
   displayCurrency?: "AUD" | "NZD" | "USD";
   showNativeCurrency?: boolean;
+  emailReminders?: boolean;
+  reminderDay?: number; // 1-28
 }
 
 /**
@@ -105,6 +107,14 @@ export async function updateUserPreferences(
 
   if (updates.showNativeCurrency !== undefined) {
     setValues.showNativeCurrency = updates.showNativeCurrency;
+  }
+
+  if (updates.emailReminders !== undefined) {
+    setValues.emailReminders = updates.emailReminders;
+  }
+
+  if (updates.reminderDay !== undefined) {
+    setValues.reminderDay = updates.reminderDay;
   }
 
   // Update preferences
