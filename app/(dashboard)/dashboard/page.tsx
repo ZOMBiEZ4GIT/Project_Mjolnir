@@ -3,6 +3,7 @@ import { CheckInPromptCard } from "@/components/check-in/check-in-prompt-card";
 import { NetWorthHero } from "@/components/dashboard/net-worth-hero";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { AssetAllocation } from "@/components/dashboard/asset-allocation";
+import { CurrencyExposure } from "@/components/dashboard/currency-exposure";
 import { NetWorthChart } from "@/components/dashboard/net-worth-chart";
 import { TopPerformers } from "@/components/dashboard/top-performers";
 import { StaleDataWarning } from "@/components/dashboard/stale-data-warning";
@@ -32,9 +33,10 @@ export default async function DashboardPage() {
         <SummaryCards />
       </div>
 
-      {/* Asset Allocation Breakdown */}
-      <div className="mb-6">
+      {/* Asset Allocation and Currency Exposure side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <AssetAllocation />
+        <CurrencyExposure />
       </div>
 
       {/* Net Worth History Chart */}

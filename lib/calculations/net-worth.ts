@@ -623,6 +623,184 @@ export async function calculateNetWorth(
 // ASSET BREAKDOWN CALCULATION
 // =============================================================================
 
+// =============================================================================
+// CURRENCY EXPOSURE CALCULATION
+// =============================================================================
+
+/**
+ * Currency exposure item showing value and percentage in a single currency.
+ */
+export interface CurrencyExposureItem {
+  /** Currency code (AUD, NZD, USD) */
+  currency: Currency;
+  /** Total value in display currency */
+  value: number;
+  /** Total value in native currency (same as value if currency === displayCurrency) */
+  valueNative: number;
+  /** Percentage of total assets */
+  percentage: number;
+  /** Number of holdings in this currency */
+  count: number;
+}
+
+/**
+ * Complete currency exposure breakdown result.
+ */
+export interface CurrencyExposure {
+  /** Breakdown by currency */
+  exposure: CurrencyExposureItem[];
+  /** Total assets value in display currency */
+  totalAssets: number;
+  /** Display currency used for values */
+  displayCurrency: Currency;
+  /** Exchange rates used for conversion (for transparency) */
+  ratesUsed: ExchangeRates;
+  /** Timestamp when calculation was performed */
+  calculatedAt: Date;
+}
+
+/**
+ * Options for currency exposure calculation.
+ */
+export interface CalculateCurrencyExposureOptions {
+  /**
+   * Display currency for values. Defaults to AUD.
+   */
+  displayCurrency?: Currency;
+}
+
+/**
+ * Calculates currency exposure breakdown showing how assets are distributed across currencies.
+ *
+ * Groups all assets by their native currency and calculates:
+ * - Total value in display currency
+ * - Total value in native currency
+ * - Percentage of total assets
+ * - Number of holdings per currency
+ *
+ * Note: Debt is excluded from currency exposure calculations.
+ *
+ * @param userId - The user ID to calculate exposure for
+ * @param options - Optional configuration including displayCurrency
+ * @returns CurrencyExposure with breakdown by currency
+ *
+ * @example
+ * const exposure = await calculateCurrencyExposure("user_123", { displayCurrency: "AUD" });
+ * exposure.exposure.forEach(item => {
+ *   console.log(`${item.currency}: ${item.percentage.toFixed(1)}%`);
+ * });
+ */
+export async function calculateCurrencyExposure(
+  userId: string,
+  options: CalculateCurrencyExposureOptions = {}
+): Promise<CurrencyExposure> {
+  const { displayCurrency = "AUD" } = options;
+  const calculatedAt = new Date();
+
+  // Get all active holdings and exchange rates concurrently
+  const [userHoldings, rates] = await Promise.all([
+    getUserHoldings(userId),
+    fetchExchangeRates(),
+  ]);
+
+  // Get latest snapshots for all holdings (single query)
+  const snapshotsMap = await getLatestSnapshots(userId);
+
+  // Categorize holdings (exclude debt)
+  const tradeableTypes = ["stock", "etf", "crypto"] as const;
+  const snapshotAssetTypes = ["super", "cash"] as const;
+
+  const tradeableHoldings = userHoldings.filter((h) =>
+    tradeableTypes.includes(h.type as (typeof tradeableTypes)[number])
+  );
+  const snapshotAssetHoldings = userHoldings.filter((h) =>
+    snapshotAssetTypes.includes(h.type as (typeof snapshotAssetTypes)[number])
+  );
+
+  // Pre-fetch quantities and prices for all tradeable holdings
+  const quantities = await Promise.all(
+    tradeableHoldings.map(async (h) => ({
+      id: h.id,
+      quantity: await calculateQuantityHeld(h.id),
+    }))
+  );
+  const quantitiesMap = new Map(quantities.map((q) => [q.id, q.quantity]));
+
+  const prices = await Promise.all(
+    tradeableHoldings
+      .filter((h) => h.symbol)
+      .map(async (h) => ({
+        symbol: h.symbol!,
+        price: await getCachedPrice(h.symbol!),
+      }))
+  );
+  const pricesMap = new Map(prices.map((p) => [p.symbol, p.price]));
+
+  // Calculate values for each category
+  const tradeableResults = tradeableHoldings.map((h) =>
+    calculateTradeableValue(h, displayCurrency, rates, quantitiesMap, pricesMap)
+  );
+
+  const snapshotAssetResults = snapshotAssetHoldings.map((h) =>
+    calculateSnapshotValue(h, snapshotsMap, displayCurrency, rates)
+  );
+
+  // Combine all holding values (filter out nulls)
+  const allValues = [
+    ...tradeableResults.map((r) => r.holdingValue).filter((v): v is HoldingValue => v !== null),
+    ...snapshotAssetResults.map((r) => r.holdingValue).filter((v): v is HoldingValue => v !== null),
+  ];
+
+  // Group by native currency
+  const currencyGroups: Record<Currency, { value: number; valueNative: number; count: number }> = {
+    AUD: { value: 0, valueNative: 0, count: 0 },
+    NZD: { value: 0, valueNative: 0, count: 0 },
+    USD: { value: 0, valueNative: 0, count: 0 },
+  };
+
+  for (const holdingValue of allValues) {
+    const currency = holdingValue.currency as Currency;
+    if (currency in currencyGroups) {
+      currencyGroups[currency].value += holdingValue.value;
+      currencyGroups[currency].valueNative += holdingValue.valueNative;
+      currencyGroups[currency].count += 1;
+    }
+  }
+
+  // Calculate total assets
+  const totalAssets = Object.values(currencyGroups).reduce((sum, g) => sum + g.value, 0);
+
+  // Build exposure array with percentages
+  const exposure: CurrencyExposureItem[] = [];
+
+  for (const [currency, group] of Object.entries(currencyGroups)) {
+    if (group.count > 0) {
+      exposure.push({
+        currency: currency as Currency,
+        value: group.value,
+        valueNative: group.valueNative,
+        percentage: totalAssets > 0 ? (group.value / totalAssets) * 100 : 0,
+        count: group.count,
+      });
+    }
+  }
+
+  // Sort by value descending
+  exposure.sort((a, b) => b.value - a.value);
+
+  return {
+    exposure,
+    totalAssets,
+    displayCurrency,
+    ratesUsed: rates,
+    calculatedAt,
+  };
+}
+
+// =============================================================================
+// ASSET BREAKDOWN HELPERS
+// =============================================================================
+
 /**
  * Adds percentage to holdings based on group total.
  */
