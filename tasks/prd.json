@@ -16,8 +16,8 @@
         "Lint passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added TimeRangeSelector component with URL param persistence using Next.js useSearchParams/useRouter"
     },
     {
       "id": "US-002",
@@ -32,8 +32,8 @@
         "Lint passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added Sparkline component using Recharts LineChart. Shows last 6 months of history, green if overall increase, red if decrease. Integrated into NetWorthHero component next to the net worth value."
     },
     {
       "id": "US-003",
@@ -48,8 +48,8 @@
         "Lint passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added AssetAllocationPieChart component using Recharts PieChart. Donut style with inner radius for cleaner look. Custom tooltip shows percentage, value, and holding count. Custom legend with compact values."
     },
     {
       "id": "US-004",
@@ -64,8 +64,8 @@
         "Lint passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added ViewToggle component to AssetAllocation with Bars/Pie options. Uses localStorage (asset-allocation-view key) for persistence. Integrated pie chart view using Recharts PieChart with custom tooltip and legend. Default is bars view."
     },
     {
       "id": "US-005",
