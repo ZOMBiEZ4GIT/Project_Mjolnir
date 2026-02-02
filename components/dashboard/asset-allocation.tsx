@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -22,6 +22,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { ChartExportButton } from "@/components/charts";
 
 type ViewMode = "bars" | "pie";
 
@@ -363,6 +364,7 @@ function ViewToggle({ viewMode, onChange }: ViewToggleProps) {
 export function AssetAllocation() {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading } = useCurrency();
+  const chartRef = useRef<HTMLDivElement>(null);
 
   // View mode state with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>("bars");
@@ -452,57 +454,65 @@ export function AssetAllocation() {
         <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
           Asset Allocation
         </h3>
-        <ViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
+        <div className="flex items-center gap-2">
+          <ChartExportButton
+            chartRef={chartRef}
+            filename="asset-allocation"
+          />
+          <ViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
+        </div>
       </div>
 
-      {viewMode === "bars" ? (
-        <div className="space-y-5">
-          {sortedBreakdown.map((item) => {
-            const percentage =
-              totalAssets > 0 ? (item.totalValue / totalAssets) * 100 : 0;
-            return (
-              <AllocationItem
-                key={item.type}
-                type={item.type}
-                totalValue={item.totalValue}
-                percentage={percentage}
-                count={item.count}
-                currency={displayCurrency}
-              />
-            );
-          })}
-        </div>
-      ) : (
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={90}
-                paddingAngle={2}
-                dataKey="value"
-                nameKey="name"
-              >
-                {pieData.map((entry) => (
-                  <Cell
-                    key={`cell-${entry.type}`}
-                    fill={getAssetHexColor(entry.type)}
-                    stroke="transparent"
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<PieChartTooltip currency={displayCurrency} />} />
-              <Legend
-                content={<PieChartLegend currency={displayCurrency} />}
-                verticalAlign="bottom"
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      <div ref={chartRef}>
+        {viewMode === "bars" ? (
+          <div className="space-y-5">
+            {sortedBreakdown.map((item) => {
+              const percentage =
+                totalAssets > 0 ? (item.totalValue / totalAssets) * 100 : 0;
+              return (
+                <AllocationItem
+                  key={item.type}
+                  type={item.type}
+                  totalValue={item.totalValue}
+                  percentage={percentage}
+                  count={item.count}
+                  currency={displayCurrency}
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={2}
+                  dataKey="value"
+                  nameKey="name"
+                >
+                  {pieData.map((entry) => (
+                    <Cell
+                      key={`cell-${entry.type}`}
+                      fill={getAssetHexColor(entry.type)}
+                      stroke="transparent"
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<PieChartTooltip currency={displayCurrency} />} />
+                <Legend
+                  content={<PieChartLegend currency={displayCurrency} />}
+                  verticalAlign="bottom"
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

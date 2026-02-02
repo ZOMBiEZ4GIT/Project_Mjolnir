@@ -15,8 +15,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { ChartSkeleton, ChartError } from "@/components/charts";
-import { useCallback } from "react";
+import { ChartSkeleton, ChartError, ChartExportButton } from "@/components/charts";
+import { useCallback, useRef } from "react";
 
 interface MonthlyBreakdown {
   date: string;
@@ -265,6 +265,7 @@ export function SuperBalanceHistoryChart({
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
   const queryClient = useQueryClient();
+  const chartRef = useRef<HTMLDivElement>(null);
 
   const {
     data: breakdownData,
@@ -389,91 +390,99 @@ export function SuperBalanceHistoryChart({
   };
 
   return (
-    <div className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart
-          data={chartData}
-          margin={{ top: 5, right: 60, left: 10, bottom: 5 }}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="#374151"
-            vertical={false}
-          />
-          <XAxis
-            dataKey="displayMonth"
-            stroke="#9CA3AF"
-            tick={{ fill: "#9CA3AF", fontSize: 12 }}
-            tickLine={{ stroke: "#4B5563" }}
-            axisLine={{ stroke: "#4B5563" }}
-          />
-          {/* Left Y-axis for balance (line) */}
-          <YAxis
-            yAxisId="balance"
-            orientation="left"
-            stroke="#9CA3AF"
-            tick={{ fill: "#9CA3AF", fontSize: 12 }}
-            tickLine={{ stroke: "#4B5563" }}
-            axisLine={{ stroke: "#4B5563" }}
-            tickFormatter={formatCurrencyCompact}
-            domain={[balanceMin, balanceMax]}
-            width={70}
-          />
-          {/* Right Y-axis for contributions (bars) */}
-          <YAxis
-            yAxisId="contrib"
-            orientation="right"
-            stroke="#9CA3AF"
-            tick={{ fill: "#9CA3AF", fontSize: 12 }}
-            tickLine={{ stroke: "#4B5563" }}
-            axisLine={{ stroke: "#4B5563" }}
-            tickFormatter={formatCurrencyCompact}
-            domain={[contribMin, contribMax]}
-            width={60}
-          />
-          <Tooltip content={<CustomTooltip currency={displayCurrency} />} />
-          <Legend content={<CustomLegend />} verticalAlign="bottom" />
+    <div>
+      <div className="flex justify-end mb-4">
+        <ChartExportButton
+          chartRef={chartRef}
+          filename="super-balance-history"
+        />
+      </div>
+      <div ref={chartRef} className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart
+            data={chartData}
+            margin={{ top: 5, right: 60, left: 10, bottom: 5 }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#374151"
+              vertical={false}
+            />
+            <XAxis
+              dataKey="displayMonth"
+              stroke="#9CA3AF"
+              tick={{ fill: "#9CA3AF", fontSize: 12 }}
+              tickLine={{ stroke: "#4B5563" }}
+              axisLine={{ stroke: "#4B5563" }}
+            />
+            {/* Left Y-axis for balance (line) */}
+            <YAxis
+              yAxisId="balance"
+              orientation="left"
+              stroke="#9CA3AF"
+              tick={{ fill: "#9CA3AF", fontSize: 12 }}
+              tickLine={{ stroke: "#4B5563" }}
+              axisLine={{ stroke: "#4B5563" }}
+              tickFormatter={formatCurrencyCompact}
+              domain={[balanceMin, balanceMax]}
+              width={70}
+            />
+            {/* Right Y-axis for contributions (bars) */}
+            <YAxis
+              yAxisId="contrib"
+              orientation="right"
+              stroke="#9CA3AF"
+              tick={{ fill: "#9CA3AF", fontSize: 12 }}
+              tickLine={{ stroke: "#4B5563" }}
+              axisLine={{ stroke: "#4B5563" }}
+              tickFormatter={formatCurrencyCompact}
+              domain={[contribMin, contribMax]}
+              width={60}
+            />
+            <Tooltip content={<CustomTooltip currency={displayCurrency} />} />
+            <Legend content={<CustomLegend />} verticalAlign="bottom" />
 
-          {/* Stacked bars for contributions */}
-          <Bar
-            yAxisId="contrib"
-            dataKey="employerContrib"
-            stackId="contrib"
-            fill={COLORS.employer}
-            radius={[0, 0, 0, 0]}
-          />
-          <Bar
-            yAxisId="contrib"
-            dataKey="employeeContrib"
-            stackId="contrib"
-            fill={COLORS.employee}
-            radius={[0, 0, 0, 0]}
-          />
-          <Bar
-            yAxisId="contrib"
-            dataKey="investmentReturns"
-            stackId="contrib"
-            fill={COLORS.returns}
-            radius={[2, 2, 0, 0]}
-          />
+            {/* Stacked bars for contributions */}
+            <Bar
+              yAxisId="contrib"
+              dataKey="employerContrib"
+              stackId="contrib"
+              fill={COLORS.employer}
+              radius={[0, 0, 0, 0]}
+            />
+            <Bar
+              yAxisId="contrib"
+              dataKey="employeeContrib"
+              stackId="contrib"
+              fill={COLORS.employee}
+              radius={[0, 0, 0, 0]}
+            />
+            <Bar
+              yAxisId="contrib"
+              dataKey="investmentReturns"
+              stackId="contrib"
+              fill={COLORS.returns}
+              radius={[2, 2, 0, 0]}
+            />
 
-          {/* Balance line overlaid */}
-          <Line
-            yAxisId="balance"
-            type="monotone"
-            dataKey="balance"
-            stroke={COLORS.balance}
-            strokeWidth={2}
-            dot={{ fill: COLORS.balance, strokeWidth: 0, r: 4 }}
-            activeDot={{
-              r: 6,
-              fill: COLORS.balance,
-              stroke: "#374151",
-              strokeWidth: 2,
-            }}
-          />
-        </ComposedChart>
-      </ResponsiveContainer>
+            {/* Balance line overlaid */}
+            <Line
+              yAxisId="balance"
+              type="monotone"
+              dataKey="balance"
+              stroke={COLORS.balance}
+              strokeWidth={2}
+              dot={{ fill: COLORS.balance, strokeWidth: 0, r: 4 }}
+              activeDot={{
+                r: 6,
+                fill: COLORS.balance,
+                stroke: "#374151",
+                strokeWidth: 2,
+              }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

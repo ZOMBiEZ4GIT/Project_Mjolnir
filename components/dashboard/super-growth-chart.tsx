@@ -14,8 +14,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { ChartSkeleton, ChartError } from "@/components/charts";
-import { useCallback } from "react";
+import { ChartSkeleton, ChartError, ChartExportButton } from "@/components/charts";
+import { useCallback, useRef } from "react";
 
 interface MonthlyBreakdown {
   date: string;
@@ -229,6 +229,7 @@ export function SuperGrowthChart({
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
   const queryClient = useQueryClient();
+  const chartRef = useRef<HTMLDivElement>(null);
 
   const {
     data: breakdownData,
@@ -354,10 +355,16 @@ export function SuperGrowthChart({
 
   return (
     <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-      <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-6">
-        {title}
-      </h3>
-      <div className="h-64">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+          {title}
+        </h3>
+        <ChartExportButton
+          chartRef={chartRef}
+          filename="super-growth-breakdown"
+        />
+      </div>
+      <div ref={chartRef} className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}

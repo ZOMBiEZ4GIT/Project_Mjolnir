@@ -14,8 +14,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { ChartSkeleton, ChartError } from "@/components/charts";
-import { useCallback } from "react";
+import { ChartSkeleton, ChartError, ChartExportButton } from "@/components/charts";
+import { useCallback, useRef } from "react";
 
 interface Transaction {
   id: string;
@@ -132,6 +132,7 @@ export function HoldingPriceChart({
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { isLoading: currencyLoading } = useCurrency();
   const queryClient = useQueryClient();
+  const chartRef = useRef<HTMLDivElement>(null);
 
   const {
     data: transactions,
@@ -259,76 +260,84 @@ export function HoldingPriceChart({
   };
 
   return (
-    <div className="h-64">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          data={chartData}
-          margin={{ top: 5, right: 50, left: 10, bottom: 5 }}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="#374151"
-            vertical={false}
-          />
-          <XAxis
-            dataKey="displayDate"
-            stroke="#9CA3AF"
-            tick={{ fill: "#9CA3AF", fontSize: 12 }}
-            tickLine={{ stroke: "#4B5563" }}
-            axisLine={{ stroke: "#4B5563" }}
-          />
-          <YAxis
-            yAxisId="price"
-            orientation="left"
-            stroke="#9CA3AF"
-            tick={{ fill: "#9CA3AF", fontSize: 12 }}
-            tickLine={{ stroke: "#4B5563" }}
-            axisLine={{ stroke: "#4B5563" }}
-            tickFormatter={formatPriceCompact}
-            domain={[priceMin, priceMax]}
-            width={70}
-          />
-          <YAxis
-            yAxisId="quantity"
-            orientation="right"
-            stroke="#9CA3AF"
-            tick={{ fill: "#9CA3AF", fontSize: 12 }}
-            tickLine={{ stroke: "#4B5563" }}
-            axisLine={{ stroke: "#4B5563" }}
-            tickFormatter={formatQuantityCompact}
-            domain={[qtyMin, qtyMax]}
-            width={50}
-          />
-          <Tooltip content={<CustomTooltip currency={holdingCurrency} />} />
-          <Legend
-            wrapperStyle={{ paddingTop: 10 }}
-            formatter={(value) => (
-              <span className="text-gray-400 text-sm">{value}</span>
-            )}
-          />
-          <Line
-            yAxisId="price"
-            type="monotone"
-            dataKey="price"
-            name="Price"
-            stroke="#3B82F6"
-            strokeWidth={2}
-            dot={{ fill: "#3B82F6", strokeWidth: 0, r: 4 }}
-            activeDot={{ r: 6, fill: "#3B82F6", stroke: "#fff", strokeWidth: 2 }}
-          />
-          <Line
-            yAxisId="quantity"
-            type="stepAfter"
-            dataKey="quantity"
-            name="Quantity"
-            stroke="#8B5CF6"
-            strokeWidth={2}
-            strokeDasharray="5 5"
-            dot={{ fill: "#8B5CF6", strokeWidth: 0, r: 3 }}
-            activeDot={{ r: 5, fill: "#8B5CF6", stroke: "#fff", strokeWidth: 2 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+    <div>
+      <div className="flex justify-end mb-4">
+        <ChartExportButton
+          chartRef={chartRef}
+          filename="holding-price-history"
+        />
+      </div>
+      <div ref={chartRef} className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart
+            data={chartData}
+            margin={{ top: 5, right: 50, left: 10, bottom: 5 }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#374151"
+              vertical={false}
+            />
+            <XAxis
+              dataKey="displayDate"
+              stroke="#9CA3AF"
+              tick={{ fill: "#9CA3AF", fontSize: 12 }}
+              tickLine={{ stroke: "#4B5563" }}
+              axisLine={{ stroke: "#4B5563" }}
+            />
+            <YAxis
+              yAxisId="price"
+              orientation="left"
+              stroke="#9CA3AF"
+              tick={{ fill: "#9CA3AF", fontSize: 12 }}
+              tickLine={{ stroke: "#4B5563" }}
+              axisLine={{ stroke: "#4B5563" }}
+              tickFormatter={formatPriceCompact}
+              domain={[priceMin, priceMax]}
+              width={70}
+            />
+            <YAxis
+              yAxisId="quantity"
+              orientation="right"
+              stroke="#9CA3AF"
+              tick={{ fill: "#9CA3AF", fontSize: 12 }}
+              tickLine={{ stroke: "#4B5563" }}
+              axisLine={{ stroke: "#4B5563" }}
+              tickFormatter={formatQuantityCompact}
+              domain={[qtyMin, qtyMax]}
+              width={50}
+            />
+            <Tooltip content={<CustomTooltip currency={holdingCurrency} />} />
+            <Legend
+              wrapperStyle={{ paddingTop: 10 }}
+              formatter={(value) => (
+                <span className="text-gray-400 text-sm">{value}</span>
+              )}
+            />
+            <Line
+              yAxisId="price"
+              type="monotone"
+              dataKey="price"
+              name="Price"
+              stroke="#3B82F6"
+              strokeWidth={2}
+              dot={{ fill: "#3B82F6", strokeWidth: 0, r: 4 }}
+              activeDot={{ r: 6, fill: "#3B82F6", stroke: "#fff", strokeWidth: 2 }}
+            />
+            <Line
+              yAxisId="quantity"
+              type="stepAfter"
+              dataKey="quantity"
+              name="Quantity"
+              stroke="#8B5CF6"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={{ fill: "#8B5CF6", strokeWidth: 0, r: 3 }}
+              activeDot={{ r: 5, fill: "#8B5CF6", stroke: "#fff", strokeWidth: 2 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

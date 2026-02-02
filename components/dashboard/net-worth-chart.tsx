@@ -5,7 +5,7 @@ import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency } from "@/lib/utils/currency";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { LineChart as LineChartIcon, BarChart3 } from "lucide-react";
 import {
   LineChart,
@@ -17,7 +17,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { AssetsVsDebtChart } from "./assets-vs-debt-chart";
-import { ChartSkeleton, ChartError } from "@/components/charts";
+import { ChartSkeleton, ChartError, ChartExportButton } from "@/components/charts";
 
 interface HistoryPoint {
   date: string;
@@ -207,6 +207,7 @@ export function NetWorthChart() {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const chartRef = useRef<HTMLDivElement>(null);
 
   // Chart view mode state with localStorage persistence
   const [chartViewMode, setChartViewMode] = useState<ChartViewMode>("networth");
@@ -359,6 +360,10 @@ export function NetWorthChart() {
           Net Worth History
         </h3>
         <div className="flex items-center gap-2 flex-wrap">
+          <ChartExportButton
+            chartRef={chartRef}
+            filename="net-worth-history"
+          />
           <ChartViewToggle
             viewMode={chartViewMode}
             onChange={handleChartViewChange}
@@ -370,49 +375,51 @@ export function NetWorthChart() {
         </div>
       </div>
 
-      {chartViewMode === "networth" ? (
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="#374151"
-                vertical={false}
-              />
-              <XAxis
-                dataKey="displayMonth"
-                stroke="#9CA3AF"
-                tick={{ fill: "#9CA3AF", fontSize: 12 }}
-                tickLine={{ stroke: "#4B5563" }}
-                axisLine={{ stroke: "#4B5563" }}
-              />
-              <YAxis
-                stroke="#9CA3AF"
-                tick={{ fill: "#9CA3AF", fontSize: 12 }}
-                tickLine={{ stroke: "#4B5563" }}
-                axisLine={{ stroke: "#4B5563" }}
-                tickFormatter={formatCurrencyCompact}
-                domain={[yMin, yMax]}
-                width={70}
-              />
-              <Tooltip content={<CustomTooltip currency={displayCurrency} />} />
-              <Line
-                type="monotone"
-                dataKey="netWorth"
-                stroke="#10B981"
-                strokeWidth={2}
-                dot={{ fill: "#10B981", strokeWidth: 0, r: 4 }}
-                activeDot={{ r: 6, fill: "#10B981", stroke: "#fff", strokeWidth: 2 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      ) : (
-        <AssetsVsDebtChart data={historyData.history} />
-      )}
+      <div ref={chartRef}>
+        {chartViewMode === "networth" ? (
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={chartData}
+                margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#374151"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="displayMonth"
+                  stroke="#9CA3AF"
+                  tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                  tickLine={{ stroke: "#4B5563" }}
+                  axisLine={{ stroke: "#4B5563" }}
+                />
+                <YAxis
+                  stroke="#9CA3AF"
+                  tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                  tickLine={{ stroke: "#4B5563" }}
+                  axisLine={{ stroke: "#4B5563" }}
+                  tickFormatter={formatCurrencyCompact}
+                  domain={[yMin, yMax]}
+                  width={70}
+                />
+                <Tooltip content={<CustomTooltip currency={displayCurrency} />} />
+                <Line
+                  type="monotone"
+                  dataKey="netWorth"
+                  stroke="#10B981"
+                  strokeWidth={2}
+                  dot={{ fill: "#10B981", strokeWidth: 0, r: 4 }}
+                  activeDot={{ r: 6, fill: "#10B981", stroke: "#fff", strokeWidth: 2 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <AssetsVsDebtChart data={historyData.history} />
+        )}
+      </div>
     </div>
   );
 }
