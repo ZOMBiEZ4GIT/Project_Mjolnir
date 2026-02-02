@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from "@/components/providers/clerk-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -28,7 +29,9 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <QueryProvider>
-        <AppContent>{children}</AppContent>
+        <CurrencyProvider>
+          <AppContent>{children}</AppContent>
+        </CurrencyProvider>
       </QueryProvider>
     </ClerkProvider>
   );
