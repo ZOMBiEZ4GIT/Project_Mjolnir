@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Archive } from "lucide-react";
+import { Download, Archive, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 export const dynamic = "force-dynamic";
 
@@ -14,20 +15,54 @@ interface ExportCounts {
   snapshots: number;
 }
 
-function downloadFile(url: string) {
-  // Create a temporary anchor element to trigger the download
-  const link = document.createElement("a");
-  link.href = url;
-  link.style.display = "none";
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
+// Track which export is currently downloading
+type ExportKey = "holdings-csv" | "holdings-json" | "transactions-csv" | "transactions-json" | "snapshots-csv" | "snapshots-json" | "backup";
 
 export default function ExportPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const [counts, setCounts] = useState<ExportCounts>({ holdings: 0, transactions: 0, snapshots: 0 });
   const [isLoadingCounts, setIsLoadingCounts] = useState(true);
+  const [downloadingKey, setDownloadingKey] = useState<ExportKey | null>(null);
+
+  // Download file with loading state and toast notifications
+  async function handleDownload(url: string, key: ExportKey, successMessage: string) {
+    setDownloadingKey(key);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Export failed");
+      }
+
+      // Get filename from Content-Disposition header or generate default
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = "export";
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="([^"]+)"/);
+        if (match) {
+          filename = match[1];
+        }
+      }
+
+      // Create blob and trigger download
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = filename;
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(objectUrl);
+
+      toast.success(successMessage);
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error("Export failed. Please try again.");
+    } finally {
+      setDownloadingKey(null);
+    }
+  }
 
   // Fetch counts when user is signed in
   useEffect(() => {
@@ -121,20 +156,28 @@ export default function ExportPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadFile("/api/export/holdings?format=csv")}
-                disabled={isLoadingCounts || counts.holdings === 0}
+                onClick={() => handleDownload("/api/export/holdings?format=csv", "holdings-csv", "Holdings exported as CSV")}
+                disabled={isLoadingCounts || counts.holdings === 0 || downloadingKey !== null}
               >
-                <Download className="h-4 w-4" />
-                Download CSV
+                {downloadingKey === "holdings-csv" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {downloadingKey === "holdings-csv" ? "Exporting..." : "Download CSV"}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadFile("/api/export/holdings?format=json")}
-                disabled={isLoadingCounts || counts.holdings === 0}
+                onClick={() => handleDownload("/api/export/holdings?format=json", "holdings-json", "Holdings exported as JSON")}
+                disabled={isLoadingCounts || counts.holdings === 0 || downloadingKey !== null}
               >
-                <Download className="h-4 w-4" />
-                Download JSON
+                {downloadingKey === "holdings-json" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {downloadingKey === "holdings-json" ? "Exporting..." : "Download JSON"}
               </Button>
             </div>
           </CardContent>
@@ -163,20 +206,28 @@ export default function ExportPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadFile("/api/export/transactions?format=csv")}
-                disabled={isLoadingCounts || counts.transactions === 0}
+                onClick={() => handleDownload("/api/export/transactions?format=csv", "transactions-csv", "Transactions exported as CSV")}
+                disabled={isLoadingCounts || counts.transactions === 0 || downloadingKey !== null}
               >
-                <Download className="h-4 w-4" />
-                Download CSV
+                {downloadingKey === "transactions-csv" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {downloadingKey === "transactions-csv" ? "Exporting..." : "Download CSV"}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadFile("/api/export/transactions?format=json")}
-                disabled={isLoadingCounts || counts.transactions === 0}
+                onClick={() => handleDownload("/api/export/transactions?format=json", "transactions-json", "Transactions exported as JSON")}
+                disabled={isLoadingCounts || counts.transactions === 0 || downloadingKey !== null}
               >
-                <Download className="h-4 w-4" />
-                Download JSON
+                {downloadingKey === "transactions-json" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {downloadingKey === "transactions-json" ? "Exporting..." : "Download JSON"}
               </Button>
             </div>
           </CardContent>
@@ -205,20 +256,28 @@ export default function ExportPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadFile("/api/export/snapshots?format=csv")}
-                disabled={isLoadingCounts || counts.snapshots === 0}
+                onClick={() => handleDownload("/api/export/snapshots?format=csv", "snapshots-csv", "Snapshots exported as CSV")}
+                disabled={isLoadingCounts || counts.snapshots === 0 || downloadingKey !== null}
               >
-                <Download className="h-4 w-4" />
-                Download CSV
+                {downloadingKey === "snapshots-csv" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {downloadingKey === "snapshots-csv" ? "Exporting..." : "Download CSV"}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => downloadFile("/api/export/snapshots?format=json")}
-                disabled={isLoadingCounts || counts.snapshots === 0}
+                onClick={() => handleDownload("/api/export/snapshots?format=json", "snapshots-json", "Snapshots exported as JSON")}
+                disabled={isLoadingCounts || counts.snapshots === 0 || downloadingKey !== null}
               >
-                <Download className="h-4 w-4" />
-                Download JSON
+                {downloadingKey === "snapshots-json" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {downloadingKey === "snapshots-json" ? "Exporting..." : "Download JSON"}
               </Button>
             </div>
           </CardContent>
@@ -256,11 +315,15 @@ export default function ExportPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => downloadFile("/api/export/backup")}
-              disabled={isLoadingCounts || (counts.holdings === 0 && counts.transactions === 0 && counts.snapshots === 0)}
+              onClick={() => handleDownload("/api/export/backup", "backup", "Full backup downloaded successfully")}
+              disabled={isLoadingCounts || (counts.holdings === 0 && counts.transactions === 0 && counts.snapshots === 0) || downloadingKey !== null}
             >
-              <Archive className="h-4 w-4" />
-              Download Backup
+              {downloadingKey === "backup" ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Archive className="h-4 w-4" />
+              )}
+              {downloadingKey === "backup" ? "Exporting..." : "Download Backup"}
             </Button>
           </CardContent>
         </Card>
