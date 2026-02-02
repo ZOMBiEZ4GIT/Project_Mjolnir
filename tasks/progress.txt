@@ -230,3 +230,24 @@ Started: 2026-02-02
   - Update tracking timestamps after successful operations, not before
 ---
 
+## 2026-02-02 - US-011: Add test email button to settings
+- Created `app/api/email/test/route.ts` with:
+  - POST endpoint for sending test check-in reminder to current user
+  - Uses Clerk auth() and currentUser() for authentication
+  - Checks if email service is configured (RESEND_API_KEY present)
+  - Calls existing sendCheckInReminder() function
+  - Returns success/error response with details about what was sent
+- Updated `components/settings/email-preferences.tsx`:
+  - Added sendTestEmail() function to call the test endpoint
+  - Added sendTestEmailMutation using TanStack Query useMutation
+  - Added "Send Test Email" button with loading state (Loader2 spinner)
+  - Button shows "Sending..." text while pending
+  - Toast notifications: success (email sent), info (no check-in needed), error (failure)
+- Files changed: `app/api/email/test/route.ts`, `components/settings/email-preferences.tsx`
+- **Learnings for future iterations:**
+  - Use currentUser() from @clerk/nextjs/server to get full user details in API routes
+  - Button loading state: show Loader2 spinner + disabled state during isPending
+  - Use toast.info() for informational messages (not errors, not success)
+  - Test endpoints should provide detailed feedback about what happened
+---
+
