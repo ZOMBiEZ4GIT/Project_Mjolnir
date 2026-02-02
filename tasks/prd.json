@@ -16,8 +16,8 @@
         "Lint passes"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/export/holdings-exporter.ts with exportHoldingsCSV and exportHoldingsJSON functions"
     },
     {
       "id": "US-002",
@@ -32,8 +32,8 @@
         "Lint passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/export/transactions-exporter.ts with exportTransactionsCSV and exportTransactionsJSON functions. Uses TransactionWithSymbol type to include holding symbol in exports."
     },
     {
       "id": "US-003",
@@ -49,8 +49,8 @@
         "Lint passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/export/snapshots-exporter.ts with exportSnapshotsCSV and exportSnapshotsJSON functions. Uses SnapshotWithDetails interface extending Snapshot with holdingName and optional contribution fields."
     },
     {
       "id": "US-004",
@@ -64,8 +64,8 @@
         "Lint passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/export/backup-exporter.ts with exportFullBackupJSON function. Includes BackupMetadata (export_date, version, user_id), holdings, transactions, snapshots, and contributions arrays. Uses FullBackupInput interface for type safety."
     },
     {
       "id": "US-005",
@@ -81,8 +81,8 @@
         "Lint passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created app/api/export/holdings/route.ts with GET endpoint accepting format=csv|json query param. Uses Clerk auth, Content-Type and Content-Disposition headers for file download."
     },
     {
       "id": "US-006",
@@ -98,8 +98,8 @@
         "Lint passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created app/api/export/transactions/route.ts with GET endpoint accepting format=csv|json query param. Joins transactions with holdings to get symbol. Uses Clerk auth, Content-Type and Content-Disposition headers for file download."
     },
     {
       "id": "US-007",
@@ -115,8 +115,8 @@
         "Lint passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created app/api/export/snapshots/route.ts with GET endpoint accepting format=csv|json query param. Joins snapshots with holdings to get holding name, and joins with contributions to include employer/employee contributions. Uses Clerk auth, Content-Type and Content-Disposition headers for file download."
     },
     {
       "id": "US-008",
@@ -132,8 +132,8 @@
         "Lint passes"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created app/api/export/backup/route.ts with GET endpoint returning JSON backup. Fetches all holdings, transactions (with symbol), snapshots (with details and contributions), and contributions (with holding name). Uses exportFullBackupJSON from backup-exporter. Filename includes timestamp: mjolnir-backup-YYYY-MM-DD.json"
     },
     {
       "id": "US-009",

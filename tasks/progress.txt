@@ -54,3 +54,84 @@ Started: 2026-02-03
 
 ---
 
+## 2026-02-03 - US-001
+- Implemented holdings export utility with CSV and JSON export functions
+- Files created: lib/export/holdings-exporter.ts
+- **Learnings for future iterations:**
+  - Export utilities should map camelCase DB fields to snake_case for CSV/JSON consistency with import format
+  - CSV escaping handles commas, quotes, and newlines - wrapping in quotes and doubling internal quotes
+  - Use Holding type from @/lib/db/schema for type safety
+---
+
+## 2026-02-03 - US-002
+- Implemented transactions export utility with CSV and JSON export functions
+- Files created: lib/export/transactions-exporter.ts
+- **Learnings for future iterations:**
+  - Transactions require symbol from related holding for meaningful exports - created TransactionWithSymbol interface extending Transaction
+  - Follow same escapeCSVValue pattern and CSV_COLUMNS structure from holdings exporter for consistency
+  - CSV column order matches import format: date, symbol, action, quantity, unit_price, fees, currency, notes
+---
+
+## 2026-02-03 - US-003
+- Implemented snapshots export utility with CSV and JSON export functions
+- Files created: lib/export/snapshots-exporter.ts
+- **Learnings for future iterations:**
+  - Snapshots need holding name for meaningful exports - created SnapshotWithDetails interface extending Snapshot
+  - Contributions (employer_contrib, employee_contrib) are optional fields - may be present if snapshot corresponds to super holdings
+  - CSV columns: date, holding_name, balance, currency, employer_contrib, employee_contrib
+---
+
+## 2026-02-03 - US-004
+- Implemented full backup export utility combining all data types into a single JSON file
+- Files created: lib/export/backup-exporter.ts
+- **Learnings for future iterations:**
+  - Full backup includes: metadata (export_date, version, user_id), holdings, transactions, snapshots, contributions
+  - Reuse existing type interfaces from other exporters (TransactionWithSymbol, SnapshotWithDetails)
+  - Created ContributionWithHoldingName interface for contributions with holding context
+  - Used FullBackupInput interface to type the input object for better API clarity
+  - Version field (BACKUP_VERSION = "1.0.0") allows future format changes to be tracked
+---
+
+## 2026-02-03 - US-005
+- Created export API endpoint for holdings at app/api/export/holdings/route.ts
+- Files created: app/api/export/holdings/route.ts
+- **Learnings for future iterations:**
+  - Export API endpoints use `new Response(content, { headers })` instead of NextResponse.json for file downloads
+  - Content-Type for CSV: "text/csv;charset=utf-8", for JSON: "application/json"
+  - Content-Disposition: `attachment; filename="holdings-${timestamp}.csv"` triggers browser download
+  - Query param `format=csv|json` controls export format (default: csv)
+  - Fetch all holdings including dormant (exclude deleted via isNull(deletedAt))
+---
+
+
+## 2026-02-03 - US-006
+- Created export API endpoint for transactions at app/api/export/transactions/route.ts
+- Files created: app/api/export/transactions/route.ts
+- **Learnings for future iterations:**
+  - Transactions require a join with holdings table to include the symbol in exports
+  - Use `innerJoin` with holdings to get symbol field, filtering by userId on holdings table
+  - Must exclude both deleted transactions AND deleted holdings in the where clause
+  - Same Response pattern as holdings export: Content-Type and Content-Disposition headers
+---
+
+## 2026-02-03 - US-007
+- Created export API endpoint for snapshots at app/api/export/snapshots/route.ts
+- Files created: app/api/export/snapshots/route.ts
+- **Learnings for future iterations:**
+  - Snapshots require a join with holdings to get holding name for meaningful exports
+  - Contributions are fetched separately and matched by holdingId + date via a Map lookup
+  - Use Map for contribution lookup: key = `${holdingId}-${date}`, value = { employerContrib, employeeContrib }
+  - Same Response pattern: Content-Type and Content-Disposition headers with timestamp in filename
+  - Must exclude deleted snapshots, deleted holdings, and deleted contributions in where clauses
+---
+
+## 2026-02-03 - US-008
+- Created export API endpoint for full backup at app/api/export/backup/route.ts
+- Files created: app/api/export/backup/route.ts
+- **Learnings for future iterations:**
+  - Full backup endpoint combines all queries from holdings, transactions, and snapshots endpoints
+  - Contributions are fetched twice: once for snapshot lookup, once for the full contributions export with holding names
+  - ContributionWithHoldingName type requires all Contribution fields plus holdingName
+  - Backup filename uses `mjolnir-backup-${timestamp}.json` pattern (matches acceptance criteria)
+  - No format query param needed - backup is always JSON
+---

@@ -10,6 +10,7 @@ const navItems = [
   { href: "/transactions", label: "Transactions" },
   { href: "/snapshots", label: "Snapshots" },
   { href: "/import", label: "Import" },
+  { href: "/export", label: "Export" },
   { href: "/settings", label: "Settings" },
 ];
 
