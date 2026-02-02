@@ -1,5 +1,6 @@
 import { UserButton } from "@clerk/nextjs";
 import { DashboardNav } from "@/components/dashboard/nav";
+import { MobileNav } from "@/components/dashboard/mobile-nav";
 import { DashboardErrorBoundary } from "@/components/dashboard/dashboard-error-boundary";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +16,12 @@ export default function DashboardLayout({
     <div className="min-h-screen flex flex-col">
       <header className="bg-gray-900 border-b border-gray-800">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-4 md:gap-8">
+            <MobileNav />
             <h1 className="text-2xl font-bold text-white">Mjolnir</h1>
-            <DashboardNav />
+            <div className="hidden md:block">
+              <DashboardNav />
+            </div>
           </div>
           {hasClerkKey && (
             <UserButton
