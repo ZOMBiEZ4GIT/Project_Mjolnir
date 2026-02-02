@@ -246,3 +246,21 @@ Started: 2026-02-02
   - HoldingValue.value is now in display currency, HoldingValue.valueNative is still native currency
 ---
 
+## 2026-02-02 - US-010
+- Updated dashboard components to use display currency conversion
+- Files changed:
+  - `app/api/net-worth/route.ts` - Added displayCurrency query parameter
+  - `components/dashboard/net-worth-hero.tsx` - Use useCurrency hook, pass displayCurrency to API
+  - `components/dashboard/summary-cards.tsx` - Use useCurrency hook, convert history values
+  - `components/dashboard/asset-allocation.tsx` - Use useCurrency hook, pass displayCurrency to API
+  - `components/dashboard/net-worth-chart.tsx` - Use useCurrency hook, convert chart values
+  - `components/dashboard/top-performers.tsx` - Use useCurrency hook, convert gain/loss values
+- **Learnings for future iterations:**
+  - Dashboard components should include displayCurrency in queryKey for proper cache invalidation
+  - Historical net worth values are stored in AUD, convert to display currency using `convert(amount, "AUD")`
+  - API endpoints accept `displayCurrency` query param: `/api/net-worth?displayCurrency=USD`
+  - All dashboard components wait for `!currencyLoading` before showing content (prevents flicker)
+  - Recharts custom tooltip components need currency prop passed separately
+  - formatCurrency(value, currency) from lib/utils/currency.ts handles multi-currency formatting
+---
+
