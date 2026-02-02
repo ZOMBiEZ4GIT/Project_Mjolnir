@@ -217,3 +217,15 @@ Started: 2026-02-02
   - Import: `import { CurrencySelector } from "@/components/ui/currency-selector"`
 ---
 
+## 2026-02-02 - US-008
+- Added CurrencySelector to dashboard header next to refresh button
+- Files changed:
+  - `components/dashboard/dashboard-header.tsx` - Added CurrencySelector import and component
+- **Learnings for future iterations:**
+  - DashboardHeader has a flex container with welcome message on left, toolbar items on right
+  - Toolbar items (CurrencySelector, Refresh button) are grouped in a flex div with gap-3
+  - CurrencySelector uses compact mode by default which fits well in toolbar
+  - Changing currency will trigger CurrencyProvider optimistic update, which re-renders all components using useCurrency()
+  - Actual dashboard value conversion happens in US-009/US-010 (net worth calculations + dashboard updates)
+---
+

@@ -142,8 +142,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added CurrencySelector to DashboardHeader component, positioned next to Refresh button. Uses CurrencyProvider for optimistic updates."
     },
     {
       "id": "US-009",
