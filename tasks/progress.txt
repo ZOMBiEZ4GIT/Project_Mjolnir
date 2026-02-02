@@ -349,3 +349,31 @@ Started: 2026-02-02
   - Color scheme: AUD=green, NZD=blue, USD=amber for differentiation
 ---
 
+## 2026-02-02 - US-016
+- Updated transactions display with currency formatting, filtering, and aggregated totals
+- Files changed:
+  - `app/(dashboard)/transactions/page.tsx` - Added CurrencyDisplay, CurrencyFilter, and aggregated totals footer
+  - `app/api/transactions/route.ts` - Added currency filter query parameter support
+- **Learnings for future iterations:**
+  - Transactions page uses useCurrency hook for displayCurrency and convert function
+  - Aggregated totals use useMemo to calculate buys, sells, dividends, and net cash flow
+  - When transactions have mixed currencies, totals are converted to display currency
+  - Net cash flow = sells + dividends - buys (money in minus money out)
+  - CurrencyFilter reused from holdings module (`components/holdings/currency-filter.tsx`)
+  - TableFooter component from shadcn/ui used for totals row
+  - URL param pattern: `/transactions?currency=AUD` - filter persists via searchParams
+---
+
+## 2026-02-02 - US-017
+- Updated snapshots display and check-in modal with currency support
+- Files changed:
+  - `app/(dashboard)/snapshots/page.tsx` - Added useCurrency hook and CurrencyDisplay component for balance display with conversion and native indicator
+  - `components/check-in/check-in-modal.tsx` - Added currency badges to all holding entry types (super, cash, debt)
+- **Learnings for future iterations:**
+  - Snapshots page follows same pattern as transactions: useCurrency hook + CurrencyDisplay component
+  - CurrencyDisplay used with showNative prop to show native indicator when currencies differ
+  - Check-in modal uses currency badge pattern (`<span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">{currency}</span>`)
+  - Edit snapshot modal already had currency symbol prefix for inputs (no changes needed)
+  - Currency badges provide clear visual indication without needing CurrencyDisplay component (for input forms vs display tables)
+---
+

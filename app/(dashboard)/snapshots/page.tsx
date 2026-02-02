@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
+import { useCurrency } from "@/components/providers/currency-provider";
 import {
   Table,
   TableBody,
@@ -23,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Pencil, Trash2 } from "lucide-react";
 import { EditSnapshotModal } from "@/components/snapshots/edit-snapshot-modal";
 import { DeleteSnapshotDialog } from "@/components/snapshots/delete-snapshot-dialog";
+import { CurrencyDisplay } from "@/components/ui/currency-display";
+import type { Currency } from "@/lib/utils/currency";
 import type { Holding } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -74,18 +77,6 @@ function formatMonthYear(dateStr: string): string {
   return date.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
 }
 
-// Format balance with currency symbol
-function formatBalance(balance: string, currency: string): string {
-  const num = Number(balance);
-  const symbols: Record<string, string> = {
-    AUD: "A$",
-    NZD: "NZ$",
-    USD: "US$",
-  };
-  const symbol = symbols[currency] || currency;
-  return `${symbol}${num.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-}
-
 // Capitalize holding type for display
 function formatType(type: string): string {
   return type.charAt(0).toUpperCase() + type.slice(1);
@@ -93,6 +84,7 @@ function formatType(type: string): string {
 
 export default function SnapshotsPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const { displayCurrency, convert, isLoading: currencyLoading } = useCurrency();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -355,43 +347,57 @@ export default function SnapshotsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredSnapshots.map((snapshot) => (
-              <TableRow key={snapshot.id} className="border-gray-700 hover:bg-gray-800/50">
-                <TableCell className="text-white">
-                  {formatMonthYear(snapshot.date)}
-                </TableCell>
-                <TableCell className="text-white">{snapshot.holdingName}</TableCell>
-                <TableCell className="text-gray-300">
-                  {formatType(snapshot.holdingType)}
-                </TableCell>
-                <TableCell className="text-white text-right font-mono">
-                  {formatBalance(snapshot.balance, snapshot.currency)}
-                </TableCell>
-                <TableCell className="text-gray-300">{snapshot.currency}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEditClick(snapshot)}
-                      className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
-                    >
-                      <Pencil className="h-4 w-4" />
-                      <span className="sr-only">Edit</span>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDeleteClick(snapshot)}
-                      className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-gray-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete</span>
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            {filteredSnapshots.map((snapshot) => {
+              const nativeBalance = Number(snapshot.balance);
+              const nativeCurrency = snapshot.currency as Currency;
+              const convertedBalance = convert(nativeBalance, nativeCurrency);
+              const showNativeIndicator = nativeCurrency !== displayCurrency;
+
+              return (
+                <TableRow key={snapshot.id} className="border-gray-700 hover:bg-gray-800/50">
+                  <TableCell className="text-white">
+                    {formatMonthYear(snapshot.date)}
+                  </TableCell>
+                  <TableCell className="text-white">{snapshot.holdingName}</TableCell>
+                  <TableCell className="text-gray-300">
+                    {formatType(snapshot.holdingType)}
+                  </TableCell>
+                  <TableCell className="text-white text-right font-mono">
+                    <CurrencyDisplay
+                      amount={convertedBalance}
+                      currency={displayCurrency}
+                      showNative={showNativeIndicator}
+                      nativeCurrency={nativeCurrency}
+                      nativeAmount={nativeBalance}
+                      isLoading={currencyLoading}
+                    />
+                  </TableCell>
+                  <TableCell className="text-gray-300">{snapshot.currency}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEditClick(snapshot)}
+                        className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
+                      >
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Edit</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteClick(snapshot)}
+                        className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-gray-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Delete</span>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
