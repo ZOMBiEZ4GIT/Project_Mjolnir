@@ -45,11 +45,46 @@
 - Tailwind responsive breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
 - Use responsive classes like `hidden md:block` or `grid-cols-1 md:grid-cols-2`
 
+- Error boundary component at `components/error-boundary.tsx` - use for wrapping sections that might fail
+- SectionErrorBoundary at `components/dashboard/section-error-boundary.tsx` - lighter weight, section-specific error handling
+- DashboardContent at `components/dashboard/dashboard-content.tsx` - wraps all dashboard sections with error boundaries
+
 ---
 
 # W-12 Polish & Error Handling Progress Log
 
 Started: 2026-02-03
 
+---
+
+## 2026-02-03 - US-001
+- Created reusable ErrorBoundary component at `components/error-boundary.tsx`
+- React class component using getDerivedStateFromError and componentDidCatch
+- Shows friendly Card-based error message with "Try again" button
+- Logs errors to console for debugging
+- Dark mode styling using existing Card and Button components
+- Optional `fallback` prop for custom error UI
+- Optional `onReset` callback for parent components
+- Also exports `withErrorBoundary` HOC for wrapping components
+- Files changed: `components/error-boundary.tsx` (created)
+- **Learnings for future iterations:**
+  - React error boundaries must be class components (cannot be function components)
+  - Show error details in development mode only using `process.env.NODE_ENV`
+  - Use existing shadcn/ui Card styling for consistency
+---
+
+## 2026-02-03 - US-002
+- Added error boundary to dashboard layout
+- Created `components/dashboard/dashboard-error-boundary.tsx` as client wrapper for layout
+- Created `components/dashboard/section-error-boundary.tsx` for individual sections
+- Created `components/dashboard/dashboard-content.tsx` to wrap all dashboard sections
+- Updated `app/(dashboard)/layout.tsx` to wrap children in DashboardErrorBoundary
+- Updated `app/(dashboard)/dashboard/page.tsx` to use DashboardContent component
+- Each major section (Net Worth Hero, Summary Cards, Asset Allocation, Currency Exposure, Super Breakdown, Net Worth Chart, Top Performers, Check-in Prompt) has its own SectionErrorBoundary
+- Files changed: `app/(dashboard)/layout.tsx`, `app/(dashboard)/dashboard/page.tsx` (modified), `components/dashboard/dashboard-error-boundary.tsx`, `components/dashboard/section-error-boundary.tsx`, `components/dashboard/dashboard-content.tsx` (created)
+- **Learnings for future iterations:**
+  - Use client wrapper component (DashboardErrorBoundary) to add client-side ErrorBoundary to server component layout
+  - SectionErrorBoundary is lighter weight than main ErrorBoundary - smaller UI, section name prop
+  - Extract dashboard sections into separate DashboardContent client component for fine-grained error handling
 ---
 
