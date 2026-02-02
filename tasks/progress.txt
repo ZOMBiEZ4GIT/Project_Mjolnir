@@ -202,3 +202,15 @@ Started: 2026-02-02
   - Loader2 icon with animate-spin class for spinning animation
 ---
 
+## 2026-02-02 - US-012
+- Implemented CSV template download buttons for transactions and snapshots
+- Files modified: `app/(dashboard)/import/page.tsx`
+- **Learnings for future iterations:**
+  - CSV download uses Blob with "text/csv;charset=utf-8;" MIME type and URL.createObjectURL
+  - Download triggered by creating temporary anchor element with download attribute
+  - Template constants defined at module level: TRANSACTIONS_TEMPLATE, SNAPSHOTS_TEMPLATE
+  - Button styled with variant="ghost" size="sm" for compact integration with format example section
+  - Download icon from lucide-react used for visual indicator
+  - Templates include header row + one example data row to help users understand format
+---
+
