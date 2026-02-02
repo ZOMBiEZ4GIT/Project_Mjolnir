@@ -143,3 +143,17 @@ Started: 2026-02-02
     - POST /api/import/snapshots (multipart form with CSV file)
 ---
 
+## 2026-02-02 - US-008
+- Implemented file upload component at `components/import/file-upload.tsx`
+- Files created: `components/import/file-upload.tsx`
+- **Learnings for future iterations:**
+  - FileUpload component props: onFileSelect (callback with File), onFileClear (optional), accept (default ".csv"), disabled, className
+  - Drag-and-drop handled via onDragOver/onDragLeave/onDrop events
+  - Click to browse via hidden input ref, triggered by clicking the drop zone
+  - Validates .csv file type by checking file extension (.csv) or MIME type (text/csv, application/csv)
+  - Shows selected file name + size after selection, with X button to clear
+  - Uses lucide-react icons: Upload, FileText, X
+  - Error state shown when non-CSV file is dropped/selected
+  - Uses shadcn Button component for clear button
+---
+
