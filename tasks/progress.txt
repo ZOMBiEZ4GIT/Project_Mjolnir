@@ -216,3 +216,27 @@ Started: 2026-02-02
   - Pattern: empty state checks for both no holdings and no breakdown data separately
 ---
 
+## 2026-02-02 - US-007
+- Added super breakdown section to dashboard with conditional rendering
+- Files changed: `app/(dashboard)/dashboard/page.tsx`, `components/dashboard/super-breakdown-section.tsx` (new file)
+- **Learnings for future iterations:**
+  - Wrapper component pattern: Create a Section component that conditionally renders based on data availability
+  - For "only show if data exists" requirement, wrapper component returns null when no data
+  - Reuse existing APIs with minimal params (months=1) to check for existence efficiently
+  - Section placement: between Asset Allocation and Net Worth Chart as per acceptance criteria
+  - The inner chart component (SuperGrowthChart) handles its own empty data states, wrapper handles existence check
+  - staleTime on TanStack Query (5 minutes) for holdings check since holdings don't change often
+---
+
+## 2026-02-02 - US-008
+- Verified monthly change indicators already implemented in summary cards
+- Files verified: `components/dashboard/summary-cards.tsx`
+- Feature was implemented during W-7 (dashboard work) - no new code changes needed
+- All acceptance criteria met: MoM badges, percentage display, green/red colors, history-based calculation
+- **Learnings for future iterations:**
+  - Check existing code thoroughly before implementing - features may already exist from prior epic work
+  - SummaryCard component pattern: accepts previousValue prop, handles change calculation internally
+  - Debt card inverts positive/negative indicators (debt increase = bad = red)
+  - History API with months=2 provides current and previous month for MoM calculation
+---
+

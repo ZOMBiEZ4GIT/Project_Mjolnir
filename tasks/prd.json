@@ -112,8 +112,8 @@
         "Lint passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created SuperBreakdownSection wrapper component that checks for super holdings before rendering. If no super holdings exist, the section is completely hidden. If holdings exist but no breakdown data, SuperGrowthChart shows its built-in empty state. Section placed between Asset Allocation/Currency Exposure and Net Worth History Chart."
     },
     {
       "id": "US-008",
@@ -128,8 +128,8 @@
         "Lint passes"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Feature already implemented in summary-cards.tsx during W-7 dashboard work. SummaryCard component shows change amount and percentage with TrendingUp/TrendingDown icons, uses history API for previous month comparison, handles debt invertion for positive/negative indicators."
     },
     {
       "id": "US-009",
