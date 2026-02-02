@@ -160,8 +160,8 @@
         "Lint passes"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added ChartViewToggle component to NetWorthChart with Net Worth and Assets vs Debt options. Uses localStorage (net-worth-chart-view key) for persistence. Integrates AssetsVsDebtChart component when that view is selected. Default is net worth line chart view. Both toggles (view mode and time range) are displayed in responsive header."
     },
     {
       "id": "US-011",

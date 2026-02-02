@@ -253,3 +253,15 @@ Started: 2026-02-02
   - Component receives data as prop from parent - allows reuse with existing data fetching
 ---
 
+## 2026-02-02 - US-010
+- Added chart view toggle to net worth section (Net Worth / Assets vs Debt)
+- Files changed: `components/dashboard/net-worth-chart.tsx`
+- **Learnings for future iterations:**
+  - View toggle pattern: ChartViewToggle component with ChartViewMode type ("networth" | "assetsvsdebt")
+  - localStorage persistence: CHART_VIEW_STORAGE_KEY constant, read on mount with useEffect, write on change
+  - Import LineChartIcon from lucide-react (not LineChart to avoid Recharts conflict)
+  - AssetsVsDebtChart is imported and passed historyData.history prop directly (data already available from parent fetch)
+  - Responsive header layout: flex-col on mobile, flex-row on sm:+ with gap-3 for proper spacing of both toggles
+  - Time range selector remains visible in both view modes since AssetsVsDebtChart receives filtered history data
+---
+
