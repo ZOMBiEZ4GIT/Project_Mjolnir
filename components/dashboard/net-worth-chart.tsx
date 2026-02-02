@@ -5,7 +5,8 @@ import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency } from "@/lib/utils/currency";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { LineChart as LineChartIcon, BarChart3 } from "lucide-react";
 import {
   LineChart,
   Line,
@@ -15,6 +16,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { AssetsVsDebtChart } from "./assets-vs-debt-chart";
 
 interface HistoryPoint {
   date: string;
@@ -33,6 +35,11 @@ interface HistoryResponse {
  */
 type TimeRange = "3m" | "6m" | "1y" | "all";
 
+/**
+ * Chart view modes.
+ */
+type ChartViewMode = "networth" | "assetsvsdebt";
+
 const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; months: number }[] = [
   { value: "3m", label: "3M", months: 3 },
   { value: "6m", label: "6M", months: 6 },
@@ -41,6 +48,7 @@ const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; months: number }[] 
 ];
 
 const DEFAULT_TIME_RANGE: TimeRange = "1y";
+const CHART_VIEW_STORAGE_KEY = "net-worth-chart-view";
 
 async function fetchHistory(months: number): Promise<HistoryResponse> {
   const response = await fetch(`/api/net-worth/history?months=${months}`);
@@ -157,6 +165,45 @@ function TimeRangeSelector({ selectedRange, onRangeChange }: TimeRangeSelectorPr
 }
 
 /**
+ * Chart view toggle component.
+ */
+interface ChartViewToggleProps {
+  viewMode: ChartViewMode;
+  onChange: (mode: ChartViewMode) => void;
+}
+
+function ChartViewToggle({ viewMode, onChange }: ChartViewToggleProps) {
+  return (
+    <div className="flex items-center gap-1 bg-gray-700/50 rounded-lg p-1">
+      <button
+        onClick={() => onChange("networth")}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          viewMode === "networth"
+            ? "bg-gray-600 text-white"
+            : "text-gray-400 hover:text-white"
+        }`}
+        title="Net Worth only"
+      >
+        <LineChartIcon className="h-4 w-4" />
+        <span className="hidden sm:inline">Net Worth</span>
+      </button>
+      <button
+        onClick={() => onChange("assetsvsdebt")}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          viewMode === "assetsvsdebt"
+            ? "bg-gray-600 text-white"
+            : "text-gray-400 hover:text-white"
+        }`}
+        title="Assets vs Debt comparison"
+      >
+        <BarChart3 className="h-4 w-4" />
+        <span className="hidden sm:inline">Assets vs Debt</span>
+      </button>
+    </div>
+  );
+}
+
+/**
  * Net Worth History Chart
  *
  * Displays a line chart showing net worth history with configurable time ranges.
@@ -180,6 +227,23 @@ export function NetWorthChart() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+
+  // Chart view mode state with localStorage persistence
+  const [chartViewMode, setChartViewMode] = useState<ChartViewMode>("networth");
+
+  // Load chart view preference from localStorage on mount
+  useEffect(() => {
+    const stored = localStorage.getItem(CHART_VIEW_STORAGE_KEY);
+    if (stored === "networth" || stored === "assetsvsdebt") {
+      setChartViewMode(stored);
+    }
+  }, []);
+
+  // Handle chart view mode change
+  const handleChartViewChange = (mode: ChartViewMode) => {
+    setChartViewMode(mode);
+    localStorage.setItem(CHART_VIEW_STORAGE_KEY, mode);
+  };
 
   // Get time range from URL param, default to 1Y
   const rangeParam = searchParams.get("range") as TimeRange | null;
@@ -249,14 +313,20 @@ export function NetWorthChart() {
   if (chartData.length === 0) {
     return (
       <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
             Net Worth History
           </h3>
-          <TimeRangeSelector
-            selectedRange={selectedRange}
-            onRangeChange={handleRangeChange}
-          />
+          <div className="flex items-center gap-2 flex-wrap">
+            <ChartViewToggle
+              viewMode={chartViewMode}
+              onChange={handleChartViewChange}
+            />
+            <TimeRangeSelector
+              selectedRange={selectedRange}
+              onRangeChange={handleRangeChange}
+            />
+          </div>
         </div>
         <div className="h-64 flex items-center justify-center">
           <p className="text-gray-500 text-center">
@@ -285,54 +355,65 @@ export function NetWorthChart() {
 
   return (
     <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
           Net Worth History
         </h3>
-        <TimeRangeSelector
-          selectedRange={selectedRange}
-          onRangeChange={handleRangeChange}
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <ChartViewToggle
+            viewMode={chartViewMode}
+            onChange={handleChartViewChange}
+          />
+          <TimeRangeSelector
+            selectedRange={selectedRange}
+            onRangeChange={handleRangeChange}
+          />
+        </div>
       </div>
-      <div className="h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={chartData}
-            margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#374151"
-              vertical={false}
-            />
-            <XAxis
-              dataKey="displayMonth"
-              stroke="#9CA3AF"
-              tick={{ fill: "#9CA3AF", fontSize: 12 }}
-              tickLine={{ stroke: "#4B5563" }}
-              axisLine={{ stroke: "#4B5563" }}
-            />
-            <YAxis
-              stroke="#9CA3AF"
-              tick={{ fill: "#9CA3AF", fontSize: 12 }}
-              tickLine={{ stroke: "#4B5563" }}
-              axisLine={{ stroke: "#4B5563" }}
-              tickFormatter={formatCurrencyCompact}
-              domain={[yMin, yMax]}
-              width={70}
-            />
-            <Tooltip content={<CustomTooltip currency={displayCurrency} />} />
-            <Line
-              type="monotone"
-              dataKey="netWorth"
-              stroke="#10B981"
-              strokeWidth={2}
-              dot={{ fill: "#10B981", strokeWidth: 0, r: 4 }}
-              activeDot={{ r: 6, fill: "#10B981", stroke: "#fff", strokeWidth: 2 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+
+      {chartViewMode === "networth" ? (
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={chartData}
+              margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="#374151"
+                vertical={false}
+              />
+              <XAxis
+                dataKey="displayMonth"
+                stroke="#9CA3AF"
+                tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                tickLine={{ stroke: "#4B5563" }}
+                axisLine={{ stroke: "#4B5563" }}
+              />
+              <YAxis
+                stroke="#9CA3AF"
+                tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                tickLine={{ stroke: "#4B5563" }}
+                axisLine={{ stroke: "#4B5563" }}
+                tickFormatter={formatCurrencyCompact}
+                domain={[yMin, yMax]}
+                width={70}
+              />
+              <Tooltip content={<CustomTooltip currency={displayCurrency} />} />
+              <Line
+                type="monotone"
+                dataKey="netWorth"
+                stroke="#10B981"
+                strokeWidth={2}
+                dot={{ fill: "#10B981", strokeWidth: 0, r: 4 }}
+                activeDot={{ r: 6, fill: "#10B981", stroke: "#fff", strokeWidth: 2 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <AssetsVsDebtChart data={historyData.history} />
+      )}
     </div>
   );
 }
