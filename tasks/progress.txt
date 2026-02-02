@@ -321,3 +321,25 @@ Started: 2026-02-02
   - Export patterns: create index.ts for barrel exports from component directories
 ---
 
+## 2026-02-02 - US-014
+- Added chart export functionality to all major charts
+- Files changed:
+  - `components/charts/chart-export-button.tsx` (new file)
+  - `components/charts/index.ts` (updated)
+  - `components/dashboard/net-worth-chart.tsx` (updated)
+  - `components/dashboard/super-growth-chart.tsx` (updated)
+  - `components/dashboard/asset-allocation.tsx` (updated)
+  - `components/holdings/holding-price-chart.tsx` (updated)
+  - `components/holdings/super-balance-history-chart.tsx` (updated)
+  - `package.json` (added html2canvas dependency)
+- **Learnings for future iterations:**
+  - html2canvas is the simplest approach for exporting React charts as images (no native recharts export)
+  - ChartExportButton pattern: wrap chart in div with ref, pass ref and filename to component
+  - Use scale: 2 in html2canvas options for higher resolution exports
+  - Set backgroundColor to match app theme (gray-800 = #1f2937 for dark mode)
+  - Filename format: {chart-type}-YYYY-MM-DD.png provides clear identification
+  - Loading state with Loader2 icon shows export progress
+  - Export button placed in chart header alongside other controls (toggles, selectors)
+  - For charts without header (detail pages), add flex justify-end container for export button
+---
+
