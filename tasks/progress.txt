@@ -164,3 +164,35 @@ Started: 2026-02-02
   - Cron config goes in `crons` array in vercel.json with `path` and `schedule` properties
 ---
 
+## 2026-02-02 - US-007: Add email preferences API endpoints
+- Extended `/api/preferences` GET response to include `emailReminders` and `reminderDay` fields
+- Extended `/api/preferences` PATCH to accept `emailReminders` (boolean) and `reminderDay` (integer 1-28)
+- Added validation for `reminderDay` range (must be between 1 and 28)
+- Updated `lib/queries/users.ts` `UpdatePreferencesInput` interface to include new fields
+- Updated `updateUserPreferences` function to handle `emailReminders` and `reminderDay`
+- Files changed: `app/api/preferences/route.ts`, `lib/queries/users.ts`
+- **Learnings for future iterations:**
+  - Preferences API follows pattern: GET returns all prefs, PATCH accepts partial updates
+  - Validation errors use `{ errors: { field: "message" } }` format with 400 status
+  - Integer validation in JS: check `typeof === "number"` AND `Number.isInteger()` for proper integer checking
+---
+
+## 2026-02-02 - US-008: Create email preferences UI component
+- Created `components/settings/email-preferences.tsx` with:
+  - Toggle switch for enabling/disabling email reminders
+  - Dropdown selector for reminder day (1st-28th of month)
+  - User's primary email address display from Clerk
+  - Loading skeleton while preferences load
+  - Toast notifications for success/error on updates
+- Used TanStack Query with same `["preferences"]` query key as CurrencyProvider
+- Implemented optimistic updates with rollback on error
+- Used `useUser` hook from `@clerk/nextjs` for client-side user email access
+- Files changed: `components/settings/email-preferences.tsx`
+- **Learnings for future iterations:**
+  - Use `useUser()` from `@clerk/nextjs` to get user info client-side (vs `currentUser()` server-side)
+  - Access email via `user?.primaryEmailAddress?.emailAddress`
+  - When sharing query key with other providers, optimistic updates should follow same pattern
+  - Day selector uses 1-28 range to avoid month-end edge cases
+  - Disable dependent controls (like day selector) when parent toggle is off
+---
+
