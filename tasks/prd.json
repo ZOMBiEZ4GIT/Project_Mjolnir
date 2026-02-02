@@ -194,8 +194,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated HoldingsTable with useCurrency hook, CurrencyDisplay for MarketValue/GainLoss/CostBasis cells"
     },
     {
       "id": "US-012",

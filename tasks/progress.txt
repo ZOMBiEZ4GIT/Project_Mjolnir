@@ -264,3 +264,15 @@ Started: 2026-02-02
   - formatCurrency(value, currency) from lib/utils/currency.ts handles multi-currency formatting
 ---
 
+## 2026-02-02 - US-011
+- Updated holdings list to display values in user's selected display currency
+- Files changed:
+  - `components/holdings/holdings-table.tsx` - Added currency conversion to all value cells
+- **Learnings for future iterations:**
+  - HoldingsTable uses useCurrency() hook at the top level, passes displayCurrency/convert/currencyLoading down to child cells
+  - MarketValueCell, GainLossCell, and new CostBasisCell all use CurrencyDisplay component for consistent formatting
+  - CurrencyDisplay shows native currency indicator `(NZD)` when showNative=true and currencies differ
+  - Removed unused local formatting functions (formatCurrency, formatMarketValue, formatGainLossAmount) in favor of CurrencyDisplay
+  - Pattern: cell components receive displayCurrency, convert function, and currencyLoading as props from parent section
+---
+
