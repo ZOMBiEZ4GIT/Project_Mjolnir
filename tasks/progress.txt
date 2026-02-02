@@ -214,3 +214,16 @@ Started: 2026-02-02
   - Templates include header row + one example data row to help users understand format
 ---
 
+## 2026-02-02 - US-013
+- Implemented import history tracking with database table and API updates
+- Files created: `drizzle/0009_lethal_reaper.sql` (migration)
+- Files modified: `lib/db/schema.ts`, `app/api/import/transactions/route.ts`, `app/api/import/snapshots/route.ts`
+- **Learnings for future iterations:**
+  - import_history table has: id, user_id, type (transactions|snapshots), filename, total, imported, skipped, errors_json, created_at
+  - New enum `importTypeEnum` added for type field with values: "transactions", "snapshots"
+  - errors_json stores JSON array of errors as text (nullable - null when no errors)
+  - Import history record saved after summary is built but before API returns
+  - Relations added: users has many importHistory, importHistory belongs to user
+  - Type exports added: ImportHistory, NewImportHistory
+---
+
