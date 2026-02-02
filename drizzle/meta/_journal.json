@@ -43,6 +43,13 @@
       "when": 1769981604375,
       "tag": "0005_robust_leo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1770001121156,
+      "tag": "0006_spotty_lucky_pierre",
+      "breakpoints": true
     }
   ]
 }

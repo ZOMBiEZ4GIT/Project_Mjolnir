@@ -262,7 +262,7 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
   const queryClient = useQueryClient();
 
   // Get currency context for display currency conversion
-  const { displayCurrency, convert, isLoading: currencyLoading } = useCurrency();
+  const { displayCurrency, convert, showNativeCurrency, isLoading: currencyLoading } = useCurrency();
 
   const deleteMutation = useMutation({
     mutationFn: async (holdingId: string) => {
@@ -318,6 +318,7 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
               displayCurrency={displayCurrency}
               convert={convert}
               currencyLoading={currencyLoading}
+              showNativeCurrency={showNativeCurrency}
             />
           );
         })}
@@ -374,6 +375,7 @@ interface HoldingsTypeSectionProps {
   displayCurrency: Currency;
   convert: (amount: number, fromCurrency: Currency) => number;
   currencyLoading?: boolean;
+  showNativeCurrency?: boolean;
 }
 
 /**
@@ -490,6 +492,7 @@ interface MarketValueCellProps {
   displayCurrency: Currency;
   convert: (amount: number, fromCurrency: Currency) => number;
   currencyLoading?: boolean;
+  showNativeCurrency?: boolean;
 }
 
 function MarketValueCell({
@@ -501,6 +504,7 @@ function MarketValueCell({
   displayCurrency,
   convert,
   currencyLoading,
+  showNativeCurrency,
 }: MarketValueCellProps) {
   // Loading state
   if (pricesLoading || currencyLoading) {
@@ -524,6 +528,17 @@ function MarketValueCell({
 
   if (nativeMarketValue === null) {
     return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  // When showNativeCurrency is true, display in native currency (no conversion)
+  if (showNativeCurrency) {
+    return (
+      <CurrencyDisplay
+        amount={nativeMarketValue}
+        currency={nativeCurrency}
+        className="text-white font-mono"
+      />
+    );
   }
 
   // Convert to display currency
@@ -555,6 +570,7 @@ interface GainLossCellProps {
   displayCurrency: Currency;
   convert: (amount: number, fromCurrency: Currency) => number;
   currencyLoading?: boolean;
+  showNativeCurrency?: boolean;
 }
 
 function GainLossCell({
@@ -567,6 +583,7 @@ function GainLossCell({
   displayCurrency,
   convert,
   currencyLoading,
+  showNativeCurrency,
 }: GainLossCellProps) {
   // Loading state
   if (pricesLoading || currencyLoading) {
@@ -596,6 +613,25 @@ function GainLossCell({
 
   if (!nativeGainLoss) {
     return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  // When showNativeCurrency is true, display in native currency (no conversion)
+  if (showNativeCurrency) {
+    const isPositive = nativeGainLoss.amount >= 0;
+    const colorClass = isPositive ? "text-green-400" : "text-red-400";
+
+    return (
+      <div className="flex flex-col gap-0.5 items-end">
+        <CurrencyDisplay
+          amount={nativeGainLoss.amount}
+          currency={nativeCurrency}
+          className={`font-mono ${colorClass}`}
+        />
+        <span className={`text-xs ${colorClass}`}>
+          {formatGainLossPercent(nativeGainLoss.percent)}
+        </span>
+      </div>
+    );
   }
 
   // Convert gain/loss to display currency
@@ -631,6 +667,7 @@ interface CostBasisCellProps {
   displayCurrency: Currency;
   convert: (amount: number, fromCurrency: Currency) => number;
   currencyLoading?: boolean;
+  showNativeCurrency?: boolean;
 }
 
 function CostBasisCell({
@@ -639,6 +676,7 @@ function CostBasisCell({
   displayCurrency,
   convert,
   currencyLoading,
+  showNativeCurrency,
 }: CostBasisCellProps) {
   // Loading state
   if (currencyLoading) {
@@ -648,6 +686,17 @@ function CostBasisCell({
   // No cost basis
   if (costBasis === null || costBasis === 0) {
     return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  // When showNativeCurrency is true, display in native currency (no conversion)
+  if (showNativeCurrency) {
+    return (
+      <CurrencyDisplay
+        amount={costBasis}
+        currency={holdingCurrency}
+        className="text-gray-300 font-mono"
+      />
+    );
   }
 
   // Convert to display currency
@@ -677,6 +726,7 @@ function HoldingsTypeSection({
   displayCurrency,
   convert,
   currencyLoading,
+  showNativeCurrency,
 }: HoldingsTypeSectionProps) {
   const label = HOLDING_TYPE_LABELS[type];
   const isTradeable = TRADEABLE_TYPES.includes(type as (typeof TRADEABLE_TYPES)[number]);
@@ -783,6 +833,7 @@ function HoldingsTypeSection({
                           displayCurrency={displayCurrency}
                           convert={convert}
                           currencyLoading={currencyLoading}
+                          showNativeCurrency={showNativeCurrency}
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -796,6 +847,7 @@ function HoldingsTypeSection({
                           displayCurrency={displayCurrency}
                           convert={convert}
                           currencyLoading={currencyLoading}
+                          showNativeCurrency={showNativeCurrency}
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -805,6 +857,7 @@ function HoldingsTypeSection({
                           displayCurrency={displayCurrency}
                           convert={convert}
                           currencyLoading={currencyLoading}
+                          showNativeCurrency={showNativeCurrency}
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -814,6 +867,7 @@ function HoldingsTypeSection({
                           displayCurrency={displayCurrency}
                           convert={convert}
                           currencyLoading={currencyLoading}
+                          showNativeCurrency={showNativeCurrency}
                         />
                       </TableCell>
                     </>

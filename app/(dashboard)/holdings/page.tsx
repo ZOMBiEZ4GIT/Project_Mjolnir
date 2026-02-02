@@ -11,6 +11,7 @@ import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { NativeCurrencyToggle } from "@/components/ui/native-currency-toggle";
 
 export const dynamic = "force-dynamic";
 
@@ -313,15 +314,18 @@ export default function HoldingsPage() {
             </AddHoldingDialog>
           </div>
         </div>
-        <div className="flex items-center gap-2 mb-4">
-          <Switch
-            id="show-dormant-empty"
-            checked={showDormant}
-            onCheckedChange={handleShowDormantChange}
-          />
-          <Label htmlFor="show-dormant-empty" className="text-gray-300 cursor-pointer">
-            Show dormant holdings
-          </Label>
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-dormant-empty"
+              checked={showDormant}
+              onCheckedChange={handleShowDormantChange}
+            />
+            <Label htmlFor="show-dormant-empty" className="text-gray-300 cursor-pointer text-sm">
+              Show dormant holdings
+            </Label>
+          </div>
+          <NativeCurrencyToggle />
         </div>
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
           <div className="text-gray-400">
@@ -369,15 +373,18 @@ export default function HoldingsPage() {
           </AddHoldingDialog>
         </div>
       </div>
-      <div className="flex items-center gap-2 mb-4">
-        <Switch
-          id="show-dormant"
-          checked={showDormant}
-          onCheckedChange={handleShowDormantChange}
-        />
-        <Label htmlFor="show-dormant" className="text-gray-300 cursor-pointer">
-          Show dormant holdings
-        </Label>
+      <div className="flex items-center gap-4 mb-4">
+        <div className="flex items-center gap-2">
+          <Switch
+            id="show-dormant"
+            checked={showDormant}
+            onCheckedChange={handleShowDormantChange}
+          />
+          <Label htmlFor="show-dormant" className="text-gray-300 cursor-pointer text-sm">
+            Show dormant holdings
+          </Label>
+        </div>
+        <NativeCurrencyToggle />
       </div>
       <HoldingsTable
         holdings={holdings}

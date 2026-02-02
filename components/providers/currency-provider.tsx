@@ -21,6 +21,7 @@ import {
  */
 interface PreferencesResponse {
   displayCurrency: Currency;
+  showNativeCurrency: boolean;
   updatedAt: string;
 }
 
@@ -48,6 +49,18 @@ interface CurrencyContextValue {
    * This persists to the database and updates context immediately.
    */
   setDisplayCurrency: (currency: Currency) => void;
+
+  /**
+   * Whether to show values in their native currency instead of converting.
+   * When true, holdings display in their original currency.
+   */
+  showNativeCurrency: boolean;
+
+  /**
+   * Update the show native currency preference.
+   * This persists to the database and updates context immediately.
+   */
+  setShowNativeCurrency: (show: boolean) => void;
 
   /**
    * Current exchange rates in the format { "USD/AUD": number, "NZD/AUD": number }.
@@ -103,12 +116,12 @@ async function fetchPreferences(): Promise<PreferencesResponse> {
  * Updates user preferences via the API.
  */
 async function updatePreferences(
-  displayCurrency: Currency
+  updates: { displayCurrency?: Currency; showNativeCurrency?: boolean }
 ): Promise<PreferencesResponse> {
   const response = await fetch("/api/preferences", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ displayCurrency }),
+    body: JSON.stringify(updates),
   });
   if (!response.ok) {
     throw new Error(`Failed to update preferences: ${response.status}`);
@@ -202,6 +215,9 @@ export function CurrencyProvider({
   const [optimisticCurrency, setOptimisticCurrency] = useState<Currency | null>(
     null
   );
+  const [optimisticShowNative, setOptimisticShowNative] = useState<boolean | null>(
+    null
+  );
 
   // Fetch user preferences
   const {
@@ -228,9 +244,9 @@ export function CurrencyProvider({
     retry: 2,
   });
 
-  // Mutation for updating preferences
-  const updateMutation = useMutation({
-    mutationFn: updatePreferences,
+  // Mutation for updating currency preference
+  const updateCurrencyMutation = useMutation({
+    mutationFn: (displayCurrency: Currency) => updatePreferences({ displayCurrency }),
     onSuccess: (data) => {
       // Update cache
       queryClient.setQueryData(["preferences"], data);
@@ -240,6 +256,21 @@ export function CurrencyProvider({
     onError: () => {
       // Revert optimistic update on error
       setOptimisticCurrency(null);
+    },
+  });
+
+  // Mutation for updating show native currency preference
+  const updateShowNativeMutation = useMutation({
+    mutationFn: (showNativeCurrency: boolean) => updatePreferences({ showNativeCurrency }),
+    onSuccess: (data) => {
+      // Update cache
+      queryClient.setQueryData(["preferences"], data);
+      // Clear optimistic state
+      setOptimisticShowNative(null);
+    },
+    onError: () => {
+      // Revert optimistic update on error
+      setOptimisticShowNative(null);
     },
   });
 
@@ -253,6 +284,17 @@ export function CurrencyProvider({
     }
     return defaultCurrency;
   }, [optimisticCurrency, preferencesData, defaultCurrency]);
+
+  // Determine show native currency (optimistic > fetched > default false)
+  const showNativeCurrency = useMemo(() => {
+    if (optimisticShowNative !== null) {
+      return optimisticShowNative;
+    }
+    if (preferencesData?.showNativeCurrency !== undefined) {
+      return preferencesData.showNativeCurrency;
+    }
+    return false;
+  }, [optimisticShowNative, preferencesData]);
 
   // Transform rates from API format
   const rates = useMemo(() => {
@@ -279,9 +321,23 @@ export function CurrencyProvider({
       // Optimistic update
       setOptimisticCurrency(currency);
       // Persist to server
-      updateMutation.mutate(currency);
+      updateCurrencyMutation.mutate(currency);
     },
-    [isSignedIn, updateMutation]
+    [isSignedIn, updateCurrencyMutation]
+  );
+
+  // Set show native currency with optimistic update
+  const setShowNativeCurrency = useCallback(
+    (show: boolean) => {
+      if (!isSignedIn) {
+        return;
+      }
+      // Optimistic update
+      setOptimisticShowNative(show);
+      // Persist to server
+      updateShowNativeMutation.mutate(show);
+    },
+    [isSignedIn, updateShowNativeMutation]
   );
 
   // Convert function using current rates
@@ -317,6 +373,8 @@ export function CurrencyProvider({
     () => ({
       displayCurrency,
       setDisplayCurrency,
+      showNativeCurrency,
+      setShowNativeCurrency,
       rates,
       isLoading,
       isStale,
@@ -327,6 +385,8 @@ export function CurrencyProvider({
     [
       displayCurrency,
       setDisplayCurrency,
+      showNativeCurrency,
+      setShowNativeCurrency,
       rates,
       isLoading,
       isStale,

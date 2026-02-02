@@ -42,6 +42,7 @@ export const userPreferences = pgTable("user_preferences", {
     .notNull()
     .unique(), // One preference record per user
   displayCurrency: currencyEnum("display_currency").default("AUD").notNull(),
+  showNativeCurrency: boolean("show_native_currency").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

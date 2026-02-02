@@ -7,6 +7,7 @@ type Currency = (typeof currencies)[number];
 
 interface PatchBody {
   displayCurrency?: string;
+  showNativeCurrency?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export async function GET() {
 
   return NextResponse.json({
     displayCurrency: preferences.displayCurrency,
+    showNativeCurrency: preferences.showNativeCurrency,
     updatedAt: preferences.updatedAt,
   });
 }
@@ -53,21 +55,32 @@ export async function PATCH(request: NextRequest) {
     if (!currencies.includes(body.displayCurrency as Currency)) {
       errors.displayCurrency = `Currency must be one of: ${currencies.join(", ")}`;
     }
-  } else {
-    errors.displayCurrency = "displayCurrency is required";
+  }
+
+  // Validate showNativeCurrency if provided
+  if (body.showNativeCurrency !== undefined) {
+    if (typeof body.showNativeCurrency !== "boolean") {
+      errors.showNativeCurrency = "showNativeCurrency must be a boolean";
+    }
+  }
+
+  // Require at least one field to update
+  if (body.displayCurrency === undefined && body.showNativeCurrency === undefined) {
+    errors.general = "At least one of displayCurrency or showNativeCurrency is required";
   }
 
   if (Object.keys(errors).length > 0) {
     return NextResponse.json({ errors }, { status: 400 });
   }
 
-  const updated = await updateUserPreferences(
-    userId,
-    body.displayCurrency as Currency
-  );
+  const updated = await updateUserPreferences(userId, {
+    displayCurrency: body.displayCurrency as Currency | undefined,
+    showNativeCurrency: body.showNativeCurrency,
+  });
 
   return NextResponse.json({
     displayCurrency: updated.displayCurrency,
+    showNativeCurrency: updated.showNativeCurrency,
     updatedAt: updated.updatedAt,
   });
 }

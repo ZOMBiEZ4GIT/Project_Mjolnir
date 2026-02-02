@@ -75,27 +75,42 @@ export async function getUserPreferences(
   return newPrefs;
 }
 
+interface UpdatePreferencesInput {
+  displayCurrency?: "AUD" | "NZD" | "USD";
+  showNativeCurrency?: boolean;
+}
+
 /**
  * Update user preferences.
  *
  * @param userId - The Clerk user ID
- * @param displayCurrency - The display currency to set
+ * @param updates - The preferences to update
  * @returns The updated preferences
  */
 export async function updateUserPreferences(
   userId: string,
-  displayCurrency: "AUD" | "NZD" | "USD"
+  updates: UpdatePreferencesInput
 ): Promise<UserPreferences> {
   // Ensure user and preferences exist first
   await getUserPreferences(userId);
 
+  // Build the set object with only provided fields
+  const setValues: Record<string, unknown> = {
+    updatedAt: new Date(),
+  };
+
+  if (updates.displayCurrency !== undefined) {
+    setValues.displayCurrency = updates.displayCurrency;
+  }
+
+  if (updates.showNativeCurrency !== undefined) {
+    setValues.showNativeCurrency = updates.showNativeCurrency;
+  }
+
   // Update preferences
   const [updated] = await db
     .update(userPreferences)
-    .set({
-      displayCurrency,
-      updatedAt: new Date(),
-    })
+    .set(setValues)
     .where(eq(userPreferences.userId, userId))
     .returning();
 
