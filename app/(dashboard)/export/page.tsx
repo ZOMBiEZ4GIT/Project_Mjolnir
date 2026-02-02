@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 interface ExportCounts {
   holdings: number;
+  transactions: number;
 }
 
 function downloadFile(url: string) {
@@ -24,7 +25,7 @@ function downloadFile(url: string) {
 
 export default function ExportPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
-  const [counts, setCounts] = useState<ExportCounts>({ holdings: 0 });
+  const [counts, setCounts] = useState<ExportCounts>({ holdings: 0, transactions: 0 });
   const [isLoadingCounts, setIsLoadingCounts] = useState(true);
 
   // Fetch counts when user is signed in
@@ -38,6 +39,13 @@ export default function ExportPage() {
         if (holdingsRes.ok) {
           const holdingsData = await holdingsRes.json();
           setCounts(prev => ({ ...prev, holdings: holdingsData.length }));
+        }
+
+        // Fetch transactions count
+        const transactionsRes = await fetch("/api/transactions");
+        if (transactionsRes.ok) {
+          const transactionsData = await transactionsRes.json();
+          setCounts(prev => ({ ...prev, transactions: transactionsData.length }));
         }
       } catch (error) {
         console.error("Failed to fetch export counts:", error);
@@ -132,9 +140,37 @@ export default function ExportPage() {
               Export your BUY, SELL, and DIVIDEND transaction history.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {/* US-011: Transactions export buttons and count will be added here */}
-            <p className="text-sm text-gray-500">Export options coming soon...</p>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-400">
+              {isLoadingCounts ? (
+                "Loading..."
+              ) : (
+                <>
+                  <span className="font-semibold text-white">{counts.transactions}</span>{" "}
+                  {counts.transactions === 1 ? "transaction" : "transactions"} to export
+                </>
+              )}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadFile("/api/export/transactions?format=csv")}
+                disabled={isLoadingCounts || counts.transactions === 0}
+              >
+                <Download className="h-4 w-4" />
+                Download CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadFile("/api/export/transactions?format=json")}
+                disabled={isLoadingCounts || counts.transactions === 0}
+              >
+                <Download className="h-4 w-4" />
+                Download JSON
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
