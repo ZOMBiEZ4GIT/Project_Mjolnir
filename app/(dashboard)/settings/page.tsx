@@ -2,6 +2,7 @@
 
 import { Settings, Globe, Bell } from "lucide-react";
 import { EmailPreferences } from "@/components/settings/email-preferences";
+import { SettingsSkeleton } from "@/components/settings/settings-skeleton";
 import { CurrencySelector } from "@/components/ui/currency-selector";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { Switch } from "@/components/ui/switch";
@@ -25,6 +26,10 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold text-white">Settings</h1>
       </div>
 
+      {/* Show skeleton while preferences are loading */}
+      {isLoading ? (
+        <SettingsSkeleton />
+      ) : (
       <div className="space-y-8 max-w-2xl">
         {/* Currency Preferences Section */}
         <section className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
@@ -84,6 +89,7 @@ export default function SettingsPage() {
           <EmailPreferences />
         </section>
       </div>
+      )}
     </div>
   );
 }
