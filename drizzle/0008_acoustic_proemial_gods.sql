@@ -1,0 +1,1 @@
+ALTER TABLE "user_preferences" ADD COLUMN "last_reminder_sent" timestamp with time zone;

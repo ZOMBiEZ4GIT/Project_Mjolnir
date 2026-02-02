@@ -8,6 +8,8 @@ type Currency = (typeof currencies)[number];
 interface PatchBody {
   displayCurrency?: string;
   showNativeCurrency?: boolean;
+  emailReminders?: boolean;
+  reminderDay?: number;
 }
 
 /**
@@ -26,6 +28,8 @@ export async function GET() {
   return NextResponse.json({
     displayCurrency: preferences.displayCurrency,
     showNativeCurrency: preferences.showNativeCurrency,
+    emailReminders: preferences.emailReminders,
+    reminderDay: preferences.reminderDay,
     updatedAt: preferences.updatedAt,
   });
 }
@@ -64,9 +68,30 @@ export async function PATCH(request: NextRequest) {
     }
   }
 
+  // Validate emailReminders if provided
+  if (body.emailReminders !== undefined) {
+    if (typeof body.emailReminders !== "boolean") {
+      errors.emailReminders = "emailReminders must be a boolean";
+    }
+  }
+
+  // Validate reminderDay if provided (must be 1-28)
+  if (body.reminderDay !== undefined) {
+    if (typeof body.reminderDay !== "number" || !Number.isInteger(body.reminderDay)) {
+      errors.reminderDay = "reminderDay must be an integer";
+    } else if (body.reminderDay < 1 || body.reminderDay > 28) {
+      errors.reminderDay = "reminderDay must be between 1 and 28";
+    }
+  }
+
   // Require at least one field to update
-  if (body.displayCurrency === undefined && body.showNativeCurrency === undefined) {
-    errors.general = "At least one of displayCurrency or showNativeCurrency is required";
+  if (
+    body.displayCurrency === undefined &&
+    body.showNativeCurrency === undefined &&
+    body.emailReminders === undefined &&
+    body.reminderDay === undefined
+  ) {
+    errors.general = "At least one preference field is required";
   }
 
   if (Object.keys(errors).length > 0) {
@@ -76,11 +101,15 @@ export async function PATCH(request: NextRequest) {
   const updated = await updateUserPreferences(userId, {
     displayCurrency: body.displayCurrency as Currency | undefined,
     showNativeCurrency: body.showNativeCurrency,
+    emailReminders: body.emailReminders,
+    reminderDay: body.reminderDay,
   });
 
   return NextResponse.json({
     displayCurrency: updated.displayCurrency,
     showNativeCurrency: updated.showNativeCurrency,
+    emailReminders: updated.emailReminders,
+    reminderDay: updated.reminderDay,
     updatedAt: updated.updatedAt,
   });
 }

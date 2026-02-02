@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, decimal, date, boolean, pgEnum, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, decimal, date, boolean, pgEnum, unique, integer } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // =============================================================================
@@ -43,6 +43,10 @@ export const userPreferences = pgTable("user_preferences", {
     .unique(), // One preference record per user
   displayCurrency: currencyEnum("display_currency").default("AUD").notNull(),
   showNativeCurrency: boolean("show_native_currency").default(false).notNull(),
+  // Email reminder preferences
+  emailReminders: boolean("email_reminders").default(true).notNull(),
+  reminderDay: integer("reminder_day").default(1).notNull(), // 1-28, day of month to send reminder
+  lastReminderSent: timestamp("last_reminder_sent", { withTimezone: true }), // Tracks when last reminder was sent
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

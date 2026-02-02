@@ -54,11 +54,227 @@
   - RESEND_API_KEY (for email reminders)
   - NEXT_PUBLIC_APP_URL
 
+- Email templates in `components/emails/`:
+  - Use @react-email/components for email-compatible React components
+  - Inline styles only (no Tailwind) - use style objects with `as const` for strict typing
+  - Dark mode colors: background=#111827, card=#1f2937, border=#374151
+  - Export both named component and default for React Email preview compatibility
+
 ---
 
 # W-10 Email Reminders Progress Log
 
 Started: 2026-02-02
 
+---
+
+## 2026-02-02 - US-001: Install and configure Resend SDK
+- Installed resend npm package (v6.9.1)
+- Created `lib/services/email.ts` with:
+  - Lazy Resend client initialization (follows existing pattern in exchange-rates.ts)
+  - `EmailError` custom error class
+  - `SendEmailOptions` and `SendEmailResult` typed interfaces
+  - `sendEmail()` function for sending transactional emails
+  - `isEmailConfigured()` helper to check if API key is set
+- Added RESEND_API_KEY to .env.example
+- Files changed: `lib/services/email.ts`, `.env.example`, `package.json`, `package-lock.json`
+- **Learnings for future iterations:**
+  - Resend SDK uses `{ data, error }` return pattern instead of throwing
+  - Default from address uses Resend's testing domain `onboarding@resend.dev`
+  - Follow existing service patterns: lazy initialization, custom error classes, typed interfaces
+---
+
+## 2026-02-02 - US-002: Create email preferences schema
+- Added two new fields to `userPreferences` table in `lib/db/schema.ts`:
+  - `emailReminders`: boolean (default true) - enables/disables reminder emails
+  - `reminderDay`: integer (default 1) - day of month (1-28) to send reminders
+- Added `integer` import from drizzle-orm/pg-core
+- Generated migration `drizzle/0007_rapid_blonde_phantom.sql`
+- Files changed: `lib/db/schema.ts`, `drizzle/0007_rapid_blonde_phantom.sql`, `drizzle/meta/0007_snapshot.json`, `drizzle/meta/_journal.json`
+- **Learnings for future iterations:**
+  - Use `integer()` from drizzle-orm for integer columns (not smallint)
+  - Schema fields use camelCase in code, snake_case in database (Drizzle handles conversion)
+  - When committing schema changes, include both migration .sql file AND meta files
+---
+
+## 2026-02-02 - US-003: Create check-in reminder email template
+- Installed @react-email/components package for email templating
+- Created `components/emails/check-in-reminder.tsx` with:
+  - `CheckInReminderEmail` component using React Email components
+  - Dark mode styling (gray-900 background, gray-800 card) matching app design
+  - Personalized greeting with user name
+  - Holdings summary card showing super, cash, debt counts
+  - CTA button linking to check-in page
+  - Footer with optional unsubscribe link
+- Exported TypeScript interfaces:
+  - `HoldingsSummary` - counts for super, cash, debt, total
+  - `CheckInReminderEmailProps` - userName, currentMonth, holdings, checkInUrl, unsubscribeUrl
+- Files changed: `components/emails/check-in-reminder.tsx`, `package.json`, `package-lock.json`
+- **Learnings for future iterations:**
+  - React Email uses `@react-email/components` package (not `react-email` directly)
+  - Email styles must use inline style objects, not Tailwind classes
+  - Use `fontWeight: "bold" as const` for TypeScript strict mode compliance
+  - Email template is a React component that exports as default for React Email preview compatibility
+---
+
+## 2026-02-02 - US-004: Create send reminder email function
+- Created `lib/services/reminders.ts` with:
+  - `getCheckInStatus()` - reusable function to get holdings needing check-in (extracted from API logic)
+  - `sendCheckInReminder()` - main function to send personalized check-in reminder emails
+- Function signature: `sendCheckInReminder({ userId, email, userName? })`
+- Returns structured result: `{ success, needsCheckIn, holdingsToUpdate, error?, messageId? }`
+- Email not sent if user has no holdings needing updates (needsCheckIn: false)
+- Uses `render()` from @react-email/components to convert React Email template to HTML
+- Builds check-in URL from NEXT_PUBLIC_APP_URL env var
+- Files changed: `lib/services/reminders.ts`
+- **Learnings for future iterations:**
+  - Use `render()` from @react-email/components to convert React Email components to HTML string
+  - Extract reusable query logic from API routes into `lib/services/` or `lib/queries/`
+  - Return structured results with clear success/failure states rather than throwing errors
+  - Include optional fields (like messageId) only when relevant to avoid undefined checks
+---
+
+## 2026-02-02 - US-005: Create cron job API route
+- Created `app/api/cron/send-reminders/route.ts` with:
+  - POST endpoint for Vercel Cron to call daily
+  - CRON_SECRET authorization via Bearer token in Authorization header
+  - Query for users with emailReminders=true AND reminderDay matching current day
+  - Days 29-31 treated as day 28 (since reminderDay max is 28)
+  - Calls sendCheckInReminder for each eligible user
+  - Returns summary: { eligibleUsers, emailsSent, skippedNoCheckIn, failed }
+  - GET endpoint as health check
+- Added CRON_SECRET to .env.example
+- Files changed: `app/api/cron/send-reminders/route.ts`, `.env.example`
+- **Learnings for future iterations:**
+  - Vercel Cron sends secret as "Bearer <secret>" in Authorization header
+  - Use innerJoin with users and userPreferences to get both user info and preferences
+  - Handle edge cases gracefully (days 29-31 → day 28 for monthly reminders)
+  - Log progress with prefix like `[send-reminders]` for easier debugging
+---
+
+## 2026-02-02 - US-006: Configure Vercel cron schedule
+- Updated `vercel.json` to add crons configuration
+- Schedule: `0 23 * * *` (daily at 11pm UTC = 9am AEST)
+- Path: `/api/cron/send-reminders`
+- CRON_SECRET was already in .env.example from US-005
+- Files changed: `vercel.json`
+- **Learnings for future iterations:**
+  - Vercel cron schedule uses standard cron syntax in UTC timezone
+  - 9am AEST = 11pm UTC previous day (AEST is UTC+10 during standard time, UTC+11 during daylight saving)
+  - Cron config goes in `crons` array in vercel.json with `path` and `schedule` properties
+---
+
+## 2026-02-02 - US-007: Add email preferences API endpoints
+- Extended `/api/preferences` GET response to include `emailReminders` and `reminderDay` fields
+- Extended `/api/preferences` PATCH to accept `emailReminders` (boolean) and `reminderDay` (integer 1-28)
+- Added validation for `reminderDay` range (must be between 1 and 28)
+- Updated `lib/queries/users.ts` `UpdatePreferencesInput` interface to include new fields
+- Updated `updateUserPreferences` function to handle `emailReminders` and `reminderDay`
+- Files changed: `app/api/preferences/route.ts`, `lib/queries/users.ts`
+- **Learnings for future iterations:**
+  - Preferences API follows pattern: GET returns all prefs, PATCH accepts partial updates
+  - Validation errors use `{ errors: { field: "message" } }` format with 400 status
+  - Integer validation in JS: check `typeof === "number"` AND `Number.isInteger()` for proper integer checking
+---
+
+## 2026-02-02 - US-008: Create email preferences UI component
+- Created `components/settings/email-preferences.tsx` with:
+  - Toggle switch for enabling/disabling email reminders
+  - Dropdown selector for reminder day (1st-28th of month)
+  - User's primary email address display from Clerk
+  - Loading skeleton while preferences load
+  - Toast notifications for success/error on updates
+- Used TanStack Query with same `["preferences"]` query key as CurrencyProvider
+- Implemented optimistic updates with rollback on error
+- Used `useUser` hook from `@clerk/nextjs` for client-side user email access
+- Files changed: `components/settings/email-preferences.tsx`
+- **Learnings for future iterations:**
+  - Use `useUser()` from `@clerk/nextjs` to get user info client-side (vs `currentUser()` server-side)
+  - Access email via `user?.primaryEmailAddress?.emailAddress`
+  - When sharing query key with other providers, optimistic updates should follow same pattern
+  - Day selector uses 1-28 range to avoid month-end edge cases
+  - Disable dependent controls (like day selector) when parent toggle is off
+---
+
+## 2026-02-02 - US-009: Create settings page
+- Created `app/(dashboard)/settings/page.tsx` with:
+  - Currency preferences section (display currency selector, show native currency toggle)
+  - Email reminders section (integrates existing EmailPreferences component)
+  - Page header with Settings icon
+  - Consistent card styling: `rounded-lg border border-gray-700 bg-gray-800/50 p-6`
+- Added "Settings" to dashboard navigation in `components/dashboard/nav.tsx`
+- Currency preferences use existing `useCurrency` hook and `CurrencySelector` component
+- Files changed: `app/(dashboard)/settings/page.tsx`, `components/dashboard/nav.tsx`
+- **Learnings for future iterations:**
+  - Settings page uses "use client" directive for currency context hooks
+  - Card styling pattern: `rounded-lg border border-gray-700 bg-gray-800/50 p-6`
+  - Dashboard navigation items defined in `navItems` array in `components/dashboard/nav.tsx`
+  - Currency selector can use `compact={false}` for full-width display
+---
+
+## 2026-02-02 - US-010: Add email sent tracking
+- Added `lastReminderSent` timestamp column to `userPreferences` table in `lib/db/schema.ts`
+- Generated migration `drizzle/0008_acoustic_proemial_gods.sql`
+- Updated cron job at `app/api/cron/send-reminders/route.ts`:
+  - Added `getFirstOfCurrentMonth()` helper function
+  - Modified query to include `or(isNull(...), lt(...))` filter to skip users already emailed this month
+  - Added `lt` and `or` imports from drizzle-orm
+- Updated `sendCheckInReminder()` in `lib/services/reminders.ts`:
+  - Added import for `userPreferences` from schema
+  - After successful email send, updates `lastReminderSent` timestamp for the user
+- Files changed: `lib/db/schema.ts`, `drizzle/0008_acoustic_proemial_gods.sql`, `drizzle/meta/0008_snapshot.json`, `drizzle/meta/_journal.json`, `app/api/cron/send-reminders/route.ts`, `lib/services/reminders.ts`
+- **Learnings for future iterations:**
+  - Use `or(isNull(...), lt(...))` pattern to check for null OR older-than-date conditions
+  - Timestamp columns in Drizzle can be nullable by omitting `.notNull()`
+  - Month comparison uses first-of-month Date object with `lt()` operator
+  - Update tracking timestamps after successful operations, not before
+---
+
+## 2026-02-02 - US-011: Add test email button to settings
+- Created `app/api/email/test/route.ts` with:
+  - POST endpoint for sending test check-in reminder to current user
+  - Uses Clerk auth() and currentUser() for authentication
+  - Checks if email service is configured (RESEND_API_KEY present)
+  - Calls existing sendCheckInReminder() function
+  - Returns success/error response with details about what was sent
+- Updated `components/settings/email-preferences.tsx`:
+  - Added sendTestEmail() function to call the test endpoint
+  - Added sendTestEmailMutation using TanStack Query useMutation
+  - Added "Send Test Email" button with loading state (Loader2 spinner)
+  - Button shows "Sending..." text while pending
+  - Toast notifications: success (email sent), info (no check-in needed), error (failure)
+- Files changed: `app/api/email/test/route.ts`, `components/settings/email-preferences.tsx`
+- **Learnings for future iterations:**
+  - Use currentUser() from @clerk/nextjs/server to get full user details in API routes
+  - Button loading state: show Loader2 spinner + disabled state during isPending
+  - Use toast.info() for informational messages (not errors, not success)
+  - Test endpoints should provide detailed feedback about what happened
+---
+
+## 2026-02-02 - US-012: Add unsubscribe link to emails
+- Created `lib/services/unsubscribe-token.ts` with HMAC-based token system:
+  - `generateUnsubscribeToken()` - creates signed token from userId (base64url:signature format)
+  - `verifyUnsubscribeToken()` - validates token using timing-safe comparison
+  - `generateUnsubscribeUrl()` - builds full URL with encoded token
+  - Uses CLERK_SECRET_KEY as fallback signing secret
+- Created `app/api/email/unsubscribe/route.ts`:
+  - GET endpoint that validates token from query params
+  - Disables emailReminders in userPreferences for the user
+  - Redirects to /unsubscribed with success/error status
+- Created `app/unsubscribed/page.tsx` confirmation page:
+  - Success state with green CheckCircle icon
+  - Error states (missing_token, invalid_token, user_not_found) with appropriate icons
+  - Links to Settings page and Dashboard
+  - Dark mode styling consistent with app
+- Updated `lib/services/reminders.ts`:
+  - Now generates unsubscribe URL using `generateUnsubscribeUrl(userId)`
+  - Passes unsubscribeUrl to CheckInReminderEmail component
+- Files changed: `lib/services/unsubscribe-token.ts`, `app/api/email/unsubscribe/route.ts`, `app/unsubscribed/page.tsx`, `lib/services/reminders.ts`
+- **Learnings for future iterations:**
+  - Use `crypto.timingSafeEqual()` for constant-time signature comparison (security best practice)
+  - Use base64url encoding (not base64) for URL-safe tokens
+  - Token format: `base64url(data):signature` allows easy extraction while remaining tamper-proof
+  - Redirect-based APIs (like unsubscribe) should use GET method for compatibility with email clients
+  - Error handling in redirect flows: use query params to pass status to confirmation page
 ---
 
