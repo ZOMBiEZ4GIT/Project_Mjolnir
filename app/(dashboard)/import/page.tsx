@@ -2,12 +2,33 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import { Download } from "lucide-react";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { FileUpload } from "@/components/import/file-upload";
 import { ImportResults, type ImportError } from "@/components/import/import-results";
 import { ImportProgress } from "@/components/import/import-progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+
+// CSV template content
+const TRANSACTIONS_TEMPLATE = `date,symbol,action,quantity,unit_price,fees,currency,exchange,notes
+2024-03-15,VAS.AX,BUY,10,95.50,9.50,AUD,ASX,Initial purchase`;
+
+const SNAPSHOTS_TEMPLATE = `date,fund_name,balance,employer_contrib,employee_contrib,currency
+2024-03-31,AustralianSuper,185000,1200,500,AUD`;
+
+// Helper to trigger CSV download
+function downloadCsv(content: string, filename: string) {
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 export const dynamic = "force-dynamic";
 
@@ -217,7 +238,18 @@ export default function ImportPage() {
 
             {/* CSV Format Example */}
             <div className="rounded-lg border border-gray-800 bg-gray-950 p-4">
-              <h4 className="text-sm font-medium text-gray-300 mb-2">CSV Format</h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-medium text-gray-300">CSV Format</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-gray-400 hover:text-white"
+                  onClick={() => downloadCsv(TRANSACTIONS_TEMPLATE, "transactions-template.csv")}
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Download Template
+                </Button>
+              </div>
               <pre className="text-xs text-gray-400 overflow-x-auto whitespace-pre-wrap">
 {`date,symbol,action,quantity,unit_price,fees,currency,exchange,notes
 2024-03-15,VAS.AX,BUY,10,95.50,9.50,AUD,ASX,
@@ -271,7 +303,18 @@ export default function ImportPage() {
 
             {/* CSV Format Example */}
             <div className="rounded-lg border border-gray-800 bg-gray-950 p-4">
-              <h4 className="text-sm font-medium text-gray-300 mb-2">CSV Format</h4>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-medium text-gray-300">CSV Format</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-gray-400 hover:text-white"
+                  onClick={() => downloadCsv(SNAPSHOTS_TEMPLATE, "snapshots-template.csv")}
+                >
+                  <Download className="h-3 w-3 mr-1" />
+                  Download Template
+                </Button>
+              </div>
               <pre className="text-xs text-gray-400 overflow-x-auto whitespace-pre-wrap">
 {`date,fund_name,balance,employer_contrib,employee_contrib,currency
 2024-03-31,AustralianSuper,185000,1200,500,AUD
