@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CurrencySelector } from "@/components/ui/currency-selector";
+import { FxRatesDisplay } from "@/components/ui/fx-rates-display";
 
 /**
  * Refreshes all tradeable holding prices via POST /api/prices.
@@ -101,6 +102,7 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
         Welcome{userName ? `, ${userName}` : ""}
       </h1>
       <div className="flex items-center gap-3">
+        <FxRatesDisplay mode="compact" />
         <CurrencySelector />
         <Button
           onClick={handleRefresh}
