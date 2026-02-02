@@ -107,6 +107,13 @@
     - Symbols: AUD = "$", NZD = "NZ$", USD = "US$"
   - Icons from `lucide-react` (TrendingUp, TrendingDown, AlertTriangle, etc.)
 
+- CurrencyProvider in `components/providers/currency-provider.tsx`:
+  - `useCurrency()` hook for currency context in client components
+  - Provides: displayCurrency, setDisplayCurrency, rates, isLoading, isStale, ratesFetchedAt, convert(), refreshRates()
+  - `convert(amount, fromCurrency)` converts to display currency using current rates
+  - Uses optimistic updates for immediate UI feedback when changing currency
+  - Hierarchy: ClerkProvider > QueryProvider > CurrencyProvider > app
+
 ---
 
 # W-8 Multi-Currency Support Progress Log
@@ -175,5 +182,20 @@ Started: 2026-02-02
   - Native currency indicator shows `(currencyCode)` badge when showNative=true and currencies differ
   - Loading skeleton uses inline span with animate-pulse for consistent sizing
   - Test pages can be added at `/test-*` routes for component verification
+---
+
+## 2026-02-02 - US-006
+- Implemented CurrencyProvider context for app-wide currency management
+- Files changed:
+  - `components/providers/currency-provider.tsx` - New provider with TanStack Query integration
+  - `app/layout.tsx` - Wrapped app in CurrencyProvider
+- **Learnings for future iterations:**
+  - CurrencyProvider must be inside QueryProvider (needs queryClient) and ClerkProvider (needs auth)
+  - Provider hierarchy: ClerkProvider > QueryProvider > CurrencyProvider > app content
+  - `useCurrency()` hook provides: displayCurrency, setDisplayCurrency, rates, isLoading, isStale, ratesFetchedAt, convert, refreshRates
+  - Uses optimistic updates for setDisplayCurrency (immediate UI update, persist async)
+  - Fetches from `/api/preferences` and `/api/exchange-rates` on mount when authenticated
+  - `convert(amount, fromCurrency)` function handles rates unavailable gracefully (returns original)
+  - Import pattern: `import { CurrencyProvider, useCurrency } from "@/components/providers/currency-provider"`
 ---
 
