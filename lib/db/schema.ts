@@ -150,6 +150,8 @@ export const contributions = pgTable(
 
 export const priceCacheSourceEnum = pgEnum("price_cache_source", ["yahoo", "coingecko"]);
 
+export const importTypeEnum = pgEnum("import_type", ["transactions", "snapshots"]);
+
 export const priceCache = pgTable("price_cache", {
   id: uuid("id").defaultRandom().primaryKey(),
   symbol: text("symbol").notNull().unique(),
@@ -181,12 +183,31 @@ export const exchangeRates = pgTable(
 );
 
 // =============================================================================
+// IMPORT HISTORY
+// =============================================================================
+
+export const importHistory = pgTable("import_history", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: text("user_id")
+    .references(() => users.id)
+    .notNull(),
+  type: importTypeEnum("type").notNull(),
+  filename: text("filename").notNull(),
+  total: integer("total").notNull(),
+  imported: integer("imported").notNull(),
+  skipped: integer("skipped").notNull(),
+  errorsJson: text("errors_json"), // JSON array of errors, stored as text
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// =============================================================================
 // RELATIONS
 // =============================================================================
 
 export const usersRelations = relations(users, ({ one, many }) => ({
   holdings: many(holdings),
   preferences: one(userPreferences),
+  importHistory: many(importHistory),
 }));
 
 export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
@@ -227,6 +248,13 @@ export const contributionsRelations = relations(contributions, ({ one }) => ({
   }),
 }));
 
+export const importHistoryRelations = relations(importHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [importHistory.userId],
+    references: [users.id],
+  }),
+}));
+
 // =============================================================================
 // TYPES (for TypeScript inference)
 // =============================================================================
@@ -254,3 +282,6 @@ export type NewPriceCache = typeof priceCache.$inferInsert;
 
 export type ExchangeRate = typeof exchangeRates.$inferSelect;
 export type NewExchangeRate = typeof exchangeRates.$inferInsert;
+
+export type ImportHistory = typeof importHistory.$inferSelect;
+export type NewImportHistory = typeof importHistory.$inferInsert;

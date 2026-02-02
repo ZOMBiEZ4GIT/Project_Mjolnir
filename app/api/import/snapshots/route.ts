@@ -12,6 +12,8 @@ import { auth } from "@clerk/nextjs/server";
 import { parseCSV } from "@/lib/import/csv-parser";
 import { validateSnapshotRows } from "@/lib/import/validators/snapshot-validator";
 import { importSnapshots, type ImportError } from "@/lib/import/snapshot-importer";
+import { db } from "@/lib/db";
+import { importHistory } from "@/lib/db/schema";
 
 interface ImportSummary {
   total: number;
@@ -113,6 +115,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     skipped: importResult.skipped + validationErrors.length,
     errors: allErrors,
   };
+
+  // Save import history record
+  await db.insert(importHistory).values({
+    userId,
+    type: "snapshots",
+    filename: file.name,
+    total: summary.total,
+    imported: summary.imported,
+    skipped: summary.skipped,
+    errorsJson: allErrors.length > 0 ? JSON.stringify(allErrors) : null,
+  });
 
   return NextResponse.json(summary);
 }
