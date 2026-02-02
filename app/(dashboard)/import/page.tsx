@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { FileUpload } from "@/components/import/file-upload";
 import { ImportResults, type ImportError } from "@/components/import/import-results";
+import { ImportProgress } from "@/components/import/import-progress";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -24,11 +25,36 @@ export default function ImportPage() {
   const [transactionFile, setTransactionFile] = React.useState<File | null>(null);
   const [transactionResults, setTransactionResults] = React.useState<ImportSummary | null>(null);
   const [transactionLoading, setTransactionLoading] = React.useState(false);
+  const [transactionRowCount, setTransactionRowCount] = React.useState<number | undefined>(undefined);
 
   // Snapshot import state
   const [snapshotFile, setSnapshotFile] = React.useState<File | null>(null);
   const [snapshotResults, setSnapshotResults] = React.useState<ImportSummary | null>(null);
   const [snapshotLoading, setSnapshotLoading] = React.useState(false);
+  const [snapshotRowCount, setSnapshotRowCount] = React.useState<number | undefined>(undefined);
+
+  // Helper to count CSV rows (excluding header)
+  const countCsvRows = async (file: File): Promise<number> => {
+    const text = await file.text();
+    const lines = text.split("\n").filter((line) => line.trim().length > 0);
+    // Subtract 1 for header row
+    return Math.max(0, lines.length - 1);
+  };
+
+  // Handle file selection with row counting
+  const handleTransactionFileSelect = async (file: File) => {
+    setTransactionFile(file);
+    setTransactionResults(null);
+    const rowCount = await countCsvRows(file);
+    setTransactionRowCount(rowCount);
+  };
+
+  const handleSnapshotFileSelect = async (file: File) => {
+    setSnapshotFile(file);
+    setSnapshotResults(null);
+    const rowCount = await countCsvRows(file);
+    setSnapshotRowCount(rowCount);
+  };
 
   const handleTransactionImport = async () => {
     if (!transactionFile) return;
@@ -111,11 +137,13 @@ export default function ImportPage() {
   const handleTransactionFileClear = () => {
     setTransactionFile(null);
     setTransactionResults(null);
+    setTransactionRowCount(undefined);
   };
 
   const handleSnapshotFileClear = () => {
     setSnapshotFile(null);
     setSnapshotResults(null);
+    setSnapshotRowCount(undefined);
   };
 
   // Show loading while Clerk auth is loading
@@ -159,20 +187,25 @@ export default function ImportPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <FileUpload
-              onFileSelect={setTransactionFile}
+              onFileSelect={handleTransactionFileSelect}
               onFileClear={handleTransactionFileClear}
               disabled={transactionLoading}
             />
 
-            {transactionFile && !transactionResults && (
+            {transactionFile && !transactionResults && !transactionLoading && (
               <Button
                 onClick={handleTransactionImport}
                 disabled={transactionLoading}
                 className="w-full"
               >
-                {transactionLoading ? "Importing..." : "Import Transactions"}
+                Import Transactions
               </Button>
             )}
+
+            <ImportProgress
+              isLoading={transactionLoading}
+              rowCount={transactionRowCount}
+            />
 
             {transactionResults && (
               <ImportResults
@@ -208,20 +241,25 @@ export default function ImportPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <FileUpload
-              onFileSelect={setSnapshotFile}
+              onFileSelect={handleSnapshotFileSelect}
               onFileClear={handleSnapshotFileClear}
               disabled={snapshotLoading}
             />
 
-            {snapshotFile && !snapshotResults && (
+            {snapshotFile && !snapshotResults && !snapshotLoading && (
               <Button
                 onClick={handleSnapshotImport}
                 disabled={snapshotLoading}
                 className="w-full"
               >
-                {snapshotLoading ? "Importing..." : "Import Snapshots"}
+                Import Snapshots
               </Button>
             )}
+
+            <ImportProgress
+              isLoading={snapshotLoading}
+              rowCount={snapshotRowCount}
+            />
 
             {snapshotResults && (
               <ImportResults
