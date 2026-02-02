@@ -298,3 +298,23 @@ Started: 2026-02-03
   - Handle mutation state in the dialog component to keep parent component cleaner
 ---
 
+## 2026-02-03 - US-015
+- Added keyboard shortcuts for quick navigation
+- Installed shadcn/ui command component (built on cmdk)
+- Created `components/command-menu.tsx` with Cmd/Ctrl+K listener
+- CommandMenu shows navigation palette with all dashboard pages
+- Each item has icon, label, and description
+- Uses CommandDialog from shadcn/ui for modal behavior
+- Added CommandMenu to dashboard layout (always available)
+- Added keyboard shortcuts documentation section to settings page
+- Documents: Cmd/Ctrl+K (open menu), Escape (close dialogs), Enter (submit forms)
+- Note about Windows/Linux using Ctrl instead of Cmd
+- Files changed: `components/command-menu.tsx` (created), `components/ui/command.tsx` (installed), `app/(dashboard)/layout.tsx` (modified), `app/(dashboard)/settings/page.tsx` (modified)
+- **Learnings for future iterations:**
+  - Install shadcn/ui command with `npx shadcn@latest add command --yes`
+  - cmdk provides fuzzy search out of the box - just use CommandInput
+  - Escape key handling is built into Radix UI dialogs (no custom implementation needed)
+  - Enter form submission is standard HTML behavior (no custom implementation needed)
+  - Use kbd element for keyboard shortcut styling with consistent border/bg colors
+---
+
