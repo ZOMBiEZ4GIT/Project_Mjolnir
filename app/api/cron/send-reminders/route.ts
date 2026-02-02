@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { users, userPreferences } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or, isNull, lt } from "drizzle-orm";
 import { sendCheckInReminder } from "@/lib/services/reminders";
+
+/**
+ * Get the first day of the current month as a Date object.
+ * Used to filter out users who already received a reminder this month.
+ */
+function getFirstOfCurrentMonth(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
 
 /**
  * POST /api/cron/send-reminders
@@ -40,20 +49,32 @@ export async function POST(request: NextRequest) {
   // For days 29-31, treat as day 28 (since reminderDay max is 28)
   const effectiveDay = Math.min(currentDay, 28);
 
-  // Query users who have email_reminders enabled and reminder_day matches today
+  // Get start of current month to check if reminder already sent this month
+  const monthStart = getFirstOfCurrentMonth();
+
+  // Query users who:
+  // - Have email_reminders enabled
+  // - reminder_day matches today
+  // - Have NOT received a reminder this month (lastReminderSent is null or before this month)
   const eligibleUsers = await db
     .select({
       userId: users.id,
       email: users.email,
       name: users.name,
       reminderDay: userPreferences.reminderDay,
+      lastReminderSent: userPreferences.lastReminderSent,
     })
     .from(users)
     .innerJoin(userPreferences, eq(userPreferences.userId, users.id))
     .where(
       and(
         eq(userPreferences.emailReminders, true),
-        eq(userPreferences.reminderDay, effectiveDay)
+        eq(userPreferences.reminderDay, effectiveDay),
+        // Skip users who already received a reminder this month
+        or(
+          isNull(userPreferences.lastReminderSent),
+          lt(userPreferences.lastReminderSent, monthStart)
+        )
       )
     );
 

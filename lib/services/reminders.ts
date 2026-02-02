@@ -6,7 +6,7 @@
  */
 
 import { db } from "@/lib/db";
-import { holdings, snapshots } from "@/lib/db/schema";
+import { holdings, snapshots, userPreferences } from "@/lib/db/schema";
 import { eq, isNull, and, inArray } from "drizzle-orm";
 import { sendEmail, type SendEmailResult } from "./email";
 import {
@@ -233,6 +233,12 @@ export async function sendCheckInReminder(
       error: result.error,
     };
   }
+
+  // Update lastReminderSent timestamp to track when email was sent
+  await db
+    .update(userPreferences)
+    .set({ lastReminderSent: new Date() })
+    .where(eq(userPreferences.userId, userId));
 
   return {
     success: true,
