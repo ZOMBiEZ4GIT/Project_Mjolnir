@@ -171,3 +171,34 @@ Started: 2026-02-02
   - Works with both transaction and snapshot import API responses
 ---
 
+## 2026-02-02 - US-010
+- Implemented import page at `app/(dashboard)/import/page.tsx`
+- Added Import link to dashboard navigation in `components/dashboard/nav.tsx`
+- Added shadcn card component `components/ui/card.tsx`
+- Files created/modified: `app/(dashboard)/import/page.tsx`, `components/dashboard/nav.tsx`, `components/ui/card.tsx`
+- **Learnings for future iterations:**
+  - Import page uses two Card sections: Import Transactions and Import Snapshots
+  - Each section has FileUpload + ImportResults components with local state
+  - ImportSummary interface: { total, imported, skipped, errors } - matches API response
+  - Uses toast.success/warning/error from sonner based on import results
+  - CSV format examples shown in pre tags with text-xs text-gray-400 styling
+  - Dashboard navigation is defined in `components/dashboard/nav.tsx` as `navItems` array
+  - Card component from shadcn added via `npx shadcn@latest add card -y`
+  - Page follows existing patterns: useAuthSafe for auth, dynamic="force-dynamic", container layout
+---
+
+## 2026-02-02 - US-011
+- Implemented import progress indicator with animated progress bar
+- Added `components/import/import-progress.tsx` - shows progress bar + "Processing X rows..." message
+- Added `components/ui/progress.tsx` - shadcn Progress component (radix-ui/react-progress)
+- Updated `app/(dashboard)/import/page.tsx` - integrated ImportProgress, row counting on file select
+- Files created/modified: `components/import/import-progress.tsx`, `components/ui/progress.tsx`, `app/(dashboard)/import/page.tsx`
+- **Learnings for future iterations:**
+  - ImportProgress component props: isLoading (boolean), rowCount (number|undefined), progress (number|undefined), className
+  - Uses indeterminate progress animation when no actual progress value provided (simulates 0-90% over time)
+  - Row counting done on file select via file.text().split("\n") - subtracts 1 for header row
+  - Import button hidden during loading (not just disabled) - shows progress bar instead
+  - Progress component from shadcn: `npx shadcn@latest add progress -y` (uses @radix-ui/react-progress)
+  - Loader2 icon with animate-spin class for spinning animation
+---
+
