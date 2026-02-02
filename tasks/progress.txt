@@ -299,3 +299,25 @@ Started: 2026-02-02
   - Single data point handling: show info card with key metrics instead of empty/broken chart
 ---
 
+## 2026-02-02 - US-013
+- Added reusable loading and error state components for all charts
+- Files changed:
+  - `components/charts/chart-skeleton.tsx` (new file)
+  - `components/charts/chart-error.tsx` (new file)
+  - `components/charts/index.ts` (new file)
+  - `components/dashboard/net-worth-chart.tsx` (updated)
+  - `components/dashboard/super-growth-chart.tsx` (updated)
+  - `components/dashboard/asset-allocation-pie-chart.tsx` (updated)
+  - `components/holdings/holding-price-chart.tsx` (updated)
+  - `components/holdings/super-balance-history-chart.tsx` (updated)
+- **Learnings for future iterations:**
+  - Centralize reusable UI patterns in dedicated directories (components/charts/ for chart utilities)
+  - ChartSkeleton supports variant prop (bar/pie/line) for different chart type skeletons
+  - ChartError accepts onRetry callback for retry functionality
+  - withContainer prop adds card-style border/background wrapper when needed
+  - Use TanStack Query's invalidateQueries() for retry - triggers immediate refetch
+  - useCallback() wraps retry handlers to prevent unnecessary re-renders
+  - Delete inline skeleton functions when migrating to reusable components
+  - Export patterns: create index.ts for barrel exports from component directories
+---
+

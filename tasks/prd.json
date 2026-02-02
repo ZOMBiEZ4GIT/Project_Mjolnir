@@ -208,8 +208,8 @@
         "Lint passes"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created reusable ChartSkeleton (bar/pie/line variants) and ChartError (with retry button) components in components/charts/. Updated all chart components to use these: NetWorthChart, SuperGrowthChart, AssetAllocationPieChart, HoldingPriceChart, SuperBalanceHistoryChart. Retry uses TanStack Query invalidateQueries() for data refetch."
     },
     {
       "id": "US-014",
