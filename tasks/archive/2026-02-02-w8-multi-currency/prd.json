@@ -1,0 +1,339 @@
+{
+  "id": "w8-multi-currency",
+  "title": "W-8 Multi-Currency Support",
+  "branchName": "feature/w8-multi-currency",
+  "description": "Multi-currency support enables accurate tracking of holdings denominated in AUD, NZD, and USD. All values are stored in their native currency and converted at display time using current exchange rates.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create user preferences schema",
+      "description": "As a developer, I need to store user display preferences including currency.",
+      "acceptanceCriteria": [
+        "Create `user_preferences` table with Drizzle schema in `lib/db/schema.ts`",
+        "Fields: id (uuid), user_id (text, from Clerk), display_currency (enum: AUD, NZD, USD, default AUD), created_at, updated_at",
+        "Add unique constraint on user_id",
+        "Generate migration with `npm run db:generate`",
+        "Typecheck passes (`npm run build`)",
+        "Lint passes (`npm run lint`)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Schema created with migration 0005_robust_leo.sql"
+    },
+    {
+      "id": "US-002",
+      "title": "Create user preferences API endpoints",
+      "description": "As a developer, I need API endpoints to get and update user preferences.",
+      "acceptanceCriteria": [
+        "Create `app/api/preferences/route.ts` with GET and PATCH handlers",
+        "GET returns current user preferences (creates default if none exist)",
+        "PATCH updates display_currency",
+        "Returns: { displayCurrency, updatedAt }",
+        "Requires Clerk authentication",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "API endpoints created with ensureUser helper to handle foreign key constraint"
+    },
+    {
+      "id": "US-003",
+      "title": "Create currency conversion utility",
+      "description": "As a developer, I need a utility to convert between currencies.",
+      "acceptanceCriteria": [
+        "Create `lib/utils/currency.ts`",
+        "Function `convertCurrency(amount, from, to, rates): number`",
+        "Handles AUD to NZD, AUD to USD, NZD to USD conversions (and reverse)",
+        "Returns original amount if from === to",
+        "Uses rates object: { 'USD/AUD': number, 'NZD/AUD': number }",
+        "Rounds to 2 decimal places for display",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Created lib/utils/currency.ts with convertCurrency function using AUD as intermediary for cross-currency conversions"
+    },
+    {
+      "id": "US-004",
+      "title": "Create currency formatting utility",
+      "description": "As a developer, I need consistent currency formatting across the app.",
+      "acceptanceCriteria": [
+        "Add to `lib/utils/currency.ts`",
+        "Function `formatCurrency(amount, currency, options?): string`",
+        "Options: { showCode: boolean, showSymbol: boolean, compact: boolean }",
+        "Symbols: $ for AUD, NZ$ for NZD, US$ for USD",
+        "Handles negative numbers: -$1,234.56",
+        "Compact mode: $1.2M, $500K",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Added formatCurrency function with FormatCurrencyOptions interface, CURRENCY_SYMBOLS map, and compact number helpers"
+    },
+    {
+      "id": "US-005",
+      "title": "Create CurrencyDisplay component",
+      "description": "As a developer, I need a reusable component for displaying currency values.",
+      "acceptanceCriteria": [
+        "Create `components/ui/currency-display.tsx`",
+        "Props: amount, currency, showNative?, nativeCurrency?, nativeAmount?",
+        "Shows formatted amount in display currency",
+        "Hover/tooltip shows ISO code",
+        "If showNative and currencies differ: shows native value indicator",
+        "Handles loading state (skeleton)",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Created CurrencyDisplay component with tooltip, native indicator, and skeleton. Added shadcn/ui Tooltip dependency."
+    },
+    {
+      "id": "US-006",
+      "title": "Create currency context provider",
+      "description": "As a developer, I need a context to provide display currency and rates throughout the app.",
+      "acceptanceCriteria": [
+        "Create `components/providers/currency-provider.tsx`",
+        "Provides: displayCurrency, setDisplayCurrency, rates, isLoading",
+        "Fetches user preference on mount",
+        "Fetches exchange rates on mount",
+        "Function `convert(amount, fromCurrency): number` using current rates",
+        "Wrap app in CurrencyProvider in layout",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Created CurrencyProvider context with TanStack Query, optimistic updates, useCurrency hook. Wrapped in root layout."
+    },
+    {
+      "id": "US-007",
+      "title": "Create currency selector component",
+      "description": "As Roland, I want to switch my display currency easily.",
+      "acceptanceCriteria": [
+        "Create `components/ui/currency-selector.tsx`",
+        "Dropdown/toggle showing current display currency",
+        "Options: AUD, NZD, USD with symbols",
+        "Selecting updates user preference via API",
+        "Updates context immediately (optimistic update)",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Created CurrencySelector component with Select dropdown, DollarSign icon, compact/full modes, and loading skeleton."
+    },
+    {
+      "id": "US-008",
+      "title": "Add currency selector to dashboard header",
+      "description": "As Roland, I want to toggle display currency from the dashboard.",
+      "acceptanceCriteria": [
+        "Add CurrencySelector to dashboard header/toolbar",
+        "Position: near refresh button or user menu",
+        "Changing currency updates all displayed values immediately",
+        "Persists preference across sessions",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Added CurrencySelector to DashboardHeader component, positioned next to Refresh button. Uses CurrencyProvider for optimistic updates."
+    },
+    {
+      "id": "US-009",
+      "title": "Update net worth calculations with currency conversion",
+      "description": "As a developer, I need net worth calculations to respect display currency.",
+      "acceptanceCriteria": [
+        "Update `lib/calculations/net-worth.ts`",
+        "Function accepts optional displayCurrency parameter",
+        "Converts all values to display currency before summing",
+        "Breakdown values also in display currency",
+        "Returns rates used for conversion (for transparency)",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Added displayCurrency parameter to calculateNetWorth and calculateAssetBreakdown, returns ratesUsed for transparency"
+    },
+    {
+      "id": "US-010",
+      "title": "Update dashboard with currency conversion",
+      "description": "As Roland, I want dashboard values in my selected display currency.",
+      "acceptanceCriteria": [
+        "Hero net worth card shows value in display currency",
+        "Total assets/debt in display currency",
+        "Asset allocation values in display currency",
+        "Chart values in display currency",
+        "All use CurrencyDisplay component or currency context",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Updated net-worth API to accept displayCurrency param, all 5 dashboard components now use useCurrency hook and formatCurrency utility"
+    },
+    {
+      "id": "US-011",
+      "title": "Update holdings list with currency conversion",
+      "description": "As Roland, I want to see holding values in my display currency.",
+      "acceptanceCriteria": [
+        "Holdings list uses CurrencyDisplay component",
+        "Market value shown in display currency",
+        "Shows native currency indicator if different from display",
+        "Cost basis and gain/loss converted to display currency",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Updated HoldingsTable with useCurrency hook, CurrencyDisplay for MarketValue/GainLoss/CostBasis cells"
+    },
+    {
+      "id": "US-012",
+      "title": "Add native currency toggle option",
+      "description": "As Roland, I want to optionally see values in their native currency.",
+      "acceptanceCriteria": [
+        "Add toggle/checkbox: Show native currencies",
+        "When enabled: shows values in native currency (not converted)",
+        "Market value, cost basis, gain/loss in native",
+        "Totals still aggregate in display currency",
+        "Toggle state stored in user preferences",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Added showNativeCurrency to user_preferences, CurrencyProvider, and NativeCurrencyToggle component. Holdings table cells respect toggle."
+    },
+    {
+      "id": "US-013",
+      "title": "Currency filter on holdings list",
+      "description": "As Roland, I want to filter holdings by currency.",
+      "acceptanceCriteria": [
+        "Add currency filter dropdown to holdings list",
+        "Options: All, AUD, NZD, USD",
+        "Filters holdings to show only selected currency",
+        "Filter state persists in URL params",
+        "Works with existing type and dormant filters",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "Created CurrencyFilter component with Select dropdown. Filter state persists in URL ?currency= param. Works with existing show_dormant filter."
+    },
+    {
+      "id": "US-014",
+      "title": "Currency grouping option on holdings list",
+      "description": "As Roland, I want to group holdings by currency.",
+      "acceptanceCriteria": [
+        "Add Group by option: Type (default) or Currency",
+        "When grouped by currency: sections for AUD, NZD, USD",
+        "Each section shows subtotal in that currency",
+        "Section headers show count and subtotal",
+        "Toggle state persists in URL params",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "Created GroupBySelector component. HoldingsTable supports groupBy='type'|'currency' prop. Currency sections show subtotal in native currency. URL param ?group_by=currency persists state."
+    },
+    {
+      "id": "US-015",
+      "title": "Dashboard currency exposure breakdown",
+      "description": "As Roland, I want to see my currency exposure on the dashboard.",
+      "acceptanceCriteria": [
+        "Add Currency Exposure card/section to dashboard",
+        "Shows total value held in each currency (in display currency)",
+        "Shows percentage allocation per currency",
+        "Visual indicator (pie chart or bars)",
+        "Includes all asset types",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "Added calculateCurrencyExposure function, /api/currency-exposure endpoint, CurrencyExposure component with progress bars and flags. Displayed side-by-side with Asset Allocation on dashboard."
+    },
+    {
+      "id": "US-016",
+      "title": "Update transactions display with currency",
+      "description": "As Roland, I want transaction values to show currency clearly.",
+      "acceptanceCriteria": [
+        "Transactions list shows currency for each transaction",
+        "Uses CurrencyDisplay component",
+        "Filter by currency option",
+        "Total row shows aggregates (converted if mixed currencies)",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "Added CurrencyDisplay component to Unit Price, Fees, and Total columns. Added CurrencyFilter dropdown with URL persistence. Added TableFooter with aggregated totals (buys, sells, dividends, net cash flow) that convert to display currency when mixed."
+    },
+    {
+      "id": "US-017",
+      "title": "Update snapshots display with currency",
+      "description": "As Roland, I want snapshot values to show currency clearly.",
+      "acceptanceCriteria": [
+        "Snapshots list shows currency for each snapshot",
+        "Uses CurrencyDisplay component",
+        "Check-in modal shows currency per holding",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 17,
+      "passes": true,
+      "notes": "Snapshots page uses CurrencyDisplay component with currency conversion and native indicator. Check-in modal shows currency badges for all holding types (super, cash, debt)."
+    },
+    {
+      "id": "US-018",
+      "title": "FX rate display on dashboard",
+      "description": "As Roland, I want to see current exchange rates.",
+      "acceptanceCriteria": [
+        "Add small section/tooltip showing current rates",
+        "Shows: USD/AUD, NZD/AUD rates",
+        "Shows as of [time] indicator",
+        "Accessible from currency selector or dashboard",
+        "Typecheck passes",
+        "Lint passes",
+        "Verify in browser using Playwright"
+      ],
+      "priority": 18,
+      "passes": true,
+      "notes": "Created FxRatesDisplay component with compact (icon+tooltip) and inline modes. Shows USD/AUD and NZD/AUD rates with 'as of' time indicator. Added to dashboard header toolbar."
+    },
+    {
+      "id": "US-019",
+      "title": "Design for historical FX rates (documentation only)",
+      "description": "As a developer, I need schema design to support future historical rates.",
+      "acceptanceCriteria": [
+        "Document proposed schema in `docs/future-historical-fx.md`",
+        "Schema: exchange_rate_history (from, to, rate, date, fetched_at)",
+        "Explain how calculations would change to use historical rates",
+        "No implementation in this epic - documentation only",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 19,
+      "passes": true,
+      "notes": "Created comprehensive documentation covering schema design, data collection strategies (cron/backfill), calculation changes for net worth history and cost basis, migration path, and API provider comparison."
+    }
+  ]
+}
