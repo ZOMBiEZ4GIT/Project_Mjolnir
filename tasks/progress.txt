@@ -318,3 +318,23 @@ Started: 2026-02-03
   - Use kbd element for keyboard shortcut styling with consistent border/bg colors
 ---
 
+## 2026-02-03 - US-016
+- Added empty states to all list pages with consistent styling and helpful CTAs
+- Created `components/ui/empty-state.tsx` - reusable component with icon, title, description, and optional action
+- Updated Holdings page (`app/(dashboard)/holdings/page.tsx`):
+  - Empty state shows Briefcase icon with "Add your first holding" CTA button
+  - Filter-empty state shows Filter icon with "Show all currencies" button
+- Updated Transactions page (`app/(dashboard)/transactions/page.tsx`):
+  - Empty state shows ArrowLeftRight icon with "Add your first transaction" CTA button
+  - Filter-empty state shows Filter icon with "Clear all filters" button
+- Updated Snapshots page (`app/(dashboard)/snapshots/page.tsx`):
+  - Empty state shows Camera icon with "Go to Dashboard" link (since snapshots are created via check-in modal)
+  - Filter-empty state shows Filter icon with "Clear all filters" button
+- Files changed: `components/ui/empty-state.tsx` (created), `app/(dashboard)/holdings/page.tsx`, `app/(dashboard)/transactions/page.tsx`, `app/(dashboard)/snapshots/page.tsx` (modified)
+- **Learnings for future iterations:**
+  - Use LucideIcon type for icon prop in reusable components
+  - Differentiate between "no data exists" and "filters returned no results" with different icons and messages
+  - For items created elsewhere (snapshots via check-in modal), link to the creation location rather than showing an "Add" button
+  - Use size="lg" on primary CTA buttons in empty states for visual prominence
+---
+
