@@ -25,6 +25,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { EditHoldingDialog } from "./edit-holding-dialog";
+import { CurrencyDisplay } from "@/components/ui/currency-display";
+import { useCurrency } from "@/components/providers/currency-provider";
+import type { Currency } from "@/lib/utils/currency";
 
 // Display names for holding types
 const HOLDING_TYPE_LABELS: Record<Holding["type"], string> = {
@@ -145,17 +148,6 @@ function formatSnapshotDate(dateString: string): string {
 }
 
 /**
- * Format a number as currency (without symbol, just formatting)
- */
-function formatCurrency(value: number | null): string {
-  if (value === null || value === 0) return "—";
-  return value.toLocaleString("en-AU", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-}
-
-/**
  * Format quantity with appropriate decimal places
  */
 function formatQuantity(value: number | null): string {
@@ -241,18 +233,6 @@ function calculateMarketValue(quantity: number | null, price: number | null): nu
 }
 
 /**
- * Format market value with currency symbol
- */
-function formatMarketValue(value: number | null, currency: string): string {
-  if (value === null) return "—";
-  const symbol = CURRENCY_SYMBOLS[currency] || currency;
-  return `${symbol}${value.toLocaleString("en-AU", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-/**
  * Calculate unrealized gain/loss (Market Value - Cost Basis)
  */
 function calculateGainLoss(
@@ -268,19 +248,6 @@ function calculateGainLoss(
 }
 
 /**
- * Format gain/loss amount with sign
- */
-function formatGainLossAmount(amount: number, currency: string): string {
-  const symbol = CURRENCY_SYMBOLS[currency] || currency;
-  const sign = amount >= 0 ? "+" : "";
-  const absValue = Math.abs(amount).toLocaleString("en-AU", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${sign}${symbol}${absValue}`;
-}
-
-/**
  * Format gain/loss percentage with sign
  */
 function formatGainLossPercent(percent: number): string {
@@ -293,6 +260,9 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
   const groupedHoldings = groupHoldingsByType(holdings);
   const queryClient = useQueryClient();
+
+  // Get currency context for display currency conversion
+  const { displayCurrency, convert, isLoading: currencyLoading } = useCurrency();
 
   const deleteMutation = useMutation({
     mutationFn: async (holdingId: string) => {
@@ -345,6 +315,9 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
               onDelete={setDeletingHolding}
               onRetryPrice={onRetryPrice}
               retryingPriceIds={retryingPriceIds}
+              displayCurrency={displayCurrency}
+              convert={convert}
+              currencyLoading={currencyLoading}
             />
           );
         })}
@@ -398,6 +371,9 @@ interface HoldingsTypeSectionProps {
   onDelete: (holding: HoldingWithData) => void;
   onRetryPrice?: (holdingId: string) => void;
   retryingPriceIds?: Set<string>;
+  displayCurrency: Currency;
+  convert: (amount: number, fromCurrency: Currency) => number;
+  currencyLoading?: boolean;
 }
 
 /**
@@ -503,6 +479,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
 
 /**
  * MarketValueCell component displays market value (quantity x price).
+ * Now with display currency conversion and native currency indicator.
  */
 interface MarketValueCellProps {
   quantity: number | null;
@@ -510,12 +487,24 @@ interface MarketValueCellProps {
   holdingCurrency: string;
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  displayCurrency: Currency;
+  convert: (amount: number, fromCurrency: Currency) => number;
+  currencyLoading?: boolean;
 }
 
-function MarketValueCell({ quantity, holdingId, holdingCurrency, prices, pricesLoading }: MarketValueCellProps) {
+function MarketValueCell({
+  quantity,
+  holdingId,
+  holdingCurrency,
+  prices,
+  pricesLoading,
+  displayCurrency,
+  convert,
+  currencyLoading,
+}: MarketValueCellProps) {
   // Loading state
-  if (pricesLoading) {
-    return <span className="text-gray-500 text-sm">Loading...</span>;
+  if (pricesLoading || currencyLoading) {
+    return <CurrencyDisplay amount={0} currency={displayCurrency} isLoading />;
   }
 
   // No quantity - cannot calculate market value
@@ -530,18 +519,31 @@ function MarketValueCell({ quantity, holdingId, holdingCurrency, prices, pricesL
   }
 
   const { price, currency } = priceData;
-  const displayCurrency = currency || holdingCurrency;
-  const marketValue = calculateMarketValue(quantity, price);
+  const nativeCurrency = (currency || holdingCurrency) as Currency;
+  const nativeMarketValue = calculateMarketValue(quantity, price);
+
+  if (nativeMarketValue === null) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  // Convert to display currency
+  const displayMarketValue = convert(nativeMarketValue, nativeCurrency);
 
   return (
-    <span className="text-white font-mono">
-      {formatMarketValue(marketValue, displayCurrency)}
-    </span>
+    <CurrencyDisplay
+      amount={displayMarketValue}
+      currency={displayCurrency}
+      showNative
+      nativeCurrency={nativeCurrency}
+      nativeAmount={nativeMarketValue}
+      className="text-white font-mono"
+    />
   );
 }
 
 /**
  * GainLossCell component displays unrealized gain/loss (Market Value - Cost Basis).
+ * Now with display currency conversion and native currency indicator.
  */
 interface GainLossCellProps {
   quantity: number | null;
@@ -550,12 +552,25 @@ interface GainLossCellProps {
   holdingCurrency: string;
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  displayCurrency: Currency;
+  convert: (amount: number, fromCurrency: Currency) => number;
+  currencyLoading?: boolean;
 }
 
-function GainLossCell({ quantity, costBasis, holdingId, holdingCurrency, prices, pricesLoading }: GainLossCellProps) {
+function GainLossCell({
+  quantity,
+  costBasis,
+  holdingId,
+  holdingCurrency,
+  prices,
+  pricesLoading,
+  displayCurrency,
+  convert,
+  currencyLoading,
+}: GainLossCellProps) {
   // Loading state
-  if (pricesLoading) {
-    return <span className="text-gray-500 text-sm">Loading...</span>;
+  if (pricesLoading || currencyLoading) {
+    return <CurrencyDisplay amount={0} currency={displayCurrency} isLoading />;
   }
 
   // No quantity - cannot calculate market value
@@ -575,32 +590,94 @@ function GainLossCell({ quantity, costBasis, holdingId, holdingCurrency, prices,
   }
 
   const { price, currency } = priceData;
-  const displayCurrency = currency || holdingCurrency;
+  const nativeCurrency = (currency || holdingCurrency) as Currency;
   const marketValue = calculateMarketValue(quantity, price);
-  const gainLoss = calculateGainLoss(marketValue, costBasis);
+  const nativeGainLoss = calculateGainLoss(marketValue, costBasis);
 
-  if (!gainLoss) {
+  if (!nativeGainLoss) {
     return <span className="text-gray-500 text-sm">—</span>;
   }
 
-  const isPositive = gainLoss.amount >= 0;
+  // Convert gain/loss to display currency
+  const displayGainLoss = convert(nativeGainLoss.amount, nativeCurrency);
+  const isPositive = displayGainLoss >= 0;
   const colorClass = isPositive ? "text-green-400" : "text-red-400";
 
   return (
     <div className="flex flex-col gap-0.5 items-end">
       {/* Amount */}
-      <span className={`font-mono ${colorClass}`}>
-        {formatGainLossAmount(gainLoss.amount, displayCurrency)}
-      </span>
-      {/* Percentage */}
+      <CurrencyDisplay
+        amount={displayGainLoss}
+        currency={displayCurrency}
+        showNative
+        nativeCurrency={nativeCurrency}
+        nativeAmount={nativeGainLoss.amount}
+        className={`font-mono ${colorClass}`}
+      />
+      {/* Percentage - same regardless of currency */}
       <span className={`text-xs ${colorClass}`}>
-        {formatGainLossPercent(gainLoss.percent)}
+        {formatGainLossPercent(nativeGainLoss.percent)}
       </span>
     </div>
   );
 }
 
-function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, onDelete, onRetryPrice, retryingPriceIds }: HoldingsTypeSectionProps) {
+/**
+ * CostBasisCell component displays cost basis or avg cost with currency conversion.
+ */
+interface CostBasisCellProps {
+  costBasis: number | null;
+  holdingCurrency: Currency;
+  displayCurrency: Currency;
+  convert: (amount: number, fromCurrency: Currency) => number;
+  currencyLoading?: boolean;
+}
+
+function CostBasisCell({
+  costBasis,
+  holdingCurrency,
+  displayCurrency,
+  convert,
+  currencyLoading,
+}: CostBasisCellProps) {
+  // Loading state
+  if (currencyLoading) {
+    return <CurrencyDisplay amount={0} currency={displayCurrency} isLoading />;
+  }
+
+  // No cost basis
+  if (costBasis === null || costBasis === 0) {
+    return <span className="text-gray-500 text-sm">—</span>;
+  }
+
+  // Convert to display currency
+  const displayCostBasis = convert(costBasis, holdingCurrency);
+
+  return (
+    <CurrencyDisplay
+      amount={displayCostBasis}
+      currency={displayCurrency}
+      showNative
+      nativeCurrency={holdingCurrency}
+      nativeAmount={costBasis}
+      className="text-gray-300 font-mono"
+    />
+  );
+}
+
+function HoldingsTypeSection({
+  type,
+  holdings,
+  prices,
+  pricesLoading,
+  onEdit,
+  onDelete,
+  onRetryPrice,
+  retryingPriceIds,
+  displayCurrency,
+  convert,
+  currencyLoading,
+}: HoldingsTypeSectionProps) {
   const label = HOLDING_TYPE_LABELS[type];
   const isTradeable = TRADEABLE_TYPES.includes(type as (typeof TRADEABLE_TYPES)[number]);
   const isSnapshotType = SNAPSHOT_TYPES.includes(type as (typeof SNAPSHOT_TYPES)[number]);
@@ -703,6 +780,9 @@ function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, on
                           holdingCurrency={holding.currency}
                           prices={prices}
                           pricesLoading={pricesLoading}
+                          displayCurrency={displayCurrency}
+                          convert={convert}
+                          currencyLoading={currencyLoading}
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -713,13 +793,28 @@ function HoldingsTypeSection({ type, holdings, prices, pricesLoading, onEdit, on
                           holdingCurrency={holding.currency}
                           prices={prices}
                           pricesLoading={pricesLoading}
+                          displayCurrency={displayCurrency}
+                          convert={convert}
+                          currencyLoading={currencyLoading}
                         />
                       </TableCell>
-                      <TableCell className="text-gray-300 text-right font-mono">
-                        {formatCurrency(holding.costBasis)}
+                      <TableCell className="text-right">
+                        <CostBasisCell
+                          costBasis={holding.costBasis}
+                          holdingCurrency={holding.currency as Currency}
+                          displayCurrency={displayCurrency}
+                          convert={convert}
+                          currencyLoading={currencyLoading}
+                        />
                       </TableCell>
-                      <TableCell className="text-gray-300 text-right font-mono">
-                        {formatCurrency(holding.avgCost)}
+                      <TableCell className="text-right">
+                        <CostBasisCell
+                          costBasis={holding.avgCost}
+                          holdingCurrency={holding.currency as Currency}
+                          displayCurrency={displayCurrency}
+                          convert={convert}
+                          currencyLoading={currencyLoading}
+                        />
                       </TableCell>
                     </>
                   )}
