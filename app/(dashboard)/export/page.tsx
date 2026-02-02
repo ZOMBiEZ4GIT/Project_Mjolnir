@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, Archive } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -232,9 +232,36 @@ export default function ExportPage() {
               Download a complete JSON backup of all your data including holdings, transactions, snapshots, and contributions.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {/* US-013: Full backup button and counts will be added here */}
-            <p className="text-sm text-gray-500">Export options coming soon...</p>
+          <CardContent className="space-y-4">
+            <div className="text-sm text-gray-400">
+              {isLoadingCounts ? (
+                "Loading..."
+              ) : (
+                <div className="space-y-1">
+                  <p>
+                    <span className="font-semibold text-white">{counts.holdings}</span>{" "}
+                    {counts.holdings === 1 ? "holding" : "holdings"}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-white">{counts.transactions}</span>{" "}
+                    {counts.transactions === 1 ? "transaction" : "transactions"}
+                  </p>
+                  <p>
+                    <span className="font-semibold text-white">{counts.snapshots}</span>{" "}
+                    {counts.snapshots === 1 ? "snapshot" : "snapshots"}
+                  </p>
+                </div>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => downloadFile("/api/export/backup")}
+              disabled={isLoadingCounts || (counts.holdings === 0 && counts.transactions === 0 && counts.snapshots === 0)}
+            >
+              <Archive className="h-4 w-4" />
+              Download Backup
+            </Button>
           </CardContent>
         </Card>
       </div>
