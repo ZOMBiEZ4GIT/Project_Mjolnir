@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const holdingId = searchParams.get("holding_id");
   const action = searchParams.get("action");
+  const currency = searchParams.get("currency");
 
   // Build query with join to include holding info
   // Filter by user via the holdings table (ensures user only sees their own transactions)
@@ -50,6 +51,11 @@ export async function GET(request: NextRequest) {
   // Filter by action type if provided and valid
   if (action && transactionActions.includes(action as TransactionAction)) {
     baseConditions.push(eq(transactions.action, action as TransactionAction));
+  }
+
+  // Filter by currency if provided and valid
+  if (currency && currencies.includes(currency as Currency)) {
+    baseConditions.push(eq(transactions.currency, currency as Currency));
   }
 
   const result = await db
