@@ -1,0 +1,204 @@
+{
+  "project": "Mjolnir",
+  "branchName": "feature/w10-email-reminders",
+  "description": "Monthly email reminders using Vercel Cron and Resend to prompt Roland for monthly check-in when snapshots are due.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Install and configure Resend SDK",
+      "description": "As a developer, I need the Resend SDK installed and configured.",
+      "acceptanceCriteria": [
+        "Install resend npm package",
+        "Create lib/services/email.ts with Resend client initialization",
+        "Client reads RESEND_API_KEY from environment",
+        "Export typed sendEmail function",
+        "Add RESEND_API_KEY to .env.example",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Create email preferences schema",
+      "description": "As a developer, I need to store user email preferences.",
+      "acceptanceCriteria": [
+        "Add email_reminders boolean to user_preferences table (default true)",
+        "Add reminder_day integer (1-28) for preferred send day (default 1)",
+        "Generate migration with npm run db:generate",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Create check-in reminder email template",
+      "description": "As a developer, I need an email template for monthly reminders.",
+      "acceptanceCriteria": [
+        "Create components/emails/check-in-reminder.tsx using React Email",
+        "Template includes: greeting, reminder message, check-in link",
+        "Shows which holdings need updates (super, cash, debt count)",
+        "Dark mode styling consistent with app",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Create send reminder email function",
+      "description": "As a developer, I need a function to send the check-in reminder.",
+      "acceptanceCriteria": [
+        "Create lib/services/reminders.ts with sendCheckInReminder function",
+        "Function takes userId and email address",
+        "Fetches holdings needing check-in using existing check-in status API logic",
+        "Sends email using Resend with check-in-reminder template",
+        "Returns success/failure status",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Create cron job API route",
+      "description": "As a developer, I need a cron endpoint that Vercel can call.",
+      "acceptanceCriteria": [
+        "Create app/api/cron/send-reminders/route.ts",
+        "Verifies CRON_SECRET header for security",
+        "Queries users who have email_reminders enabled",
+        "Only sends if current day matches user's reminder_day",
+        "Calls sendCheckInReminder for each eligible user",
+        "Returns summary of emails sent",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Configure Vercel cron schedule",
+      "description": "As a developer, I need to configure Vercel to run the cron job.",
+      "acceptanceCriteria": [
+        "Create vercel.json with crons configuration",
+        "Schedule: daily at 9am AEST (11pm UTC previous day)",
+        "Path: /api/cron/send-reminders",
+        "Add CRON_SECRET to environment variables list",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Add email preferences API endpoints",
+      "description": "As a developer, I need API endpoints to manage email preferences.",
+      "acceptanceCriteria": [
+        "Extend /api/preferences GET to return emailReminders and reminderDay",
+        "Extend /api/preferences PATCH to accept emailReminders and reminderDay",
+        "Validate reminderDay is between 1 and 28",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Create email preferences UI component",
+      "description": "As Roland, I want to manage my email reminder settings.",
+      "acceptanceCriteria": [
+        "Create components/settings/email-preferences.tsx",
+        "Toggle switch for email reminders on/off",
+        "Dropdown to select reminder day (1-28)",
+        "Shows user email from Clerk",
+        "Saves changes via preferences API",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Create settings page",
+      "description": "As Roland, I want a settings page to configure app preferences.",
+      "acceptanceCriteria": [
+        "Create app/(dashboard)/settings/page.tsx",
+        "Add Settings link to dashboard navigation",
+        "Include EmailPreferences component",
+        "Include existing currency preferences (move from header)",
+        "Page title: Settings",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Add email sent tracking",
+      "description": "As a developer, I need to track when emails were sent.",
+      "acceptanceCriteria": [
+        "Add last_reminder_sent timestamp to user_preferences",
+        "Update timestamp when reminder is sent",
+        "Cron job skips users who received email this month",
+        "Generate migration for new column",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Add test email button to settings",
+      "description": "As Roland, I want to test that email reminders work.",
+      "acceptanceCriteria": [
+        "Add 'Send Test Email' button to email preferences section",
+        "Creates API endpoint /api/email/test",
+        "Sends test reminder email to current user",
+        "Shows success/error toast notification",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Add unsubscribe link to emails",
+      "description": "As Roland, I want to unsubscribe from emails easily.",
+      "acceptanceCriteria": [
+        "Add unsubscribe link to email template footer",
+        "Create /api/email/unsubscribe endpoint",
+        "Endpoint accepts token with userId",
+        "Disables email_reminders for that user",
+        "Shows confirmation page after unsubscribe",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}
