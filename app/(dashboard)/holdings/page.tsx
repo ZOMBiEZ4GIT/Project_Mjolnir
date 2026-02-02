@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { RefreshCw } from "lucide-react";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { HoldingsTable, type HoldingWithData, type PriceData } from "@/components/holdings/holdings-table";
 import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
+import { CurrencyFilter, type CurrencyFilterValue } from "@/components/holdings/currency-filter";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -123,6 +124,10 @@ export default function HoldingsPage() {
   const queryClient = useQueryClient();
 
   const showDormant = searchParams.get("show_dormant") === "true";
+  const currencyFilterParam = searchParams.get("currency") as CurrencyFilterValue | null;
+  const currencyFilter: CurrencyFilterValue = currencyFilterParam && ["all", "AUD", "NZD", "USD"].includes(currencyFilterParam)
+    ? currencyFilterParam
+    : "all";
 
   const handleShowDormantChange = (checked: boolean) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -130,6 +135,16 @@ export default function HoldingsPage() {
       params.set("show_dormant", "true");
     } else {
       params.delete("show_dormant");
+    }
+    router.push(`/holdings${params.toString() ? `?${params.toString()}` : ""}`);
+  };
+
+  const handleCurrencyFilterChange = (value: CurrencyFilterValue) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value === "all") {
+      params.delete("currency");
+    } else {
+      params.set("currency", value);
     }
     router.push(`/holdings${params.toString() ? `?${params.toString()}` : ""}`);
   };
@@ -246,6 +261,13 @@ export default function HoldingsPage() {
     }
   }, [priceMap, pricesLoading, backgroundRefreshMutation]);
 
+  // Filter holdings by currency
+  const filteredHoldings = useMemo(() => {
+    if (!holdings) return [];
+    if (currencyFilter === "all") return holdings;
+    return holdings.filter((holding) => holding.currency === currencyFilter);
+  }, [holdings, currencyFilter]);
+
   // Show loading while Clerk auth is loading
   if (!isLoaded) {
     return (
@@ -294,7 +316,7 @@ export default function HoldingsPage() {
     );
   }
 
-  // Show empty state
+  // Show empty state (no holdings at all)
   if (!holdings || holdings.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -325,6 +347,7 @@ export default function HoldingsPage() {
               Show dormant holdings
             </Label>
           </div>
+          <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
           <NativeCurrencyToggle />
         </div>
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
@@ -332,6 +355,55 @@ export default function HoldingsPage() {
             <p className="text-lg">No holdings yet</p>
             <p className="text-sm mt-2">
               Add your first holding to start tracking your net worth.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show filtered empty state (has holdings but none match filter)
+  if (filteredHoldings.length === 0) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-white">Holdings</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => refreshMutation.mutate()}
+              disabled={refreshMutation.isPending}
+              className="gap-2"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`}
+              />
+              {refreshMutation.isPending ? "Refreshing..." : "Refresh Prices"}
+            </Button>
+            <AddHoldingDialog>
+              <Button>Add Holding</Button>
+            </AddHoldingDialog>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-dormant-filtered"
+              checked={showDormant}
+              onCheckedChange={handleShowDormantChange}
+            />
+            <Label htmlFor="show-dormant-filtered" className="text-gray-300 cursor-pointer text-sm">
+              Show dormant holdings
+            </Label>
+          </div>
+          <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
+          <NativeCurrencyToggle />
+        </div>
+        <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
+          <div className="text-gray-400">
+            <p className="text-lg">No {currencyFilter} holdings found</p>
+            <p className="text-sm mt-2">
+              Try selecting a different currency filter or &quot;All Currencies&quot;.
             </p>
           </div>
         </div>
@@ -384,10 +456,11 @@ export default function HoldingsPage() {
             Show dormant holdings
           </Label>
         </div>
+        <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
         <NativeCurrencyToggle />
       </div>
       <HoldingsTable
-        holdings={holdings}
+        holdings={filteredHoldings}
         prices={priceMap}
         pricesLoading={pricesLoading}
         onRetryPrice={handleRetryPrice}
