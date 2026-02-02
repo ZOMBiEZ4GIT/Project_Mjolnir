@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
 import {
   TrendingUp,
   Landmark,
@@ -15,6 +17,8 @@ interface HoldingValue {
   name: string;
   symbol: string | null;
   value: number;
+  currency: string;
+  valueNative: number;
 }
 
 interface AssetTypeBreakdown {
@@ -30,27 +34,17 @@ interface NetWorthResponse {
   totalDebt: number;
   breakdown: AssetTypeBreakdown[];
   hasStaleData: boolean;
+  displayCurrency: Currency;
+  ratesUsed: ExchangeRates;
   calculatedAt: string;
 }
 
-async function fetchNetWorth(): Promise<NetWorthResponse> {
-  const response = await fetch("/api/net-worth");
+async function fetchNetWorth(displayCurrency: Currency): Promise<NetWorthResponse> {
+  const response = await fetch(`/api/net-worth?displayCurrency=${displayCurrency}`);
   if (!response.ok) {
     throw new Error("Failed to fetch net worth");
   }
   return response.json();
-}
-
-/**
- * Formats a number as Australian currency (AUD).
- */
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: "AUD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 /**
@@ -152,6 +146,7 @@ interface AllocationItemProps {
   totalValue: number;
   percentage: number;
   count: number;
+  currency: Currency;
 }
 
 /**
@@ -162,6 +157,7 @@ function AllocationItem({
   totalValue,
   percentage,
   count,
+  currency,
 }: AllocationItemProps) {
   return (
     <div className="space-y-2">
@@ -182,7 +178,7 @@ function AllocationItem({
           </div>
         </div>
         <div className="text-right">
-          <div className="font-medium text-white">{formatCurrency(totalValue)}</div>
+          <div className="font-medium text-white">{formatCurrency(totalValue, currency, { compact: true })}</div>
           <div className="text-xs text-gray-400">{formatPercentage(percentage)}</div>
         </div>
       </div>
@@ -203,7 +199,7 @@ function AllocationItem({
  * Displays a breakdown of assets by type (Stocks, ETFs, Crypto, Super, Cash).
  * Each type shows:
  * - Icon and name
- * - Value in AUD
+ * - Value in the user's display currency
  * - Percentage of total assets
  * - Visual progress bar for percentage
  *
@@ -211,20 +207,21 @@ function AllocationItem({
  */
 export function AssetAllocation() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const { displayCurrency, isLoading: currencyLoading } = useCurrency();
 
   const {
     data: netWorthData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["net-worth"],
-    queryFn: fetchNetWorth,
-    enabled: isLoaded && isSignedIn,
+    queryKey: ["net-worth", displayCurrency],
+    queryFn: () => fetchNetWorth(displayCurrency),
+    enabled: isLoaded && isSignedIn && !currencyLoading,
     refetchInterval: 60 * 1000,
   });
 
   // Show skeleton while loading or not authenticated
-  if (!isLoaded || !isSignedIn || isLoading) {
+  if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
     return <AllocationSkeleton />;
   }
 
@@ -279,6 +276,7 @@ export function AssetAllocation() {
               totalValue={item.totalValue}
               percentage={percentage}
               count={item.count}
+              currency={displayCurrency}
             />
           );
         })}

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
+import { useCurrency } from "@/components/providers/currency-provider";
 import {
   Table,
   TableBody,
@@ -11,6 +12,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from "@/components/ui/table";
 import {
   Select,
@@ -24,7 +26,10 @@ import { Button } from "@/components/ui/button";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
 import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
 import { DeleteTransactionDialog } from "@/components/transactions/delete-transaction-dialog";
+import { CurrencyDisplay } from "@/components/ui/currency-display";
+import { CurrencyFilter, type CurrencyFilterValue } from "@/components/holdings/currency-filter";
 import type { Holding } from "@/lib/db/schema";
+import type { Currency } from "@/lib/utils/currency";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +60,8 @@ type TransactionAction = (typeof transactionActions)[number];
 
 async function fetchTransactions(
   holdingId: string | null,
-  action: string | null
+  action: string | null,
+  currency: CurrencyFilterValue | null
 ): Promise<TransactionWithHolding[]> {
   const params = new URLSearchParams();
   if (holdingId) {
@@ -63,6 +69,9 @@ async function fetchTransactions(
   }
   if (action) {
     params.set("action", action);
+  }
+  if (currency && currency !== "all") {
+    params.set("currency", currency);
   }
   const url = `/api/transactions${params.toString() ? `?${params.toString()}` : ""}`;
   const response = await fetch(url);
@@ -121,15 +130,14 @@ function calculateTotal(transaction: TransactionWithHolding): number {
 }
 
 /**
- * Format a number as currency
+ * Interface for aggregated totals
  */
-function formatCurrency(value: number, currency: string): string {
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+interface AggregatedTotals {
+  totalBuys: number;
+  totalSells: number;
+  totalDividends: number;
+  netCashFlow: number;
+  hasMixedCurrencies: boolean;
 }
 
 /**
@@ -166,17 +174,20 @@ function getActionColorClass(action: TransactionWithHolding["action"]): string {
 
 export default function TransactionsPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const { displayCurrency, convert, isLoading: currencyLoading } = useCurrency();
   const searchParams = useSearchParams();
   const router = useRouter();
 
   // Get filters from URL search params
   const selectedHoldingId = searchParams.get("holding_id");
   const selectedAction = searchParams.get("action") as TransactionAction | null;
+  const selectedCurrency = (searchParams.get("currency") || "all") as CurrencyFilterValue;
 
   // Update URL search params when filters change
   const updateFilters = (
     holdingId: string | null,
-    action: string | null
+    action: string | null,
+    currency: CurrencyFilterValue
   ) => {
     const params = new URLSearchParams();
     if (holdingId) {
@@ -185,17 +196,24 @@ export default function TransactionsPage() {
     if (action) {
       params.set("action", action);
     }
+    if (currency && currency !== "all") {
+      params.set("currency", currency);
+    }
     router.push(`/transactions${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
   const handleHoldingChange = (value: string) => {
     const holdingId = value === "all" ? null : value;
-    updateFilters(holdingId, selectedAction);
+    updateFilters(holdingId, selectedAction, selectedCurrency);
   };
 
   const handleActionChange = (value: string) => {
     const action = value === "all" ? null : value;
-    updateFilters(selectedHoldingId, action);
+    updateFilters(selectedHoldingId, action, selectedCurrency);
+  };
+
+  const handleCurrencyChange = (value: CurrencyFilterValue) => {
+    updateFilters(selectedHoldingId, selectedAction, value);
   };
 
   // Fetch tradeable holdings for the filter dropdown
@@ -210,10 +228,60 @@ export default function TransactionsPage() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["transactions", { holdingId: selectedHoldingId, action: selectedAction }],
-    queryFn: () => fetchTransactions(selectedHoldingId, selectedAction),
+    queryKey: ["transactions", { holdingId: selectedHoldingId, action: selectedAction, currency: selectedCurrency }],
+    queryFn: () => fetchTransactions(selectedHoldingId, selectedAction, selectedCurrency),
     enabled: isLoaded && isSignedIn,
   });
+
+  // Calculate aggregated totals
+  const aggregatedTotals = useMemo<AggregatedTotals | null>(() => {
+    if (!transactions || transactions.length === 0) {
+      return null;
+    }
+
+    // Check for mixed currencies
+    const currencies = new Set(transactions.map((t) => t.currency));
+    const hasMixedCurrencies = currencies.size > 1;
+
+    let totalBuys = 0;
+    let totalSells = 0;
+    let totalDividends = 0;
+
+    for (const transaction of transactions) {
+      const total = calculateTotal(transaction);
+      // Convert to display currency if mixed, otherwise use native value
+      const convertedTotal = hasMixedCurrencies
+        ? convert(total, transaction.currency as Currency)
+        : total;
+
+      switch (transaction.action) {
+        case "BUY": {
+          totalBuys += convertedTotal;
+          break;
+        }
+        case "SELL": {
+          totalSells += convertedTotal;
+          break;
+        }
+        case "DIVIDEND": {
+          totalDividends += convertedTotal;
+          break;
+        }
+        // SPLIT has no monetary value
+      }
+    }
+
+    // Net cash flow: sells + dividends - buys (money in minus money out)
+    const netCashFlow = totalSells + totalDividends - totalBuys;
+
+    return {
+      totalBuys,
+      totalSells,
+      totalDividends,
+      netCashFlow,
+      hasMixedCurrencies,
+    };
+  }, [transactions, convert]);
 
   // State for edit and delete dialogs
   const [editTransaction, setEditTransaction] = useState<TransactionWithHolding | null>(null);
@@ -263,6 +331,15 @@ export default function TransactionsPage() {
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label className="text-gray-400 text-sm">
+          Currency
+        </Label>
+        <CurrencyFilter
+          value={selectedCurrency}
+          onChange={handleCurrencyChange}
+        />
       </div>
     </div>
   );
@@ -331,12 +408,12 @@ export default function TransactionsPage() {
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
           <div className="text-gray-400">
             <p className="text-lg">
-              {selectedHoldingId || selectedAction
+              {selectedHoldingId || selectedAction || selectedCurrency !== "all"
                 ? "No transactions match your filters"
                 : "No transactions yet"}
             </p>
             <p className="text-sm mt-2">
-              {selectedHoldingId || selectedAction
+              {selectedHoldingId || selectedAction || selectedCurrency !== "all"
                 ? "Try adjusting your filters to see more transactions."
                 : "Add your first transaction to start tracking your portfolio."}
             </p>
@@ -404,26 +481,41 @@ export default function TransactionsPage() {
                         })}
                   </TableCell>
                   <TableCell className="text-gray-300 text-right font-mono">
-                    {transaction.action === "SPLIT"
-                      ? "—"
-                      : formatCurrency(
-                          Number(transaction.unitPrice),
-                          transaction.currency
-                        )}
+                    {transaction.action === "SPLIT" ? (
+                      "—"
+                    ) : (
+                      <CurrencyDisplay
+                        amount={Number(transaction.unitPrice)}
+                        currency={transaction.currency}
+                        isLoading={currencyLoading}
+                        className="justify-end"
+                      />
+                    )}
                   </TableCell>
                   <TableCell className="text-gray-300 text-right font-mono">
                     {transaction.action === "SPLIT" ||
-                    Number(transaction.fees) === 0
-                      ? "—"
-                      : formatCurrency(
-                          Number(transaction.fees),
-                          transaction.currency
-                        )}
+                    Number(transaction.fees) === 0 ? (
+                      "—"
+                    ) : (
+                      <CurrencyDisplay
+                        amount={Number(transaction.fees)}
+                        currency={transaction.currency}
+                        isLoading={currencyLoading}
+                        className="justify-end"
+                      />
+                    )}
                   </TableCell>
                   <TableCell className="text-white text-right font-mono font-medium">
-                    {transaction.action === "SPLIT"
-                      ? "—"
-                      : formatCurrency(total, transaction.currency)}
+                    {transaction.action === "SPLIT" ? (
+                      "—"
+                    ) : (
+                      <CurrencyDisplay
+                        amount={total}
+                        currency={transaction.currency}
+                        isLoading={currencyLoading}
+                        className="justify-end"
+                      />
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -480,6 +572,65 @@ export default function TransactionsPage() {
               );
             })}
           </TableBody>
+          {aggregatedTotals && (
+            <TableFooter className="border-t border-gray-700">
+              <TableRow className="bg-gray-900/50 hover:bg-gray-900/50">
+                <TableCell colSpan={4} className="text-gray-400 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Totals</span>
+                    {aggregatedTotals.hasMixedCurrencies && (
+                      <span className="text-xs text-gray-500">
+                        (converted to {displayCurrency})
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell colSpan={3} className="text-right">
+                  <div className="flex flex-col gap-1 text-sm">
+                    <div className="flex justify-end items-center gap-4">
+                      <span className="text-gray-400">Buys:</span>
+                      <CurrencyDisplay
+                        amount={aggregatedTotals.totalBuys}
+                        currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
+                        isLoading={currencyLoading}
+                        className="text-red-400 font-mono"
+                      />
+                    </div>
+                    <div className="flex justify-end items-center gap-4">
+                      <span className="text-gray-400">Sells:</span>
+                      <CurrencyDisplay
+                        amount={aggregatedTotals.totalSells}
+                        currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
+                        isLoading={currencyLoading}
+                        className="text-green-400 font-mono"
+                      />
+                    </div>
+                    {aggregatedTotals.totalDividends > 0 && (
+                      <div className="flex justify-end items-center gap-4">
+                        <span className="text-gray-400">Dividends:</span>
+                        <CurrencyDisplay
+                          amount={aggregatedTotals.totalDividends}
+                          currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
+                          isLoading={currencyLoading}
+                          className="text-green-400 font-mono"
+                        />
+                      </div>
+                    )}
+                    <div className="flex justify-end items-center gap-4 pt-1 border-t border-gray-700">
+                      <span className="text-gray-300 font-medium">Net Cash Flow:</span>
+                      <CurrencyDisplay
+                        amount={aggregatedTotals.netCashFlow}
+                        currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
+                        isLoading={currencyLoading}
+                        className={`font-mono font-bold ${aggregatedTotals.netCashFlow >= 0 ? "text-green-400" : "text-red-400"}`}
+                      />
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell />
+              </TableRow>
+            </TableFooter>
+          )}
         </Table>
       </div>
 

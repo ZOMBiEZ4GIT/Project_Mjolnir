@@ -157,7 +157,12 @@ function CashHoldingEntry({
     <div className={`p-3 rounded-lg bg-gray-800 border ${error ? "border-red-500" : "border-gray-700"}`}>
       <div className="flex items-center gap-4">
         <div className="flex-1">
-          <span className="text-white font-medium">{holding.name}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-white font-medium">{holding.name}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">
+              {holding.currency}
+            </span>
+          </div>
           {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
         </div>
         <div className="flex items-center gap-2">
@@ -202,7 +207,12 @@ function DebtHoldingEntry({
     <div className={`p-3 rounded-lg bg-gray-800 border ${error ? "border-red-500" : "border-gray-700"}`}>
       <div className="flex items-center gap-4">
         <div className="flex-1">
-          <span className="text-white font-medium">{holding.name}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-white font-medium">{holding.name}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">
+              {holding.currency}
+            </span>
+          </div>
           {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
         </div>
         <div className="flex items-center gap-2">
@@ -257,6 +267,9 @@ function SuperHoldingEntry({
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-white font-medium">{holding.name}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">
+              {holding.currency}
+            </span>
             {holding.isDormant && (
               <span className="text-xs px-2 py-0.5 rounded bg-gray-700 text-gray-400">
                 Dormant

@@ -2,13 +2,34 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
+import { useCurrency } from "@/components/providers/currency-provider";
+import { formatCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
 import { TrendingUp, TrendingDown, Wallet, CreditCard } from "lucide-react";
+
+interface HoldingValue {
+  id: string;
+  name: string;
+  symbol: string | null;
+  value: number;
+  currency: string;
+  valueNative: number;
+}
+
+interface AssetTypeBreakdown {
+  type: "stock" | "etf" | "crypto" | "super" | "cash";
+  totalValue: number;
+  count: number;
+  holdings: HoldingValue[];
+}
 
 interface NetWorthResponse {
   netWorth: number;
   totalAssets: number;
   totalDebt: number;
+  breakdown: AssetTypeBreakdown[];
   hasStaleData: boolean;
+  displayCurrency: Currency;
+  ratesUsed: ExchangeRates;
   calculatedAt: string;
 }
 
@@ -24,8 +45,8 @@ interface HistoryResponse {
   generatedAt: string;
 }
 
-async function fetchNetWorth(): Promise<NetWorthResponse> {
-  const response = await fetch("/api/net-worth");
+async function fetchNetWorth(displayCurrency: Currency): Promise<NetWorthResponse> {
+  const response = await fetch(`/api/net-worth?displayCurrency=${displayCurrency}`);
   if (!response.ok) {
     throw new Error("Failed to fetch net worth");
   }
@@ -38,18 +59,6 @@ async function fetchHistory(): Promise<HistoryResponse> {
     throw new Error("Failed to fetch history");
   }
   return response.json();
-}
-
-/**
- * Formats a number as Australian currency (AUD).
- */
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-AU", {
-    style: "currency",
-    currency: "AUD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 /**
@@ -81,6 +90,7 @@ interface SummaryCardProps {
   previousValue: number | null;
   icon: React.ReactNode;
   accentColor: "green" | "red";
+  currency: Currency;
 }
 
 /**
@@ -92,6 +102,7 @@ function SummaryCard({
   previousValue,
   icon,
   accentColor,
+  currency,
 }: SummaryCardProps) {
   const hasChange = previousValue !== null && previousValue !== 0;
   const changeAmount = hasChange ? value - previousValue : 0;
@@ -116,7 +127,7 @@ function SummaryCard({
 
       {/* Value */}
       <div className="text-2xl md:text-3xl font-bold text-white mb-2">
-        {formatCurrency(value)}
+        {formatCurrency(value, currency)}
       </div>
 
       {/* Change from last month */}
@@ -133,7 +144,7 @@ function SummaryCard({
             }`}
           >
             {changeAmount >= 0 ? "+" : ""}
-            {formatCurrency(changeAmount)} ({formatPercentage(changePercent)})
+            {formatCurrency(changeAmount, currency)} ({formatPercentage(changePercent)})
           </span>
           <span className="text-xs text-gray-500">from last month</span>
         </div>
@@ -147,21 +158,22 @@ function SummaryCard({
  *
  * Displays two smaller cards showing Total Assets and Total Debt.
  * Each card shows:
- * - Current value in AUD
+ * - Current value in the user's display currency
  * - Change from last month (amount and percentage)
  * - Appropriate icon and color coding
  */
 export function SummaryCards() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
 
   const {
     data: netWorthData,
     isLoading: isLoadingNetWorth,
     error: netWorthError,
   } = useQuery({
-    queryKey: ["net-worth"],
-    queryFn: fetchNetWorth,
-    enabled: isLoaded && isSignedIn,
+    queryKey: ["net-worth", displayCurrency],
+    queryFn: () => fetchNetWorth(displayCurrency),
+    enabled: isLoaded && isSignedIn && !currencyLoading,
     refetchInterval: 60 * 1000,
   });
 
@@ -173,7 +185,7 @@ export function SummaryCards() {
   });
 
   // Show skeleton while loading or not authenticated
-  if (!isLoaded || !isSignedIn || isLoadingNetWorth) {
+  if (!isLoaded || !isSignedIn || isLoadingNetWorth || currencyLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CardSkeleton />
@@ -202,14 +214,15 @@ export function SummaryCards() {
   }
 
   // Get previous month data
+  // Note: History is in AUD, so we convert to display currency for comparison
   let previousAssets: number | null = null;
   let previousDebt: number | null = null;
 
   if (historyData && historyData.history.length >= 2 && !isLoadingHistory) {
     const previousMonth = historyData.history[historyData.history.length - 2];
     if (previousMonth) {
-      previousAssets = previousMonth.totalAssets;
-      previousDebt = previousMonth.totalDebt;
+      previousAssets = convert(previousMonth.totalAssets, "AUD");
+      previousDebt = convert(previousMonth.totalDebt, "AUD");
     }
   }
 
@@ -221,6 +234,7 @@ export function SummaryCards() {
         previousValue={previousAssets}
         icon={<Wallet className="h-5 w-5" />}
         accentColor="green"
+        currency={displayCurrency}
       />
       <SummaryCard
         title="Total Debt"
@@ -228,6 +242,7 @@ export function SummaryCards() {
         previousValue={previousDebt}
         icon={<CreditCard className="h-5 w-5" />}
         accentColor="red"
+        currency={displayCurrency}
       />
     </div>
   );

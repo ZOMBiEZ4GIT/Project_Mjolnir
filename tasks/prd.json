@@ -17,8 +17,8 @@
         "Lint passes (`npm run lint`)"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Schema created with migration 0005_robust_leo.sql"
     },
     {
       "id": "US-002",
@@ -34,8 +34,8 @@
         "Lint passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "API endpoints created with ensureUser helper to handle foreign key constraint"
     },
     {
       "id": "US-003",
@@ -52,8 +52,8 @@
         "Lint passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/utils/currency.ts with convertCurrency function using AUD as intermediary for cross-currency conversions"
     },
     {
       "id": "US-004",
@@ -70,8 +70,8 @@
         "Lint passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added formatCurrency function with FormatCurrencyOptions interface, CURRENCY_SYMBOLS map, and compact number helpers"
     },
     {
       "id": "US-005",
@@ -89,8 +89,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created CurrencyDisplay component with tooltip, native indicator, and skeleton. Added shadcn/ui Tooltip dependency."
     },
     {
       "id": "US-006",
@@ -107,8 +107,8 @@
         "Lint passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created CurrencyProvider context with TanStack Query, optimistic updates, useCurrency hook. Wrapped in root layout."
     },
     {
       "id": "US-007",
@@ -125,8 +125,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created CurrencySelector component with Select dropdown, DollarSign icon, compact/full modes, and loading skeleton."
     },
     {
       "id": "US-008",
@@ -142,8 +142,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added CurrencySelector to DashboardHeader component, positioned next to Refresh button. Uses CurrencyProvider for optimistic updates."
     },
     {
       "id": "US-009",
@@ -159,8 +159,8 @@
         "Lint passes"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added displayCurrency parameter to calculateNetWorth and calculateAssetBreakdown, returns ratesUsed for transparency"
     },
     {
       "id": "US-010",
@@ -177,8 +177,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated net-worth API to accept displayCurrency param, all 5 dashboard components now use useCurrency hook and formatCurrency utility"
     },
     {
       "id": "US-011",
@@ -194,8 +194,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Updated HoldingsTable with useCurrency hook, CurrencyDisplay for MarketValue/GainLoss/CostBasis cells"
     },
     {
       "id": "US-012",
@@ -212,8 +212,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added showNativeCurrency to user_preferences, CurrencyProvider, and NativeCurrencyToggle component. Holdings table cells respect toggle."
     },
     {
       "id": "US-013",
@@ -230,8 +230,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created CurrencyFilter component with Select dropdown. Filter state persists in URL ?currency= param. Works with existing show_dormant filter."
     },
     {
       "id": "US-014",
@@ -248,8 +248,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created GroupBySelector component. HoldingsTable supports groupBy='type'|'currency' prop. Currency sections show subtotal in native currency. URL param ?group_by=currency persists state."
     },
     {
       "id": "US-015",
@@ -266,8 +266,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 15,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added calculateCurrencyExposure function, /api/currency-exposure endpoint, CurrencyExposure component with progress bars and flags. Displayed side-by-side with Asset Allocation on dashboard."
     },
     {
       "id": "US-016",
@@ -283,8 +283,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 16,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added CurrencyDisplay component to Unit Price, Fees, and Total columns. Added CurrencyFilter dropdown with URL persistence. Added TableFooter with aggregated totals (buys, sells, dividends, net cash flow) that convert to display currency when mixed."
     },
     {
       "id": "US-017",
@@ -299,8 +299,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 17,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Snapshots page uses CurrencyDisplay component with currency conversion and native indicator. Check-in modal shows currency badges for all holding types (super, cash, debt)."
     },
     {
       "id": "US-018",
@@ -316,8 +316,8 @@
         "Verify in browser using Playwright"
       ],
       "priority": 18,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created FxRatesDisplay component with compact (icon+tooltip) and inline modes. Shows USD/AUD and NZD/AUD rates with 'as of' time indicator. Added to dashboard header toolbar."
     },
     {
       "id": "US-019",
@@ -332,8 +332,8 @@
         "Lint passes"
       ],
       "priority": 19,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created comprehensive documentation covering schema design, data collection strategies (cron/backfill), calculation changes for net worth history and cost basis, migration path, and API provider comparison."
     }
   ]
 }

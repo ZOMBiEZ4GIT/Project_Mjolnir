@@ -5,6 +5,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CurrencySelector } from "@/components/ui/currency-selector";
+import { FxRatesDisplay } from "@/components/ui/fx-rates-display";
 
 /**
  * Refreshes all tradeable holding prices via POST /api/prices.
@@ -99,18 +101,22 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
       <h1 className="text-3xl font-bold text-white">
         Welcome{userName ? `, ${userName}` : ""}
       </h1>
-      <Button
-        onClick={handleRefresh}
-        disabled={isRefreshing}
-        variant="outline"
-        size="sm"
-        className="gap-2"
-      >
-        <RefreshCw
-          className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-        />
-        {isRefreshing ? "Refreshing..." : "Refresh"}
-      </Button>
+      <div className="flex items-center gap-3">
+        <FxRatesDisplay mode="compact" />
+        <CurrencySelector />
+        <Button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          variant="outline"
+          size="sm"
+          className="gap-2"
+        >
+          <RefreshCw
+            className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+          />
+          {isRefreshing ? "Refreshing..." : "Refresh"}
+        </Button>
+      </div>
     </div>
   );
 }

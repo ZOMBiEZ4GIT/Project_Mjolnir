@@ -7,6 +7,10 @@
  * - Debt: latest snapshot balance (subtracted from net worth)
  *
  * Net Worth = Total Assets - Total Debt
+ *
+ * Multi-currency support:
+ * - All values can be converted to a specified display currency
+ * - Exchange rates used are returned for transparency
  */
 
 import { db } from "@/lib/db";
@@ -21,6 +25,7 @@ import {
 } from "@/lib/services/price-cache";
 import { getLatestSnapshots, type SnapshotWithHolding } from "@/lib/queries/snapshots";
 import { getExchangeRate } from "@/lib/services/exchange-rates";
+import { convertCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
 
 // Snapshot staleness threshold: 2 months in milliseconds
 const SNAPSHOT_STALE_THRESHOLD_MS = 2 * 30 * 24 * 60 * 60 * 1000;
@@ -35,7 +40,7 @@ const SNAPSHOT_STALE_THRESHOLD_MS = 2 * 30 * 24 * 60 * 60 * 1000;
 export interface AssetTypeBreakdown {
   /** Type of holding (stock, etf, crypto, super, cash) */
   type: "stock" | "etf" | "crypto" | "super" | "cash";
-  /** Total value in AUD */
+  /** Total value in display currency */
   totalValue: number;
   /** Number of holdings in this type */
   count: number;
@@ -53,15 +58,15 @@ export interface HoldingValue {
   name: string;
   /** Symbol (nullable for cash/super) */
   symbol: string | null;
-  /** Value in AUD */
+  /** Value in display currency */
   value: number;
-  /** Original currency */
+  /** Original/native currency */
   currency: string;
-  /** Value in original currency */
+  /** Value in original/native currency */
   valueNative: number;
   /** Quantity (for tradeable assets) */
   quantity?: number;
-  /** Price (for tradeable assets) */
+  /** Price in native currency (for tradeable assets) */
   price?: number;
 }
 
@@ -104,7 +109,7 @@ export interface HoldingWithPercentage extends HoldingValue {
 export interface AssetBreakdownItem {
   /** Type of holding */
   type: "stock" | "etf" | "crypto" | "super" | "cash" | "debt";
-  /** Total value in AUD */
+  /** Total value in display currency */
   totalValue: number;
   /** Number of holdings in this type */
   count: number;
@@ -122,10 +127,14 @@ export interface AssetBreakdown {
   assets: AssetBreakdownItem[];
   /** Debt breakdown */
   debt: AssetBreakdownItem | null;
-  /** Total assets value in AUD */
+  /** Total assets value in display currency */
   totalAssets: number;
-  /** Total debt value in AUD */
+  /** Total debt value in display currency */
   totalDebt: number;
+  /** Display currency used for values */
+  displayCurrency: Currency;
+  /** Exchange rates used for conversion (for transparency) */
+  ratesUsed: ExchangeRates;
   /** Timestamp when calculation was performed */
   calculatedAt: Date;
 }
@@ -134,11 +143,11 @@ export interface AssetBreakdown {
  * Result of net worth calculation.
  */
 export interface NetWorthResult {
-  /** Total net worth (assets - debt) in AUD */
+  /** Total net worth (assets - debt) in display currency */
   netWorth: number;
-  /** Total assets (not including debt) in AUD */
+  /** Total assets (not including debt) in display currency */
   totalAssets: number;
-  /** Total debt in AUD */
+  /** Total debt in display currency */
   totalDebt: number;
   /** Breakdown by asset type */
   breakdown: AssetTypeBreakdown[];
@@ -148,6 +157,10 @@ export interface NetWorthResult {
   staleHoldings: StaleHolding[];
   /** True if any holdings have stale data */
   hasStaleData: boolean;
+  /** Display currency used for values */
+  displayCurrency: Currency;
+  /** Exchange rates used for conversion (for transparency) */
+  ratesUsed: ExchangeRates;
   /** Timestamp when calculation was performed */
   calculatedAt: Date;
 }
@@ -157,18 +170,42 @@ export interface NetWorthResult {
 // =============================================================================
 
 /**
- * Converts a value from its native currency to AUD.
+ * Fetches current exchange rates for currency conversion.
+ *
+ * @returns ExchangeRates object with USD/AUD and NZD/AUD rates
+ */
+async function fetchExchangeRates(): Promise<ExchangeRates> {
+  const [usdRate, nzdRate] = await Promise.all([
+    getExchangeRate("USD", "AUD"),
+    getExchangeRate("NZD", "AUD"),
+  ]);
+  return {
+    "USD/AUD": usdRate,
+    "NZD/AUD": nzdRate,
+  };
+}
+
+/**
+ * Converts a value from its native currency to the target display currency.
  *
  * @param value - The value in native currency
- * @param currency - The native currency code
- * @returns The value in AUD
+ * @param fromCurrency - The native currency code
+ * @param toCurrency - The target display currency code
+ * @param rates - Exchange rates to use for conversion
+ * @returns The value in target currency
  */
-async function convertToAud(value: number, currency: string): Promise<number> {
-  if (currency === "AUD") {
-    return value;
-  }
-  const rate = await getExchangeRate(currency, "AUD");
-  return value * rate;
+function convertToDisplayCurrency(
+  value: number,
+  fromCurrency: string,
+  toCurrency: Currency,
+  rates: ExchangeRates
+): number {
+  return convertCurrency(
+    value,
+    fromCurrency as Currency,
+    toCurrency,
+    rates
+  );
 }
 
 /**
@@ -198,12 +235,20 @@ interface TradeableValueResult {
 /**
  * Calculates value for tradeable holdings (stocks, ETFs, crypto).
  * Uses quantity x cached price, flagging stale/missing prices.
+ *
+ * @param holding - The holding to calculate value for
+ * @param displayCurrency - The target currency for the value
+ * @param rates - Exchange rates to use for conversion
  */
-async function calculateTradeableValue(
-  holding: Holding
-): Promise<TradeableValueResult> {
+function calculateTradeableValue(
+  holding: Holding,
+  displayCurrency: Currency,
+  rates: ExchangeRates,
+  quantitiesMap: Map<string, number>,
+  pricesMap: Map<string, CachedPrice | null>
+): TradeableValueResult {
   // Get current quantity
-  const quantity = await calculateQuantityHeld(holding.id);
+  const quantity = quantitiesMap.get(holding.id) ?? 0;
 
   // No holdings = no value (not stale, just no position)
   if (quantity === 0) {
@@ -217,7 +262,7 @@ async function calculateTradeableValue(
     return { holdingValue: null, staleHolding: null };
   }
 
-  const cachedPrice: CachedPrice | null = await getCachedPrice(symbol);
+  const cachedPrice = pricesMap.get(symbol) ?? null;
 
   // No cached price - flag as stale with "no_price" reason
   if (!cachedPrice) {
@@ -248,15 +293,20 @@ async function calculateTradeableValue(
   // Calculate value in native currency (even if stale, we use the cached price)
   const valueNative = quantity * cachedPrice.price;
 
-  // Convert to AUD
-  const valueAud = await convertToAud(valueNative, cachedPrice.currency);
+  // Convert to display currency
+  const valueDisplay = convertToDisplayCurrency(
+    valueNative,
+    cachedPrice.currency,
+    displayCurrency,
+    rates
+  );
 
   return {
     holdingValue: {
       id: holding.id,
       name: holding.name,
       symbol: symbol,
-      value: valueAud,
+      value: valueDisplay,
       currency: cachedPrice.currency,
       valueNative,
       quantity,
@@ -285,11 +335,18 @@ interface SnapshotValueResult {
 /**
  * Calculates value for snapshot holdings (super, cash, debt).
  * Uses latest snapshot balance, flagging old/missing snapshots.
+ *
+ * @param holding - The holding to calculate value for
+ * @param snapshotsMap - Map of holding ID to latest snapshot
+ * @param displayCurrency - The target currency for the value
+ * @param rates - Exchange rates to use for conversion
  */
-async function calculateSnapshotValue(
+function calculateSnapshotValue(
   holding: Holding,
-  snapshotsMap: Map<string, SnapshotWithHolding>
-): Promise<SnapshotValueResult> {
+  snapshotsMap: Map<string, SnapshotWithHolding>,
+  displayCurrency: Currency,
+  rates: ExchangeRates
+): SnapshotValueResult {
   const snapshot = snapshotsMap.get(holding.id);
 
   // No snapshot - flag as stale with "no_snapshot" reason
@@ -308,8 +365,13 @@ async function calculateSnapshotValue(
 
   const valueNative = Number(snapshot.balance);
 
-  // Convert to AUD
-  const valueAud = await convertToAud(valueNative, snapshot.currency);
+  // Convert to display currency
+  const valueDisplay = convertToDisplayCurrency(
+    valueNative,
+    snapshot.currency,
+    displayCurrency,
+    rates
+  );
 
   // Check if snapshot is stale (older than 2 months)
   const snapshotDate = new Date(snapshot.date);
@@ -322,7 +384,7 @@ async function calculateSnapshotValue(
       id: holding.id,
       name: holding.name,
       symbol: holding.symbol,
-      value: valueAud,
+      value: valueDisplay,
       currency: snapshot.currency,
       valueNative,
     },
@@ -343,35 +405,60 @@ async function calculateSnapshotValue(
 // =============================================================================
 
 /**
+ * Options for net worth calculation.
+ */
+export interface CalculateNetWorthOptions {
+  /**
+   * Display currency for values. Defaults to AUD.
+   */
+  displayCurrency?: Currency;
+}
+
+/**
  * Calculates total net worth for a user.
  *
  * Processing:
  * 1. Fetches all active holdings for user
- * 2. For tradeable (stocks, ETFs, crypto): quantity x current cached price
- * 3. For snapshot-based (super, cash, debt): latest snapshot balance
- * 4. Converts all values to AUD
- * 5. Sums assets and debt separately
- * 6. Tracks stale data (expired prices, old snapshots)
+ * 2. Fetches current exchange rates
+ * 3. For tradeable (stocks, ETFs, crypto): quantity x current cached price
+ * 4. For snapshot-based (super, cash, debt): latest snapshot balance
+ * 5. Converts all values to display currency (default AUD)
+ * 6. Sums assets and debt separately
+ * 7. Tracks stale data (expired prices, old snapshots)
  *
  * Carry-forward logic:
  * - Tradeable: Uses cached price even if stale (past TTL), flags as stale
  * - Snapshots: Uses most recent snapshot even if old, flags if older than 2 months
  *
  * @param userId - The user ID to calculate net worth for
- * @returns NetWorthResult with breakdown by type and stale data info
+ * @param options - Optional configuration including displayCurrency
+ * @returns NetWorthResult with breakdown by type, stale data info, and rates used
  *
  * @example
+ * // Calculate in AUD (default)
  * const result = await calculateNetWorth("user_123");
  * console.log(`Net Worth: $${result.netWorth.toLocaleString()}`);
+ *
+ * // Calculate in USD
+ * const resultUsd = await calculateNetWorth("user_123", { displayCurrency: "USD" });
+ * console.log(`Net Worth: US$${resultUsd.netWorth.toLocaleString()}`);
+ *
  * if (result.hasStaleData) {
  *   console.log(`Warning: ${result.staleHoldings.length} holdings have stale data`);
  * }
  */
-export async function calculateNetWorth(userId: string): Promise<NetWorthResult> {
+export async function calculateNetWorth(
+  userId: string,
+  options: CalculateNetWorthOptions = {}
+): Promise<NetWorthResult> {
+  const { displayCurrency = "AUD" } = options;
   const calculatedAt = new Date();
 
-  // Get all active holdings
-  const userHoldings = await getUserHoldings(userId);
+  // Get all active holdings and exchange rates concurrently
+  const [userHoldings, rates] = await Promise.all([
+    getUserHoldings(userId),
+    fetchExchangeRates(),
+  ]);
 
   // Get latest snapshots for all holdings (single query)
   const snapshotsMap = await getLatestSnapshots(userId);
@@ -391,17 +478,36 @@ export async function calculateNetWorth(userId: string): Promise<NetWorthResult>
     debtTypes.includes(h.type as (typeof debtTypes)[number])
   );
 
+  // Pre-fetch quantities and prices for all tradeable holdings
+  const quantities = await Promise.all(
+    tradeableHoldings.map(async (h) => ({
+      id: h.id,
+      quantity: await calculateQuantityHeld(h.id),
+    }))
+  );
+  const quantitiesMap = new Map(quantities.map((q) => [q.id, q.quantity]));
+
+  const prices = await Promise.all(
+    tradeableHoldings
+      .filter((h) => h.symbol)
+      .map(async (h) => ({
+        symbol: h.symbol!,
+        price: await getCachedPrice(h.symbol!),
+      }))
+  );
+  const pricesMap = new Map(prices.map((p) => [p.symbol, p.price]));
+
   // Calculate values for each category
-  const tradeableResults = await Promise.all(
-    tradeableHoldings.map((h) => calculateTradeableValue(h))
+  const tradeableResults = tradeableHoldings.map((h) =>
+    calculateTradeableValue(h, displayCurrency, rates, quantitiesMap, pricesMap)
   );
 
-  const snapshotAssetResults = await Promise.all(
-    snapshotAssetHoldings.map((h) => calculateSnapshotValue(h, snapshotsMap))
+  const snapshotAssetResults = snapshotAssetHoldings.map((h) =>
+    calculateSnapshotValue(h, snapshotsMap, displayCurrency, rates)
   );
 
-  const debtResults = await Promise.all(
-    debtHoldings.map((h) => calculateSnapshotValue(h, snapshotsMap))
+  const debtResults = debtHoldings.map((h) =>
+    calculateSnapshotValue(h, snapshotsMap, displayCurrency, rates)
   );
 
   // Extract holding values (filter out nulls)
@@ -507,12 +613,192 @@ export async function calculateNetWorth(userId: string): Promise<NetWorthResult>
     debtBreakdown: validDebtValues,
     staleHoldings,
     hasStaleData: staleHoldings.length > 0,
+    displayCurrency,
+    ratesUsed: rates,
     calculatedAt,
   };
 }
 
 // =============================================================================
 // ASSET BREAKDOWN CALCULATION
+// =============================================================================
+
+// =============================================================================
+// CURRENCY EXPOSURE CALCULATION
+// =============================================================================
+
+/**
+ * Currency exposure item showing value and percentage in a single currency.
+ */
+export interface CurrencyExposureItem {
+  /** Currency code (AUD, NZD, USD) */
+  currency: Currency;
+  /** Total value in display currency */
+  value: number;
+  /** Total value in native currency (same as value if currency === displayCurrency) */
+  valueNative: number;
+  /** Percentage of total assets */
+  percentage: number;
+  /** Number of holdings in this currency */
+  count: number;
+}
+
+/**
+ * Complete currency exposure breakdown result.
+ */
+export interface CurrencyExposure {
+  /** Breakdown by currency */
+  exposure: CurrencyExposureItem[];
+  /** Total assets value in display currency */
+  totalAssets: number;
+  /** Display currency used for values */
+  displayCurrency: Currency;
+  /** Exchange rates used for conversion (for transparency) */
+  ratesUsed: ExchangeRates;
+  /** Timestamp when calculation was performed */
+  calculatedAt: Date;
+}
+
+/**
+ * Options for currency exposure calculation.
+ */
+export interface CalculateCurrencyExposureOptions {
+  /**
+   * Display currency for values. Defaults to AUD.
+   */
+  displayCurrency?: Currency;
+}
+
+/**
+ * Calculates currency exposure breakdown showing how assets are distributed across currencies.
+ *
+ * Groups all assets by their native currency and calculates:
+ * - Total value in display currency
+ * - Total value in native currency
+ * - Percentage of total assets
+ * - Number of holdings per currency
+ *
+ * Note: Debt is excluded from currency exposure calculations.
+ *
+ * @param userId - The user ID to calculate exposure for
+ * @param options - Optional configuration including displayCurrency
+ * @returns CurrencyExposure with breakdown by currency
+ *
+ * @example
+ * const exposure = await calculateCurrencyExposure("user_123", { displayCurrency: "AUD" });
+ * exposure.exposure.forEach(item => {
+ *   console.log(`${item.currency}: ${item.percentage.toFixed(1)}%`);
+ * });
+ */
+export async function calculateCurrencyExposure(
+  userId: string,
+  options: CalculateCurrencyExposureOptions = {}
+): Promise<CurrencyExposure> {
+  const { displayCurrency = "AUD" } = options;
+  const calculatedAt = new Date();
+
+  // Get all active holdings and exchange rates concurrently
+  const [userHoldings, rates] = await Promise.all([
+    getUserHoldings(userId),
+    fetchExchangeRates(),
+  ]);
+
+  // Get latest snapshots for all holdings (single query)
+  const snapshotsMap = await getLatestSnapshots(userId);
+
+  // Categorize holdings (exclude debt)
+  const tradeableTypes = ["stock", "etf", "crypto"] as const;
+  const snapshotAssetTypes = ["super", "cash"] as const;
+
+  const tradeableHoldings = userHoldings.filter((h) =>
+    tradeableTypes.includes(h.type as (typeof tradeableTypes)[number])
+  );
+  const snapshotAssetHoldings = userHoldings.filter((h) =>
+    snapshotAssetTypes.includes(h.type as (typeof snapshotAssetTypes)[number])
+  );
+
+  // Pre-fetch quantities and prices for all tradeable holdings
+  const quantities = await Promise.all(
+    tradeableHoldings.map(async (h) => ({
+      id: h.id,
+      quantity: await calculateQuantityHeld(h.id),
+    }))
+  );
+  const quantitiesMap = new Map(quantities.map((q) => [q.id, q.quantity]));
+
+  const prices = await Promise.all(
+    tradeableHoldings
+      .filter((h) => h.symbol)
+      .map(async (h) => ({
+        symbol: h.symbol!,
+        price: await getCachedPrice(h.symbol!),
+      }))
+  );
+  const pricesMap = new Map(prices.map((p) => [p.symbol, p.price]));
+
+  // Calculate values for each category
+  const tradeableResults = tradeableHoldings.map((h) =>
+    calculateTradeableValue(h, displayCurrency, rates, quantitiesMap, pricesMap)
+  );
+
+  const snapshotAssetResults = snapshotAssetHoldings.map((h) =>
+    calculateSnapshotValue(h, snapshotsMap, displayCurrency, rates)
+  );
+
+  // Combine all holding values (filter out nulls)
+  const allValues = [
+    ...tradeableResults.map((r) => r.holdingValue).filter((v): v is HoldingValue => v !== null),
+    ...snapshotAssetResults.map((r) => r.holdingValue).filter((v): v is HoldingValue => v !== null),
+  ];
+
+  // Group by native currency
+  const currencyGroups: Record<Currency, { value: number; valueNative: number; count: number }> = {
+    AUD: { value: 0, valueNative: 0, count: 0 },
+    NZD: { value: 0, valueNative: 0, count: 0 },
+    USD: { value: 0, valueNative: 0, count: 0 },
+  };
+
+  for (const holdingValue of allValues) {
+    const currency = holdingValue.currency as Currency;
+    if (currency in currencyGroups) {
+      currencyGroups[currency].value += holdingValue.value;
+      currencyGroups[currency].valueNative += holdingValue.valueNative;
+      currencyGroups[currency].count += 1;
+    }
+  }
+
+  // Calculate total assets
+  const totalAssets = Object.values(currencyGroups).reduce((sum, g) => sum + g.value, 0);
+
+  // Build exposure array with percentages
+  const exposure: CurrencyExposureItem[] = [];
+
+  for (const [currency, group] of Object.entries(currencyGroups)) {
+    if (group.count > 0) {
+      exposure.push({
+        currency: currency as Currency,
+        value: group.value,
+        valueNative: group.valueNative,
+        percentage: totalAssets > 0 ? (group.value / totalAssets) * 100 : 0,
+        count: group.count,
+      });
+    }
+  }
+
+  // Sort by value descending
+  exposure.sort((a, b) => b.value - a.value);
+
+  return {
+    exposure,
+    totalAssets,
+    displayCurrency,
+    ratesUsed: rates,
+    calculatedAt,
+  };
+}
+
+// =============================================================================
+// ASSET BREAKDOWN HELPERS
 // =============================================================================
 
 /**
@@ -529,6 +815,16 @@ function addHoldingPercentages(
 }
 
 /**
+ * Options for asset breakdown calculation.
+ */
+export interface CalculateAssetBreakdownOptions {
+  /**
+   * Display currency for values. Defaults to AUD.
+   */
+  displayCurrency?: Currency;
+}
+
+/**
  * Calculates asset breakdown by type with percentages.
  *
  * Groups assets by type (stocks, ETFs, crypto, super, cash) and debt,
@@ -536,21 +832,31 @@ function addHoldingPercentages(
  * and the percentage each holding represents within its group.
  *
  * @param userId - The user ID to calculate breakdown for
- * @returns AssetBreakdown with grouped assets and percentages
+ * @param options - Optional configuration including displayCurrency
+ * @returns AssetBreakdown with grouped assets, percentages, and rates used
  *
  * @example
+ * // Calculate in AUD (default)
  * const breakdown = await calculateAssetBreakdown("user_123");
  * breakdown.assets.forEach(group => {
  *   console.log(`${group.type}: ${group.percentage.toFixed(1)}% of portfolio`);
  * });
+ *
+ * // Calculate in USD
+ * const breakdownUsd = await calculateAssetBreakdown("user_123", { displayCurrency: "USD" });
  */
 export async function calculateAssetBreakdown(
-  userId: string
+  userId: string,
+  options: CalculateAssetBreakdownOptions = {}
 ): Promise<AssetBreakdown> {
+  const { displayCurrency = "AUD" } = options;
   const calculatedAt = new Date();
 
-  // Get all active holdings
-  const userHoldings = await getUserHoldings(userId);
+  // Get all active holdings and exchange rates concurrently
+  const [userHoldings, rates] = await Promise.all([
+    getUserHoldings(userId),
+    fetchExchangeRates(),
+  ]);
 
   // Get latest snapshots for all holdings (single query)
   const snapshotsMap = await getLatestSnapshots(userId);
@@ -570,17 +876,36 @@ export async function calculateAssetBreakdown(
     debtTypes.includes(h.type as (typeof debtTypes)[number])
   );
 
+  // Pre-fetch quantities and prices for all tradeable holdings
+  const quantities = await Promise.all(
+    tradeableHoldings.map(async (h) => ({
+      id: h.id,
+      quantity: await calculateQuantityHeld(h.id),
+    }))
+  );
+  const quantitiesMap = new Map(quantities.map((q) => [q.id, q.quantity]));
+
+  const prices = await Promise.all(
+    tradeableHoldings
+      .filter((h) => h.symbol)
+      .map(async (h) => ({
+        symbol: h.symbol!,
+        price: await getCachedPrice(h.symbol!),
+      }))
+  );
+  const pricesMap = new Map(prices.map((p) => [p.symbol, p.price]));
+
   // Calculate values for each category
-  const tradeableResults = await Promise.all(
-    tradeableHoldings.map((h) => calculateTradeableValue(h))
+  const tradeableResults = tradeableHoldings.map((h) =>
+    calculateTradeableValue(h, displayCurrency, rates, quantitiesMap, pricesMap)
   );
 
-  const snapshotAssetResults = await Promise.all(
-    snapshotAssetHoldings.map((h) => calculateSnapshotValue(h, snapshotsMap))
+  const snapshotAssetResults = snapshotAssetHoldings.map((h) =>
+    calculateSnapshotValue(h, snapshotsMap, displayCurrency, rates)
   );
 
-  const debtResults = await Promise.all(
-    debtHoldings.map((h) => calculateSnapshotValue(h, snapshotsMap))
+  const debtResults = debtHoldings.map((h) =>
+    calculateSnapshotValue(h, snapshotsMap, displayCurrency, rates)
   );
 
   // Extract holding values (filter out nulls)
@@ -701,6 +1026,8 @@ export async function calculateAssetBreakdown(
     debt,
     totalAssets,
     totalDebt: debtTotal,
+    displayCurrency,
+    ratesUsed: rates,
     calculatedAt,
   };
 }
