@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency } from "@/lib/utils/currency";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { useCallback } from "react";
 import {
   LineChart,
   Line,
@@ -26,8 +28,22 @@ interface HistoryResponse {
   generatedAt: string;
 }
 
-async function fetchHistory(): Promise<HistoryResponse> {
-  const response = await fetch("/api/net-worth/history?months=12");
+/**
+ * Time range options for the chart.
+ */
+type TimeRange = "3m" | "6m" | "1y" | "all";
+
+const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; months: number }[] = [
+  { value: "3m", label: "3M", months: 3 },
+  { value: "6m", label: "6M", months: 6 },
+  { value: "1y", label: "1Y", months: 12 },
+  { value: "all", label: "All", months: 60 }, // 5 years max
+];
+
+const DEFAULT_TIME_RANGE: TimeRange = "1y";
+
+async function fetchHistory(months: number): Promise<HistoryResponse> {
+  const response = await fetch(`/api/net-worth/history?months=${months}`);
   if (!response.ok) {
     throw new Error("Failed to fetch history");
   }
@@ -110,10 +126,44 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
 }
 
 /**
+ * Time range selector component for the chart.
+ */
+interface TimeRangeSelectorProps {
+  selectedRange: TimeRange;
+  onRangeChange: (range: TimeRange) => void;
+}
+
+function TimeRangeSelector({ selectedRange, onRangeChange }: TimeRangeSelectorProps) {
+  return (
+    <div className="flex items-center gap-1 bg-gray-700/50 rounded-lg p-1">
+      {TIME_RANGE_OPTIONS.map((option) => (
+        <button
+          key={option.value}
+          onClick={() => onRangeChange(option.value)}
+          className={`
+            px-3 py-1 text-sm font-medium rounded-md transition-colors
+            ${
+              selectedRange === option.value
+                ? "bg-gray-600 text-white"
+                : "text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+            }
+          `}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
  * Net Worth History Chart
  *
- * Displays a line chart showing net worth over the last 12 months.
+ * Displays a line chart showing net worth history with configurable time ranges.
  * Features:
+ * - Time range selector: 3M, 6M, 1Y, All
+ * - Default selection is 12 months (1Y)
+ * - URL param ?range=3m persists selection
  * - X-axis: months (Jan, Feb, etc.)
  * - Y-axis: net worth value (auto-scaled, in display currency)
  * - Hover shows exact value for that month
@@ -127,14 +177,44 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
 export function NetWorthChart() {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Get time range from URL param, default to 1Y
+  const rangeParam = searchParams.get("range") as TimeRange | null;
+  const selectedRange: TimeRange =
+    rangeParam && TIME_RANGE_OPTIONS.some((opt) => opt.value === rangeParam)
+      ? rangeParam
+      : DEFAULT_TIME_RANGE;
+
+  // Get months for the selected range
+  const selectedOption = TIME_RANGE_OPTIONS.find((opt) => opt.value === selectedRange);
+  const months = selectedOption?.months ?? 12;
+
+  // Handle range change by updating URL param
+  const handleRangeChange = useCallback(
+    (newRange: TimeRange) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (newRange === DEFAULT_TIME_RANGE) {
+        // Remove param if default value to keep URL clean
+        params.delete("range");
+      } else {
+        params.set("range", newRange);
+      }
+      const newUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+      router.replace(newUrl, { scroll: false });
+    },
+    [searchParams, pathname, router]
+  );
 
   const {
     data: historyData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["net-worth-history", 12],
-    queryFn: fetchHistory,
+    queryKey: ["net-worth-history", months],
+    queryFn: () => fetchHistory(months),
     enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000, // Refetch every minute
   });
@@ -169,9 +249,15 @@ export function NetWorthChart() {
   if (chartData.length === 0) {
     return (
       <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-4">
-          Net Worth History
-        </h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+            Net Worth History
+          </h3>
+          <TimeRangeSelector
+            selectedRange={selectedRange}
+            onRangeChange={handleRangeChange}
+          />
+        </div>
         <div className="h-64 flex items-center justify-center">
           <p className="text-gray-500 text-center">
             No historical data available yet.
@@ -199,9 +285,15 @@ export function NetWorthChart() {
 
   return (
     <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-      <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-6">
-        Net Worth History
-      </h3>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+          Net Worth History
+        </h3>
+        <TimeRangeSelector
+          selectedRange={selectedRange}
+          onRangeChange={handleRangeChange}
+        />
+      </div>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
