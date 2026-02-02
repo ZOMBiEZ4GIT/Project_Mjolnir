@@ -159,8 +159,8 @@
         "Lint passes"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Enhanced RecentImports skeleton to match actual import record layout: status icon, filename row with icon + text + badge, stats row with count + clock + timestamp"
     },
     {
       "id": "US-011",
@@ -176,8 +176,8 @@
         "Lint passes"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created ApiError class with status, message, type, userMessage, and details. Includes handleApiError for catch blocks, createApiErrorResponse for API routes, factory methods fromResponse and fromUnknown. Logs errors with context and returns user-friendly messages for common HTTP status codes."
     },
     {
       "id": "US-012",
@@ -192,8 +192,8 @@
         "Lint passes"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/utils/retry.ts with withRetry utility and isTransientError helper. Integrated into fetchPrice in price-fetcher.ts with 3 retries, exponential backoff starting at 1000ms, logging on retry attempts, and fallback to cached price on exhaustion."
     },
     {
       "id": "US-013",

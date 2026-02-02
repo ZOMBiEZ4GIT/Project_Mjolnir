@@ -48,6 +48,8 @@
 - Error boundary component at `components/error-boundary.tsx` - use for wrapping sections that might fail
 - SectionErrorBoundary at `components/dashboard/section-error-boundary.tsx` - lighter weight, section-specific error handling
 - DashboardContent at `components/dashboard/dashboard-content.tsx` - wraps all dashboard sections with error boundaries
+- API error utility at `lib/utils/api-error.ts` - use ApiError class and handleApiError for consistent error handling in API routes and client code
+- Retry utility at `lib/utils/retry.ts` - use `withRetry()` for external API calls with transient failures, `isTransientError()` to filter retryable errors
 
 ---
 
@@ -206,5 +208,55 @@ Started: 2026-02-03
   - Use consistent skeleton sizing (h-4 for text, h-5 for icons, h-9 for inputs/selects, h-5 w-9 rounded-full for switches)
   - useCurrency's isLoading covers both preferences and exchange rates loading
   - EmailPreferences already has its own internal skeleton, so page-level skeleton replaces both sections together
+---
+
+## 2026-02-03 - US-010
+- Enhanced RecentImports loading skeleton to better match actual import record layout
+- Skeleton now shows: status icon (rounded-full), file icon + filename + type badge, stats row with count + clock icon + timestamp
+- The component already had an isLoading prop and basic skeleton - just needed enhancement
+- Uses animate-pulse on each element individually rather than on the container
+- Files changed: `components/import/recent-imports.tsx` (modified)
+- **Learnings for future iterations:**
+  - Check if loading skeletons already exist before creating new ones - sometimes just need enhancement
+  - Place animate-pulse on individual elements not containers for more realistic loading effect
+  - Match skeleton structure to actual content: use flex, gap spacing, rounded-full for icons, rounded for text
+---
+
+## 2026-02-03 - US-011
+- Created API error handling utility at `lib/utils/api-error.ts`
+- ApiError class with: status, message, type (categorization), userMessage (friendly), details (fieldErrors, cause, context, timestamp)
+- handleApiError function: converts unknown errors to ApiError, logs with context, returns user-friendly result
+- createApiErrorResponse helper: convenience wrapper for NextResponse.json error responses
+- Factory methods: ApiError.fromResponse() for fetch errors, ApiError.fromUnknown() for catch blocks
+- HTTP_STATUS_MESSAGES map provides user-friendly messages for common status codes (400-504)
+- ApiErrorType enum: VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, RATE_LIMITED, SERVER_ERROR, NETWORK_ERROR, TIMEOUT, UNKNOWN
+- Files changed: `lib/utils/api-error.ts` (created)
+- **Learnings for future iterations:**
+  - Use ApiError.fromResponse() when handling fetch() errors: `if (!res.ok) throw await ApiError.fromResponse(res)`
+  - Use handleApiError() in catch blocks: `const { message, status } = handleApiError(error, "context")`
+  - Use createApiErrorResponse() for quick API route error responses
+  - Store field-level validation errors in details.fieldErrors for form handling
+  - Include context string (e.g., "fetching holdings") for better debugging
+---
+
+## 2026-02-03 - US-012
+- Added retry logic to price fetching with exponential backoff
+- Created `lib/utils/retry.ts` with generic retry utility:
+  - `withRetry<T>()`: wraps async functions with configurable retry behavior
+  - `isTransientError()`: helper to identify retryable errors (network, 5xx, 429)
+  - Options: maxRetries, initialDelayMs, maxDelayMs, backoffMultiplier, isRetryable, onRetry
+  - Exponential backoff with jitter to prevent thundering herd
+- Updated `lib/services/price-fetcher.ts`:
+  - fetchPrice now wraps fetchPriceFromProvider with withRetry
+  - Up to 3 retries with 1000ms initial delay, 2x backoff multiplier
+  - Only retries transient errors (network, rate limit, server errors)
+  - Logs each retry attempt with symbol and delay for debugging
+  - On exhaustion, logs final failure and falls back to cached price (existing behavior)
+- Files changed: `lib/utils/retry.ts` (created), `lib/services/price-fetcher.ts` (modified)
+- **Learnings for future iterations:**
+  - Use `withRetry()` for any external API call that might have transient failures
+  - `isTransientError()` checks for network errors and HTTP 5xx/429 status codes
+  - Add jitter to exponential backoff to prevent synchronized retry storms
+  - Keep retry logic generic in utility, domain-specific filtering via isRetryable option
 ---
 
