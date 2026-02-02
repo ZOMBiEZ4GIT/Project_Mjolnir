@@ -1,0 +1,264 @@
+{
+  "project": "Mjolnir",
+  "branchName": "feature/w12-polish-error-handling",
+  "description": "Polish and error handling improvements including mobile responsiveness, consistent loading states, error boundaries, and UX refinements.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create reusable error boundary component",
+      "description": "As a developer, I need an error boundary to catch React errors gracefully.",
+      "acceptanceCriteria": [
+        "Create components/error-boundary.tsx using React error boundary pattern",
+        "Shows friendly error message with retry button",
+        "Logs error to console for debugging",
+        "Dark mode styling consistent with app",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Implemented error boundary with Card styling, retry button, and console logging"
+    },
+    {
+      "id": "US-002",
+      "title": "Add error boundary to dashboard layout",
+      "description": "As a user, I want errors to not crash the entire app.",
+      "acceptanceCriteria": [
+        "Wrap dashboard layout children in ErrorBoundary",
+        "Each major section (hero, charts, tables) has its own boundary",
+        "Error in one section doesn't affect others",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Added DashboardErrorBoundary wrapper to layout, created SectionErrorBoundary for individual sections, wrapped all 9 dashboard sections with their own boundaries"
+    },
+    {
+      "id": "US-003",
+      "title": "Create global error page",
+      "description": "As a user, I want to see a helpful page when something goes wrong.",
+      "acceptanceCriteria": [
+        "Create app/error.tsx for Next.js error handling",
+        "Shows friendly message: Something went wrong",
+        "Has 'Try again' button that resets error",
+        "Has 'Go to Dashboard' link",
+        "Dark mode styling",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Created app/error.tsx with Card-styled error UI, Try again and Go to Dashboard buttons, dev-only error details"
+    },
+    {
+      "id": "US-004",
+      "title": "Create not-found page",
+      "description": "As a user, I want a helpful 404 page.",
+      "acceptanceCriteria": [
+        "Create app/not-found.tsx for Next.js 404 handling",
+        "Shows friendly message: Page not found",
+        "Has 'Go to Dashboard' link",
+        "Dark mode styling consistent with app",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Created app/not-found.tsx with Card-styled 404 UI consistent with error.tsx styling"
+    },
+    {
+      "id": "US-005",
+      "title": "Add mobile navigation menu",
+      "description": "As Roland, I want to navigate on mobile devices.",
+      "acceptanceCriteria": [
+        "Create hamburger menu button visible on small screens",
+        "Menu opens as slide-out drawer or dropdown",
+        "Contains all navigation links from sidebar",
+        "Closes when link is clicked",
+        "Uses Sheet component from shadcn/ui",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Created MobileNav component using Sheet from shadcn/ui, hamburger visible on mobile via md: breakpoint"
+    },
+    {
+      "id": "US-006",
+      "title": "Make dashboard cards stack on mobile",
+      "description": "As Roland, I want the dashboard to be usable on phone.",
+      "acceptanceCriteria": [
+        "Summary cards stack vertically on small screens",
+        "Asset allocation and currency exposure stack vertically",
+        "Charts take full width on mobile",
+        "Use Tailwind responsive classes (sm:, md:, lg:)",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Added responsive padding (p-4 sm:p-6) to all dashboard cards, made header and check-in prompt stack on mobile, adjusted text sizes for small screens"
+    },
+    {
+      "id": "US-007",
+      "title": "Make holdings table responsive",
+      "description": "As Roland, I want to view holdings on mobile.",
+      "acceptanceCriteria": [
+        "Table scrolls horizontally on small screens",
+        "Or: converts to card layout on mobile",
+        "Key columns (name, value) always visible",
+        "Secondary columns hidden or collapsed on mobile",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Added overflow-x-auto for horizontal scrolling, sticky Name column, progressive column hiding using sm:/md:/lg: breakpoints, compact action buttons on mobile"
+    },
+    {
+      "id": "US-008",
+      "title": "Make transactions table responsive",
+      "description": "As Roland, I want to view transactions on mobile.",
+      "acceptanceCriteria": [
+        "Table scrolls horizontally on small screens",
+        "Key columns (date, symbol, action, total) always visible",
+        "Secondary columns (fees, notes) hidden on mobile",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Added overflow-x-auto, sticky Date column, progressive column hiding (sm:/md:/lg:), smaller action buttons on mobile, responsive footer totals"
+    },
+    {
+      "id": "US-009",
+      "title": "Add loading skeleton to settings page",
+      "description": "As Roland, I want visual feedback while settings load.",
+      "acceptanceCriteria": [
+        "Show skeleton while preferences load",
+        "Skeleton matches layout of email preferences section",
+        "Skeleton matches layout of currency preferences section",
+        "Uses animate-pulse for loading animation",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Created SettingsSkeleton component matching both currency and email preference section layouts, shows during isLoading state from useCurrency"
+    },
+    {
+      "id": "US-010",
+      "title": "Add loading skeleton to import page",
+      "description": "As Roland, I want visual feedback while import history loads.",
+      "acceptanceCriteria": [
+        "Show skeleton for recent imports section while loading",
+        "Skeleton shows placeholder rows",
+        "Uses animate-pulse for loading animation",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Enhanced RecentImports skeleton to match actual import record layout: status icon, filename row with icon + text + badge, stats row with count + clock + timestamp"
+    },
+    {
+      "id": "US-011",
+      "title": "Add API error handling utility",
+      "description": "As a developer, I need consistent API error handling.",
+      "acceptanceCriteria": [
+        "Create lib/utils/api-error.ts",
+        "ApiError class with status, message, and optional details",
+        "handleApiError function for catch blocks",
+        "Logs errors with context for debugging",
+        "Returns user-friendly messages for common errors",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Created ApiError class with status, message, type, userMessage, and details. Includes handleApiError for catch blocks, createApiErrorResponse for API routes, factory methods fromResponse and fromUnknown. Logs errors with context and returns user-friendly messages for common HTTP status codes."
+    },
+    {
+      "id": "US-012",
+      "title": "Add retry logic to price fetching",
+      "description": "As a developer, I need price fetches to retry on failure.",
+      "acceptanceCriteria": [
+        "Add retry wrapper to fetchPrice function",
+        "Retries up to 3 times with exponential backoff",
+        "Returns cached price if all retries fail",
+        "Logs retry attempts for debugging",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Created lib/utils/retry.ts with withRetry utility and isTransientError helper. Integrated into fetchPrice in price-fetcher.ts with 3 retries, exponential backoff starting at 1000ms, logging on retry attempts, and fallback to cached price on exhaustion."
+    },
+    {
+      "id": "US-013",
+      "title": "Add form validation feedback",
+      "description": "As Roland, I want clear feedback when forms have errors.",
+      "acceptanceCriteria": [
+        "Add red border to invalid form fields",
+        "Show error message below invalid fields",
+        "Clear error when field is corrected",
+        "Apply to holding form, transaction form, snapshot form",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "Added border-red-500 and focus-visible:ring-red-500 styling to all form inputs (Input and SelectTrigger) when errors exist. Updated add/edit holding dialogs, add/edit transaction dialogs (all action types), and edit snapshot modal. Errors clear when field values change."
+    },
+    {
+      "id": "US-014",
+      "title": "Add confirmation dialogs for destructive actions",
+      "description": "As Roland, I want to confirm before deleting data.",
+      "acceptanceCriteria": [
+        "Add confirmation dialog before deleting holdings",
+        "Add confirmation dialog before deleting transactions",
+        "Add confirmation dialog before deleting snapshots",
+        "Dialog shows what will be deleted",
+        "Uses AlertDialog from shadcn/ui",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "Created DeleteHoldingDialog component with detailed holding info (name, type, symbol, currency, quantity, cost basis, balance). Shows warning about associated data deletion. DeleteTransactionDialog and DeleteSnapshotDialog already existed with detailed confirmations."
+    },
+    {
+      "id": "US-015",
+      "title": "Add keyboard shortcuts",
+      "description": "As Roland, I want to navigate quickly with keyboard.",
+      "acceptanceCriteria": [
+        "Add Cmd/Ctrl+K to open quick search (or navigation)",
+        "Add Escape to close modals",
+        "Add Enter to submit forms when focused",
+        "Document shortcuts in settings or help section",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 15,
+      "passes": true,
+      "notes": "Created CommandMenu component using cmdk/shadcn command. Cmd/Ctrl+K opens quick navigation palette with all pages. Escape handled by Radix UI dialogs. Enter form submit is standard browser behavior. Added keyboard shortcuts documentation section to settings page."
+    },
+    {
+      "id": "US-016",
+      "title": "Add empty states to all list pages",
+      "description": "As Roland, I want helpful empty states when no data exists.",
+      "acceptanceCriteria": [
+        "Holdings page shows empty state with 'Add your first holding' CTA",
+        "Transactions page shows empty state with helpful message",
+        "Snapshots page shows empty state with helpful message",
+        "Empty states use consistent styling",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 16,
+      "passes": true,
+      "notes": "Created reusable EmptyState component with icon, title, description, and optional action. Updated holdings, transactions, and snapshots pages with consistent empty states including icons (Briefcase, ArrowLeftRight, Camera) and helpful CTAs. Filter-active empty states show Filter icon with clear filters button."
+    }
+  ]
+}

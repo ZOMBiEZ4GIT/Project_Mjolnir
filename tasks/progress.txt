@@ -11,7 +11,6 @@
 - ClerkProvider conditionally renders based on NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to allow builds without Clerk keys
 - Use `export const dynamic = "force-dynamic"` for pages/layouts that use Clerk components
 - Dashboard routes at `/dashboard` and `/profile` are protected; landing page `/` is public
-- Auth pages use `(auth)` route group; dashboard uses `(dashboard)` route group
 
 - TanStack Query provider is in `components/providers/query-provider.tsx` - wrap layouts with QueryProvider
 - ClerkProvider wrapper is in `components/providers/clerk-provider.tsx` - handles missing Clerk keys gracefully
@@ -21,320 +20,37 @@
 - Toaster component is in root layout; for dark mode only, hardcode `theme="dark"` in Sonner component
 
 - Dashboard navigation uses `components/dashboard/nav.tsx` with usePathname for active state
-- Settings page exists at `/settings` for user preferences
-- Import page exists at `/import` for CSV imports
+- Navigation items array can be extended with new pages (Import and Export pages follow same pattern)
 
-- Error Handling Patterns (from CLAUDE.md):
-  - Price API down: Show last cached price with "as of X ago" badge
-  - Unknown symbol: Show error on holding form, prevent save
-  - Invalid ticker: Show validation error, suggest correct format (e.g., `.AX` for ASX)
-  - Auth failure: Redirect to Clerk sign-in
-  - DB error: Generic "something went wrong" + error logging
+- Existing database schemas in `lib/db/schema.ts`:
+  - holdings: id, name, symbol, type, currency, exchange, is_dormant, user_id, created_at, deleted_at
+  - transactions: id, holding_id, date, action, quantity, unit_price, fees, currency, notes
+  - snapshots: id, holding_id, date, balance, currency
+  - contributions: id, holding_id, date, employer_contrib, employee_contrib
 
-- Design Principles:
-  - Dark mode only - no light mode
-  - Information density - show meaningful data; minimize empty space
-  - Scannable - key metrics visible without scrolling
-  - Mobile responsive - usable on phone for quick balance checks
+- Import utilities in `lib/import/`:
+  - csv-parser.ts - parseCSV function
+  - transaction-importer.ts - importTransactions
+  - snapshot-importer.ts - importSnapshots
+  - validators/ - transaction and snapshot validators
 
-- Existing components:
-  - shadcn/ui: Button, Input, Select, Table, Card, Progress, Tooltip, Switch, Dialog, Sheet
-  - Chart components in `components/charts/`: ChartSkeleton, ChartError, ChartExportButton
-  - Dashboard components with loading skeletons already implemented
+- File download pattern (from import page templates):
+  - Create Blob with content and MIME type
+  - Use URL.createObjectURL and temporary anchor element
+  - Set download attribute for filename
+  - Click programmatically and revoke object URL
 
-- Tailwind responsive breakpoints: sm (640px), md (768px), lg (1024px), xl (1280px)
-- Use responsive classes like `hidden md:block` or `grid-cols-1 md:grid-cols-2`
-
-- Error boundary component at `components/error-boundary.tsx` - use for wrapping sections that might fail
-- SectionErrorBoundary at `components/dashboard/section-error-boundary.tsx` - lighter weight, section-specific error handling
-- DashboardContent at `components/dashboard/dashboard-content.tsx` - wraps all dashboard sections with error boundaries
-- API error utility at `lib/utils/api-error.ts` - use ApiError class and handleApiError for consistent error handling in API routes and client code
-- Retry utility at `lib/utils/retry.ts` - use `withRetry()` for external API calls with transient failures, `isTransientError()` to filter retryable errors
+- API response patterns:
+  - For file downloads: set Content-Type and Content-Disposition headers
+  - Return new Response(content, { headers })
+  - CSV MIME type: "text/csv;charset=utf-8"
+  - JSON MIME type: "application/json"
 
 ---
 
-# W-12 Polish & Error Handling Progress Log
+# W-13 Data Export Progress Log
 
 Started: 2026-02-03
 
----
-
-## 2026-02-03 - US-001
-- Created reusable ErrorBoundary component at `components/error-boundary.tsx`
-- React class component using getDerivedStateFromError and componentDidCatch
-- Shows friendly Card-based error message with "Try again" button
-- Logs errors to console for debugging
-- Dark mode styling using existing Card and Button components
-- Optional `fallback` prop for custom error UI
-- Optional `onReset` callback for parent components
-- Also exports `withErrorBoundary` HOC for wrapping components
-- Files changed: `components/error-boundary.tsx` (created)
-- **Learnings for future iterations:**
-  - React error boundaries must be class components (cannot be function components)
-  - Show error details in development mode only using `process.env.NODE_ENV`
-  - Use existing shadcn/ui Card styling for consistency
----
-
-## 2026-02-03 - US-002
-- Added error boundary to dashboard layout
-- Created `components/dashboard/dashboard-error-boundary.tsx` as client wrapper for layout
-- Created `components/dashboard/section-error-boundary.tsx` for individual sections
-- Created `components/dashboard/dashboard-content.tsx` to wrap all dashboard sections
-- Updated `app/(dashboard)/layout.tsx` to wrap children in DashboardErrorBoundary
-- Updated `app/(dashboard)/dashboard/page.tsx` to use DashboardContent component
-- Each major section (Net Worth Hero, Summary Cards, Asset Allocation, Currency Exposure, Super Breakdown, Net Worth Chart, Top Performers, Check-in Prompt) has its own SectionErrorBoundary
-- Files changed: `app/(dashboard)/layout.tsx`, `app/(dashboard)/dashboard/page.tsx` (modified), `components/dashboard/dashboard-error-boundary.tsx`, `components/dashboard/section-error-boundary.tsx`, `components/dashboard/dashboard-content.tsx` (created)
-- **Learnings for future iterations:**
-  - Use client wrapper component (DashboardErrorBoundary) to add client-side ErrorBoundary to server component layout
-  - SectionErrorBoundary is lighter weight than main ErrorBoundary - smaller UI, section name prop
-  - Extract dashboard sections into separate DashboardContent client component for fine-grained error handling
----
-
-## 2026-02-03 - US-003
-- Created global error page at `app/error.tsx`
-- Next.js convention: error.tsx catches errors at the route level
-- Uses Card component with destructive/error styling consistent with ErrorBoundary
-- Shows "Something went wrong" message with Try again and Go to Dashboard buttons
-- Logs errors to console via useEffect
-- Shows error message in development mode only
-- Files changed: `app/error.tsx` (created)
-- **Learnings for future iterations:**
-  - Next.js error.tsx must be a client component ("use client")
-  - error.tsx receives `error` and `reset` props from Next.js
-  - `reset()` function attempts to re-render the route segment
-  - Use consistent styling with ErrorBoundary for cohesive error UX
----
-
-## 2026-02-03 - US-004
-- Created not-found page at `app/not-found.tsx`
-- Next.js convention: not-found.tsx handles 404 responses
-- Uses Card component with muted border styling (neutral, not error-colored)
-- Shows "Page not found" message with "Go to Dashboard" link
-- Consistent dark mode styling matching error.tsx
-- Server component (no "use client" needed since no interactivity beyond Link)
-- Files changed: `app/not-found.tsx` (created)
-- **Learnings for future iterations:**
-  - Next.js not-found.tsx can be a server component (unlike error.tsx)
-  - Use neutral styling for 404 (border-muted) vs error styling (border-destructive)
-  - Keep styling consistent across error pages for cohesive UX
----
-
-## 2026-02-03 - US-005
-- Added mobile navigation menu using Sheet component from shadcn/ui
-- Created `components/dashboard/mobile-nav.tsx` with hamburger menu button
-- Menu slides out from left side with all navigation links
-- Links automatically close the drawer when clicked via `onClick={() => setOpen(false)}`
-- Hamburger button visible on mobile (below md breakpoint), hidden on desktop
-- Desktop nav (`DashboardNav`) hidden on mobile, visible on md and above
-- Updated `app/(dashboard)/layout.tsx` to include MobileNav component
-- Files changed: `app/(dashboard)/layout.tsx` (modified), `components/dashboard/mobile-nav.tsx` (created), `components/ui/sheet.tsx` (installed)
-- **Learnings for future iterations:**
-  - Install shadcn/ui components with `npx shadcn@latest add [component] --yes`
-  - Use `md:hidden` and `hidden md:block` for responsive show/hide patterns
-  - Sheet component has `side` prop for drawer direction (left, right, top, bottom)
-  - Control Sheet open state with `open` and `onOpenChange` props
----
-
-## 2026-02-03 - US-006
-- Made dashboard cards stack and display properly on mobile devices
-- Added responsive padding `p-4 sm:p-6` to all dashboard card components
-- Updated dashboard header to stack vertically on small screens with `flex-col sm:flex-row`
-- Reduced net worth hero padding and text sizes on mobile (`text-3xl sm:text-4xl md:text-5xl`)
-- Hidden sparkline on very small screens with `hidden sm:block`
-- Made summary cards use smaller text on mobile (`text-xl sm:text-2xl`)
-- Made check-in prompt button full-width on mobile with stacking layout
-- Added `flex-wrap` to controls that could overflow on small screens
-- Adjusted container padding with `px-3 sm:px-4 py-4 sm:py-8`
-- Files changed: `components/dashboard/dashboard-content.tsx`, `components/dashboard/dashboard-header.tsx`, `components/dashboard/net-worth-hero.tsx`, `components/dashboard/summary-cards.tsx`, `components/dashboard/asset-allocation.tsx`, `components/dashboard/currency-exposure.tsx`, `components/dashboard/net-worth-chart.tsx`, `components/dashboard/top-performers.tsx`, `components/dashboard/super-breakdown-section.tsx`, `components/dashboard/super-growth-chart.tsx`, `components/dashboard/asset-allocation-pie-chart.tsx`, `components/check-in/check-in-prompt-card.tsx`
-- **Learnings for future iterations:**
-  - Use `p-4 sm:p-6` pattern for consistent responsive padding across cards
-  - Use `flex-col sm:flex-row` for layouts that should stack on mobile
-  - Use `text-xl sm:text-2xl md:text-3xl` pattern for responsive typography
-  - Hide non-essential UI elements on small screens with `hidden sm:block`
-  - Make buttons full-width on mobile with `w-full sm:w-auto`
-  - Use `flex-wrap` on control groups to prevent overflow
----
-
-## 2026-02-03 - US-007
-- Made holdings table responsive for mobile viewing
-- Added `overflow-x-auto` to table container for horizontal scrolling
-- Made Name column sticky (`sticky left-0 bg-gray-950 z-10`) so it stays visible while scrolling
-- Progressive column visibility using Tailwind responsive classes:
-  - Always visible: Name, Market Value/Balance, Actions
-  - Hidden on mobile, visible sm+ (640px+): Symbol, Price, Type, Status
-  - Hidden on mobile/tablet, visible md+ (768px+): Quantity, Gain/Loss
-  - Hidden until lg+ (1024px+): Currency, Cost Basis, Avg Cost
-- Reduced action button sizes on mobile (`h-7 w-7 sm:h-8 sm:w-8`)
-- Applied same responsive patterns to both HoldingsTypeSection and HoldingsCurrencySection components
-- Files changed: `components/holdings/holdings-table.tsx`
-- **Learnings for future iterations:**
-  - Use `sticky left-0 bg-[background-color] z-10` to keep a column visible while table scrolls
-  - `hidden sm:table-cell` pattern works for responsive table columns
-  - Progressive disclosure: show most important data on mobile, reveal more as screen grows
-  - For tables with many columns, prioritize: identifier (name) + primary value + actions
----
-
-## 2026-02-03 - US-008
-- Made transactions table responsive for mobile viewing
-- Added `overflow-x-auto` to table container for horizontal scrolling
-- Made Date column sticky (`sticky left-0 bg-gray-950 z-10`) so it stays visible while scrolling
-- Added holding name below date on mobile (since Holding column is hidden on mobile)
-- Progressive column visibility using Tailwind responsive classes:
-  - Always visible: Date, Action, Total, Actions
-  - Hidden on mobile, visible sm+ (640px+): Holding, Unit Price
-  - Hidden until md+ (768px+): Quantity
-  - Hidden until lg+ (1024px+): Fees
-- Reduced action button sizes on mobile (`h-7 w-7 sm:h-8 sm:w-8`)
-- Made footer totals responsive with smaller text and gaps on mobile
-- Updated footer to use individual TableCells with responsive visibility instead of colspan
-- Files changed: `app/(dashboard)/transactions/page.tsx`
-- **Learnings for future iterations:**
-  - For tables with hidden columns, show summary info in the sticky/always-visible column (e.g., holding name under date)
-  - When using sticky columns in footer, can't use colspan - use individual cells with matching visibility classes
-  - Use `text-xs sm:text-sm` pattern for responsive footer/summary text
-  - Abbreviate labels on mobile (e.g., "Net Cash Flow" → "Net:")
----
-
-## 2026-02-03 - US-009
-- Added loading skeleton to settings page
-- Created `components/settings/settings-skeleton.tsx` component matching both section layouts
-- Currency Preferences skeleton: Globe icon placeholder, Display Currency row with selector placeholder, Show Native Currency row with toggle placeholder
-- Email Preferences skeleton: Bell icon placeholder, email address row, toggle row, day selector row, helper text, test email button placeholder
-- Updated `app/(dashboard)/settings/page.tsx` to show SettingsSkeleton when `isLoading` is true from useCurrency
-- Uses animate-pulse on all skeleton elements for loading animation
-- Files changed: `components/settings/settings-skeleton.tsx` (created), `app/(dashboard)/settings/page.tsx` (modified)
-- **Learnings for future iterations:**
-  - Create skeleton components that match the exact layout of the content they replace
-  - Use consistent skeleton sizing (h-4 for text, h-5 for icons, h-9 for inputs/selects, h-5 w-9 rounded-full for switches)
-  - useCurrency's isLoading covers both preferences and exchange rates loading
-  - EmailPreferences already has its own internal skeleton, so page-level skeleton replaces both sections together
----
-
-## 2026-02-03 - US-010
-- Enhanced RecentImports loading skeleton to better match actual import record layout
-- Skeleton now shows: status icon (rounded-full), file icon + filename + type badge, stats row with count + clock icon + timestamp
-- The component already had an isLoading prop and basic skeleton - just needed enhancement
-- Uses animate-pulse on each element individually rather than on the container
-- Files changed: `components/import/recent-imports.tsx` (modified)
-- **Learnings for future iterations:**
-  - Check if loading skeletons already exist before creating new ones - sometimes just need enhancement
-  - Place animate-pulse on individual elements not containers for more realistic loading effect
-  - Match skeleton structure to actual content: use flex, gap spacing, rounded-full for icons, rounded for text
----
-
-## 2026-02-03 - US-011
-- Created API error handling utility at `lib/utils/api-error.ts`
-- ApiError class with: status, message, type (categorization), userMessage (friendly), details (fieldErrors, cause, context, timestamp)
-- handleApiError function: converts unknown errors to ApiError, logs with context, returns user-friendly result
-- createApiErrorResponse helper: convenience wrapper for NextResponse.json error responses
-- Factory methods: ApiError.fromResponse() for fetch errors, ApiError.fromUnknown() for catch blocks
-- HTTP_STATUS_MESSAGES map provides user-friendly messages for common status codes (400-504)
-- ApiErrorType enum: VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, RATE_LIMITED, SERVER_ERROR, NETWORK_ERROR, TIMEOUT, UNKNOWN
-- Files changed: `lib/utils/api-error.ts` (created)
-- **Learnings for future iterations:**
-  - Use ApiError.fromResponse() when handling fetch() errors: `if (!res.ok) throw await ApiError.fromResponse(res)`
-  - Use handleApiError() in catch blocks: `const { message, status } = handleApiError(error, "context")`
-  - Use createApiErrorResponse() for quick API route error responses
-  - Store field-level validation errors in details.fieldErrors for form handling
-  - Include context string (e.g., "fetching holdings") for better debugging
----
-
-## 2026-02-03 - US-012
-- Added retry logic to price fetching with exponential backoff
-- Created `lib/utils/retry.ts` with generic retry utility:
-  - `withRetry<T>()`: wraps async functions with configurable retry behavior
-  - `isTransientError()`: helper to identify retryable errors (network, 5xx, 429)
-  - Options: maxRetries, initialDelayMs, maxDelayMs, backoffMultiplier, isRetryable, onRetry
-  - Exponential backoff with jitter to prevent thundering herd
-- Updated `lib/services/price-fetcher.ts`:
-  - fetchPrice now wraps fetchPriceFromProvider with withRetry
-  - Up to 3 retries with 1000ms initial delay, 2x backoff multiplier
-  - Only retries transient errors (network, rate limit, server errors)
-  - Logs each retry attempt with symbol and delay for debugging
-  - On exhaustion, logs final failure and falls back to cached price (existing behavior)
-- Files changed: `lib/utils/retry.ts` (created), `lib/services/price-fetcher.ts` (modified)
-- **Learnings for future iterations:**
-  - Use `withRetry()` for any external API call that might have transient failures
-  - `isTransientError()` checks for network errors and HTTP 5xx/429 status codes
-  - Add jitter to exponential backoff to prevent synchronized retry storms
-  - Keep retry logic generic in utility, domain-specific filtering via isRetryable option
----
-
-## 2026-02-03 - US-013
-- Added red border styling to invalid form fields across holding, transaction, and snapshot forms
-- Applied `border-red-500 focus-visible:ring-red-500` (or `focus:ring-red-500` for Select) to Input and SelectTrigger components when validation errors exist
-- Errors clear automatically when the field value changes
-- Updated files:
-  - `components/holdings/add-holding-dialog.tsx` - name, symbol, currency, exchange fields
-  - `components/holdings/edit-holding-dialog.tsx` - name, symbol, currency, exchange fields
-  - `components/transactions/add-transaction-dialog.tsx` - date, quantity, unitPrice, fees fields (for all transaction types: BUY/SELL/DIVIDEND/SPLIT)
-  - `components/transactions/edit-transaction-dialog.tsx` - date, quantity, unitPrice, fees fields
-  - `components/snapshots/edit-snapshot-modal.tsx` - balance, employerContrib, employeeContrib fields (added errors state and validation logic)
-- Files changed: 5 form component files modified
-- **Learnings for future iterations:**
-  - Use conditional className for error styling: `className={errors.field ? "border-red-500 focus-visible:ring-red-500" : ""}`
-  - For SelectTrigger, use `focus:ring-red-500` instead of `focus-visible:ring-red-500` (different focus pseudoclass)
-  - For inputs with additional classes like `className="w-24"`, use template literal: `className={\`w-24 ${errors.field ? "border-red-500 ..." : ""}\`}`
-  - The check-in modal already had error styling implemented - review existing code before adding new patterns
----
-
-## 2026-02-03 - US-014
-- Added confirmation dialogs for destructive actions (deleting holdings, transactions, snapshots)
-- Transactions and snapshots already had detailed confirmation dialogs (DeleteTransactionDialog, DeleteSnapshotDialog)
-- Created `components/holdings/delete-holding-dialog.tsx` component matching the existing patterns
-- DeleteHoldingDialog shows:
-  - Holding name, type, symbol (if tradeable), currency
-  - Quantity and cost basis (for tradeable holdings)
-  - Latest balance (for snapshot-based holdings)
-  - Warning about associated data deletion (transactions/snapshots/contributions)
-- Updated `components/holdings/holdings-table.tsx` to use DeleteHoldingDialog instead of inline AlertDialog
-- Removed unused imports (useMutation, useQueryClient, toast) and deleteMutation from HoldingsTable
-- Files changed: `components/holdings/delete-holding-dialog.tsx` (created), `components/holdings/holdings-table.tsx` (modified)
-- **Learnings for future iterations:**
-  - All three delete dialogs (holdings, transactions, snapshots) now follow consistent patterns
-  - Use AlertDialog from shadcn/ui with consistent dark mode styling (bg-gray-900, border-gray-700)
-  - Show details in a bordered box (bg-gray-800 rounded-lg border border-gray-700)
-  - Include warning box for cascading deletions (border-yellow-500/20 bg-yellow-500/10 text-yellow-400)
-  - Handle mutation state in the dialog component to keep parent component cleaner
----
-
-## 2026-02-03 - US-015
-- Added keyboard shortcuts for quick navigation
-- Installed shadcn/ui command component (built on cmdk)
-- Created `components/command-menu.tsx` with Cmd/Ctrl+K listener
-- CommandMenu shows navigation palette with all dashboard pages
-- Each item has icon, label, and description
-- Uses CommandDialog from shadcn/ui for modal behavior
-- Added CommandMenu to dashboard layout (always available)
-- Added keyboard shortcuts documentation section to settings page
-- Documents: Cmd/Ctrl+K (open menu), Escape (close dialogs), Enter (submit forms)
-- Note about Windows/Linux using Ctrl instead of Cmd
-- Files changed: `components/command-menu.tsx` (created), `components/ui/command.tsx` (installed), `app/(dashboard)/layout.tsx` (modified), `app/(dashboard)/settings/page.tsx` (modified)
-- **Learnings for future iterations:**
-  - Install shadcn/ui command with `npx shadcn@latest add command --yes`
-  - cmdk provides fuzzy search out of the box - just use CommandInput
-  - Escape key handling is built into Radix UI dialogs (no custom implementation needed)
-  - Enter form submission is standard HTML behavior (no custom implementation needed)
-  - Use kbd element for keyboard shortcut styling with consistent border/bg colors
----
-
-## 2026-02-03 - US-016
-- Added empty states to all list pages with consistent styling and helpful CTAs
-- Created `components/ui/empty-state.tsx` - reusable component with icon, title, description, and optional action
-- Updated Holdings page (`app/(dashboard)/holdings/page.tsx`):
-  - Empty state shows Briefcase icon with "Add your first holding" CTA button
-  - Filter-empty state shows Filter icon with "Show all currencies" button
-- Updated Transactions page (`app/(dashboard)/transactions/page.tsx`):
-  - Empty state shows ArrowLeftRight icon with "Add your first transaction" CTA button
-  - Filter-empty state shows Filter icon with "Clear all filters" button
-- Updated Snapshots page (`app/(dashboard)/snapshots/page.tsx`):
-  - Empty state shows Camera icon with "Go to Dashboard" link (since snapshots are created via check-in modal)
-  - Filter-empty state shows Filter icon with "Clear all filters" button
-- Files changed: `components/ui/empty-state.tsx` (created), `app/(dashboard)/holdings/page.tsx`, `app/(dashboard)/transactions/page.tsx`, `app/(dashboard)/snapshots/page.tsx` (modified)
-- **Learnings for future iterations:**
-  - Use LucideIcon type for icon prop in reusable components
-  - Differentiate between "no data exists" and "filters returned no results" with different icons and messages
-  - For items created elsewhere (snapshots via check-in modal), link to the creation location rather than showing an "Add" button
-  - Use size="lg" on primary CTA buttons in empty states for visual prominence
 ---
 
