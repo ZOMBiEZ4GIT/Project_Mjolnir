@@ -1,14 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { holdings } from "@/lib/db/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { holdings, snapshots, type Holding } from "@/lib/db/schema";
+import { eq, and, isNull, desc } from "drizzle-orm";
+import { calculateCostBasis } from "@/lib/calculations/cost-basis";
 
 // Valid values for validation
 const currencies = ["AUD", "NZD", "USD"] as const;
 const exchanges = ["ASX", "NZX", "NYSE", "NASDAQ"] as const;
 
+// Types that are tradeable (have cost basis)
+const tradeableTypes = ["stock", "etf", "crypto"] as const;
+// Snapshot types that use balance tracking
+const snapshotTypes = ["super", "cash", "debt"] as const;
+
 type Currency = (typeof currencies)[number];
+
+// Extended holding type with cost basis and snapshot data
+interface HoldingWithData extends Holding {
+  // Cost basis data (for tradeable holdings)
+  quantity: number | null;
+  costBasis: number | null;
+  avgCost: number | null;
+  // Snapshot data (for snapshot holdings)
+  latestSnapshot: {
+    id: string;
+    holdingId: string;
+    date: string;
+    balance: string;
+    currency: string;
+  } | null;
+}
 
 interface UpdateHoldingBody {
   name?: string;
@@ -30,6 +52,9 @@ export async function GET(
   }
 
   const { id } = await params;
+  const searchParams = request.nextUrl.searchParams;
+  const includeCostBasis = searchParams.get("include_cost_basis") === "true";
+  const includeLatestSnapshot = searchParams.get("include_latest_snapshot") === "true";
 
   const result = await db
     .select()
@@ -46,7 +71,63 @@ export async function GET(
     return NextResponse.json({ error: "Holding not found" }, { status: 404 });
   }
 
-  return NextResponse.json(result[0]);
+  const holding = result[0];
+
+  // If neither cost basis nor snapshots requested, return just holding
+  if (!includeCostBasis && !includeLatestSnapshot) {
+    return NextResponse.json(holding);
+  }
+
+  const isTradeable = tradeableTypes.includes(holding.type as (typeof tradeableTypes)[number]);
+  const isSnapshot = snapshotTypes.includes(holding.type as (typeof snapshotTypes)[number]);
+
+  let quantity: number | null = null;
+  let costBasis: number | null = null;
+  let avgCost: number | null = null;
+  let latestSnapshot: HoldingWithData["latestSnapshot"] = null;
+
+  // Calculate cost basis for tradeable types if requested
+  if (includeCostBasis && isTradeable) {
+    const costBasisResult = await calculateCostBasis(holding.id);
+    quantity = costBasisResult.quantity;
+    costBasis = costBasisResult.costBasis;
+    avgCost = costBasisResult.quantity > 0
+      ? costBasisResult.costBasis / costBasisResult.quantity
+      : null;
+  }
+
+  // Get latest snapshot for snapshot-type holdings if requested
+  if (includeLatestSnapshot && isSnapshot) {
+    const latestSnapshotResult = await db
+      .select({
+        id: snapshots.id,
+        holdingId: snapshots.holdingId,
+        date: snapshots.date,
+        balance: snapshots.balance,
+        currency: snapshots.currency,
+      })
+      .from(snapshots)
+      .where(
+        and(
+          eq(snapshots.holdingId, holding.id),
+          isNull(snapshots.deletedAt)
+        )
+      )
+      .orderBy(desc(snapshots.date))
+      .limit(1);
+
+    latestSnapshot = latestSnapshotResult[0] || null;
+  }
+
+  const holdingWithData: HoldingWithData = {
+    ...holding,
+    quantity,
+    costBasis,
+    avgCost,
+    latestSnapshot,
+  };
+
+  return NextResponse.json(holdingWithData);
 }
 
 export async function PATCH(
