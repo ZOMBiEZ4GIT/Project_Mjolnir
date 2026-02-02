@@ -47,10 +47,28 @@ export function RecentImports({
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 animate-pulse"
+            className="rounded-lg border border-gray-800 bg-gray-900/50 p-4"
           >
-            <div className="h-4 bg-gray-800 rounded w-1/3 mb-2" />
-            <div className="h-3 bg-gray-800 rounded w-1/2" />
+            <div className="flex items-start gap-3">
+              {/* Status icon placeholder */}
+              <div className="h-5 w-5 rounded-full bg-gray-800 animate-pulse mt-0.5" />
+              <div className="flex-1 space-y-2">
+                {/* Filename row: FileText icon + filename + type badge */}
+                <div className="flex items-center gap-2">
+                  <div className="h-4 w-4 rounded bg-gray-800 animate-pulse" />
+                  <div className="h-4 w-32 rounded bg-gray-800 animate-pulse" />
+                  <div className="h-5 w-20 rounded-full bg-gray-800 animate-pulse" />
+                </div>
+                {/* Stats row: imported count + timestamp */}
+                <div className="flex items-center gap-4">
+                  <div className="h-3 w-20 rounded bg-gray-800 animate-pulse" />
+                  <div className="flex items-center gap-1">
+                    <div className="h-3 w-3 rounded bg-gray-800 animate-pulse" />
+                    <div className="h-3 w-24 rounded bg-gray-800 animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         ))}
       </div>
