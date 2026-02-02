@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { CurrencyDisplay } from "@/components/ui/currency-display";
 import { EditHoldingDialog } from "@/components/holdings/edit-holding-dialog";
 import { HoldingPriceChart } from "@/components/holdings/holding-price-chart";
+import { SuperBalanceHistoryChart } from "@/components/holdings/super-balance-history-chart";
 import type { Holding } from "@/lib/db/schema";
 import type { Currency } from "@/lib/utils/currency";
 
@@ -19,6 +20,9 @@ export const dynamic = "force-dynamic";
 
 // Types that are tradeable (show price chart)
 const TRADEABLE_TYPES = ["stock", "etf", "crypto"] as const;
+
+// Super type (show balance history chart)
+const SUPER_TYPE = "super" as const;
 
 // Holding type display labels
 const HOLDING_TYPE_LABELS: Record<string, string> = {
@@ -214,6 +218,8 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
   const isTradeable = holding
     ? TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number])
     : false;
+
+  const isSuper = holding ? holding.type === SUPER_TYPE : false;
 
   // Fetch price for tradeable holdings
   const { data: priceData, isLoading: priceLoading } = useQuery({
@@ -473,6 +479,19 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
             Price & Quantity History
           </h3>
           <HoldingPriceChart
+            holdingId={id}
+            holdingCurrency={holdingCurrency}
+          />
+        </div>
+      )}
+
+      {/* Balance & Contribution Chart (super only) */}
+      {isSuper && (
+        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-6">
+            Balance & Contribution History
+          </h3>
+          <SuperBalanceHistoryChart
             holdingId={id}
             holdingCurrency={holdingCurrency}
           />
