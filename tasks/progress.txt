@@ -124,3 +124,14 @@ Started: 2026-02-03
   - Same Response pattern: Content-Type and Content-Disposition headers with timestamp in filename
   - Must exclude deleted snapshots, deleted holdings, and deleted contributions in where clauses
 ---
+
+## 2026-02-03 - US-008
+- Created export API endpoint for full backup at app/api/export/backup/route.ts
+- Files created: app/api/export/backup/route.ts
+- **Learnings for future iterations:**
+  - Full backup endpoint combines all queries from holdings, transactions, and snapshots endpoints
+  - Contributions are fetched twice: once for snapshot lookup, once for the full contributions export with holding names
+  - ContributionWithHoldingName type requires all Contribution fields plus holdingName
+  - Backup filename uses `mjolnir-backup-${timestamp}.json` pattern (matches acceptance criteria)
+  - No format query param needed - backup is always JSON
+---

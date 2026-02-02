@@ -132,8 +132,8 @@
         "Lint passes"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created app/api/export/backup/route.ts with GET endpoint returning JSON backup. Fetches all holdings, transactions (with symbol), snapshots (with details and contributions), and contributions (with holding name). Uses exportFullBackupJSON from backup-exporter. Filename includes timestamp: mjolnir-backup-YYYY-MM-DD.json"
     },
     {
       "id": "US-009",
