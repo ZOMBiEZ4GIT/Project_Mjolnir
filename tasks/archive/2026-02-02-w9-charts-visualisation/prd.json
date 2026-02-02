@@ -1,0 +1,231 @@
+{
+  "project": "Mjolnir",
+  "branchName": "feature/w9-charts-visualisation",
+  "description": "Enhanced charts and visualisation for net worth tracking, including interactive charts, asset allocation pie chart, and super fund growth breakdown.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add time range selector to net worth chart",
+      "description": "As Roland, I want to view my net worth history over different time ranges.",
+      "acceptanceCriteria": [
+        "Add time range selector buttons: 3M, 6M, 1Y, All",
+        "Default selection is 12 months (1Y)",
+        "Chart data updates when range changes",
+        "URL param ?range=3m persists selection",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Added TimeRangeSelector component with URL param persistence using Next.js useSearchParams/useRouter"
+    },
+    {
+      "id": "US-002",
+      "title": "Add mini sparkline to net worth hero card",
+      "description": "As Roland, I want to see a small trend indicator next to my net worth.",
+      "acceptanceCriteria": [
+        "Add small sparkline (last 6 months) inside hero card",
+        "Sparkline shows trend direction visually",
+        "Green line if net worth increased, red if decreased",
+        "Uses existing history API data",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Added Sparkline component using Recharts LineChart. Shows last 6 months of history, green if overall increase, red if decrease. Integrated into NetWorthHero component next to the net worth value."
+    },
+    {
+      "id": "US-003",
+      "title": "Create asset allocation pie chart component",
+      "description": "As Roland, I want to see my asset allocation as a pie chart.",
+      "acceptanceCriteria": [
+        "Create PieChart component using Recharts",
+        "Shows asset types: Stocks, ETFs, Crypto, Super, Cash",
+        "Each slice colored by asset type",
+        "Hover shows percentage and value",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Added AssetAllocationPieChart component using Recharts PieChart. Donut style with inner radius for cleaner look. Custom tooltip shows percentage, value, and holding count. Custom legend with compact values."
+    },
+    {
+      "id": "US-004",
+      "title": "Add chart type toggle to asset allocation",
+      "description": "As Roland, I want to switch between bar and pie chart views.",
+      "acceptanceCriteria": [
+        "Add toggle button: Bars | Pie",
+        "Default view is bars (existing progress bars)",
+        "Switching updates the visualization immediately",
+        "Preference persists in localStorage",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Added ViewToggle component to AssetAllocation with Bars/Pie options. Uses localStorage (asset-allocation-view key) for persistence. Integrated pie chart view using Recharts PieChart with custom tooltip and legend. Default is bars view."
+    },
+    {
+      "id": "US-005",
+      "title": "Create super growth breakdown API endpoint",
+      "description": "As a developer, I need an API that returns super fund growth breakdown data.",
+      "acceptanceCriteria": [
+        "Create /api/super/breakdown endpoint",
+        "Returns: employer_contrib, employee_contrib, investment_returns per month",
+        "Accepts holdingId or returns aggregated data for all super",
+        "Returns last 12 months of data",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Created /api/super/breakdown endpoint with holdingId (optional) and months (default 12) query params. Returns breakdown array with employer/employee contributions and calculated investment returns per month. Aggregates across all super holdings when no holdingId specified."
+    },
+    {
+      "id": "US-006",
+      "title": "Create super growth breakdown chart component",
+      "description": "As Roland, I want to see how my super fund balance has grown.",
+      "acceptanceCriteria": [
+        "Create SuperGrowthChart component using Recharts",
+        "Stacked area chart: employer contrib, employee contrib, investment returns",
+        "Shows cumulative growth over time",
+        "Color coded: employer=blue, employee=green, returns=purple",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Created SuperGrowthChart component using Recharts AreaChart with stackId for stacked areas. Shows cumulative contributions and investment returns over time. Accepts optional holdingId prop to show single fund or aggregate all super. Custom tooltip shows breakdown of all three components. Uses currency provider for multi-currency support."
+    },
+    {
+      "id": "US-007",
+      "title": "Add super breakdown section to dashboard",
+      "description": "As Roland, I want to see my super breakdown on the dashboard.",
+      "acceptanceCriteria": [
+        "Add SuperGrowthChart to dashboard below asset allocation",
+        "Section title: Superannuation Growth Breakdown",
+        "Shows only if user has super holdings",
+        "Empty state if no super data available",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Created SuperBreakdownSection wrapper component that checks for super holdings before rendering. If no super holdings exist, the section is completely hidden. If holdings exist but no breakdown data, SuperGrowthChart shows its built-in empty state. Section placed between Asset Allocation/Currency Exposure and Net Worth History Chart."
+    },
+    {
+      "id": "US-008",
+      "title": "Add monthly change indicators to summary cards",
+      "description": "As Roland, I want to see month-over-month changes.",
+      "acceptanceCriteria": [
+        "Add MoM change badge to Total Assets card",
+        "Add MoM change badge to Total Debt card",
+        "Shows +X% or -X% with green/red color",
+        "Calculates from historical data",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Feature already implemented in summary-cards.tsx during W-7 dashboard work. SummaryCard component shows change amount and percentage with TrendingUp/TrendingDown icons, uses history API for previous month comparison, handles debt invertion for positive/negative indicators."
+    },
+    {
+      "id": "US-009",
+      "title": "Add assets vs debt comparison chart",
+      "description": "As Roland, I want to see how my assets compare to debt over time.",
+      "acceptanceCriteria": [
+        "Create stacked area chart showing assets and debt",
+        "Assets shown in green, debt in red",
+        "Net worth line overlaid in white",
+        "Uses existing history API data",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Created AssetsVsDebtChart component using Recharts ComposedChart. Shows assets as green area, debt as red area, with net worth as white line overlay. Custom tooltip displays all three values. Component accepts data prop from existing history API (totalAssets, totalDebt, netWorth fields already provided)."
+    },
+    {
+      "id": "US-010",
+      "title": "Add chart view toggle to net worth section",
+      "description": "As Roland, I want to switch between net worth only and assets vs debt view.",
+      "acceptanceCriteria": [
+        "Add toggle: Net Worth | Assets vs Debt",
+        "Default is Net Worth (existing line chart)",
+        "Switching updates chart immediately",
+        "Preference persists in localStorage",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Added ChartViewToggle component to NetWorthChart with Net Worth and Assets vs Debt options. Uses localStorage (net-worth-chart-view key) for persistence. Integrates AssetsVsDebtChart component when that view is selected. Default is net worth line chart view. Both toggles (view mode and time range) are displayed in responsive header."
+    },
+    {
+      "id": "US-011",
+      "title": "Add holding detail chart for tradeable assets",
+      "description": "As Roland, I want to see price history for individual holdings.",
+      "acceptanceCriteria": [
+        "Add price chart to holding detail page",
+        "Shows historical prices from transactions",
+        "Shows quantity changes over time as secondary line",
+        "Only shows for stock/etf/crypto holdings",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Created HoldingPriceChart component using Recharts with dual Y-axis (price on left, quantity on right). Price shown as blue line, quantity as purple dashed step-line. Created holding detail page at /holdings/[id] with summary cards, chart, and notes section. Updated API to support include_cost_basis and include_latest_snapshot params for single holding fetch."
+    },
+    {
+      "id": "US-012",
+      "title": "Add super detail chart for snapshot assets",
+      "description": "As Roland, I want to see balance history for super holdings.",
+      "acceptanceCriteria": [
+        "Add balance chart to super holding detail page",
+        "Shows historical balances from snapshots",
+        "Shows contribution breakdown as stacked bars",
+        "Only shows for super holdings",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Created SuperBalanceHistoryChart component using Recharts ComposedChart. Balance shown as white line (left Y-axis), contributions as stacked bars (employer=blue, employee=green, returns=purple) on right Y-axis. Custom tooltip shows balance and monthly contribution breakdown. Handles empty state and single-data-point cases. Integrated into holding detail page for super holdings only."
+    },
+    {
+      "id": "US-013",
+      "title": "Add loading and error states to all chart components",
+      "description": "As a user, I want clear feedback when charts are loading or fail.",
+      "acceptanceCriteria": [
+        "All chart components have skeleton loading state",
+        "Error state shows friendly message with retry button",
+        "Loading state matches existing dashboard skeleton patterns",
+        "Retry button refetches data",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "Created reusable ChartSkeleton (bar/pie/line variants) and ChartError (with retry button) components in components/charts/. Updated all chart components to use these: NetWorthChart, SuperGrowthChart, AssetAllocationPieChart, HoldingPriceChart, SuperBalanceHistoryChart. Retry uses TanStack Query invalidateQueries() for data refetch."
+    },
+    {
+      "id": "US-014",
+      "title": "Add chart export functionality",
+      "description": "As Roland, I want to export charts as images.",
+      "acceptanceCriteria": [
+        "Add download button to each major chart",
+        "Exports chart as PNG image",
+        "Filename includes chart type and date",
+        "Uses html2canvas or recharts built-in export",
+        "Typecheck passes",
+        "Lint passes"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": "Created ChartExportButton reusable component using html2canvas. Added export buttons to all major charts: NetWorthChart, SuperGrowthChart, AssetAllocation, HoldingPriceChart, SuperBalanceHistoryChart. Filename format: {chart-type}-YYYY-MM-DD.png. Uses gray-800 background for consistent dark mode exports."
+    }
+  ]
+}
