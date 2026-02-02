@@ -98,8 +98,8 @@
         "Lint passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created app/api/export/transactions/route.ts with GET endpoint accepting format=csv|json query param. Joins transactions with holdings to get symbol. Uses Clerk auth, Content-Type and Content-Disposition headers for file download."
     },
     {
       "id": "US-007",
@@ -115,8 +115,8 @@
         "Lint passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created app/api/export/snapshots/route.ts with GET endpoint accepting format=csv|json query param. Joins snapshots with holdings to get holding name, and joins with contributions to include employer/employee contributions. Uses Clerk auth, Content-Type and Content-Disposition headers for file download."
     },
     {
       "id": "US-008",

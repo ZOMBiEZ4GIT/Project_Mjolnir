@@ -103,3 +103,24 @@ Started: 2026-02-03
   - Fetch all holdings including dormant (exclude deleted via isNull(deletedAt))
 ---
 
+
+## 2026-02-03 - US-006
+- Created export API endpoint for transactions at app/api/export/transactions/route.ts
+- Files created: app/api/export/transactions/route.ts
+- **Learnings for future iterations:**
+  - Transactions require a join with holdings table to include the symbol in exports
+  - Use `innerJoin` with holdings to get symbol field, filtering by userId on holdings table
+  - Must exclude both deleted transactions AND deleted holdings in the where clause
+  - Same Response pattern as holdings export: Content-Type and Content-Disposition headers
+---
+
+## 2026-02-03 - US-007
+- Created export API endpoint for snapshots at app/api/export/snapshots/route.ts
+- Files created: app/api/export/snapshots/route.ts
+- **Learnings for future iterations:**
+  - Snapshots require a join with holdings to get holding name for meaningful exports
+  - Contributions are fetched separately and matched by holdingId + date via a Map lookup
+  - Use Map for contribution lookup: key = `${holdingId}-${date}`, value = { employerContrib, employeeContrib }
+  - Same Response pattern: Content-Type and Content-Disposition headers with timestamp in filename
+  - Must exclude deleted snapshots, deleted holdings, and deleted contributions in where clauses
+---
