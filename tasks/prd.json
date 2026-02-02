@@ -80,8 +80,8 @@
         "Lint passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created /api/super/breakdown endpoint with holdingId (optional) and months (default 12) query params. Returns breakdown array with employer/employee contributions and calculated investment returns per month. Aggregates across all super holdings when no holdingId specified."
     },
     {
       "id": "US-006",
@@ -96,8 +96,8 @@
         "Lint passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created SuperGrowthChart component using Recharts AreaChart with stackId for stacked areas. Shows cumulative contributions and investment returns over time. Accepts optional holdingId prop to show single fund or aggregate all super. Custom tooltip shows breakdown of all three components. Uses currency provider for multi-currency support."
     },
     {
       "id": "US-007",

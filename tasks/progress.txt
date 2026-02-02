@@ -192,3 +192,27 @@ Started: 2026-02-02
   - Type safety: Define ViewMode = "bars" | "pie" and validate localStorage values before setting state
 ---
 
+## 2026-02-02 - US-005
+- Created super growth breakdown API endpoint at /api/super/breakdown
+- Files changed: `app/api/super/breakdown/route.ts` (new file)
+- **Learnings for future iterations:**
+  - API pattern for aggregated data: Build maps keyed by holdingId then date for efficient lookup
+  - Investment returns calculation: balance_change - employer_contrib - employee_contrib
+  - When aggregating across holdings, calculate investment returns per-holding then sum (not on aggregated totals)
+  - Date filtering in Drizzle: use gte() and lte() with date strings in YYYY-MM-DD format
+  - For APIs that return breakdown data, include holdings metadata in response for frontend display
+  - MonthlyBreakdown interface: date, employerContrib, employeeContrib, investmentReturns, balance, optionally holdingId/holdingName
+---
+
+## 2026-02-02 - US-006
+- Created SuperGrowthChart component using Recharts stacked area chart
+- Files changed: `components/dashboard/super-growth-chart.tsx` (new file)
+- **Learnings for future iterations:**
+  - Recharts AreaChart with stackId prop creates proper stacked areas (use same stackId="1" for all areas to stack)
+  - Calculate cumulative values before passing to chart for "growth over time" visualization
+  - fillOpacity prop on Area component controls transparency (0.8 looks good for stacked areas)
+  - Custom Legend content prop accepts payload with {value, color} - use value to map to display names
+  - SuperGrowthChart accepts optional holdingId to show single fund or aggregate all super holdings
+  - Pattern: empty state checks for both no holdings and no breakdown data separately
+---
+
