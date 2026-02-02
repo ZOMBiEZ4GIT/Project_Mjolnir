@@ -64,8 +64,8 @@
         "Lint passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/export/backup-exporter.ts with exportFullBackupJSON function. Includes BackupMetadata (export_date, version, user_id), holdings, transactions, snapshots, and contributions arrays. Uses FullBackupInput interface for type safety."
     },
     {
       "id": "US-005",
@@ -81,8 +81,8 @@
         "Lint passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created app/api/export/holdings/route.ts with GET endpoint accepting format=csv|json query param. Uses Clerk auth, Content-Type and Content-Disposition headers for file download."
     },
     {
       "id": "US-006",

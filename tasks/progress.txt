@@ -81,3 +81,25 @@ Started: 2026-02-03
   - CSV columns: date, holding_name, balance, currency, employer_contrib, employee_contrib
 ---
 
+## 2026-02-03 - US-004
+- Implemented full backup export utility combining all data types into a single JSON file
+- Files created: lib/export/backup-exporter.ts
+- **Learnings for future iterations:**
+  - Full backup includes: metadata (export_date, version, user_id), holdings, transactions, snapshots, contributions
+  - Reuse existing type interfaces from other exporters (TransactionWithSymbol, SnapshotWithDetails)
+  - Created ContributionWithHoldingName interface for contributions with holding context
+  - Used FullBackupInput interface to type the input object for better API clarity
+  - Version field (BACKUP_VERSION = "1.0.0") allows future format changes to be tracked
+---
+
+## 2026-02-03 - US-005
+- Created export API endpoint for holdings at app/api/export/holdings/route.ts
+- Files created: app/api/export/holdings/route.ts
+- **Learnings for future iterations:**
+  - Export API endpoints use `new Response(content, { headers })` instead of NextResponse.json for file downloads
+  - Content-Type for CSV: "text/csv;charset=utf-8", for JSON: "application/json"
+  - Content-Disposition: `attachment; filename="holdings-${timestamp}.csv"` triggers browser download
+  - Query param `format=csv|json` controls export format (default: csv)
+  - Fetch all holdings including dormant (exclude deleted via isNull(deletedAt))
+---
+
