@@ -89,7 +89,7 @@ function getCurrencyFlag(currency: Currency): string {
  */
 function ExposureSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
       <div className="animate-pulse">
         <div className="h-5 w-40 bg-gray-700 rounded mb-6" />
         <div className="space-y-4">
@@ -221,7 +221,7 @@ export function CurrencyExposure() {
   // Empty state
   if (exposure.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
         <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-4">
           Currency Exposure
         </h3>
@@ -233,7 +233,7 @@ export function CurrencyExposure() {
   }
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
       <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-6">
         Currency Exposure
       </h3>

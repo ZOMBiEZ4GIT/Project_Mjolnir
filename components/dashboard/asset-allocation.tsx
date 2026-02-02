@@ -155,7 +155,7 @@ function getAssetHexColor(type: string): string {
  */
 function AllocationSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
       <div className="animate-pulse">
         <div className="h-5 w-32 bg-gray-700 rounded mb-6" />
         <div className="space-y-4">
@@ -423,8 +423,8 @@ export function AssetAllocation() {
   // Empty state
   if (sortedBreakdown.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
             Asset Allocation
           </h3>
@@ -449,8 +449,8 @@ export function AssetAllocation() {
     }));
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
           Asset Allocation
         </h3>
