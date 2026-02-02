@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 interface ExportCounts {
   holdings: number;
   transactions: number;
+  snapshots: number;
 }
 
 function downloadFile(url: string) {
@@ -25,7 +26,7 @@ function downloadFile(url: string) {
 
 export default function ExportPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
-  const [counts, setCounts] = useState<ExportCounts>({ holdings: 0, transactions: 0 });
+  const [counts, setCounts] = useState<ExportCounts>({ holdings: 0, transactions: 0, snapshots: 0 });
   const [isLoadingCounts, setIsLoadingCounts] = useState(true);
 
   // Fetch counts when user is signed in
@@ -46,6 +47,13 @@ export default function ExportPage() {
         if (transactionsRes.ok) {
           const transactionsData = await transactionsRes.json();
           setCounts(prev => ({ ...prev, transactions: transactionsData.length }));
+        }
+
+        // Fetch snapshots count
+        const snapshotsRes = await fetch("/api/snapshots");
+        if (snapshotsRes.ok) {
+          const snapshotsData = await snapshotsRes.json();
+          setCounts(prev => ({ ...prev, snapshots: snapshotsData.length }));
         }
       } catch (error) {
         console.error("Failed to fetch export counts:", error);
@@ -182,9 +190,37 @@ export default function ExportPage() {
               Export balance snapshots for super, cash, and debt accounts.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {/* US-012: Snapshots export buttons and count will be added here */}
-            <p className="text-sm text-gray-500">Export options coming soon...</p>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-400">
+              {isLoadingCounts ? (
+                "Loading..."
+              ) : (
+                <>
+                  <span className="font-semibold text-white">{counts.snapshots}</span>{" "}
+                  {counts.snapshots === 1 ? "snapshot" : "snapshots"} to export
+                </>
+              )}
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadFile("/api/export/snapshots?format=csv")}
+                disabled={isLoadingCounts || counts.snapshots === 0}
+              >
+                <Download className="h-4 w-4" />
+                Download CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => downloadFile("/api/export/snapshots?format=json")}
+                disabled={isLoadingCounts || counts.snapshots === 0}
+              >
+                <Download className="h-4 w-4" />
+                Download JSON
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
