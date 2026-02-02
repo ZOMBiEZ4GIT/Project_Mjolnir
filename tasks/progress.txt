@@ -283,3 +283,19 @@ Started: 2026-02-02
   - Build chart data by iterating transactions chronologically and calculating running totals
 ---
 
+## 2026-02-02 - US-012
+- Added super detail chart with balance history and contribution breakdown
+- Files changed:
+  - `components/holdings/super-balance-history-chart.tsx` (new file)
+  - `app/(dashboard)/holdings/[id]/page.tsx` (updated)
+- **Learnings for future iterations:**
+  - ComposedChart allows mixing Bar and Line components with separate Y-axes (like in US-009 with AssetsVsDebtChart)
+  - Use yAxisId="balance" for line, yAxisId="contrib" for bars to separate scales
+  - Stacked bars pattern: use stackId="contrib" on all Bar components for same category
+  - For negative values in stacked bars (e.g., negative investment returns), domain needs to include negative range
+  - Reuse existing API endpoints (/api/super/breakdown) with holdingId param for single-holding data
+  - Pattern for "only show for X type": add const (SUPER_TYPE = "super") and isSuper check, then conditional render
+  - Currency conversion: use convert() from useCurrency() hook to transform values to display currency
+  - Single data point handling: show info card with key metrics instead of empty/broken chart
+---
+
