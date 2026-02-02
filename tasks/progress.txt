@@ -227,3 +227,17 @@ Started: 2026-02-02
   - Type exports added: ImportHistory, NewImportHistory
 ---
 
+## 2026-02-02 - US-014
+- Implemented recent imports display on import page
+- Files created: `app/api/import/history/route.ts`, `components/import/recent-imports.tsx`
+- Files modified: `app/(dashboard)/import/page.tsx`, `package.json` (added date-fns)
+- **Learnings for future iterations:**
+  - Import history API at GET /api/import/history?limit=N returns { imports: ImportHistoryRecord[] }
+  - RecentImports component displays history with: filename, type badge, imported/skipped counts, relative timestamp
+  - Uses date-fns formatDistanceToNow for human-readable timestamps ("2 hours ago")
+  - Expandable error details when clicking on imports with errors (uses expandedId state)
+  - Empty state shows Inbox icon with "No imports yet" message
+  - Recent imports refresh after each successful import via fetchRecentImports callback
+  - errorsJson field parsed from string back to array when returning from API
+---
+
