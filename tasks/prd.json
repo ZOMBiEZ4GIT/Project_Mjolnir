@@ -208,8 +208,8 @@
         "Lint passes"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added border-red-500 and focus-visible:ring-red-500 styling to all form inputs (Input and SelectTrigger) when errors exist. Updated add/edit holding dialogs, add/edit transaction dialogs (all action types), and edit snapshot modal. Errors clear when field values change."
     },
     {
       "id": "US-014",
@@ -225,8 +225,8 @@
         "Lint passes"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created DeleteHoldingDialog component with detailed holding info (name, type, symbol, currency, quantity, cost basis, balance). Shows warning about associated data deletion. DeleteTransactionDialog and DeleteSnapshotDialog already existed with detailed confirmations."
     },
     {
       "id": "US-015",

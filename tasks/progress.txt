@@ -260,3 +260,41 @@ Started: 2026-02-03
   - Keep retry logic generic in utility, domain-specific filtering via isRetryable option
 ---
 
+## 2026-02-03 - US-013
+- Added red border styling to invalid form fields across holding, transaction, and snapshot forms
+- Applied `border-red-500 focus-visible:ring-red-500` (or `focus:ring-red-500` for Select) to Input and SelectTrigger components when validation errors exist
+- Errors clear automatically when the field value changes
+- Updated files:
+  - `components/holdings/add-holding-dialog.tsx` - name, symbol, currency, exchange fields
+  - `components/holdings/edit-holding-dialog.tsx` - name, symbol, currency, exchange fields
+  - `components/transactions/add-transaction-dialog.tsx` - date, quantity, unitPrice, fees fields (for all transaction types: BUY/SELL/DIVIDEND/SPLIT)
+  - `components/transactions/edit-transaction-dialog.tsx` - date, quantity, unitPrice, fees fields
+  - `components/snapshots/edit-snapshot-modal.tsx` - balance, employerContrib, employeeContrib fields (added errors state and validation logic)
+- Files changed: 5 form component files modified
+- **Learnings for future iterations:**
+  - Use conditional className for error styling: `className={errors.field ? "border-red-500 focus-visible:ring-red-500" : ""}`
+  - For SelectTrigger, use `focus:ring-red-500` instead of `focus-visible:ring-red-500` (different focus pseudoclass)
+  - For inputs with additional classes like `className="w-24"`, use template literal: `className={\`w-24 ${errors.field ? "border-red-500 ..." : ""}\`}`
+  - The check-in modal already had error styling implemented - review existing code before adding new patterns
+---
+
+## 2026-02-03 - US-014
+- Added confirmation dialogs for destructive actions (deleting holdings, transactions, snapshots)
+- Transactions and snapshots already had detailed confirmation dialogs (DeleteTransactionDialog, DeleteSnapshotDialog)
+- Created `components/holdings/delete-holding-dialog.tsx` component matching the existing patterns
+- DeleteHoldingDialog shows:
+  - Holding name, type, symbol (if tradeable), currency
+  - Quantity and cost basis (for tradeable holdings)
+  - Latest balance (for snapshot-based holdings)
+  - Warning about associated data deletion (transactions/snapshots/contributions)
+- Updated `components/holdings/holdings-table.tsx` to use DeleteHoldingDialog instead of inline AlertDialog
+- Removed unused imports (useMutation, useQueryClient, toast) and deleteMutation from HoldingsTable
+- Files changed: `components/holdings/delete-holding-dialog.tsx` (created), `components/holdings/holdings-table.tsx` (modified)
+- **Learnings for future iterations:**
+  - All three delete dialogs (holdings, transactions, snapshots) now follow consistent patterns
+  - Use AlertDialog from shadcn/ui with consistent dark mode styling (bg-gray-900, border-gray-700)
+  - Show details in a bordered box (bg-gray-800 rounded-lg border border-gray-700)
+  - Include warning box for cascading deletions (border-yellow-500/20 bg-yellow-500/10 text-yellow-400)
+  - Handle mutation state in the dialog component to keep parent component cleaner
+---
+
