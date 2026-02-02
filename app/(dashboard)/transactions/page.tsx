@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ArrowLeftRight, Filter } from "lucide-react";
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
 import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
 import { DeleteTransactionDialog } from "@/components/transactions/delete-transaction-dialog";
@@ -396,29 +398,42 @@ export default function TransactionsPage() {
 
   // Show empty state
   if (!transactions || transactions.length === 0) {
+    const hasFilters = selectedHoldingId || selectedAction || selectedCurrency !== "all";
+
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-white">Transactions</h1>
-          <AddTransactionDialog>
-            <Button>Add Transaction</Button>
-          </AddTransactionDialog>
+          {!hasFilters && (
+            <AddTransactionDialog>
+              <Button>Add Transaction</Button>
+            </AddTransactionDialog>
+          )}
         </div>
-        <FilterControls />
-        <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
-          <div className="text-gray-400">
-            <p className="text-lg">
-              {selectedHoldingId || selectedAction || selectedCurrency !== "all"
-                ? "No transactions match your filters"
-                : "No transactions yet"}
-            </p>
-            <p className="text-sm mt-2">
-              {selectedHoldingId || selectedAction || selectedCurrency !== "all"
-                ? "Try adjusting your filters to see more transactions."
-                : "Add your first transaction to start tracking your portfolio."}
-            </p>
-          </div>
-        </div>
+        {hasFilters && <FilterControls />}
+        <EmptyState
+          icon={hasFilters ? Filter : ArrowLeftRight}
+          title={hasFilters ? "No transactions match your filters" : "No transactions yet"}
+          description={
+            hasFilters
+              ? "Try adjusting your filters to see more transactions, or clear all filters to view everything."
+              : "Add your first transaction to start tracking your portfolio activity. Record buys, sells, dividends, and stock splits."
+          }
+          action={
+            hasFilters ? (
+              <Button
+                variant="outline"
+                onClick={() => updateFilters(null, null, "all")}
+              >
+                Clear all filters
+              </Button>
+            ) : (
+              <AddTransactionDialog>
+                <Button size="lg">Add your first transaction</Button>
+              </AddTransactionDialog>
+            )
+          }
+        />
       </div>
     );
   }

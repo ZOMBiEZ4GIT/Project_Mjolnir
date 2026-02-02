@@ -21,7 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Camera, Filter } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import Link from "next/link";
 import { EditSnapshotModal } from "@/components/snapshots/edit-snapshot-modal";
 import { DeleteSnapshotDialog } from "@/components/snapshots/delete-snapshot-dialog";
 import { CurrencyDisplay } from "@/components/ui/currency-display";
@@ -221,65 +223,84 @@ export default function SnapshotsPage() {
 
   // Show empty state
   if (!filteredSnapshots || filteredSnapshots.length === 0) {
+    const hasFilters = holdingFilter || typeFilter;
+
+    // Helper to clear all filters
+    const handleClearFilters = () => {
+      router.push("/snapshots");
+    };
+
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-white">Snapshots</h1>
         </div>
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div className="w-48">
-            <Select value={holdingFilter || "all"} onValueChange={handleHoldingFilterChange}>
-              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                <SelectValue placeholder="All Holdings" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
-                <SelectItem value="all" className="text-white hover:bg-gray-700">
-                  All Holdings
-                </SelectItem>
-                {snapshotHoldings?.map((holding) => (
-                  <SelectItem
-                    key={holding.id}
-                    value={holding.id}
-                    className="text-white hover:bg-gray-700"
-                  >
-                    {holding.name}
+        {hasFilters && (
+          <div className="flex flex-wrap gap-4 mb-6">
+            <div className="w-48">
+              <Select value={holdingFilter || "all"} onValueChange={handleHoldingFilterChange}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                  <SelectValue placeholder="All Holdings" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectItem value="all" className="text-white hover:bg-gray-700">
+                    All Holdings
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="w-36">
-            <Select value={typeFilter || "all"} onValueChange={handleTypeFilterChange}>
-              <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
-                <SelectValue placeholder="All Types" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700">
-                <SelectItem value="all" className="text-white hover:bg-gray-700">
-                  All Types
-                </SelectItem>
-                {snapshotTypes.map((type) => (
-                  <SelectItem
-                    key={type}
-                    value={type}
-                    className="text-white hover:bg-gray-700"
-                  >
-                    {formatType(type)}
+                  {snapshotHoldings?.map((holding) => (
+                    <SelectItem
+                      key={holding.id}
+                      value={holding.id}
+                      className="text-white hover:bg-gray-700"
+                    >
+                      {holding.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-36">
+              <Select value={typeFilter || "all"} onValueChange={handleTypeFilterChange}>
+                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectItem value="all" className="text-white hover:bg-gray-700">
+                    All Types
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  {snapshotTypes.map((type) => (
+                    <SelectItem
+                      key={type}
+                      value={type}
+                      className="text-white hover:bg-gray-700"
+                    >
+                      {formatType(type)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
-        <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4 text-center">
-          <div className="text-gray-400">
-            <p className="text-lg">No snapshots yet</p>
-            <p className="text-sm mt-2">
-              {holdingFilter || typeFilter
-                ? "No snapshots match your filters."
-                : "Use the monthly check-in to record balances for your holdings."}
-            </p>
-          </div>
-        </div>
+        )}
+        <EmptyState
+          icon={hasFilters ? Filter : Camera}
+          title={hasFilters ? "No snapshots match your filters" : "No snapshots yet"}
+          description={
+            hasFilters
+              ? "Try adjusting your filters to see more snapshots, or clear all filters to view everything."
+              : "Use the monthly check-in to record balances for your superannuation, cash, and debt holdings."
+          }
+          action={
+            hasFilters ? (
+              <Button variant="outline" onClick={handleClearFilters}>
+                Clear all filters
+              </Button>
+            ) : (
+              <Button size="lg" asChild>
+                <Link href="/dashboard">Go to Dashboard</Link>
+              </Button>
+            )
+          }
+        />
       </div>
     );
   }
