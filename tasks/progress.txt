@@ -157,3 +157,17 @@ Started: 2026-02-02
   - Uses shadcn Button component for clear button
 ---
 
+## 2026-02-02 - US-009
+- Implemented import results component at `components/import/import-results.tsx`
+- Files created: `components/import/import-results.tsx`
+- **Learnings for future iterations:**
+  - ImportResults component props: imported (number), skipped (number), errors (ImportError[]), className
+  - ImportError interface: { row: number, message: string } - matches API response format
+  - Color coding: imported (emerald-500/green), skipped (yellow-500), errors (destructive/red)
+  - Expandable error list using local state with ChevronDown/ChevronUp toggle
+  - Success state shows CheckCircle2 icon and "Import Complete" text when imported > 0 and no errors
+  - Uses lucide-react icons: CheckCircle2, AlertCircle, AlertTriangle, ChevronDown, ChevronUp
+  - Error list shows "Row X" badge + error message for each error
+  - Works with both transaction and snapshot import API responses
+---
+
