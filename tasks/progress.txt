@@ -88,3 +88,18 @@ Started: 2026-02-03
   - Extract dashboard sections into separate DashboardContent client component for fine-grained error handling
 ---
 
+## 2026-02-03 - US-003
+- Created global error page at `app/error.tsx`
+- Next.js convention: error.tsx catches errors at the route level
+- Uses Card component with destructive/error styling consistent with ErrorBoundary
+- Shows "Something went wrong" message with Try again and Go to Dashboard buttons
+- Logs errors to console via useEffect
+- Shows error message in development mode only
+- Files changed: `app/error.tsx` (created)
+- **Learnings for future iterations:**
+  - Next.js error.tsx must be a client component ("use client")
+  - error.tsx receives `error` and `reset` props from Next.js
+  - `reset()` function attempts to re-render the route segment
+  - Use consistent styling with ErrorBoundary for cohesive error UX
+---
+
