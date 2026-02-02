@@ -212,3 +212,21 @@ Started: 2026-02-02
   - Currency selector can use `compact={false}` for full-width display
 ---
 
+## 2026-02-02 - US-010: Add email sent tracking
+- Added `lastReminderSent` timestamp column to `userPreferences` table in `lib/db/schema.ts`
+- Generated migration `drizzle/0008_acoustic_proemial_gods.sql`
+- Updated cron job at `app/api/cron/send-reminders/route.ts`:
+  - Added `getFirstOfCurrentMonth()` helper function
+  - Modified query to include `or(isNull(...), lt(...))` filter to skip users already emailed this month
+  - Added `lt` and `or` imports from drizzle-orm
+- Updated `sendCheckInReminder()` in `lib/services/reminders.ts`:
+  - Added import for `userPreferences` from schema
+  - After successful email send, updates `lastReminderSent` timestamp for the user
+- Files changed: `lib/db/schema.ts`, `drizzle/0008_acoustic_proemial_gods.sql`, `drizzle/meta/0008_snapshot.json`, `drizzle/meta/_journal.json`, `app/api/cron/send-reminders/route.ts`, `lib/services/reminders.ts`
+- **Learnings for future iterations:**
+  - Use `or(isNull(...), lt(...))` pattern to check for null OR older-than-date conditions
+  - Timestamp columns in Drizzle can be nullable by omitting `.notNull()`
+  - Month comparison uses first-of-month Date object with `lt()` operator
+  - Update tracking timestamps after successful operations, not before
+---
+
