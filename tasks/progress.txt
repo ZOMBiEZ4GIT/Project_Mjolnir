@@ -17,6 +17,8 @@
 - Animation presets live in lib/animations.ts — import and spread onto motion.div elements (e.g. `<motion.div {...fadeIn}>`)
 - Stagger presets (staggerContainer, staggerItem) use Variants type with "hidden"/"visible" keys — use with variants prop
 - numberSpring is a Transition object for animating numeric values (e.g. useSpring, useMotionValue)
+- Reduced motion: use `useAnimationConfig(preset?)` from hooks/use-animation-config.ts — returns props that disable animations when OS prefers-reduced-motion is on
+- Hooks live in hooks/ directory (not lib/) — follow this convention for custom React hooks
 
 ---
 
@@ -93,4 +95,19 @@ Started: 2026-02-05
   - Stagger presets use Variants type with "hidden"/"visible" keys — use with `variants` prop and `initial="hidden" animate="visible"` on parent
   - `satisfies Transition` is used inline where `as const` would narrow too aggressively for transition objects
   - framer-motion exports Variants and Transition as types (import type { ... })
+---
+
+## 2026-02-05 - US-006
+- Created hooks/use-reduced-motion.ts re-exporting Framer Motion's useReducedMotion
+- Created hooks/use-animation-config.ts with useAnimationConfig hook
+- Hook accepts optional animation preset parameter (defaults to fadeIn)
+- When prefers-reduced-motion is enabled: returns initial: false, transition: { duration: 0 }
+- When disabled: returns standard animation props from the preset
+- Uses Framer Motion's useReducedMotion which listens to matchMedia changes (re-evaluates on every render)
+- Files changed: hooks/use-reduced-motion.ts (new), hooks/use-animation-config.ts (new)
+- **Learnings for future iterations:**
+  - Framer Motion's useReducedMotion returns boolean|null — it uses matchMedia internally and updates on changes
+  - Setting initial: false tells Framer Motion to skip the initial animation (element starts in animate state)
+  - Hooks go in hooks/ directory at project root (not in lib/)
+  - "use client" directive is required for any file using React hooks or Framer Motion hooks
 ---
