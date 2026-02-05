@@ -24,6 +24,10 @@
 - Card container pattern: `border-border bg-card/50` for bordered cards, `bg-muted` for skeleton placeholders
 - Error state pattern: `border-destructive bg-destructive/10` with `text-destructive` for error messages
 - Toggle pattern: active=`bg-muted text-foreground`, inactive=`text-muted-foreground hover:text-foreground`
+- Form validation pattern: `border-destructive focus-visible:ring-destructive` on inputs, `text-destructive` on error messages
+- Delete confirm button: `bg-destructive hover:bg-destructive/90 text-foreground`; cancel: `bg-card border-border text-foreground hover:bg-muted`
+- Select dropdowns: `bg-background border-border text-muted-foreground` for trigger, `focus:bg-card focus:text-foreground` for items
+- Warning/info colours (yellow-*, blue-*) are semantic and intentionally NOT part of design token migration
 
 ---
 
@@ -143,4 +147,19 @@ Started: 2026-02-05
   - Warning/stale-data UI uses yellow-* Tailwind classes — these are semantic for warnings and not part of the grey-based design token migration
   - The codebase had a very consistent pattern for card containers: `border-gray-700 bg-gray-800/50` which maps cleanly to `border-border bg-card/50`
   - For skeleton loading states, `bg-gray-700` maps to `bg-muted` consistently
+---
+
+## 2026-02-05 - US-009
+- Replaced all hardcoded Tailwind colour classes across 11 files in components/holdings/ and components/transactions/
+- Holdings files changed (8): holdings-table.tsx, holding-price-chart.tsx, super-balance-history-chart.tsx, delete-holding-dialog.tsx, edit-holding-dialog.tsx, add-holding-dialog.tsx, currency-filter.tsx, group-by-selector.tsx
+- Transaction files changed (3): delete-transaction-dialog.tsx, edit-transaction-dialog.tsx, add-transaction-dialog.tsx
+- Key mappings applied: text-gray-300/400/500 → text-muted-foreground, text-white → text-foreground, bg-gray-900 → bg-background, bg-gray-800 → bg-card, bg-gray-700 → bg-muted, border-gray-700/800 → border-border, text-green-400/500 → text-positive, text-red-400/500 → text-destructive, border-red-500 → border-destructive, bg-red-600 → bg-destructive, bg-green-900 text-green-300 → bg-positive/20 text-positive
+- Select components (currency-filter, group-by-selector): bg-gray-900 → bg-background, focus:bg-gray-800 → focus:bg-card, focus:text-white → focus:text-foreground
+- Intentionally preserved: yellow-* warning colours, blue-* info colours, Recharts SVG hex values, text-yellow-400 stale data indicators
+- **Learnings for future iterations:**
+  - Form validation errors use a consistent pattern: `border-destructive focus-visible:ring-destructive` on inputs + `text-destructive` on error `<p>` tags
+  - Select components use `focus:ring-destructive` (not focus-visible:) since SelectTrigger doesn't support focus-visible prefix the same way
+  - Delete confirmation buttons: `bg-destructive hover:bg-destructive/90 text-foreground` with cancel buttons using `bg-card border-border text-foreground hover:bg-muted`
+  - Dividend totals and positive values should use `text-positive` (not text-green-500)
+  - Info boxes (like split explanation) use blue-* which are intentional semantic colours, not grey-based theme tokens
 ---
