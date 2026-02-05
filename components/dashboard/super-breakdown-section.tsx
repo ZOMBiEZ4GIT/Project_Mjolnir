@@ -32,14 +32,14 @@ async function fetchSuperHoldings(): Promise<SuperBreakdownResponse> {
  */
 function SectionSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
       <div className="animate-pulse">
-        <div className="h-5 w-64 bg-gray-700 rounded mb-6" />
-        <div className="h-64 bg-gray-700/50 rounded flex items-end justify-around px-4 pb-4">
+        <div className="h-5 w-64 bg-muted rounded mb-6" />
+        <div className="h-64 bg-muted/50 rounded flex items-end justify-around px-4 pb-4">
           {[30, 45, 35, 55, 40, 60, 50, 70, 55, 75, 60, 80].map((h, i) => (
             <div
               key={i}
-              className="w-4 bg-gray-600 rounded-t"
+              className="w-4 bg-muted rounded-t"
               style={{ height: `${h}%` }}
             />
           ))}

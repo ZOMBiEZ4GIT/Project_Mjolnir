@@ -123,15 +123,15 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
 
   const data = payload[0].payload;
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-lg">
-      <p className="text-white font-medium mb-1">{data.name}</p>
-      <p className="text-gray-300 text-sm">
+    <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+      <p className="text-foreground font-medium mb-1">{data.name}</p>
+      <p className="text-muted-foreground text-sm">
         {formatCurrency(data.value, currency)}
       </p>
-      <p className="text-gray-400 text-sm">
+      <p className="text-muted-foreground text-sm">
         {data.percentage.toFixed(1)}% of portfolio
       </p>
-      <p className="text-gray-500 text-xs mt-1">
+      <p className="text-muted-foreground text-xs mt-1">
         {data.count} holding{data.count !== 1 ? "s" : ""}
       </p>
     </div>
@@ -164,9 +164,9 @@ function CustomLegend({ payload, currency }: CustomLegendProps) {
             className="w-3 h-3 rounded-full"
             style={{ backgroundColor: entry.color }}
           />
-          <span className="text-gray-300 text-sm">
+          <span className="text-muted-foreground text-sm">
             {entry.value}{" "}
-            <span className="text-gray-500">
+            <span className="text-muted-foreground">
               ({formatCurrency(entry.payload.value, currency, { compact: true })})
             </span>
           </span>
@@ -258,11 +258,11 @@ export function AssetAllocationPieChart() {
   // Empty state
   if (pieData.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-4">
+      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
           Asset Allocation
         </h3>
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-muted-foreground text-center py-8">
           No assets to display. Add holdings to see your allocation.
         </p>
       </div>
@@ -270,8 +270,8 @@ export function AssetAllocationPieChart() {
   }
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
-      <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-6">
+    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-6">
         Asset Allocation
       </h3>
       <div className="h-64">

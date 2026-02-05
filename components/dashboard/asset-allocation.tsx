@@ -155,20 +155,20 @@ function getAssetHexColor(type: string): string {
  */
 function AllocationSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
       <div className="animate-pulse">
-        <div className="h-5 w-32 bg-gray-700 rounded mb-6" />
+        <div className="h-5 w-32 bg-muted rounded mb-6" />
         <div className="space-y-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <div className="h-5 w-5 bg-gray-700 rounded" />
-                  <div className="h-4 w-24 bg-gray-700 rounded" />
+                  <div className="h-5 w-5 bg-muted rounded" />
+                  <div className="h-4 w-24 bg-muted rounded" />
                 </div>
-                <div className="h-4 w-20 bg-gray-700 rounded" />
+                <div className="h-4 w-20 bg-muted rounded" />
               </div>
-              <div className="h-2 w-full bg-gray-700 rounded" />
+              <div className="h-2 w-full bg-muted rounded" />
             </div>
           ))}
         </div>
@@ -205,21 +205,21 @@ function AllocationItem({
             </span>
           </div>
           <div>
-            <span className="font-medium text-white">
+            <span className="font-medium text-foreground">
               {getAssetDisplayName(type)}
             </span>
-            <span className="text-xs text-gray-500 ml-2">
+            <span className="text-xs text-muted-foreground ml-2">
               ({count} holding{count !== 1 ? "s" : ""})
             </span>
           </div>
         </div>
         <div className="text-right">
-          <div className="font-medium text-white">{formatCurrency(totalValue, currency, { compact: true })}</div>
-          <div className="text-xs text-gray-400">{formatPercentage(percentage)}</div>
+          <div className="font-medium text-foreground">{formatCurrency(totalValue, currency, { compact: true })}</div>
+          <div className="text-xs text-muted-foreground">{formatPercentage(percentage)}</div>
         </div>
       </div>
       {/* Progress bar */}
-      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+      <div className="h-2 bg-muted rounded-full overflow-hidden">
         <div
           className={`h-full ${getAssetColor(type)} rounded-full transition-all duration-500`}
           style={{ width: `${Math.min(percentage, 100)}%` }}
@@ -258,15 +258,15 @@ function PieChartTooltip({ active, payload, currency }: PieTooltipProps) {
 
   const data = payload[0].payload;
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-lg">
-      <p className="text-white font-medium mb-1">{data.name}</p>
-      <p className="text-gray-300 text-sm">
+    <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+      <p className="text-foreground font-medium mb-1">{data.name}</p>
+      <p className="text-muted-foreground text-sm">
         {formatCurrency(data.value, currency)}
       </p>
-      <p className="text-gray-400 text-sm">
+      <p className="text-muted-foreground text-sm">
         {data.percentage.toFixed(1)}% of portfolio
       </p>
-      <p className="text-gray-500 text-xs mt-1">
+      <p className="text-muted-foreground text-xs mt-1">
         {data.count} holding{data.count !== 1 ? "s" : ""}
       </p>
     </div>
@@ -299,9 +299,9 @@ function PieChartLegend({ payload, currency }: CustomLegendProps) {
             className="w-3 h-3 rounded-full"
             style={{ backgroundColor: entry.color }}
           />
-          <span className="text-gray-300 text-sm">
+          <span className="text-muted-foreground text-sm">
             {entry.value}{" "}
-            <span className="text-gray-500">
+            <span className="text-muted-foreground">
               ({formatCurrency(entry.payload.value, currency, { compact: true })})
             </span>
           </span>
@@ -321,13 +321,13 @@ interface ViewToggleProps {
 
 function ViewToggle({ viewMode, onChange }: ViewToggleProps) {
   return (
-    <div className="flex items-center gap-1 bg-gray-700/50 rounded-lg p-1">
+    <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
       <button
         onClick={() => onChange("bars")}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
           viewMode === "bars"
-            ? "bg-gray-600 text-white"
-            : "text-gray-400 hover:text-white"
+            ? "bg-muted text-foreground"
+            : "text-muted-foreground hover:text-foreground"
         }`}
         title="Bar chart view"
       >
@@ -338,8 +338,8 @@ function ViewToggle({ viewMode, onChange }: ViewToggleProps) {
         onClick={() => onChange("pie")}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
           viewMode === "pie"
-            ? "bg-gray-600 text-white"
-            : "text-gray-400 hover:text-white"
+            ? "bg-muted text-foreground"
+            : "text-muted-foreground hover:text-foreground"
         }`}
         title="Pie chart view"
       >
@@ -402,8 +402,8 @@ export function AssetAllocation() {
   // Show error state
   if (error) {
     return (
-      <div className="rounded-lg border border-red-700 bg-red-900/20 p-6">
-        <p className="text-red-400">Failed to load asset allocation</p>
+      <div className="rounded-lg border border-destructive bg-destructive/10 p-6">
+        <p className="text-destructive">Failed to load asset allocation</p>
       </div>
     );
   }
@@ -423,14 +423,14 @@ export function AssetAllocation() {
   // Empty state
   if (sortedBreakdown.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             Asset Allocation
           </h3>
           <ViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
         </div>
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-muted-foreground text-center py-8">
           No assets to display. Add holdings to see your allocation.
         </p>
       </div>
@@ -449,9 +449,9 @@ export function AssetAllocation() {
     }));
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           Asset Allocation
         </h3>
         <div className="flex items-center gap-2">

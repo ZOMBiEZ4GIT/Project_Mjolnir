@@ -26,8 +26,8 @@ export function DashboardNav() {
             key={item.href}
             href={item.href}
             className={cn(
-              "text-sm font-medium transition-colors hover:text-white",
-              isActive ? "text-white" : "text-gray-400"
+              "text-sm font-medium transition-colors hover:text-foreground",
+              isActive ? "text-foreground" : "text-muted-foreground"
             )}
           >
             {item.label}

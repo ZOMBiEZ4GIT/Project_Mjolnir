@@ -39,9 +39,9 @@ export function MobileNav() {
           <Menu className="h-6 w-6" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-64 bg-gray-900 border-gray-800">
+      <SheetContent side="left" className="w-64 bg-card border-border">
         <SheetHeader>
-          <SheetTitle className="text-white text-left">Navigation</SheetTitle>
+          <SheetTitle className="text-foreground text-left">Navigation</SheetTitle>
         </SheetHeader>
         <nav className="flex flex-col gap-2 mt-6">
           {navItems.map((item) => {
@@ -52,10 +52,10 @@ export function MobileNav() {
                 href={item.href}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-gray-800 hover:text-white",
+                  "px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-muted hover:text-foreground",
                   isActive
-                    ? "bg-gray-800 text-white"
-                    : "text-gray-400"
+                    ? "bg-muted text-foreground"
+                    : "text-muted-foreground"
                 )}
               >
                 {item.label}

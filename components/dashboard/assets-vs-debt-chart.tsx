@@ -70,35 +70,35 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
 
   const data = payload[0].payload;
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-lg min-w-[180px]">
-      <p className="text-gray-400 text-sm mb-2">
+    <div className="bg-background border border-border rounded-lg p-3 shadow-lg min-w-[180px]">
+      <p className="text-muted-foreground text-sm mb-2">
         {formatMonthFull(data.date)}
       </p>
       <div className="space-y-1">
         <div className="flex justify-between items-center gap-4">
-          <span className="text-sm text-green-400 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
+          <span className="text-sm text-positive flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-positive" />
             Assets
           </span>
-          <span className="text-white font-medium">
+          <span className="text-foreground font-medium">
             {formatCurrency(data.totalAssets, currency)}
           </span>
         </div>
         <div className="flex justify-between items-center gap-4">
-          <span className="text-sm text-red-400 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-500" />
+          <span className="text-sm text-destructive flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-destructive" />
             Debt
           </span>
-          <span className="text-white font-medium">
+          <span className="text-foreground font-medium">
             {formatCurrency(data.totalDebt, currency)}
           </span>
         </div>
-        <div className="border-t border-gray-700 my-2 pt-2 flex justify-between items-center gap-4">
-          <span className="text-sm text-gray-300 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-white" />
+        <div className="border-t border-border my-2 pt-2 flex justify-between items-center gap-4">
+          <span className="text-sm text-muted-foreground flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-foreground" />
             Net Worth
           </span>
-          <span className="text-white font-semibold">
+          <span className="text-foreground font-semibold">
             {formatCurrency(data.netWorth, currency)}
           </span>
         </div>
@@ -126,8 +126,8 @@ export function AssetsVsDebtChart({ data, isLoading }: AssetsVsDebtChartProps) {
   // Show loading state
   if (isLoading) {
     return (
-      <div className="h-64 bg-gray-700/50 rounded animate-pulse flex items-center justify-center">
-        <span className="text-gray-500">Loading chart...</span>
+      <div className="h-64 bg-muted/50 rounded animate-pulse flex items-center justify-center">
+        <span className="text-muted-foreground">Loading chart...</span>
       </div>
     );
   }
@@ -136,7 +136,7 @@ export function AssetsVsDebtChart({ data, isLoading }: AssetsVsDebtChartProps) {
   if (!data || data.length === 0) {
     return (
       <div className="h-64 flex items-center justify-center">
-        <p className="text-gray-500 text-center">
+        <p className="text-muted-foreground text-center">
           No historical data available yet.
           <br />
           Data will appear after your first month of tracking.
