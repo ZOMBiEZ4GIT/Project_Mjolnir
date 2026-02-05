@@ -111,3 +111,15 @@ Started: 2026-02-05
   - Hooks go in hooks/ directory at project root (not in lib/)
   - "use client" directive is required for any file using React hooks or Framer Motion hooks
 ---
+
+## 2026-02-05 - US-007
+- Replaced hardcoded colour classes in app/layout.tsx and app/(dashboard)/layout.tsx with design tokens
+- app/layout.tsx: bg-gray-950 → bg-background, text-white → text-foreground
+- app/(dashboard)/layout.tsx: bg-gray-900 → bg-card, border-gray-800 → border-border, text-white → text-foreground
+- Visual appearance unchanged (design token values map to same/similar colours)
+- Files changed: app/layout.tsx, app/(dashboard)/layout.tsx
+- **Learnings for future iterations:**
+  - Mapping reference: bg-gray-950 → bg-background, bg-gray-900 → bg-card, border-gray-800 → border-border, text-white → text-foreground, text-gray-* → text-muted-foreground
+  - The dashboard layout header uses bg-card (zinc-900) to visually elevate above bg-background (zinc-950)
+  - Only 3 hardcoded colour classes existed in these two files — the layouts were already relatively clean
+---
