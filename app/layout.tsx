@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 function AppContent({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${inter.className} antialiased bg-gray-950 text-white min-h-screen`}>
+      <body className={`${inter.className} antialiased bg-background text-foreground min-h-screen`}>
         {children}
         <Toaster />
       </body>
