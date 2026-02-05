@@ -91,15 +91,15 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
 
   const data = payload[0].payload;
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-lg">
-      <p className="text-gray-400 text-sm mb-2">{formatDateFull(data.date)}</p>
+    <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+      <p className="text-muted-foreground text-sm mb-2">{formatDateFull(data.date)}</p>
       <div className="space-y-1">
-        <p className="text-white font-medium">
-          <span className="text-gray-400">Price: </span>
+        <p className="text-foreground font-medium">
+          <span className="text-muted-foreground">Price: </span>
           {formatCurrency(data.price, currency)}
         </p>
-        <p className="text-white font-medium">
-          <span className="text-gray-400">Quantity: </span>
+        <p className="text-foreground font-medium">
+          <span className="text-muted-foreground">Quantity: </span>
           {data.quantity.toLocaleString("en-AU", {
             minimumFractionDigits: 0,
             maximumFractionDigits: 4,
@@ -168,7 +168,7 @@ export function HoldingPriceChart({
   if (!transactions || transactions.length === 0) {
     return (
       <div className="h-64 flex items-center justify-center">
-        <p className="text-gray-500 text-center">
+        <p className="text-muted-foreground text-center">
           No transaction history available.
           <br />
           Add transactions to see price and quantity history.
@@ -210,19 +210,19 @@ export function HoldingPriceChart({
   if (chartData.length === 1) {
     return (
       <div className="h-64 flex flex-col items-center justify-center gap-4">
-        <p className="text-gray-400 text-sm">Single transaction recorded:</p>
-        <div className="bg-gray-800 rounded-lg p-4 text-center">
-          <p className="text-gray-400 text-sm">
+        <p className="text-muted-foreground text-sm">Single transaction recorded:</p>
+        <div className="bg-card rounded-lg p-4 text-center">
+          <p className="text-muted-foreground text-sm">
             {formatDateFull(chartData[0].date)}
           </p>
-          <p className="text-white text-lg font-semibold">
+          <p className="text-foreground text-lg font-semibold">
             {formatCurrency(chartData[0].price, holdingCurrency)}
           </p>
-          <p className="text-gray-300 text-sm">
+          <p className="text-muted-foreground text-sm">
             Quantity: {chartData[0].quantity.toLocaleString("en-AU")}
           </p>
         </div>
-        <p className="text-gray-500 text-xs">
+        <p className="text-muted-foreground text-xs">
           Add more transactions to see a chart.
         </p>
       </div>
@@ -311,7 +311,7 @@ export function HoldingPriceChart({
             <Legend
               wrapperStyle={{ paddingTop: 10 }}
               formatter={(value) => (
-                <span className="text-gray-400 text-sm">{value}</span>
+                <span className="text-muted-foreground text-sm">{value}</span>
               )}
             />
             <Line

@@ -28,16 +28,16 @@ export function CurrencyFilter({ value, onChange, className }: CurrencyFilterPro
   return (
     <div className={className}>
       <Select value={value} onValueChange={(v) => onChange(v as CurrencyFilterValue)}>
-        <SelectTrigger className="w-[160px] h-9 bg-gray-900 border-gray-700 text-gray-300">
-          <Filter className="h-4 w-4 mr-2 text-gray-400" />
+        <SelectTrigger className="w-[160px] h-9 bg-background border-border text-muted-foreground">
+          <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
           <SelectValue placeholder="Filter by currency" />
         </SelectTrigger>
-        <SelectContent className="bg-gray-900 border-gray-700">
+        <SelectContent className="bg-background border-border">
           {CURRENCY_OPTIONS.map((option) => (
             <SelectItem
               key={option.value}
               value={option.value}
-              className="text-gray-300 focus:bg-gray-800 focus:text-white"
+              className="text-muted-foreground focus:bg-card focus:text-foreground"
             >
               {option.label}
             </SelectItem>

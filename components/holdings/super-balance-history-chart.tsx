@@ -114,8 +114,8 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
     data.employerContrib + data.employeeContrib + data.investmentReturns;
 
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-lg">
-      <p className="text-gray-400 text-sm mb-2">
+    <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+      <p className="text-muted-foreground text-sm mb-2">
         {formatMonthFull(data.date)}
       </p>
       <div className="space-y-1">
@@ -124,13 +124,13 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
             className="w-3 h-3 rounded"
             style={{ backgroundColor: COLORS.balance }}
           />
-          <span className="text-gray-300 text-sm">Balance:</span>
-          <span className="text-white font-semibold">
+          <span className="text-muted-foreground text-sm">Balance:</span>
+          <span className="text-foreground font-semibold">
             {formatCurrency(data.balance, currency)}
           </span>
         </div>
-        <div className="border-t border-gray-700 my-2 pt-2">
-          <p className="text-gray-500 text-xs mb-1 uppercase tracking-wide">
+        <div className="border-t border-border my-2 pt-2">
+          <p className="text-muted-foreground text-xs mb-1 uppercase tracking-wide">
             Monthly Changes
           </p>
           <div className="flex items-center gap-2">
@@ -138,8 +138,8 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
               className="w-3 h-3 rounded"
               style={{ backgroundColor: COLORS.employer }}
             />
-            <span className="text-gray-300 text-sm">Employer:</span>
-            <span className="text-white font-medium">
+            <span className="text-muted-foreground text-sm">Employer:</span>
+            <span className="text-foreground font-medium">
               {formatCurrency(data.employerContrib, currency)}
             </span>
           </div>
@@ -148,8 +148,8 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
               className="w-3 h-3 rounded"
               style={{ backgroundColor: COLORS.employee }}
             />
-            <span className="text-gray-300 text-sm">Employee:</span>
-            <span className="text-white font-medium">
+            <span className="text-muted-foreground text-sm">Employee:</span>
+            <span className="text-foreground font-medium">
               {formatCurrency(data.employeeContrib, currency)}
             </span>
           </div>
@@ -158,10 +158,10 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
               className="w-3 h-3 rounded"
               style={{ backgroundColor: COLORS.returns }}
             />
-            <span className="text-gray-300 text-sm">Returns:</span>
+            <span className="text-muted-foreground text-sm">Returns:</span>
             <span
               className={`font-medium ${
-                data.investmentReturns >= 0 ? "text-green-400" : "text-red-400"
+                data.investmentReturns >= 0 ? "text-positive" : "text-destructive"
               }`}
             >
               {data.investmentReturns >= 0 ? "+" : ""}
@@ -169,12 +169,12 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
             </span>
           </div>
         </div>
-        <div className="border-t border-gray-700 mt-2 pt-2">
-          <p className="text-gray-400 text-sm">
+        <div className="border-t border-border mt-2 pt-2">
+          <p className="text-muted-foreground text-sm">
             Monthly Total:{" "}
             <span
               className={`font-semibold ${
-                totalContrib >= 0 ? "text-green-400" : "text-red-400"
+                totalContrib >= 0 ? "text-positive" : "text-destructive"
               }`}
             >
               {totalContrib >= 0 ? "+" : ""}
@@ -218,7 +218,7 @@ function CustomLegend({ payload }: CustomLegendProps) {
             className="w-3 h-3 rounded"
             style={{ backgroundColor: entry.color }}
           />
-          <span className="text-gray-300 text-sm">
+          <span className="text-muted-foreground text-sm">
             {labels[entry.value] || entry.value}
           </span>
         </div>
@@ -309,7 +309,7 @@ export function SuperBalanceHistoryChart({
   if (breakdown.length === 0) {
     return (
       <div className="h-64 flex items-center justify-center">
-        <p className="text-gray-500 text-center">
+        <p className="text-muted-foreground text-center">
           No historical data available yet.
           <br />
           Data will appear after your first monthly check-in.
@@ -323,19 +323,19 @@ export function SuperBalanceHistoryChart({
     const point = breakdown[0];
     return (
       <div className="h-64 flex flex-col items-center justify-center gap-4">
-        <p className="text-gray-400 text-sm">Single snapshot recorded:</p>
-        <div className="bg-gray-800 rounded-lg p-4 text-center">
-          <p className="text-gray-400 text-sm">
+        <p className="text-muted-foreground text-sm">Single snapshot recorded:</p>
+        <div className="bg-card rounded-lg p-4 text-center">
+          <p className="text-muted-foreground text-sm">
             {formatMonthFull(point.date)}
           </p>
-          <p className="text-white text-lg font-semibold">
+          <p className="text-foreground text-lg font-semibold">
             {formatCurrency(
               convert(point.balance, holdingCurrency),
               displayCurrency
             )}
           </p>
           {(point.employerContrib > 0 || point.employeeContrib > 0) && (
-            <p className="text-gray-400 text-sm mt-2">
+            <p className="text-muted-foreground text-sm mt-2">
               Contributions: {formatCurrency(
                 convert(point.employerContrib + point.employeeContrib, holdingCurrency),
                 displayCurrency
@@ -343,7 +343,7 @@ export function SuperBalanceHistoryChart({
             </p>
           )}
         </div>
-        <p className="text-gray-500 text-xs">
+        <p className="text-muted-foreground text-xs">
           Add more snapshots to see a chart.
         </p>
       </div>

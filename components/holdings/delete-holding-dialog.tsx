@@ -133,52 +133,52 @@ export function DeleteHoldingDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="bg-gray-900 border-gray-700">
+      <AlertDialogContent className="bg-background border-border">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-white">Delete Holding</AlertDialogTitle>
-          <AlertDialogDescription className="text-gray-400">
+          <AlertDialogTitle className="text-foreground">Delete Holding</AlertDialogTitle>
+          <AlertDialogDescription className="text-muted-foreground">
             Are you sure you want to delete this holding? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         {/* Holding details */}
-        <div className="my-4 p-4 bg-gray-800 rounded-lg border border-gray-700 space-y-2">
+        <div className="my-4 p-4 bg-card rounded-lg border border-border space-y-2">
           <div className="flex justify-between">
-            <span className="text-gray-400">Name:</span>
-            <span className="text-white font-medium">{holding.name}</span>
+            <span className="text-muted-foreground">Name:</span>
+            <span className="text-foreground font-medium">{holding.name}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-400">Type:</span>
-            <span className="text-white">{HOLDING_TYPE_LABELS[holding.type]}</span>
+            <span className="text-muted-foreground">Type:</span>
+            <span className="text-foreground">{HOLDING_TYPE_LABELS[holding.type]}</span>
           </div>
           {holding.symbol && (
             <div className="flex justify-between">
-              <span className="text-gray-400">Symbol:</span>
-              <span className="text-white font-mono">{holding.symbol}</span>
+              <span className="text-muted-foreground">Symbol:</span>
+              <span className="text-foreground font-mono">{holding.symbol}</span>
             </div>
           )}
           <div className="flex justify-between">
-            <span className="text-gray-400">Currency:</span>
-            <span className="text-white">{holding.currency}</span>
+            <span className="text-muted-foreground">Currency:</span>
+            <span className="text-foreground">{holding.currency}</span>
           </div>
           {isTradeable && holding.quantity !== null && holding.quantity > 0 && (
             <div className="flex justify-between">
-              <span className="text-gray-400">Quantity:</span>
-              <span className="text-white font-mono">{formatQuantity(holding.quantity)}</span>
+              <span className="text-muted-foreground">Quantity:</span>
+              <span className="text-foreground font-mono">{formatQuantity(holding.quantity)}</span>
             </div>
           )}
           {isTradeable && holding.costBasis !== null && holding.costBasis > 0 && (
             <div className="flex justify-between">
-              <span className="text-gray-400">Cost Basis:</span>
-              <span className="text-white font-mono">
+              <span className="text-muted-foreground">Cost Basis:</span>
+              <span className="text-foreground font-mono">
                 {formatBalance(holding.costBasis, holding.currency)}
               </span>
             </div>
           )}
           {isSnapshotType && holding.latestSnapshot && (
             <div className="flex justify-between">
-              <span className="text-gray-400">Latest Balance:</span>
-              <span className="text-white font-mono">
+              <span className="text-muted-foreground">Latest Balance:</span>
+              <span className="text-foreground font-mono">
                 {formatBalance(holding.latestSnapshot.balance, holding.latestSnapshot.currency)}
               </span>
             </div>
@@ -196,7 +196,7 @@ export function DeleteHoldingDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel
-            className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+            className="bg-card border-border text-foreground hover:bg-muted"
             disabled={mutation.isPending}
           >
             Cancel
@@ -204,7 +204,7 @@ export function DeleteHoldingDialog({
           <AlertDialogAction
             onClick={handleDelete}
             disabled={mutation.isPending}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-destructive hover:bg-destructive/90 text-foreground"
           >
             {mutation.isPending ? (
               <>
