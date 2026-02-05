@@ -40,6 +40,14 @@ export default {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        positive: {
+          DEFAULT: "hsl(var(--positive))",
+          foreground: "hsl(var(--positive-foreground))",
+        },
+        negative: {
+          DEFAULT: "hsl(var(--negative))",
+          foreground: "hsl(var(--negative-foreground))",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -50,6 +58,15 @@ export default {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+      },
+      boxShadow: {
+        "glow-sm": "0 0 8px 0 var(--accent-glow)",
+        "glow-md": "0 0 16px 2px var(--accent-glow)",
+        "glow-lg": "0 0 24px 4px var(--accent-glow)",
+        "glow-positive": "0 0 16px 2px var(--positive-glow)",
+        "glow-negative": "0 0 16px 2px var(--negative-glow)",
+        "card": "0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3)",
+        "card-hover": "0 4px 12px 0 rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3)",
       },
       borderRadius: {
         lg: "var(--radius)",
