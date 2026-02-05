@@ -19,6 +19,11 @@
 - numberSpring is a Transition object for animating numeric values (e.g. useSpring, useMotionValue)
 - Reduced motion: use `useAnimationConfig(preset?)` from hooks/use-animation-config.ts — returns props that disable animations when OS prefers-reduced-motion is on
 - Hooks live in hooks/ directory (not lib/) — follow this convention for custom React hooks
+- Recharts SVG props (stroke, fill) require raw hex values — CSS variables not supported in SVG rendering
+- Category indicator colours (asset types, currencies) use hardcoded Tailwind colours (bg-blue-500 etc.) — these are intentional and distinct from theme tokens
+- Card container pattern: `border-border bg-card/50` for bordered cards, `bg-muted` for skeleton placeholders
+- Error state pattern: `border-destructive bg-destructive/10` with `text-destructive` for error messages
+- Toggle pattern: active=`bg-muted text-foreground`, inactive=`text-muted-foreground hover:text-foreground`
 
 ---
 
@@ -122,4 +127,20 @@ Started: 2026-02-05
   - Mapping reference: bg-gray-950 → bg-background, bg-gray-900 → bg-card, border-gray-800 → border-border, text-white → text-foreground, text-gray-* → text-muted-foreground
   - The dashboard layout header uses bg-card (zinc-900) to visually elevate above bg-background (zinc-950)
   - Only 3 hardcoded colour classes existed in these two files — the layouts were already relatively clean
+---
+
+## 2026-02-05 - US-008
+- Replaced all hardcoded Tailwind colour classes across 14 dashboard component files with design tokens
+- Key mappings applied: border-gray-700 → border-border, bg-gray-800/50 → bg-card/50, bg-gray-700 (skeleton) → bg-muted, text-gray-400/500 → text-muted-foreground, text-white → text-foreground, text-green-500/emerald-400 → text-positive, text-red-500/400 → text-destructive, bg-gray-900 (tooltip) → bg-background, from-gray-800 to-gray-900 → from-card to-background
+- Error states: border-red-700 bg-red-900/20 → border-destructive bg-destructive/10, text-red-400 → text-destructive
+- Toggle active states: bg-gray-600 text-white → bg-muted text-foreground
+- Toggle inactive: text-gray-400 hover:text-white → text-muted-foreground hover:text-foreground
+- Intentionally preserved: category indicator colours (bg-blue-500, bg-purple-500, bg-orange-500, bg-emerald-500, bg-amber-500 in getAssetColor/getCurrencyColor), Recharts SVG hex values (stroke/fill props), and yellow-* warning theme classes
+- Files changed: nav.tsx, mobile-nav.tsx, dashboard-header.tsx, summary-cards.tsx, net-worth-hero.tsx, net-worth-chart.tsx, top-performers.tsx, asset-allocation.tsx, asset-allocation-pie-chart.tsx, assets-vs-debt-chart.tsx, currency-exposure.tsx, super-growth-chart.tsx, super-breakdown-section.tsx, stale-data-warning.tsx
+- **Learnings for future iterations:**
+  - Recharts SVG props (stroke, fill) require raw hex values — CSS variables are not supported in SVG rendering
+  - Category-specific colours (asset types, currencies) are intentionally hardcoded as they represent distinct data categories, not theme tokens
+  - Warning/stale-data UI uses yellow-* Tailwind classes — these are semantic for warnings and not part of the grey-based design token migration
+  - The codebase had a very consistent pattern for card containers: `border-gray-700 bg-gray-800/50` which maps cleanly to `border-border bg-card/50`
+  - For skeleton loading states, `bg-gray-700` maps to `bg-muted` consistently
 ---
