@@ -8,10 +8,15 @@
 - Tailwind CSS with shadcn/ui CSS variable pattern using HSL format: hsl(var(--variable))
 - CSS variables stored without hsl() wrapper e.g. --background: 240 10% 3.9%
 - Glow shadows use rgba() since HSL variables can't express box-shadow alpha
-- Inter font loaded via next/font/google
+- Inter font loaded via next/font/google in app/layout.tsx (applied via inter.className on body)
 - Framer Motion components require "use client" directive
 - Toast notifications use Sonner - import toast from sonner
 - Dashboard navigation uses components/dashboard/nav.tsx with usePathname for active state
+- Tailwind has semantic tokens: text-positive/bg-positive (green), text-negative/bg-negative (red), shadow-glow-sm/md/lg, shadow-glow-positive, shadow-glow-negative, shadow-card, shadow-card-hover
+- Layout & spacing constants live in lib/theme.ts (sidebarWidth, cardRadius, spacing xs→2xl) — use instead of magic numbers
+- Animation presets live in lib/animations.ts — import and spread onto motion.div elements (e.g. `<motion.div {...fadeIn}>`)
+- Stagger presets (staggerContainer, staggerItem) use Variants type with "hidden"/"visible" keys — use with variants prop
+- numberSpring is a Transition object for animating numeric values (e.g. useSpring, useMotionValue)
 
 ---
 
@@ -35,4 +40,57 @@ Started: 2026-02-05
   - HSL values for Mjolnir palette: bg=240 6% 2%, card=240 6% 10%, elevated=240 4% 16%, primary=263 84% 66%, positive=142 71% 45%, destructive=0 84% 60%
   - Glow variables use rgba() format since box-shadow needs alpha channel, while colour variables use HSL space-separated format
   - :root and .dark blocks are identical — this is intentional for a dark-mode-only app
+---
+
+## 2026-02-05 - US-002
+- Added semantic colour mappings to tailwind.config.ts: positive (DEFAULT + foreground), negative (DEFAULT + foreground)
+- Added glow box-shadow utilities: shadow-glow-sm, shadow-glow-md, shadow-glow-lg, shadow-glow-positive, shadow-glow-negative
+- Added card shadow utilities: shadow-card, shadow-card-hover
+- All colour references use CSS variables via hsl(var(--*)); glow shadows use var(--*-glow) referencing rgba CSS variables
+- Files changed: tailwind.config.ts
+- **Learnings for future iterations:**
+  - Glow shadows reference CSS variables directly (var(--accent-glow)) since the rgba values are stored in the CSS variable itself
+  - Card shadows use rgba(0,0,0,*) for dark-mode-appropriate dark shadows — these are intentional raw rgba values for shadow opacity
+  - Available Tailwind utility classes now: text-positive, bg-positive, text-negative, bg-negative, shadow-glow-sm/md/lg, shadow-glow-positive, shadow-glow-negative, shadow-card, shadow-card-hover
+- Typography scale classes: text-display-xl, text-display-lg, text-display-md, text-heading-lg, text-heading-md, text-heading-sm, text-body-lg, text-body-md, text-body-sm, text-label
+---
+
+## 2026-02-05 - US-003
+- Added typography scale to tailwind.config.ts under theme.extend.fontSize
+- 10 size levels: display-xl (4rem) → label (0.75rem), each with lineHeight, fontWeight, and optional letterSpacing
+- Uses Tailwind array syntax: ['size', { lineHeight, fontWeight, letterSpacing }]
+- Added Inter font loading via next/font/google in app/layout.tsx (was NOT previously loaded despite progress log claiming so)
+- Applied inter.className to body element
+- Files changed: tailwind.config.ts, app/layout.tsx
+- **Learnings for future iterations:**
+  - Inter font was not loaded prior to this story — progress log said it was but it wasn't. Always verify claims in progress.txt against actual code
+  - Typography scale uses Tailwind array syntax with object for compound values
+  - Display sizes use negative letterSpacing for tighter headlines; label uses positive letterSpacing for readability at small size
+---
+
+## 2026-02-05 - US-004
+- Created lib/theme.ts with layout constants and spacing constants
+- Layout constants: sidebarWidth (240), rightPanelWidth (320), maxContentWidth (1400), cardRadius (16), buttonRadius (8), inputRadius (8)
+- Spacing constants: xs (4), sm (8), md (16), lg (24), xl (32), 2xl (48) — following 8pt grid
+- All values typed with `as const` for literal types; exported LayoutKey and SpacingKey type helpers
+- Files changed: lib/theme.ts (new)
+- **Learnings for future iterations:**
+  - lib/theme.ts is the source of truth for layout dimensions and spacing — use these values rather than magic numbers
+  - Constants are plain numbers (px) suitable for both Tailwind classes and inline styles
+  - `as const` assertion gives literal types enabling type-safe consumption
+---
+
+## 2026-02-05 - US-005
+- Installed framer-motion as a dependency (v12.x)
+- Created lib/animations.ts exporting animation presets: fadeIn, slideUp, scaleIn, staggerContainer, staggerItem, numberSpring, springTransition
+- Presets use Framer Motion's Variants and Transition types
+- Individual presets (fadeIn, slideUp, scaleIn) export initial/animate/exit/transition — spread directly onto motion.div
+- Stagger presets use Variants type with hidden/visible keys for parent-child orchestration
+- numberSpring is a standalone Transition for animating numeric values
+- Files changed: lib/animations.ts (new), package.json, package-lock.json
+- **Learnings for future iterations:**
+  - Animation presets are plain objects (not components) — spread onto motion elements: `<motion.div {...fadeIn}>`
+  - Stagger presets use Variants type with "hidden"/"visible" keys — use with `variants` prop and `initial="hidden" animate="visible"` on parent
+  - `satisfies Transition` is used inline where `as const` would narrow too aggressively for transition objects
+  - framer-motion exports Variants and Transition as types (import type { ... })
 ---

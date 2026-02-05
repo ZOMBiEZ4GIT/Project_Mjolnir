@@ -35,7 +35,7 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -59,7 +59,7 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -73,7 +73,7 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -89,7 +89,7 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
