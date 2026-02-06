@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
@@ -23,6 +24,8 @@ import {
   Legend,
 } from "recharts";
 import { ChartExportButton } from "@/components/charts";
+import { NumberTicker } from "@/components/dashboard/number-ticker";
+import { fadeIn, staggerContainer, staggerItem } from "@/lib/animations";
 
 type ViewMode = "bars" | "pie";
 
@@ -63,16 +66,6 @@ async function fetchNetWorth(displayCurrency: Currency): Promise<NetWorthRespons
   return response.json();
 }
 
-/**
- * Formats a percentage.
- */
-function formatPercentage(value: number): string {
-  return `${value.toFixed(1)}%`;
-}
-
-/**
- * Returns the icon for an asset type.
- */
 function getAssetIcon(type: string): React.ReactNode {
   switch (type) {
     case "stock":
@@ -90,9 +83,6 @@ function getAssetIcon(type: string): React.ReactNode {
   }
 }
 
-/**
- * Returns the display name for an asset type.
- */
 function getAssetDisplayName(type: string): string {
   switch (type) {
     case "stock":
@@ -110,9 +100,6 @@ function getAssetDisplayName(type: string): string {
   }
 }
 
-/**
- * Returns the color class for an asset type.
- */
 function getAssetColor(type: string): string {
   switch (type) {
     case "stock":
@@ -130,34 +117,28 @@ function getAssetColor(type: string): string {
   }
 }
 
-/**
- * Returns the hex color for an asset type (for Recharts).
- */
 function getAssetHexColor(type: string): string {
   switch (type) {
     case "stock":
-      return "#3B82F6"; // blue-500
+      return "#3B82F6";
     case "etf":
-      return "#8B5CF6"; // purple-500
+      return "#8B5CF6";
     case "crypto":
-      return "#F97316"; // orange-500
+      return "#F97316";
     case "super":
-      return "#10B981"; // emerald-500
+      return "#10B981";
     case "cash":
-      return "#06B6D4"; // cyan-500
+      return "#06B6D4";
     default:
-      return "#6B7280"; // gray-500
+      return "#6B7280";
   }
 }
 
-/**
- * Loading skeleton for asset allocation.
- */
 function AllocationSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
       <div className="animate-pulse">
-        <div className="h-5 w-32 bg-muted rounded mb-6" />
+        <div className="h-4 w-32 bg-muted rounded mb-6" />
         <div className="space-y-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i}>
@@ -183,20 +164,32 @@ interface AllocationItemProps {
   percentage: number;
   count: number;
   currency: Currency;
+  animate: boolean;
 }
 
-/**
- * Individual asset allocation row.
- */
 function AllocationItem({
   type,
   totalValue,
   percentage,
   count,
   currency,
+  animate,
 }: AllocationItemProps) {
+  const [barWidth, setBarWidth] = useState(animate ? 0 : percentage);
+
+  useEffect(() => {
+    if (animate) {
+      // Delay slightly so the stagger can play first
+      const timer = setTimeout(() => setBarWidth(percentage), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [animate, percentage]);
+
   return (
-    <div className="space-y-2">
+    <motion.div
+      variants={staggerItem}
+      className="space-y-2 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-accent/5"
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${getAssetColor(type)} bg-opacity-20`}>
@@ -208,30 +201,33 @@ function AllocationItem({
             <span className="font-medium text-foreground">
               {getAssetDisplayName(type)}
             </span>
-            <span className="text-xs text-muted-foreground ml-2">
+            <span className="text-body-sm text-muted-foreground ml-2">
               ({count} holding{count !== 1 ? "s" : ""})
             </span>
           </div>
         </div>
         <div className="text-right">
-          <div className="font-medium text-foreground">{formatCurrency(totalValue, currency, { compact: true })}</div>
-          <div className="text-xs text-muted-foreground">{formatPercentage(percentage)}</div>
+          <div className="font-medium text-foreground">
+            {formatCurrency(totalValue, currency, { compact: true })}
+          </div>
+          <div className="text-body-sm text-muted-foreground">
+            {percentage.toFixed(1)}%
+          </div>
         </div>
       </div>
-      {/* Progress bar */}
       <div className="h-2 bg-muted rounded-full overflow-hidden">
         <div
-          className={`h-full ${getAssetColor(type)} rounded-full transition-all duration-500`}
-          style={{ width: `${Math.min(percentage, 100)}%` }}
+          className={`h-full ${getAssetColor(type)} rounded-full transition-all ease-out`}
+          style={{
+            width: `${Math.min(barWidth, 100)}%`,
+            transitionDuration: "400ms",
+          }}
         />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
-/**
- * Pie chart data point interface.
- */
 interface PieDataPoint {
   name: string;
   type: string;
@@ -240,9 +236,6 @@ interface PieDataPoint {
   count: number;
 }
 
-/**
- * Custom tooltip component for the pie chart.
- */
 interface PieTooltipProps {
   active?: boolean;
   payload?: Array<{
@@ -260,22 +253,19 @@ function PieChartTooltip({ active, payload, currency }: PieTooltipProps) {
   return (
     <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
       <p className="text-foreground font-medium mb-1">{data.name}</p>
-      <p className="text-muted-foreground text-sm">
+      <p className="text-body-sm text-muted-foreground">
         {formatCurrency(data.value, currency)}
       </p>
-      <p className="text-muted-foreground text-sm">
+      <p className="text-body-sm text-muted-foreground">
         {data.percentage.toFixed(1)}% of portfolio
       </p>
-      <p className="text-muted-foreground text-xs mt-1">
+      <p className="text-body-sm text-muted-foreground mt-1">
         {data.count} holding{data.count !== 1 ? "s" : ""}
       </p>
     </div>
   );
 }
 
-/**
- * Custom legend for the pie chart.
- */
 interface LegendPayload {
   value: string;
   type: string;
@@ -299,7 +289,7 @@ function PieChartLegend({ payload, currency }: CustomLegendProps) {
             className="w-3 h-3 rounded-full"
             style={{ backgroundColor: entry.color }}
           />
-          <span className="text-muted-foreground text-sm">
+          <span className="text-body-sm text-muted-foreground">
             {entry.value}{" "}
             <span className="text-muted-foreground">
               ({formatCurrency(entry.payload.value, currency, { compact: true })})
@@ -311,9 +301,6 @@ function PieChartLegend({ payload, currency }: CustomLegendProps) {
   );
 }
 
-/**
- * View mode toggle button group.
- */
 interface ViewToggleProps {
   viewMode: ViewMode;
   onChange: (mode: ViewMode) => void;
@@ -324,7 +311,7 @@ function ViewToggle({ viewMode, onChange }: ViewToggleProps) {
     <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
       <button
         onClick={() => onChange("bars")}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-body-sm font-medium transition-colors ${
           viewMode === "bars"
             ? "bg-muted text-foreground"
             : "text-muted-foreground hover:text-foreground"
@@ -336,7 +323,7 @@ function ViewToggle({ viewMode, onChange }: ViewToggleProps) {
       </button>
       <button
         onClick={() => onChange("pie")}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-body-sm font-medium transition-colors ${
           viewMode === "pie"
             ? "bg-muted text-foreground"
             : "text-muted-foreground hover:text-foreground"
@@ -350,26 +337,14 @@ function ViewToggle({ viewMode, onChange }: ViewToggleProps) {
   );
 }
 
-/**
- * Asset Allocation Component
- *
- * Displays a breakdown of assets by type (Stocks, ETFs, Crypto, Super, Cash).
- * Supports two view modes:
- * - Bars: Progress bars showing each asset type's percentage
- * - Pie: Donut chart showing asset allocation
- *
- * View preference is persisted in localStorage.
- * Sorted by value descending. Debt is shown separately (not included here).
- */
 export function AssetAllocation() {
+  const shouldReduceMotion = useReducedMotion();
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading } = useCurrency();
   const chartRef = useRef<HTMLDivElement>(null);
 
-  // View mode state with localStorage persistence
   const [viewMode, setViewMode] = useState<ViewMode>("bars");
 
-  // Load preference from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "bars" || stored === "pie") {
@@ -377,7 +352,6 @@ export function AssetAllocation() {
     }
   }, []);
 
-  // Handle view mode change
   const handleViewModeChange = (mode: ViewMode) => {
     setViewMode(mode);
     localStorage.setItem(STORAGE_KEY, mode);
@@ -394,38 +368,33 @@ export function AssetAllocation() {
     refetchInterval: 60 * 1000,
   });
 
-  // Show skeleton while loading or not authenticated
   if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
     return <AllocationSkeleton />;
   }
 
-  // Show error state
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive bg-destructive/10 p-6">
+      <div className="rounded-2xl border border-destructive bg-destructive/10 p-6">
         <p className="text-destructive">Failed to load asset allocation</p>
       </div>
     );
   }
 
-  // No data available
   if (!netWorthData || !netWorthData.breakdown) {
     return <AllocationSkeleton />;
   }
 
   const { breakdown, totalAssets } = netWorthData;
 
-  // Sort breakdown by value descending
   const sortedBreakdown = [...breakdown].sort(
     (a, b) => b.totalValue - a.totalValue
   );
 
-  // Empty state
   if (sortedBreakdown.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+          <h3 className="text-label uppercase text-muted-foreground">
             Asset Allocation
           </h3>
           <ViewToggle viewMode={viewMode} onChange={handleViewModeChange} />
@@ -437,7 +406,6 @@ export function AssetAllocation() {
     );
   }
 
-  // Prepare pie chart data
   const pieData: PieDataPoint[] = sortedBreakdown
     .filter((item) => item.totalValue > 0)
     .map((item) => ({
@@ -448,10 +416,17 @@ export function AssetAllocation() {
       count: item.count,
     }));
 
+  const containerVariants = shouldReduceMotion ? undefined : staggerContainer;
+
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+    <motion.div
+      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      initial={shouldReduceMotion ? false : fadeIn.initial}
+      animate={fadeIn.animate}
+      transition={shouldReduceMotion ? { duration: 0 } : fadeIn.transition}
+    >
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+        <h3 className="text-label uppercase text-muted-foreground">
           Asset Allocation
         </h3>
         <div className="flex items-center gap-2">
@@ -465,7 +440,12 @@ export function AssetAllocation() {
 
       <div ref={chartRef}>
         {viewMode === "bars" ? (
-          <div className="space-y-5">
+          <motion.div
+            className="space-y-3"
+            variants={containerVariants}
+            initial={shouldReduceMotion ? undefined : "hidden"}
+            animate={shouldReduceMotion ? undefined : "visible"}
+          >
             {sortedBreakdown.map((item) => {
               const percentage =
                 totalAssets > 0 ? (item.totalValue / totalAssets) * 100 : 0;
@@ -477,12 +457,13 @@ export function AssetAllocation() {
                   percentage={percentage}
                   count={item.count}
                   currency={displayCurrency}
+                  animate={!shouldReduceMotion}
                 />
               );
             })}
-          </div>
+          </motion.div>
         ) : (
-          <div className="h-64">
+          <div className="relative h-64">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -510,9 +491,19 @@ export function AssetAllocation() {
                 />
               </PieChart>
             </ResponsiveContainer>
+            {/* Centre overlay — total assets */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ marginBottom: "40px" }}>
+              <div className="text-center">
+                <NumberTicker
+                  value={totalAssets}
+                  currency={displayCurrency}
+                  className="text-heading-sm text-foreground"
+                />
+              </div>
+            </div>
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 }
