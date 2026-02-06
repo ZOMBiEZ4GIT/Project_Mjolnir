@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion, type Variants } from "framer-motion";
-import { Pencil, Trash2, AlertTriangle, TrendingUp, TrendingDown, RotateCw } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle, TrendingUp, TrendingDown, Minus, RotateCw } from "lucide-react";
 import { PriceFlash } from "./price-flash";
 import { PriceNumberTicker } from "./price-number-ticker";
 import { PriceTimestamp } from "./price-timestamp";
@@ -442,10 +442,6 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
   const displayCurrency = currency || holdingCurrency;
   const currencyPrefix = CURRENCY_SYMBOLS[displayCurrency] || displayCurrency;
 
-  // Format change display
-  const hasChange = changePercent !== null && changeAbsolute !== null;
-  const changeInfo = hasChange ? formatChangePercent(changePercent) : null;
-
   // Show retry button for errors or if currently retrying
   const showRetry = (error || isRetrying) && onRetry;
 
@@ -469,25 +465,31 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
         />
       </PriceFlash>
 
-      {/* Change indicator with crossfade */}
-      {hasChange && changeInfo && (
+      {/* Change indicator with crossfade on direction change */}
+      {changePercent !== null && (
         <AnimatePresence mode="wait">
           <motion.span
-            key={`${changePercent}-${changeAbsolute}`}
+            key={changePercent > 0 ? "up" : changePercent < 0 ? "down" : "zero"}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             className={`text-xs flex items-center gap-0.5 ${
-              changeInfo.isPositive ? "text-positive" : "text-destructive"
+              changePercent > 0
+                ? "text-positive"
+                : changePercent < 0
+                  ? "text-destructive"
+                  : "text-muted-foreground"
             }`}
           >
-            {changeInfo.isPositive ? (
+            {changePercent > 0 ? (
               <TrendingUp className="h-3 w-3" />
-            ) : (
+            ) : changePercent < 0 ? (
               <TrendingDown className="h-3 w-3" />
+            ) : (
+              <Minus className="h-3 w-3" />
             )}
-            {changeInfo.text}
+            {changePercent === 0 ? "0.00%" : formatChangePercent(changePercent).text}
             {changeAbsolute !== null && (
               <span className="text-muted-foreground ml-1">
                 ({formatChangeAbsolute(changeAbsolute, displayCurrency)})
