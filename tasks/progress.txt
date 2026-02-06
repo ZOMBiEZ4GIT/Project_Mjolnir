@@ -32,6 +32,7 @@
 - html2canvas backgroundColor requires raw hex — use `#18181b` to match --card token
 - Email templates (components/emails/) use inline hex values — email clients don't support CSS variables
 - Only legitimate remaining hardcoded grey: `bg-gray-500` fallback in category indicator functions (asset-allocation, currency-exposure)
+- TimeRangeSelector (components/charts/time-range-selector.tsx) exports TimeRange type and TIME_RANGE_OPTIONS — import from @/components/charts
 - lightweight-charts v5 API: `chart.addSeries(AreaSeries, options)` — not `chart.addAreaSeries(options)` (deprecated)
 - TradingView charts require `next/dynamic` with `ssr: false` — use TVChart from components/charts/tv-chart.tsx
 - TVChartWrapper supports `onCrosshairMove` callback for custom tooltips — returns TVCrosshairData { time, value, x, y } or null
@@ -153,5 +154,24 @@ Started: 2026-02-06
   - TradingView Time type accepts YYYY-MM-DD strings cast as `Time` — works with monthly data
   - Custom tooltip needs `pointer-events-none` to avoid interfering with chart hover
   - Clamp tooltip x position with `Math.min(x + offset, containerWidth - tooltipWidth)` to prevent overflow
+---
+
+## 2026-02-06 - US-003
+- Created `components/charts/time-range-selector.tsx` — standalone animated time range selector
+  - Framer Motion `layoutId="time-range-indicator"` for smooth sliding pill between options
+  - Active tab: `bg-accent/20 text-foreground`, inactive: `text-muted-foreground hover:text-foreground`
+  - `useReducedMotion()` hook: sets transition duration to 0 when OS prefers reduced motion
+  - Props: `value: TimeRange`, `onChange: (range: TimeRange) => void`
+  - Exports `TimeRange` type and `TIME_RANGE_OPTIONS` constant for reuse
+- Updated `components/charts/index.ts` barrel exports
+- Updated `components/dashboard/net-worth-chart.tsx`:
+  - Removed inline `TimeRange` type, `TIME_RANGE_OPTIONS`, and `TimeRangeSelector` function
+  - Imports from `@/components/charts` instead
+  - Updated prop names from `selectedRange/onRangeChange` to `value/onChange`
+- Files changed: components/charts/time-range-selector.tsx (new), components/charts/index.ts, components/dashboard/net-worth-chart.tsx
+- **Learnings for future iterations:**
+  - Framer Motion `layoutId` sliding indicator pattern: render `motion.span` with `layoutId` only on active item inside a button — identical to filter-tabs.tsx pattern
+  - `useReducedMotion()` from framer-motion returns boolean — use to set transition duration to 0
+  - When extracting components, watch for prop name changes — replace_all may not match different indentation levels
 ---
 
