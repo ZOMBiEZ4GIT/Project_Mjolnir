@@ -1,0 +1,223 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/ux2-layout-navigation",
+  "description": "UX-2: Layout & Navigation — Replace top-header navigation with a collapsible sidebar, add mobile drawer, animated nav active indicator, and page transitions.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create shared navigation items config",
+      "description": "As a developer, I want navigation items defined in a single location so sidebar, mobile nav, and command menu all share the same data.",
+      "acceptanceCriteria": [
+        "Create lib/navigation.ts exporting navItems array",
+        "Each item has: href (string), label (string), icon (Lucide icon component), description (string for command menu)",
+        "Items: Dashboard (/), Holdings (/holdings), Transactions (/transactions), Snapshots (/snapshots), Import (/import), Export (/export), Settings (/settings)",
+        "Icons match current command-menu.tsx: LayoutDashboard, Wallet, ArrowRightLeft, Camera, Upload, Download, Settings",
+        "Export NavItem type for TypeScript consumers",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Dashboard href uses /dashboard (matching existing routes) rather than / as PRD suggested. Export item added with Download icon."
+    },
+    {
+      "id": "US-002",
+      "title": "Create nav item component with active indicator",
+      "description": "As a user, I want visual feedback on which page I'm on via an animated active indicator.",
+      "acceptanceCriteria": [
+        "Create components/layout/nav-item.tsx as a client component",
+        "Props: item (NavItem), isCollapsed (boolean), isActive (boolean)",
+        "Renders Link with icon and label (label hidden when collapsed)",
+        "Active state: animated background pill using Framer Motion layoutId='active-nav'",
+        "Active state has shadow-glow-sm from design system",
+        "Inactive: text-muted-foreground, hover → text-foreground with bg-accent/10",
+        "Active: text-foreground with bg-accent/20 background",
+        "When collapsed, show Tooltip with label on hover using shadcn/ui Tooltip",
+        "Icon-only items have aria-label matching their text label",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Component exported as NavItemLink. Uses Framer Motion layoutId='active-nav' for animated pill. TooltipProvider wraps each collapsed item for label tooltip on hover."
+    },
+    {
+      "id": "US-003",
+      "title": "Create sidebar component with expand/collapse",
+      "description": "As a user, I want a persistent sidebar that can toggle between expanded and collapsed states.",
+      "acceptanceCriteria": [
+        "Create components/layout/sidebar.tsx as a client component",
+        "Sidebar renders on left side of viewport",
+        "Expanded state: 240px wide (use layout.sidebarWidth from lib/theme.ts)",
+        "Collapsed state: 64px wide, icons only",
+        "Toggle button at bottom with PanelLeftClose/PanelLeftOpen icons from Lucide",
+        "Collapse state persists in localStorage under key 'mjolnir-sidebar-collapsed'",
+        "Smooth width transition using CSS transition-[width] (200ms ease-in-out)",
+        "Uses design tokens: bg-card background, border-r border-border",
+        "Has role='navigation' and aria-label='Main navigation'",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Sidebar component at components/layout/sidebar.tsx. Uses localStorage for collapse state persistence. Hidden on mobile via hidden lg:flex. Active state matches on exact path or starts-with for nested routes. Width uses layout.sidebarWidth from lib/theme.ts. Toggle button at bottom with PanelLeftClose/PanelLeftOpen icons."
+    },
+    {
+      "id": "US-004",
+      "title": "Add branding and user section to sidebar",
+      "description": "As a user, I want to see app branding and my account controls in the sidebar.",
+      "acceptanceCriteria": [
+        "Top of sidebar: 'Mjolnir' text when expanded, 'M' icon when collapsed",
+        "Branding section has subtle bottom border (border-b border-border)",
+        "Bottom of sidebar: Clerk UserButton component",
+        "When expanded: UserButton shows with user name if available",
+        "When collapsed: UserButton shows as avatar circle only",
+        "Vertical layout: Branding (top) → Nav items (middle, flex-1) → User section (bottom) → Collapse toggle (bottom-most)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Branding section with Zap icon (Mjolnir = lightning/thunder). Uses text-heading-sm for brand name, text-primary for icon. User section shows Clerk UserButton with firstName when expanded, avatar-only when collapsed. Uses useUser() hook from @clerk/nextjs for client-side user data. hasClerkKey check guards rendering when Clerk is not configured."
+    },
+    {
+      "id": "US-005",
+      "title": "Create mobile navigation drawer",
+      "description": "As a user on mobile, I want a slide-out navigation drawer since the sidebar is hidden.",
+      "acceptanceCriteria": [
+        "Create components/layout/mobile-nav.tsx as a client component",
+        "A slim mobile header bar appears on screens below lg breakpoint (1024px)",
+        "Mobile header shows: hamburger button (left), 'Mjolnir' text (center), UserButton (right)",
+        "Hamburger button has aria-label='Open navigation menu'",
+        "Tapping hamburger opens a Sheet drawer from the left (shadcn/ui Sheet)",
+        "Drawer contains same nav items as sidebar with icons + labels",
+        "Active item highlighted with same styling as sidebar (bg-accent/20)",
+        "Drawer closes when a nav item is tapped",
+        "Drawer closes on Escape key (Sheet handles this)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Mobile header bar with hamburger (left), Mjolnir branding (center), Clerk UserButton (right). Sheet drawer from left with nav items using shared navItems from lib/navigation.ts. Active item uses bg-accent/20 matching sidebar. Drawer closes on nav item tap. Header bar is fixed positioned with z-30, visible only below lg breakpoint."
+    },
+    {
+      "id": "US-006",
+      "title": "Create app shell layout component",
+      "description": "As a developer, I want a single layout component that composes sidebar, mobile nav, and content area.",
+      "acceptanceCriteria": [
+        "Create components/layout/app-shell.tsx that composes all layout pieces",
+        "Desktop (lg+): sidebar on left + main content area taking remaining width",
+        "Mobile (<lg): mobile header + full-width content (sidebar hidden)",
+        "Main content area has padding: p-6 on desktop, p-4 on mobile",
+        "Content area max-width: 1400px (use layout.maxContentWidth from lib/theme.ts)",
+        "Content area left margin adjusts based on sidebar collapsed state (240px or 64px on desktop)",
+        "Use CSS transition-[margin-left] for smooth adjustment when sidebar toggles",
+        "CommandMenu remains rendered at layout level",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "AppShell component at components/layout/app-shell.tsx. Owns sidebar collapsed state (localStorage persistence) and passes it to Sidebar via props. Sidebar refactored to accept isCollapsed/onToggleCollapsed props. Desktop: sidebar + margin-left content area with transition-[margin-left]. Mobile: pt-14 for fixed mobile header, full-width content. Content area has max-width from layout.maxContentWidth (1400px). Uses mounted state pattern to avoid hydration mismatch on sidebar width."
+    },
+    {
+      "id": "US-007",
+      "title": "Integrate app shell into dashboard layout",
+      "description": "As a developer, I want to replace the current header-based layout with the new app shell.",
+      "acceptanceCriteria": [
+        "Update app/(dashboard)/layout.tsx to use AppShell component",
+        "Remove the old header-based navigation markup from the layout",
+        "DashboardErrorBoundary still wraps the content area",
+        "CommandMenu still rendered and Cmd+K works",
+        "All existing dashboard pages continue to render correctly",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Replaced old header-based navigation (DashboardNav, MobileNav from components/dashboard/, UserButton) with AppShell component. DashboardErrorBoundary still wraps children. CommandMenu rendered inside AppShell. Fixed mobile margin-left by using CSS custom property with responsive Tailwind class (ml-0 lg:ml-[var(--sidebar-width)]) instead of inline marginLeft that applied on all screen sizes."
+    },
+    {
+      "id": "US-008",
+      "title": "Create page transition wrapper",
+      "description": "As a user, I want smooth fade transitions between pages.",
+      "acceptanceCriteria": [
+        "Create components/layout/page-wrapper.tsx using Framer Motion",
+        "Wraps page content with fade transition: opacity 0→1 on mount (200ms)",
+        "Uses fadeIn preset from lib/animations.ts",
+        "Respects prefers-reduced-motion using useAnimationConfig hook",
+        "No layout shift during transitions",
+        "Wrap dashboard layout's children in the page wrapper",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "PageWrapper component at components/layout/page-wrapper.tsx. Uses fadeIn preset from lib/animations.ts for 200ms opacity fade. Respects prefers-reduced-motion via Framer Motion useReducedMotion hook (initial: false + duration: 0 when reduced motion enabled). Integrated in dashboard layout wrapping children inside DashboardErrorBoundary. Uses typed fadeIn properties directly on motion.div to avoid Record<string,unknown> type incompatibility with Framer Motion props."
+    },
+    {
+      "id": "US-009",
+      "title": "Verify dashboard action controls work after layout change",
+      "description": "As a developer, I want to verify dashboard-specific controls still work in the new layout.",
+      "acceptanceCriteria": [
+        "DashboardHeader component (welcome, refresh, currency selector, FX rates) renders correctly on dashboard page",
+        "Refresh button fetches prices successfully",
+        "Currency selector changes display currency",
+        "FX rates display shows current rates",
+        "Non-dashboard pages (holdings, transactions, etc.) show their own page headers correctly",
+        "DashboardHeader uses design tokens (no hardcoded text-white, bg-gray-*)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Verification story — no code changes needed. DashboardHeader component renders correctly within AppShell layout with welcome message, refresh button, CurrencySelector, and FxRatesDisplay. All components use design tokens (text-foreground, text-muted-foreground, bg-muted, border-border, text-positive, etc.) with no hardcoded text-white or bg-gray-* classes. Non-dashboard pages (holdings, transactions, snapshots, import, export, settings) all render their own page headers correctly with design tokens. Build and lint pass."
+    },
+    {
+      "id": "US-010",
+      "title": "Update command menu to use shared nav items",
+      "description": "As a developer, I want command menu to use the shared navigation config.",
+      "acceptanceCriteria": [
+        "Update components/command-menu.tsx to import navItems from lib/navigation.ts",
+        "Remove duplicated nav item definitions from command menu",
+        "Navigation items in command menu match sidebar exactly",
+        "Command menu continues to work with Cmd+K shortcut",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Replaced local navigationItems array with shared navItems from lib/navigation.ts. Removed 6 duplicated lucide-react icon imports (LayoutDashboard, Wallet, ArrowRightLeft, Camera, Upload, Settings) — only Keyboard icon remains for shortcuts section. Command menu now includes Export item that was previously missing. Nav items in command menu now match sidebar exactly."
+    },
+    {
+      "id": "US-011",
+      "title": "Clean up old navigation components",
+      "description": "As a developer, I want to remove deprecated navigation components.",
+      "acceptanceCriteria": [
+        "Delete components/dashboard/nav.tsx (replaced by sidebar)",
+        "Delete components/dashboard/mobile-nav.tsx (replaced by new mobile-nav.tsx in layout/)",
+        "Verify no imports reference the deleted files",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Deleted components/dashboard/nav.tsx and components/dashboard/mobile-nav.tsx. Verified no source code imports reference deleted files (only archive progress.txt and PRD docs). Updated Codebase Patterns in progress.txt to reference new layout components. Build and lint pass."
+    },
+    {
+      "id": "US-012",
+      "title": "Keyboard accessibility audit",
+      "description": "As a user, I want to navigate the sidebar with keyboard.",
+      "acceptanceCriteria": [
+        "All sidebar nav items are focusable via Tab key",
+        "Enter/Space activates the focused nav item (navigates to that route)",
+        "Focus ring visible on all interactive elements (focus-visible:ring-2 focus-visible:ring-ring)",
+        "Sidebar collapse toggle is keyboard accessible",
+        "Mobile drawer traps focus when open (Sheet handles this)",
+        "Cmd+K command menu continues to work from any page",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Added focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring to: NavItemLink (nav-item.tsx), sidebar collapse toggle button (sidebar.tsx), and mobile drawer nav links (mobile-nav.tsx). Sidebar nav items use Next.js Link (native <a> tags) — focusable via Tab and activated by Enter. Collapse toggle uses native <button> — focusable and activated by Enter/Space. Mobile drawer uses Radix Sheet for focus trapping. Cmd+K command menu rendered via AppShell on all pages. Build and lint pass."
+    }
+  ]
+}
