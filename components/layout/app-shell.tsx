@@ -45,8 +45,12 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Main content area */}
       <main
-        style={{ marginLeft: mounted ? sidebarWidth : layout.sidebarWidth }}
-        className="min-h-screen transition-[margin-left] duration-200 ease-in-out pt-14 lg:pt-0"
+        style={
+          {
+            "--sidebar-width": `${mounted ? sidebarWidth : layout.sidebarWidth}px`,
+          } as React.CSSProperties
+        }
+        className="min-h-screen ml-0 lg:ml-[var(--sidebar-width)] transition-[margin-left] duration-200 ease-in-out pt-14 lg:pt-0"
       >
         <div
           className="mx-auto p-4 lg:p-6"
