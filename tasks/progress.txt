@@ -187,3 +187,21 @@ Started: 2026-02-05
   - Email templates (components/emails/) use inline hex by necessity — email clients don't support CSS variables
   - The only legitimate remaining hardcoded grey classes are bg-gray-500 fallbacks in category indicator functions (asset-allocation.tsx, currency-exposure.tsx)
 ---
+
+## 2026-02-06 - US-011
+- Created design system demo page at app/(dashboard)/design-system/page.tsx
+- Page showcases all design tokens as a developer reference:
+  - **Colour palette**: 4 groups (backgrounds, accent/status, text, borders/inputs) rendered as swatches with CSS variable names
+  - **Typography scale**: All 10 sizes with name, spec (size/lineHeight/weight/tracking), and sample text
+  - **Shadows & glows**: 7 shadow variants (card, card-hover, glow-sm/md/lg, glow-positive, glow-negative) as live cards
+  - **Animation presets**: fadeIn, slideUp, scaleIn with "Replay" buttons + numberSpring demo with cycling values
+  - **Spacing**: Visual representation of the 8pt grid (xs→2xl) with proportional bars
+- Page uses only design token classes (no hardcoded colour values)
+- Wrapped in Framer Motion stagger container so sections animate in on load
+- Files changed: app/(dashboard)/design-system/page.tsx (new)
+- **Learnings for future iterations:**
+  - Framer Motion stagger presets use variants prop with "hidden"/"visible" keys on parent, and staggerItem variants on children
+  - AnimationDemo pattern: use key={counter} on motion.div to re-trigger animation on state change (forces remount)
+  - Design token dynamic class application works via template literals with class data — no need for Tailwind safelist since all classes are statically analyzable in the data arrays
+  - &quot; entity needed in JSX for literal quotes in text content
+---
