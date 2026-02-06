@@ -1,0 +1,176 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/ux4-transaction-ui-enhancement",
+  "description": "UX-4: Transaction UI Enhancement — Polish transaction entry and history with animated type selector, react-hook-form + zod dialogs, monthly grouping with sticky headers, summary cards, stagger animations, and design token cleanup.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create animated transaction type selector",
+      "description": "As a user, I want a polished type selector with animated indicator so choosing a transaction type feels interactive and clear.",
+      "acceptanceCriteria": [
+        "Create components/transactions/type-selector.tsx — animated tab bar with options: BUY, SELL, DIVIDEND, SPLIT",
+        "Active tab has sliding background indicator using Framer Motion layoutId",
+        "Each tab is colour-coded: BUY=positive/green, SELL=destructive/red, DIVIDEND=accent/purple, SPLIT=blue",
+        "Inactive tabs: text-muted-foreground with hover:text-foreground",
+        "Indicator slides smoothly (200ms, ease-in-out)",
+        "Component accepts value and onChange props for controlled usage",
+        "Component accepts optional disabled prop — shows active type but no interaction, reduced opacity on other tabs",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Refactor AddTransactionDialog to react-hook-form + zod",
+      "description": "As a developer, I want the add transaction dialog refactored to use react-hook-form and zod for consistency.",
+      "acceptanceCriteria": [
+        "Update components/transactions/add-transaction-dialog.tsx to use useForm from react-hook-form",
+        "Create zod schema with conditional validation per transaction type",
+        "BUY/SELL: quantity > 0, unitPrice > 0, fees >= 0",
+        "DIVIDEND: quantity > 0 (shares held), unitPrice > 0 (dividend per share), no fees",
+        "SPLIT: quantity > 0 (split ratio), no price/fees",
+        "Use FormField components for inputs with inline error display",
+        "Replace radio buttons with TypeSelector component from US-001",
+        "Two-step flow preserved: Step 1 (holding + type) → Step 2 (details)",
+        "SELL validation checks available quantity and prevents overselling",
+        "Calculated totals (estimated cost/proceeds) display in real-time",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Refactor EditTransactionDialog to react-hook-form + zod",
+      "description": "As a developer, I want the edit transaction dialog refactored for consistency with the add dialog.",
+      "acceptanceCriteria": [
+        "Update components/transactions/edit-transaction-dialog.tsx to use useForm with pre-populated data",
+        "Create zod schema matching transaction type requirements (same as add)",
+        "Use FormField components for inputs",
+        "Use TypeSelector in disabled mode (type cannot be changed)",
+        "Holding name and action type displayed as read-only information",
+        "SELL validation accounts for the transaction being edited when calculating available quantity",
+        "Use toast helpers for feedback",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Add transaction summary cards above table",
+      "description": "As a user, I want to see my transaction totals at a glance in summary cards so I can understand cash flow quickly.",
+      "acceptanceCriteria": [
+        "Create components/transactions/transaction-summary.tsx — a row of summary cards",
+        "Display 4 cards: Total Bought (green), Total Sold (red), Dividends Received (purple), Net Cash Flow (positive/negative colour)",
+        "Each card shows: label, formatted dollar amount, transaction count",
+        "Cards use design tokens: bg-card, border-border, appropriate text colours",
+        "Cards stagger in on load (50ms delay each) using staggerContainer/staggerItem presets",
+        "Grid: 4 columns on lg+, 2 columns on md, 1 column on mobile",
+        "Remove existing aggregated totals from table footer",
+        "Summary values respect current filter state (holding, action, currency)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Group transaction history by month with sticky headers",
+      "description": "As a user, I want transactions grouped by month so I can scan history chronologically.",
+      "acceptanceCriteria": [
+        "Group transactions by month (e.g., 'February 2026', 'January 2026')",
+        "Month headers are sticky — stick to top of scroll container as user scrolls",
+        "Month headers display: month/year name (left), transaction count for that month (right)",
+        "Month headers use bg-background to avoid content showing through when sticky",
+        "Month headers have subtle bottom border (border-border)",
+        "Groups sorted in reverse chronological order (most recent first)",
+        "When filters change, grouping recalculates based on filtered transactions",
+        "Empty months not shown",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Add stagger animation and row hover effects to transaction table",
+      "description": "As a user, I want smooth animations and hover feedback on transaction rows for a polished feel.",
+      "acceptanceCriteria": [
+        "Transaction rows use stagger animation on initial load and filter change (50ms delay, capped at 500ms total)",
+        "Row hover: bg-accent/5 background with 150ms transition",
+        "Rows animate out on filter change (fade, 100ms) and new rows stagger in",
+        "Use AnimatePresence with row keys based on transaction ID",
+        "Respects prefers-reduced-motion",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Polish transaction type badges with design tokens",
+      "description": "As a user, I want clear, consistent colour coding for transaction types throughout the page.",
+      "acceptanceCriteria": [
+        "Update transaction action badges: BUY=bg-positive/20 text-positive, SELL=bg-destructive/20 text-destructive, DIVIDEND=bg-accent/20 text-accent, SPLIT=bg-blue-500/20 text-blue-400",
+        "Badges are pill-shaped (rounded-full px-2 py-0.5 text-xs font-medium)",
+        "Same colour scheme used in: table badges, type selector tabs, summary cards",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Add success confirmation animation on save",
+      "description": "As a user, I want visual confirmation when I save a transaction so I know it worked.",
+      "acceptanceCriteria": [
+        "On successful save: dialog closes, success toast appears with checkmark icon",
+        "New/updated transaction row briefly highlights with subtle accent pulse (1s, bg-accent/10 → transparent)",
+        "Row highlight only applies to the specific transaction that was just saved (by ID)",
+        "Highlight uses Framer Motion animation, respects prefers-reduced-motion",
+        "On successful deletion: toast shows 'Transaction deleted', row fades out before removal",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Replace hardcoded colours across transaction components",
+      "description": "As a developer, I want all transaction components using design system tokens.",
+      "acceptanceCriteria": [
+        "Audit all files in components/transactions/ and app/(dashboard)/transactions/page.tsx",
+        "Replace: bg-green-900 text-green-300 → bg-positive/20 text-positive",
+        "Replace: bg-red-900 text-red-300 → bg-destructive/20 text-destructive",
+        "Replace: text-white → text-foreground, text-gray-* → text-muted-foreground",
+        "Replace: bg-gray-* → bg-card/bg-muted/bg-background, border-gray-* → border-border",
+        "Filter dropdowns use design tokens",
+        "Empty state uses design tokens",
+        "Visual appearance preserved",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Audit confirmed all transaction components already use design tokens. Only remaining hardcoded colours are yellow (warning) and blue (info/SPLIT), which are intentionally exempt per codebase patterns."
+    }
+  ]
+}
