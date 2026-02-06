@@ -72,6 +72,10 @@
 - Transaction action colour mapping: BUY=positive/green, SELL=destructive/red, DIVIDEND=accent/purple, SPLIT=blue-400/blue-500
 - onTransactionSaved/onDeleted callbacks enable row highlight and fade-out animations from parent component
 
+- Check-in form uses react-hook-form + zod with useFieldArray for dynamic holdings list; showContributions is UI-only state (not in form schema)
+- useFieldArray `replace()` syncs form fields with API data; use a ref-based sync key to prevent re-replacing on every render
+- form.trigger(`holdings.${idx}.balance`) validates individual field array items for per-step validation in wizard flows
+- form.setValue with `{ shouldValidate: form.formState.isSubmitted }` re-validates on change only after first validation attempt
 - Check-in status API returns `previousBalances` keyed by holdingId — most recent snapshot balance before target month
 - CheckInModal is a 3-step wizard (Select Month → Update Holdings → Review & Save) with currentStep state (0-2)
 - animate-shake keyframes defined in tailwind.config.ts — use `animate-shake` class with useState toggle + setTimeout auto-clear
@@ -220,5 +224,30 @@ Started: 2026-02-06
   - Net worth change approximation: sum balance changes, invert debt changes (decrease = positive for net worth)
   - `formatCurrency(String(totalChange), "AUD")` — cast number to string for the helper
   - IIFE pattern `{(() => {...})()}` in JSX for complex conditional rendering with calculations
+---
+
+## 2026-02-06 - US-009
+- Refactored check-in modal from manual useState to react-hook-form + zod
+- Created zod schema: `checkInFormSchema` with `month` (required string) and `holdings` array of `holdingEntrySchema` (holdingId, type, balance required, employerContrib/employeeContrib optional)
+- Used `useFieldArray` for dynamic holdings list managed by `fields` and `replace()`
+- Sync API holdings data to form fields via useEffect with ref-based sync key (`lastSyncedRef`) to prevent infinite re-replace loops
+- `showContributions` kept as separate UI-only state (not part of form schema)
+- Removed 6 separate useState hooks (superHoldingsData, cashHoldingsData, debtHoldingsData, updatedHoldingIds, validationErrors, selectedMonth) — all replaced by useForm
+- Merged CashHoldingEntry and DebtHoldingEntry into single `BalanceHoldingEntry` (identical UI)
+- Validation via `form.trigger('holdings.${idx}.balance')` per field on Step 2 Continue
+- Error shake + focus first empty balance preserved with existing DOM query pattern
+- form.setValue with `{ shouldValidate: form.formState.isSubmitted }` ensures re-validation only after first validation attempt
+- `holdingIndexMap` useMemo provides O(1) lookup from holdingId to field array index
+- `getHoldingData` useCallback wraps index lookup + watched values for review/success steps
+- Net reduction of 170 lines (439 removed, 269 added)
+- Files changed: components/check-in/check-in-modal.tsx (refactored)
+- **Learnings for future iterations:**
+  - When syncing useFieldArray with async API data, use a ref-based sync key (e.g. `lastSyncedRef.current = syncKey`) to prevent re-replacing on every render
+  - `replace()` from useFieldArray resets all fields — don't call it if data hasn't changed
+  - `form.trigger('holdings.${idx}.balance')` validates individual items — use Promise.all for batch per-step validation
+  - `form.watch("holdings")` returns the live array — derive computed values (updatedCount, getHoldingData) from this
+  - `zodResolver(schema) as unknown as Resolver<FormValues>` casting pattern still needed (documented in codebase patterns)
+  - showContributions toggle is UI-only state — keep it in separate useState, not in form schema
+  - `form.formState.errors.holdings?.[idx]?.balance?.message` is the path to field array item errors
 ---
 
