@@ -221,6 +221,7 @@ export default function HoldingsPage() {
   const {
     data: priceMap,
     isLoading: pricesLoading,
+    isFetching: pricesFetching,
   } = useQuery({
     queryKey: ["prices"],
     queryFn: fetchPrices,
@@ -278,6 +279,9 @@ export default function HoldingsPage() {
     },
     // Silent error handling - no toast for background refresh failures
   });
+
+  // Derive refreshing state: true when manual/background refresh is in-flight or prices are refetching
+  const pricesRefreshingState = refreshMutation.isPending || backgroundRefreshMutation.isPending || (pricesFetching && !pricesLoading);
 
   // Speed-dial FAB: refs for hidden dialog triggers + check-in modal state
   const addHoldingRef = useRef<HTMLButtonElement>(null);
@@ -569,6 +573,7 @@ export default function HoldingsPage() {
         holdings={filteredHoldings}
         prices={priceMap}
         pricesLoading={pricesLoading}
+        pricesRefreshing={pricesRefreshingState}
         onRetryPrice={handleRetryPrice}
         retryingPriceIds={retryingPriceIds}
         groupBy="type"

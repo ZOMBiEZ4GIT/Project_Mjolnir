@@ -96,6 +96,7 @@ interface HoldingsTableProps {
   holdings: HoldingWithData[];
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  pricesRefreshing?: boolean;
   onRetryPrice?: (holdingId: string) => void;
   retryingPriceIds?: Set<string>;
   groupBy?: GroupByValue;
@@ -247,7 +248,7 @@ function formatGainLossPercent(percent: number): string {
   return `${sign}${percent.toFixed(2)}%`;
 }
 
-export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, retryingPriceIds, groupBy = "type", typeFilter = "all", sparklineData, sparklineLoading }: HoldingsTableProps) {
+export function HoldingsTable({ holdings, prices, pricesLoading, pricesRefreshing, onRetryPrice, retryingPriceIds, groupBy = "type", typeFilter = "all", sparklineData, sparklineLoading }: HoldingsTableProps) {
   const [editingHolding, setEditingHolding] = useState<HoldingWithData | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
   const groupedByType = groupHoldingsByType(holdings);
@@ -307,6 +308,7 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
                     holdings={typeHoldings}
                     prices={prices}
                     pricesLoading={pricesLoading}
+                    pricesRefreshing={pricesRefreshing}
                     onEdit={setEditingHolding}
                     onDelete={setDeletingHolding}
                     onRetryPrice={onRetryPrice}
@@ -330,6 +332,7 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
                 isSnapshotType={flatIsSnapshot}
                 prices={prices}
                 pricesLoading={pricesLoading}
+                pricesRefreshing={pricesRefreshing}
                 onEdit={setEditingHolding}
                 onDelete={setDeletingHolding}
                 onRetryPrice={onRetryPrice}
@@ -400,6 +403,7 @@ interface HoldingsTypeSectionProps {
   holdings: HoldingWithData[];
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  pricesRefreshing?: boolean;
   onEdit: (holding: HoldingWithData) => void;
   onDelete: (holding: HoldingWithData) => void;
   onRetryPrice?: (holdingId: string) => void;
@@ -422,11 +426,12 @@ interface PriceCellProps {
   holdingCurrency: string;
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  pricesRefreshing?: boolean;
   onRetry?: () => void;
   isRetrying?: boolean;
 }
 
-function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry, isRetrying }: PriceCellProps) {
+function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, pricesRefreshing, onRetry, isRetrying }: PriceCellProps) {
   // Loading state — shaped skeleton
   if (pricesLoading) {
     return <PriceSkeleton variant="price" />;
@@ -454,7 +459,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
     <div
       className={`flex flex-col gap-0.5 items-end transition-all duration-200 ${
         isStale ? "border-l-2 border-warning/50 pl-2" : "border-l-2 border-transparent pl-2"
-      }`}
+      } ${pricesRefreshing ? "animate-pulse" : ""}`}
     >
       {/* Main price with flash + number ticker */}
       <PriceFlash value={price}>
@@ -765,6 +770,7 @@ function HoldingsTypeSection({
   holdings,
   prices,
   pricesLoading,
+  pricesRefreshing,
   onEdit,
   onDelete,
   onRetryPrice,
@@ -831,6 +837,7 @@ function HoldingsTypeSection({
                 isSnapshotType={isSnapshotType}
                 prices={prices}
                 pricesLoading={pricesLoading}
+                pricesRefreshing={pricesRefreshing}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onRetryPrice={onRetryPrice}
@@ -860,6 +867,7 @@ interface HoldingsFlatSectionProps {
   isSnapshotType: boolean;
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  pricesRefreshing?: boolean;
   onEdit: (holding: HoldingWithData) => void;
   onDelete: (holding: HoldingWithData) => void;
   onRetryPrice?: (holdingId: string) => void;
@@ -878,6 +886,7 @@ function HoldingsFlatSection({
   isSnapshotType,
   prices,
   pricesLoading,
+  pricesRefreshing,
   onEdit,
   onDelete,
   onRetryPrice,
@@ -897,6 +906,7 @@ function HoldingsFlatSection({
         isSnapshotType={isSnapshotType}
         prices={prices}
         pricesLoading={pricesLoading}
+        pricesRefreshing={pricesRefreshing}
         onEdit={onEdit}
         onDelete={onDelete}
         onRetryPrice={onRetryPrice}
@@ -929,6 +939,7 @@ interface HoldingsTableContentProps {
   isSnapshotType: boolean;
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  pricesRefreshing?: boolean;
   onEdit: (holding: HoldingWithData) => void;
   onDelete: (holding: HoldingWithData) => void;
   onRetryPrice?: (holdingId: string) => void;
@@ -947,6 +958,7 @@ function HoldingsTableContent({
   isSnapshotType,
   prices,
   pricesLoading,
+  pricesRefreshing,
   onEdit,
   onDelete,
   onRetryPrice,
@@ -1080,6 +1092,7 @@ function HoldingsTableContent({
                       holdingCurrency={holding.currency}
                       prices={prices}
                       pricesLoading={pricesLoading}
+                      pricesRefreshing={pricesRefreshing}
                       onRetry={onRetryPrice ? () => onRetryPrice(holding.id) : undefined}
                       isRetrying={retryingPriceIds?.has(holding.id)}
                     />
