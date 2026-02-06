@@ -2,28 +2,26 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm, FormProvider, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { showSuccess, showError } from "@/lib/toast-helpers";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  AnimatedDialog,
+  AnimatedDialogContent,
+  AnimatedDialogDescription,
+  AnimatedDialogFooter,
+  AnimatedDialogHeader,
+  AnimatedDialogTitle,
+  AnimatedDialogTrigger,
+} from "@/components/ui/animated-dialog";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FormField } from "@/components/ui/form-field";
+import { FormSelectField } from "@/components/ui/form-select-field";
+import { useFormShake } from "@/hooks/use-form-shake";
 
 const HOLDING_TYPES = [
   { value: "stock", label: "Stock", description: "Individual company shares" },
@@ -43,23 +41,64 @@ const TRADEABLE_TYPES = ["stock", "etf", "crypto"] as const;
 const EXCHANGE_REQUIRED_TYPES = ["stock", "etf"] as const;
 
 export type HoldingType = (typeof HOLDING_TYPES)[number]["value"];
-type Currency = (typeof CURRENCIES)[number];
-type Exchange = (typeof EXCHANGES)[number];
 
-interface FormData {
-  name: string;
-  symbol: string;
-  currency: Currency | "";
-  exchange: Exchange | "";
-  isDormant: boolean;
-}
+const CURRENCY_OPTIONS = CURRENCIES.map((c) => ({ value: c, label: c }));
+const EXCHANGE_OPTIONS = EXCHANGES.map((e) => ({ value: e, label: e }));
 
-interface FormErrors {
-  name?: string;
-  symbol?: string;
-  currency?: string;
-  exchange?: string;
-}
+// Zod schema for step 2 form
+const holdingFormSchema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    symbol: z.string().optional().default(""),
+    currency: z.string().min(1, "Currency is required"),
+    exchange: z.string().optional().default(""),
+    isDormant: z.boolean().default(false),
+    // Hidden field to drive conditional validation
+    _type: z.enum(["stock", "etf", "crypto", "super", "cash", "debt"]),
+  })
+  .superRefine((data, ctx) => {
+    const isTradeable = (TRADEABLE_TYPES as readonly string[]).includes(data._type);
+    const requiresExchange = (EXCHANGE_REQUIRED_TYPES as readonly string[]).includes(data._type);
+
+    // Symbol required for tradeable types
+    if (isTradeable && !data.symbol.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Symbol is required",
+        path: ["symbol"],
+      });
+    }
+
+    // Validate symbol format for ASX/NZX
+    if (isTradeable && data.symbol.trim()) {
+      const upperSymbol = data.symbol.trim().toUpperCase();
+      if (data.exchange === "ASX" && !upperSymbol.endsWith(".AX")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "ASX symbols must end with .AX (e.g., VAS.AX)",
+          path: ["symbol"],
+        });
+      }
+      if (data.exchange === "NZX" && !upperSymbol.endsWith(".NZ")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "NZX symbols must end with .NZ (e.g., SPK.NZ)",
+          path: ["symbol"],
+        });
+      }
+    }
+
+    // Exchange required for stock/etf
+    if (requiresExchange && !data.exchange) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Exchange is required",
+        path: ["exchange"],
+      });
+    }
+  });
+
+type HoldingFormValues = z.infer<typeof holdingFormSchema>;
 
 interface AddHoldingDialogProps {
   children?: React.ReactNode;
@@ -87,36 +126,29 @@ async function createHolding(data: {
   return response.json();
 }
 
-function validateSymbolForExchange(symbol: string, exchange: Exchange | ""): string | undefined {
-  if (!symbol) return undefined;
-
-  const upperSymbol = symbol.toUpperCase();
-
-  if (exchange === "ASX" && !upperSymbol.endsWith(".AX")) {
-    return "ASX symbols must end with .AX (e.g., VAS.AX)";
-  }
-
-  if (exchange === "NZX" && !upperSymbol.endsWith(".NZ")) {
-    return "NZX symbols must end with .NZ (e.g., SPK.NZ)";
-  }
-
-  return undefined;
-}
-
 export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedType, setSelectedType] = useState<HoldingType | null>(null);
-  const [formData, setFormData] = useState<FormData>({
-    name: "",
-    symbol: "",
-    currency: "",
-    exchange: "",
-    isDormant: false,
-  });
-  const [errors, setErrors] = useState<FormErrors>({});
+  const { formRef, triggerShake } = useFormShake();
 
   const queryClient = useQueryClient();
+
+  const form = useForm<HoldingFormValues>({
+    resolver: zodResolver(holdingFormSchema) as unknown as Resolver<HoldingFormValues>,
+    defaultValues: {
+      name: "",
+      symbol: "",
+      currency: "",
+      exchange: "",
+      isDormant: false,
+      _type: "stock",
+    },
+  });
+
+  const isTradeable = selectedType && (TRADEABLE_TYPES as readonly string[]).includes(selectedType);
+  const requiresExchange = selectedType && (EXCHANGE_REQUIRED_TYPES as readonly string[]).includes(selectedType);
+  const isSuper = selectedType === "super";
 
   const mutation = useMutation({
     mutationFn: createHolding,
@@ -125,9 +157,12 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
       showSuccess("Holding created successfully");
       handleClose();
     },
-    onError: (error: { errors?: FormErrors; error?: string }) => {
+    onError: (error: { errors?: Record<string, string>; error?: string }) => {
       if (error.errors) {
-        setErrors(error.errors);
+        // Set server errors on individual fields
+        Object.entries(error.errors).forEach(([field, message]) => {
+          form.setError(field as keyof HoldingFormValues, { message });
+        });
       } else {
         showError(error.error || "Failed to create holding");
       }
@@ -136,11 +171,9 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
 
   const handleClose = () => {
     setOpen(false);
-    // Reset state when closing
     setStep(1);
     setSelectedType(null);
-    setFormData({ name: "", symbol: "", currency: "", exchange: "", isDormant: false });
-    setErrors({});
+    form.reset();
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -153,80 +186,63 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
 
   const handleContinue = () => {
     if (selectedType) {
+      form.setValue("_type", selectedType);
       setStep(2);
     }
   };
 
   const handleBack = () => {
     setStep(1);
-    setErrors({});
+    form.clearErrors();
   };
 
-  const isTradeable = selectedType && TRADEABLE_TYPES.includes(selectedType as typeof TRADEABLE_TYPES[number]);
-  const requiresExchange = selectedType && EXCHANGE_REQUIRED_TYPES.includes(selectedType as typeof EXCHANGE_REQUIRED_TYPES[number]);
-  const isSuper = selectedType === "super";
-
-  const handleSubmit = () => {
-    const newErrors: FormErrors = {};
-
-    // Validate name
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
-    }
-
-    // Validate currency
-    if (!formData.currency) {
-      newErrors.currency = "Currency is required";
-    }
-
-    // Validate symbol for tradeable types
-    if (isTradeable) {
-      if (!formData.symbol.trim()) {
-        newErrors.symbol = "Symbol is required";
-      } else {
-        // Validate symbol format for ASX/NZX
-        const symbolError = validateSymbolForExchange(formData.symbol, formData.exchange);
-        if (symbolError) {
-          newErrors.symbol = symbolError;
-        }
-      }
-    }
-
-    // Validate exchange for stock/etf
-    if (requiresExchange && !formData.exchange) {
-      newErrors.exchange = "Exchange is required";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    // Submit form
+  const onValid = (data: HoldingFormValues) => {
     mutation.mutate({
       type: selectedType!,
-      name: formData.name.trim(),
-      symbol: isTradeable ? formData.symbol.trim().toUpperCase() : undefined,
-      currency: formData.currency,
-      exchange: requiresExchange ? formData.exchange : undefined,
-      isDormant: isSuper ? formData.isDormant : undefined,
+      name: data.name.trim(),
+      symbol: isTradeable ? data.symbol.trim().toUpperCase() : undefined,
+      currency: data.currency,
+      exchange: requiresExchange ? data.exchange : undefined,
+      isDormant: isSuper ? data.isDormant : undefined,
     });
   };
 
+  const onSubmit = form.handleSubmit(onValid, () => {
+    triggerShake();
+  });
+
+  const getNamePlaceholder = () => {
+    if (isTradeable) return "e.g., Vanguard Australian Shares";
+    if (selectedType === "super") return "e.g., AustralianSuper";
+    if (selectedType === "cash") return "e.g., Savings Account";
+    if (selectedType === "debt") return "e.g., Home Loan";
+    return "e.g., My Holding";
+  };
+
+  const getSymbolPlaceholder = () => {
+    if (requiresExchange) {
+      const exchange = form.watch("exchange");
+      if (exchange === "ASX") return "e.g., VAS.AX";
+      if (exchange === "NZX") return "e.g., SPK.NZ";
+      return "e.g., AAPL";
+    }
+    return "e.g., BTC";
+  };
+
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
+    <AnimatedDialog open={open} onOpenChange={handleOpenChange}>
+      <AnimatedDialogTrigger asChild>
         {children ?? <Button>Add Holding</Button>}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      </AnimatedDialogTrigger>
+      <AnimatedDialogContent className="sm:max-w-md">
         {step === 1 ? (
           <>
-            <DialogHeader>
-              <DialogTitle>Add New Holding</DialogTitle>
-              <DialogDescription>
+            <AnimatedDialogHeader>
+              <AnimatedDialogTitle>Add New Holding</AnimatedDialogTitle>
+              <AnimatedDialogDescription>
                 Select the type of asset you want to track.
-              </DialogDescription>
-            </DialogHeader>
+              </AnimatedDialogDescription>
+            </AnimatedDialogHeader>
 
             <div className="py-4">
               <RadioGroup
@@ -255,176 +271,94 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
               </RadioGroup>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <AnimatedDialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
               <Button onClick={handleContinue} disabled={!selectedType}>
                 Continue
               </Button>
-            </DialogFooter>
+            </AnimatedDialogFooter>
           </>
         ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle>
-                Add {HOLDING_TYPES.find((t) => t.value === selectedType)?.label}
-              </DialogTitle>
-              <DialogDescription>
-                Enter the details for your {selectedType} holding.
-              </DialogDescription>
-            </DialogHeader>
+          <FormProvider {...form}>
+            <form onSubmit={onSubmit}>
+              <AnimatedDialogHeader>
+                <AnimatedDialogTitle>
+                  Add {HOLDING_TYPES.find((t) => t.value === selectedType)?.label}
+                </AnimatedDialogTitle>
+                <AnimatedDialogDescription>
+                  Enter the details for your {selectedType} holding.
+                </AnimatedDialogDescription>
+              </AnimatedDialogHeader>
 
-            <div className="grid gap-4 py-4">
-              {/* Name field - always shown */}
-              <div className="grid gap-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  placeholder={
-                    isTradeable
-                      ? "e.g., Vanguard Australian Shares"
-                      : selectedType === "super"
-                      ? "e.g., AustralianSuper"
-                      : selectedType === "cash"
-                      ? "e.g., Savings Account"
-                      : selectedType === "debt"
-                      ? "e.g., Home Loan"
-                      : "e.g., My Holding"
-                  }
-                  value={formData.name}
-                  onChange={(e) => {
-                    setFormData({ ...formData, name: e.target.value });
-                    if (errors.name) setErrors({ ...errors, name: undefined });
-                  }}
-                  className={errors.name ? "border-destructive focus-visible:ring-destructive" : ""}
+              <div ref={formRef as React.RefObject<HTMLDivElement | null>} className="grid gap-4 py-4">
+                {/* Name field - always shown */}
+                <FormField<HoldingFormValues>
+                  name="name"
+                  label="Name"
+                  placeholder={getNamePlaceholder()}
                 />
-                {errors.name && (
-                  <p className="text-sm text-destructive">{errors.name}</p>
-                )}
-              </div>
 
-              {/* Symbol field - only for tradeable types */}
-              {isTradeable && (
-                <div className="grid gap-2">
-                  <Label htmlFor="symbol">Symbol</Label>
-                  <Input
-                    id="symbol"
-                    placeholder={
-                      requiresExchange
-                        ? formData.exchange === "ASX"
-                          ? "e.g., VAS.AX"
-                          : formData.exchange === "NZX"
-                          ? "e.g., SPK.NZ"
-                          : "e.g., AAPL"
-                        : "e.g., BTC"
-                    }
-                    value={formData.symbol}
-                    onChange={(e) => {
-                      setFormData({ ...formData, symbol: e.target.value });
-                      if (errors.symbol) setErrors({ ...errors, symbol: undefined });
-                    }}
-                    className={errors.symbol ? "border-destructive focus-visible:ring-destructive" : ""}
+                {/* Symbol field - only for tradeable types */}
+                {isTradeable && (
+                  <FormField<HoldingFormValues>
+                    name="symbol"
+                    label="Symbol"
+                    placeholder={getSymbolPlaceholder()}
                   />
-                  {errors.symbol && (
-                    <p className="text-sm text-destructive">{errors.symbol}</p>
-                  )}
-                </div>
-              )}
-
-              {/* Currency field - always shown */}
-              <div className="grid gap-2">
-                <Label htmlFor="currency">Currency</Label>
-                <Select
-                  value={formData.currency}
-                  onValueChange={(value: Currency) => {
-                    setFormData({ ...formData, currency: value });
-                    if (errors.currency) setErrors({ ...errors, currency: undefined });
-                  }}
-                >
-                  <SelectTrigger
-                    id="currency"
-                    className={errors.currency ? "border-destructive focus:ring-destructive" : ""}
-                  >
-                    <SelectValue placeholder="Select currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map((currency) => (
-                      <SelectItem key={currency} value={currency}>
-                        {currency}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.currency && (
-                  <p className="text-sm text-destructive">{errors.currency}</p>
                 )}
-              </div>
 
-              {/* Exchange field - only for stock/etf */}
-              {requiresExchange && (
-                <div className="grid gap-2">
-                  <Label htmlFor="exchange">Exchange</Label>
-                  <Select
-                    value={formData.exchange}
-                    onValueChange={(value: Exchange) => {
-                      setFormData({ ...formData, exchange: value });
-                      if (errors.exchange) setErrors({ ...errors, exchange: undefined });
-                      // Clear symbol error when exchange changes - user might need to update symbol
-                      if (errors.symbol) setErrors({ ...errors, exchange: undefined, symbol: undefined });
-                    }}
-                  >
-                    <SelectTrigger
-                      id="exchange"
-                      className={errors.exchange ? "border-destructive focus:ring-destructive" : ""}
+                {/* Currency field - always shown */}
+                <FormSelectField<HoldingFormValues>
+                  name="currency"
+                  label="Currency"
+                  placeholder="Select currency"
+                  options={CURRENCY_OPTIONS}
+                />
+
+                {/* Exchange field - only for stock/etf */}
+                {requiresExchange && (
+                  <FormSelectField<HoldingFormValues>
+                    name="exchange"
+                    label="Exchange"
+                    placeholder="Select exchange"
+                    options={EXCHANGE_OPTIONS}
+                  />
+                )}
+
+                {/* Is Dormant checkbox - only for super type */}
+                {isSuper && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isDormant"
+                      checked={form.watch("isDormant")}
+                      onCheckedChange={(checked) => {
+                        form.setValue("isDormant", checked === true);
+                      }}
+                    />
+                    <Label
+                      htmlFor="isDormant"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                     >
-                      <SelectValue placeholder="Select exchange" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {EXCHANGES.map((exchange) => (
-                        <SelectItem key={exchange} value={exchange}>
-                          {exchange}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.exchange && (
-                    <p className="text-sm text-destructive">{errors.exchange}</p>
-                  )}
-                </div>
-              )}
+                      Mark as dormant (e.g., inactive Kiwisaver)
+                    </Label>
+                  </div>
+                )}
+              </div>
 
-              {/* Is Dormant checkbox - only for super type */}
-              {isSuper && (
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="isDormant"
-                    checked={formData.isDormant}
-                    onCheckedChange={(checked) => {
-                      setFormData({ ...formData, isDormant: checked === true });
-                    }}
-                  />
-                  <Label
-                    htmlFor="isDormant"
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    Mark as dormant (e.g., inactive Kiwisaver)
-                  </Label>
-                </div>
-              )}
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={handleBack}>
-                Back
-              </Button>
-              <Button onClick={handleSubmit} disabled={mutation.isPending}>
-                {mutation.isPending ? "Saving..." : "Save"}
-              </Button>
-            </DialogFooter>
-          </>
+              <AnimatedDialogFooter className="gap-2 sm:gap-0">
+                <Button type="button" variant="outline" onClick={handleBack}>
+                  Back
+                </Button>
+                <Button type="submit" disabled={mutation.isPending}>
+                  {mutation.isPending ? "Saving..." : "Save"}
+                </Button>
+              </AnimatedDialogFooter>
+            </form>
+          </FormProvider>
         )}
-      </DialogContent>
-    </Dialog>
+      </AnimatedDialogContent>
+    </AnimatedDialog>
   );
 }
