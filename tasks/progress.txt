@@ -72,6 +72,7 @@
 - Transaction action colour mapping: BUY=positive/green, SELL=destructive/red, DIVIDEND=accent/purple, SPLIT=blue-400/blue-500
 - onTransactionSaved/onDeleted callbacks enable row highlight and fade-out animations from parent component
 
+- Check-in status API returns `previousBalances` keyed by holdingId — most recent snapshot balance before target month
 - CheckInModal is a 3-step wizard (Select Month → Update Holdings → Review & Save) with currentStep state (0-2)
 - animate-shake keyframes defined in tailwind.config.ts — use `animate-shake` class with useState toggle + setTimeout auto-clear
 - Type icon mapping: super=Landmark, cash=Wallet, debt=CreditCard (from lucide-react)
@@ -181,5 +182,20 @@ Started: 2026-02-06
   - `AnimatePresence initial={false}` prevents animation on first mount — use when content should appear expanded immediately
   - Pre-population via useEffect watching query data: merge with existing state to avoid overwriting user edits
   - API returns `latestContributions` keyed by holdingId — only populated for active (non-dormant) super holdings with non-zero values
+---
+
+## 2026-02-06 - US-007
+- Enhanced check-in status API to return `previousBalances` (most recent snapshot before target month per holding)
+- Revamped Step 3 review to show comparison cards: holding name, new balance, previous balance (or "First entry"), change amount with direction arrows
+- For debt: inverted change colour logic (decrease=green, increase=red)
+- Added large change warning (>50%) with amber AlertTriangle icon — informational only, doesn't block save
+- Super contributions (employer/employee) shown below holding name when entered
+- Files changed: app/api/check-in/status/route.ts (added previousBalances query), components/check-in/check-in-modal.tsx (revamped Step 3)
+- **Learnings for future iterations:**
+  - `lt()` from drizzle-orm filters snapshots before target month for "previous balance" lookups
+  - `previousBalances` API pattern: query all snapshots < target date, ordered desc, take first per holdingId
+  - Debt change colour inversion: `isDebt ? changeAmount < 0 : changeAmount > 0` for "positive" (green) change
+  - Percentage change calculation: `Math.abs((new - prev) / prev) * 100` — guard against division by zero when prevNum is 0
+  - Warning/info yellow colours (yellow-500) are intentionally NOT design tokens — used for semantic warnings
 ---
 
