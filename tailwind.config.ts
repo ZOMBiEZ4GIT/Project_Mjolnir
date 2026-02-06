@@ -133,11 +133,16 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        shimmer: {
+          "0%": { backgroundPosition: "200% 0" },
+          "100%": { backgroundPosition: "-200% 0" },
+        },
       },
       animation: {
         shake: "shake 0.5s ease-in-out",
         "accordion-down": "accordion-down 0.2s ease-out forwards",
         "accordion-up": "accordion-up 0.15s ease-in forwards",
+        shimmer: "shimmer 2s infinite linear",
       },
     },
   },

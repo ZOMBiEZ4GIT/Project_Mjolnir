@@ -17,8 +17,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added Framer Motion animations, design token states, reduced motion support"
     },
     {
       "id": "US-002",
@@ -36,8 +36,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Custom progress bar with shimmer animation, backward-compatible props"
     },
     {
       "id": "US-003",
@@ -56,8 +56,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "New ImportPreview component + CSV parsing in import page"
     },
     {
       "id": "US-004",
@@ -74,8 +74,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Refactored export page with stagger animations, custom card layout, design tokens"
     },
     {
       "id": "US-005",
@@ -91,8 +91,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Per-button state machine with Map, auto-reset timers, scale pulse animation"
     },
     {
       "id": "US-006",
@@ -111,8 +111,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "AnimatedCount with useSpring, 3-card grid, stagger animations, success banner"
     },
     {
       "id": "US-007",
@@ -129,8 +129,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Animated expand/collapse, pattern-matched fix suggestions, stagger rows"
     },
     {
       "id": "US-008",
@@ -145,8 +145,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "CSV download with suggestions, success animation reusing export pattern"
     },
     {
       "id": "US-009",
@@ -168,8 +168,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Stagger animations, expandable details, design tokens, text-label section header"
     },
     {
       "id": "US-010",
@@ -187,8 +187,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Audit complete — all files already use design tokens from US-001–009. Added typography tokens to import page header."
     }
   ]
 }

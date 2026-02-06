@@ -153,3 +153,122 @@ Started: 2026-02-07
 
 ---
 
+## 2026-02-07 - US-001
+- Polished file-upload.tsx with Framer Motion animations and design token states
+- Files changed: components/import/file-upload.tsx
+- **Learnings for future iterations:**
+  - Component already used mostly design tokens; main changes were animation additions
+  - AnimatePresence mode="wait" works well for toggling between dropzone and file-selected states
+  - Upload icon pulse uses `animate` with keyframe array `[1, 1.1, 1]` and `repeat: Infinity`
+  - File icon scale-in uses `initial: { scale: 0.8, opacity: 0 }` with 200ms easeOut
+  - `useReducedMotion()` returns boolean — pass `false` as initial to skip animations
+  - Drag-over state: border-accent + bg-accent/5 (not border-primary which was previous)
+  - File selected state: bg-card (not bg-muted/50 which was previous)
+---
+
+## 2026-02-07 - US-002
+- Rebuilt import-progress.tsx with custom progress bar (not shadcn Progress)
+- Added shimmer keyframe animation to tailwind.config.ts
+- Files changed: components/import/import-progress.tsx, tailwind.config.ts
+- **Learnings for future iterations:**
+  - Added `animate-shimmer` keyframe (200%→-200% backgroundPosition, 2s linear infinite)
+  - Custom progress bar uses CSS transition (not Framer Motion) for width changes — simpler and more performant
+  - `shadow-glow-sm` on progress fill creates subtle accent glow effect
+  - ImportProgress now accepts optional `currentRow` for "row X of Y" text (backward-compatible)
+  - Indeterminate mode still uses the asymptotic approach to 90% for perceived progress
+---
+
+## 2026-02-07 - US-003
+- Created ImportPreview component and integrated preview step into import page
+- Files changed: components/import/import-preview.tsx (new), app/(dashboard)/import/page.tsx
+- **Learnings for future iterations:**
+  - CSV parsing is simple split-by-comma — no quoted field handling needed for this app's use case
+  - Preview replaces the old direct "Import [Type]" button — file select now always shows preview first
+  - Validation functions accept `_rows` param (unused for now) — extensible for row-level validation later
+  - Warning banner uses border-warning/30 + bg-warning/10 pattern (consistent with design system)
+  - Preview slide uses x:30→0 (right-to-left) for forward navigation feel
+  - `motion.tbody` with `variants` pattern works well for table row stagger animations
+---
+
+## 2026-02-07 - US-004
+- Polished export page with stagger animations and custom card layout
+- Files changed: app/(dashboard)/export/page.tsx
+- **Learnings for future iterations:**
+  - Replaced Card/CardContent/CardHeader with plain motion.div + custom rounded-2xl styling for more control
+  - Custom staggerContainerCustom with 80ms delay (different from default staggerContainer 50ms)
+  - Export card data-driven: array of card config objects mapped to JSX — cleaner than duplicated markup
+  - Count badges as pills: `rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground`
+  - Full backup card distinguished with border-accent/30 and text-accent icon
+---
+
+## 2026-02-07 - US-005
+- Added per-button download state tracking with success/error animations to export page
+- Files changed: app/(dashboard)/export/page.tsx
+- **Learnings for future iterations:**
+  - Map<ExportKey, ButtonState> tracks per-button states (idle/downloading/success/error)
+  - TypeScript narrowing gotcha: `state === "downloading" || ... state !== "downloading"` fails type check
+    because after first false comparison, TS narrows type to exclude "downloading" — restructure as separate boolean
+  - Success state auto-resets after 1.5s, error after 2s via setTimeout
+  - Scale pulse: `animate={{ scale: [1, 1.05, 1] }}` with duration 0.3 for subtle bounce
+  - `cn()` for conditional className merging: `state === "success" && "text-positive border-positive/30"`
+---
+
+## 2026-02-07 - US-006
+- Enhanced import-results.tsx with animated counts and stagger animations
+- Files changed: components/import/import-results.tsx
+- **Learnings for future iterations:**
+  - AnimatedCount: useSpring + useMotionValue + .on("change") for performant integer animation
+  - motionValue.jump() for instant (reduced motion), motionValue.set() for animated
+  - Three-card grid (grid-cols-3 gap-3) for Imported/Skipped/Errors — always show all three
+  - Added `suggestion` field to ImportError interface in preparation for US-007
+  - Success banner: border-positive/30 bg-positive/10 with CheckCircle2 icon
+  - Error row badge changed from bg-destructive/10 to bg-muted rounded-full pill
+---
+
+## 2026-02-07 - US-007
+- Enhanced error section with animated expand/collapse and fix suggestions
+- Files changed: components/import/import-results.tsx
+- **Learnings for future iterations:**
+  - Rotating chevron: `motion.div animate={{ rotate: isExpanded ? 180 : 0 }}` — cleaner than ChevronUp/Down toggle
+  - AnimatePresence initial={false} skips enter animation on mount — use for collapsed sections
+  - `generateSuggestion()` exported for reuse (US-008 error report will need it)
+  - Fix suggestion patterns: check lowercase message against known keywords, return template strings
+  - Auto-expand if <= 5 errors via useState initializer function
+  - Error row stagger: 30ms delay per row (errorStaggerContainer), slides in from left (x: -8 → 0)
+---
+
+## 2026-02-07 - US-008
+- Added downloadable error report CSV to import results
+- Files changed: components/import/import-results.tsx
+- **Learnings for future iterations:**
+  - Client-side CSV generation: Blob + createObjectURL + click trick
+  - CSV escaping: wrap in double quotes, replace inner " with ""
+  - Reused success animation pattern from export page (scale pulse + text-positive + auto-reset)
+  - downloadState kept simple ("idle" | "success") — no "downloading" state needed for client-side CSV
+  - Filename pattern: import-errors-YYYY-MM-DD.csv using ISO date split
+---
+
+## 2026-02-07 - US-009
+- Polished recent-imports.tsx with stagger animations and design tokens
+- Files changed: components/import/recent-imports.tsx, app/(dashboard)/import/page.tsx
+- **Learnings for future iterations:**
+  - Type badge colours: Transactions=accent (purple), Snapshots=positive (green)
+  - Row hover: `transition-colors duration-150 hover:bg-accent/5` for subtle hover
+  - Expanded details show first 3 errors max, with "...and X more" truncation
+  - `format(date, "PPpp")` gives full locale-aware date+time string
+  - Section title uses `text-label uppercase text-muted-foreground` for label typography
+  - Skeleton loading now uses bg-muted (design token) not bg-card
+  - Empty state icon uses text-muted-foreground/50 for extra subtle appearance
+---
+
+### US-010: Replace hardcoded colours across all import/export components ✅
+- **Status:** PASS (build ✅, lint ✅)
+- **Approach:** Audited all 7 target files for hardcoded colour classes (text-gray-*, bg-gray-*, border-gray-*, text-green-*, etc.)
+- **Finding:** All import/export files already use design tokens — US-001 through US-009 systematically replaced hardcoded colours during implementation
+- **Changes:** Updated import page header from `text-2xl font-bold` to `text-heading-lg` and description to `text-body-sm`
+- **chart-export-button.tsx:** `#18181b` hex retained — html2canvas requires raw hex values, not CSS variables
+- **Learnings:**
+  - When each story properly applies design tokens during implementation, the final audit story becomes trivial
+  - Typography tokens (text-heading-lg, text-body-sm, text-label) are easy to miss — page headers and descriptions should be checked alongside colour tokens
+---
+
