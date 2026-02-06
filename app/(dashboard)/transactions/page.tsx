@@ -204,9 +204,9 @@ function getActionColorClass(action: TransactionWithHolding["action"]): string {
     case "BUY":
       return "bg-positive/20 text-positive";
     case "SELL":
-      return "bg-destructive/20 text-destructive";
+      return "bg-destructive/10 text-destructive";
     case "DIVIDEND":
-      return "bg-accent/20 text-accent";
+      return "bg-accent/10 text-accent";
     case "SPLIT":
       return "bg-blue-500/20 text-blue-400";
     default:

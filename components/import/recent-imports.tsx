@@ -141,7 +141,7 @@ export function RecentImports({
                         className={cn(
                           "text-xs px-2 py-0.5 rounded-full font-medium",
                           record.type === "transactions"
-                            ? "bg-accent/20 text-accent"
+                            ? "bg-accent/10 text-accent"
                             : "bg-positive/20 text-positive"
                         )}
                       >
