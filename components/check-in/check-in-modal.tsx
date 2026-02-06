@@ -1,6 +1,9 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useForm, useFieldArray, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
@@ -38,19 +41,6 @@ interface HoldingToUpdate {
   type: string;
   currency: string;
   isDormant: boolean;
-}
-
-// Data structure for super holding entry with optional contributions
-export interface SuperHoldingData {
-  balance: string;
-  employerContrib: string;
-  employeeContrib: string;
-  showContributions: boolean;
-}
-
-// Data structure for simple balance holdings (cash, debt)
-export interface BalanceHoldingData {
-  balance: string;
 }
 
 // Currency symbols for display
@@ -155,142 +145,57 @@ async function saveCheckIn(body: CheckInSaveBody): Promise<{
   return response.json();
 }
 
-// Props for SuperHoldingEntry component
-interface SuperHoldingEntryProps {
+// ---------------------------------------------------------------------------
+// Zod schema for check-in form
+// ---------------------------------------------------------------------------
+
+const holdingEntrySchema = z.object({
+  holdingId: z.string().min(1),
+  type: z.string(),
+  balance: z.string().min(1, "Balance is required"),
+  employerContrib: z.string().optional().default(""),
+  employeeContrib: z.string().optional().default(""),
+});
+
+const checkInFormSchema = z.object({
+  month: z.string().min(1, "Month is required"),
+  holdings: z.array(holdingEntrySchema),
+});
+
+type CheckInFormValues = z.infer<typeof checkInFormSchema>;
+
+// ---------------------------------------------------------------------------
+// Sub-components for holding entries
+// ---------------------------------------------------------------------------
+
+interface HoldingEntryProps {
   holding: HoldingToUpdate;
-  data: SuperHoldingData;
-  onDataChange: (holdingId: string, data: SuperHoldingData) => void;
+  index: number;
+  balance: string;
+  employerContrib: string;
+  employeeContrib: string;
+  showContributions: boolean;
+  onBalanceChange: (value: string) => void;
+  onEmployerContribChange: (value: string) => void;
+  onEmployeeContribChange: (value: string) => void;
+  onToggleContributions: () => void;
   error?: string;
 }
 
-// Props for cash holding entry component
-interface CashHoldingEntryProps {
-  holding: HoldingToUpdate;
-  data: BalanceHoldingData;
-  onDataChange: (holdingId: string, data: BalanceHoldingData) => void;
-  error?: string;
-}
-
-// Cash holding entry component with balance input
-function CashHoldingEntry({
-  holding,
-  data,
-  onDataChange,
-  error,
-}: CashHoldingEntryProps) {
-  const currencySymbol = currencySymbols[holding.currency] || holding.currency;
-
-  const handleBalanceChange = (value: string) => {
-    onDataChange(holding.id, { balance: value });
-  };
-
-  return (
-    <div className={`p-3 rounded-lg bg-card border ${error ? "border-destructive" : "border-border"}`}>
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-foreground font-medium">{holding.name}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-              {holding.currency}
-            </span>
-          </div>
-          {error && <p className="text-xs text-destructive mt-1">{error}</p>}
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{currencySymbol}</span>
-          <Input
-            type="number"
-            placeholder="Balance"
-            value={data.balance}
-            onChange={(e) => handleBalanceChange(e.target.value)}
-            className={`w-32 bg-background text-foreground text-right ${error ? "border-destructive" : "border-border"}`}
-            step="0.01"
-            min="0"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Props for debt holding entry component
-interface DebtHoldingEntryProps {
-  holding: HoldingToUpdate;
-  data: BalanceHoldingData;
-  onDataChange: (holdingId: string, data: BalanceHoldingData) => void;
-  error?: string;
-}
-
-// Debt holding entry component with balance input (displayed and stored as positive)
-function DebtHoldingEntry({
-  holding,
-  data,
-  onDataChange,
-  error,
-}: DebtHoldingEntryProps) {
-  const currencySymbol = currencySymbols[holding.currency] || holding.currency;
-
-  const handleBalanceChange = (value: string) => {
-    onDataChange(holding.id, { balance: value });
-  };
-
-  return (
-    <div className={`p-3 rounded-lg bg-card border ${error ? "border-destructive" : "border-border"}`}>
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-foreground font-medium">{holding.name}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-              {holding.currency}
-            </span>
-          </div>
-          {error && <p className="text-xs text-destructive mt-1">{error}</p>}
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{currencySymbol}</span>
-          <Input
-            type="number"
-            placeholder="Balance"
-            value={data.balance}
-            onChange={(e) => handleBalanceChange(e.target.value)}
-            className={`w-32 bg-background text-foreground text-right ${error ? "border-destructive" : "border-border"}`}
-            step="0.01"
-            min="0"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Super holding entry component with balance input and optional contributions
 function SuperHoldingEntry({
   holding,
-  data,
-  onDataChange,
+  balance,
+  employerContrib,
+  employeeContrib,
+  showContributions,
+  onBalanceChange,
+  onEmployerContribChange,
+  onEmployeeContribChange,
+  onToggleContributions,
   error,
-}: SuperHoldingEntryProps) {
+}: HoldingEntryProps) {
   const currencySymbol = currencySymbols[holding.currency] || holding.currency;
   const reducedMotion = useReducedMotion();
-
-  const handleBalanceChange = (value: string) => {
-    onDataChange(holding.id, { ...data, balance: value });
-  };
-
-  const handleEmployerContribChange = (value: string) => {
-    onDataChange(holding.id, { ...data, employerContrib: value });
-  };
-
-  const handleEmployeeContribChange = (value: string) => {
-    onDataChange(holding.id, { ...data, employeeContrib: value });
-  };
-
-  const toggleContributions = () => {
-    onDataChange(holding.id, {
-      ...data,
-      showContributions: !data.showContributions,
-    });
-  };
 
   return (
     <div className={`p-3 rounded-lg bg-card border ${error ? "border-destructive" : "border-border"} space-y-3`}>
@@ -315,8 +220,8 @@ function SuperHoldingEntry({
           <Input
             type="number"
             placeholder="Balance"
-            value={data.balance}
-            onChange={(e) => handleBalanceChange(e.target.value)}
+            value={balance}
+            onChange={(e) => onBalanceChange(e.target.value)}
             className={`w-32 bg-background text-foreground text-right ${error ? "border-destructive" : "border-border"}`}
             step="0.01"
             min="0"
@@ -329,21 +234,21 @@ function SuperHoldingEntry({
         <>
           <button
             type="button"
-            onClick={toggleContributions}
+            onClick={onToggleContributions}
             className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
           >
-            {data.showContributions ? (
+            {showContributions ? (
               <ChevronDown className="w-4 h-4" />
             ) : (
               <ChevronRight className="w-4 h-4" />
             )}
-            {data.showContributions
+            {showContributions
               ? "Hide Contributions"
               : "Add Contributions"}
           </button>
 
           <AnimatePresence initial={false}>
-            {data.showContributions && (
+            {showContributions && (
               <motion.div
                 key="contributions"
                 initial={reducedMotion ? false : { height: 0, opacity: 0 }}
@@ -362,8 +267,8 @@ function SuperHoldingEntry({
                       <Input
                         type="number"
                         placeholder="0.00"
-                        value={data.employerContrib}
-                        onChange={(e) => handleEmployerContribChange(e.target.value)}
+                        value={employerContrib}
+                        onChange={(e) => onEmployerContribChange(e.target.value)}
                         className="w-28 bg-background border-border text-foreground text-right"
                         step="0.01"
                         min="0"
@@ -379,8 +284,8 @@ function SuperHoldingEntry({
                       <Input
                         type="number"
                         placeholder="0.00"
-                        value={data.employeeContrib}
-                        onChange={(e) => handleEmployeeContribChange(e.target.value)}
+                        value={employeeContrib}
+                        onChange={(e) => onEmployeeContribChange(e.target.value)}
                         className="w-28 bg-background border-border text-foreground text-right"
                         step="0.01"
                         min="0"
@@ -393,6 +298,50 @@ function SuperHoldingEntry({
           </AnimatePresence>
         </>
       )}
+    </div>
+  );
+}
+
+interface BalanceEntryProps {
+  holding: HoldingToUpdate;
+  balance: string;
+  onBalanceChange: (value: string) => void;
+  error?: string;
+}
+
+function BalanceHoldingEntry({
+  holding,
+  balance,
+  onBalanceChange,
+  error,
+}: BalanceEntryProps) {
+  const currencySymbol = currencySymbols[holding.currency] || holding.currency;
+
+  return (
+    <div className={`p-3 rounded-lg bg-card border ${error ? "border-destructive" : "border-border"}`}>
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-foreground font-medium">{holding.name}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+              {holding.currency}
+            </span>
+          </div>
+          {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">{currencySymbol}</span>
+          <Input
+            type="number"
+            placeholder="Balance"
+            value={balance}
+            onChange={(e) => onBalanceChange(e.target.value)}
+            className={`w-32 bg-background text-foreground text-right ${error ? "border-destructive" : "border-border"}`}
+            step="0.01"
+            min="0"
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -430,79 +379,83 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
   const currentMonth = getFirstOfMonth(new Date());
   const previousMonth = getFirstOfPreviousMonth();
 
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  // UI-only state: which super holdings show contributions section
+  const [showContributions, setShowContributions] = useState<Record<string, boolean>>({});
 
-  // Track which holdings have been "updated" (filled in) in this session
-  const [updatedHoldingIds, setUpdatedHoldingIds] = useState<Set<string>>(
-    new Set()
-  );
+  // ---------------------------------------------------------------------------
+  // react-hook-form setup
+  // ---------------------------------------------------------------------------
+  const form = useForm<CheckInFormValues>({
+    resolver: zodResolver(checkInFormSchema) as unknown as Resolver<CheckInFormValues>,
+    defaultValues: {
+      month: currentMonth,
+      holdings: [],
+    },
+  });
 
-  // Validation errors for inline display
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const { fields, replace } = useFieldArray({
+    control: form.control,
+    name: "holdings",
+  });
 
-  // State for super holdings data
-  const [superHoldingsData, setSuperHoldingsData] = useState<
-    Record<string, SuperHoldingData>
-  >({});
-
-  // State for cash holdings data
-  const [cashHoldingsData, setCashHoldingsData] = useState<
-    Record<string, BalanceHoldingData>
-  >({});
-
-  // State for debt holdings data
-  const [debtHoldingsData, setDebtHoldingsData] = useState<
-    Record<string, BalanceHoldingData>
-  >({});
+  const watchedMonth = form.watch("month");
+  const watchedHoldings = form.watch("holdings");
 
   // Fetch holdings needing updates for selected month
   const { data, isLoading, error } = useQuery({
-    queryKey: ["check-in-holdings", selectedMonth],
-    queryFn: () => fetchHoldingsForMonth(selectedMonth),
+    queryKey: ["check-in-holdings", watchedMonth],
+    queryFn: () => fetchHoldingsForMonth(watchedMonth),
     enabled: isLoaded && isSignedIn && open,
   });
 
-  // Pre-populate super holdings with previous contribution values
+  // Track whether we've synced form fields for current API data
+  const lastSyncedRef = useRef<string>("");
+
+  // Sync field array with API holdings data + pre-populate contributions
   useEffect(() => {
-    if (!data?.latestContributions || !data?.holdings) return;
+    if (!data?.holdings) return;
 
-    const contribs = data.latestContributions;
-    const superHoldings = data.holdings.filter(
-      (h) => h.type === "super" && !h.isDormant
-    );
+    // Build a stable key from holdings IDs + month to detect changes
+    const syncKey = `${watchedMonth}:${data.holdings.map((h) => h.id).join(",")}`;
+    if (lastSyncedRef.current === syncKey) return;
+    lastSyncedRef.current = syncKey;
 
-    const initialData: Record<string, SuperHoldingData> = {};
-    for (const holding of superHoldings) {
-      const prev = contribs[holding.id];
-      if (prev) {
-        const employer = parseFloat(prev.employerContrib);
-        const employee = parseFloat(prev.employeeContrib);
-        if (employer > 0 || employee > 0) {
-          initialData[holding.id] = {
-            balance: "",
-            employerContrib: prev.employerContrib,
-            employeeContrib: prev.employeeContrib,
-            showContributions: true,
-          };
-        }
-      }
-    }
+    const contribs = data.latestContributions || {};
+    const newShowContribs: Record<string, boolean> = {};
 
-    if (Object.keys(initialData).length > 0) {
-      setSuperHoldingsData((prev) => {
-        // Only set initial data for holdings not already modified by user
-        const merged = { ...initialData };
-        for (const [id, val] of Object.entries(prev)) {
-          if (val.balance || val.employerContrib || val.employeeContrib) {
-            merged[id] = val;
+    const holdingEntries: CheckInFormValues["holdings"] = data.holdings.map(
+      (holding) => {
+        let employerContrib = "";
+        let employeeContrib = "";
+
+        if (holding.type === "super" && !holding.isDormant) {
+          const prev = contribs[holding.id];
+          if (prev) {
+            const employer = parseFloat(prev.employerContrib);
+            const employee = parseFloat(prev.employeeContrib);
+            if (employer > 0 || employee > 0) {
+              employerContrib = prev.employerContrib;
+              employeeContrib = prev.employeeContrib;
+              newShowContribs[holding.id] = true;
+            }
           }
         }
-        return merged;
-      });
-    }
-  }, [data?.latestContributions, data?.holdings]);
 
-  // Group holdings by type
+        return {
+          holdingId: holding.id,
+          type: holding.type,
+          balance: "",
+          employerContrib,
+          employeeContrib,
+        };
+      }
+    );
+
+    replace(holdingEntries);
+    setShowContributions(newShowContribs);
+  }, [data?.holdings, data?.latestContributions, watchedMonth, replace]);
+
+  // Group holdings by type (from API data, not form fields)
   const groupedHoldings = useMemo(() => {
     if (!data?.holdings) return {};
 
@@ -518,9 +471,46 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     return groups;
   }, [data?.holdings]);
 
-  // Calculate progress
+  // Map holdingId → field index for quick lookup
+  const holdingIndexMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (let i = 0; i < fields.length; i++) {
+      map[fields[i].holdingId] = i;
+    }
+    return map;
+  }, [fields]);
+
+  // Calculate progress: count holdings with non-empty balance
   const totalHoldings = data?.holdings?.length ?? 0;
-  const updatedCount = updatedHoldingIds.size;
+  const updatedCount = useMemo(() => {
+    return watchedHoldings.filter(
+      (h) => h.balance && h.balance.trim() !== ""
+    ).length;
+  }, [watchedHoldings]);
+
+  // Get form data for a specific holding
+  const getHoldingData = useCallback(
+    (holdingId: string) => {
+      const idx = holdingIndexMap[holdingId];
+      if (idx === undefined) {
+        return { balance: "", employerContrib: "", employeeContrib: "" };
+      }
+      const h = watchedHoldings[idx];
+      return {
+        balance: h?.balance ?? "",
+        employerContrib: h?.employerContrib ?? "",
+        employeeContrib: h?.employeeContrib ?? "",
+      };
+    },
+    [holdingIndexMap, watchedHoldings]
+  );
+
+  // Handle month change (from MonthSelector on Step 1)
+  const handleMonthChange = (month: string) => {
+    form.setValue("month", month);
+    // Reset sync key so holdings get re-populated for new month
+    lastSyncedRef.current = "";
+  };
 
   // Reset state when modal opens/closes
   const handleOpenChange = (newOpen: boolean) => {
@@ -533,150 +523,40 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
       // Reset on close
       setCurrentStep(0);
       setDirection(1);
-      setUpdatedHoldingIds(new Set());
-      setSelectedMonth(currentMonth);
-      setSuperHoldingsData({});
-      setCashHoldingsData({});
-      setDebtHoldingsData({});
-      setValidationErrors({});
+      form.reset({ month: currentMonth, holdings: [] });
+      setShowContributions({});
       setShakeStep2(false);
       setShowSuccess(false);
       setSaveResult(null);
+      lastSyncedRef.current = "";
     }
     onOpenChange(newOpen);
   };
 
-  // Handler for updating super holding data
-  const handleSuperHoldingDataChange = (
-    holdingId: string,
-    newData: SuperHoldingData
-  ) => {
-    setSuperHoldingsData((prev) => ({
+  // Toggle contributions visibility for a super holding
+  const toggleContributions = (holdingId: string) => {
+    setShowContributions((prev) => ({
       ...prev,
-      [holdingId]: newData,
+      [holdingId]: !prev[holdingId],
     }));
-
-    // Mark as updated if balance is entered
-    if (newData.balance && newData.balance.trim() !== "") {
-      setUpdatedHoldingIds((prev) => new Set([...prev, holdingId]));
-    } else {
-      setUpdatedHoldingIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(holdingId);
-        return newSet;
-      });
-    }
   };
 
-  // Get or initialize super holding data
-  const getSuperHoldingData = (holdingId: string): SuperHoldingData => {
-    return (
-      superHoldingsData[holdingId] || {
-        balance: "",
-        employerContrib: "",
-        employeeContrib: "",
-        showContributions: false,
-      }
+  // Validate all balance fields on Step 2 Continue
+  const validateStep2 = async (): Promise<boolean> => {
+    // Trigger validation on all holding balance fields
+    const results = await Promise.all(
+      fields.map((_, idx) =>
+        form.trigger(`holdings.${idx}.balance`)
+      )
     );
-  };
-
-  // Handler for updating cash holding data
-  const handleCashHoldingDataChange = (
-    holdingId: string,
-    newData: BalanceHoldingData
-  ) => {
-    setCashHoldingsData((prev) => ({
-      ...prev,
-      [holdingId]: newData,
-    }));
-
-    // Mark as updated if balance is entered
-    if (newData.balance && newData.balance.trim() !== "") {
-      setUpdatedHoldingIds((prev) => new Set([...prev, holdingId]));
-    } else {
-      setUpdatedHoldingIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(holdingId);
-        return newSet;
-      });
-    }
-  };
-
-  // Get or initialize cash holding data
-  const getCashHoldingData = (holdingId: string): BalanceHoldingData => {
-    return cashHoldingsData[holdingId] || { balance: "" };
-  };
-
-  // Handler for updating debt holding data
-  const handleDebtHoldingDataChange = (
-    holdingId: string,
-    newData: BalanceHoldingData
-  ) => {
-    setDebtHoldingsData((prev) => ({
-      ...prev,
-      [holdingId]: newData,
-    }));
-
-    // Mark as updated if balance is entered
-    if (newData.balance && newData.balance.trim() !== "") {
-      setUpdatedHoldingIds((prev) => new Set([...prev, holdingId]));
-    } else {
-      setUpdatedHoldingIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(holdingId);
-        return newSet;
-      });
-    }
-  };
-
-  // Get or initialize debt holding data
-  const getDebtHoldingData = (holdingId: string): BalanceHoldingData => {
-    return debtHoldingsData[holdingId] || { balance: "" };
-  };
-
-  // Handle month change (from MonthSelector on Step 1)
-  const handleMonthChange = (month: string) => {
-    setSelectedMonth(month);
-    // Reset updated holdings and data when month changes
-    setUpdatedHoldingIds(new Set());
-    setSuperHoldingsData({});
-    setCashHoldingsData({});
-    setDebtHoldingsData({});
-    setValidationErrors({});
-  };
-
-  // Validate all balances are filled (for Step 2 Continue)
-  const validateBalances = (): boolean => {
-    const errors: Record<string, string> = {};
-
-    for (const holding of data?.holdings || []) {
-      if (holding.type === "super") {
-        const entryData = getSuperHoldingData(holding.id);
-        if (!entryData.balance || entryData.balance.trim() === "") {
-          errors[holding.id] = "Balance is required";
-        }
-      } else if (holding.type === "cash") {
-        const entryData = getCashHoldingData(holding.id);
-        if (!entryData.balance || entryData.balance.trim() === "") {
-          errors[holding.id] = "Balance is required";
-        }
-      } else if (holding.type === "debt") {
-        const entryData = getDebtHoldingData(holding.id);
-        if (!entryData.balance || entryData.balance.trim() === "") {
-          errors[holding.id] = "Balance is required";
-        }
-      }
-    }
-
-    setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
+    return results.every(Boolean);
   };
 
   // Step navigation
-  const goToNextStep = () => {
+  const goToNextStep = async () => {
     if (currentStep === 1) {
-      // Validate before moving to review
-      if (!validateBalances()) {
+      const isValid = await validateStep2();
+      if (!isValid) {
         // Trigger shake animation
         setShakeStep2(true);
         setTimeout(() => setShakeStep2(false), 500);
@@ -722,59 +602,44 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
       setSaveResult(result);
       setShowSuccess(true);
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to save check-in");
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to save check-in");
     },
   });
 
-  // Build save body and execute
+  // Build save body from form values and execute
   const handleSaveAll = () => {
+    const formValues = form.getValues();
     const body: CheckInSaveBody = {
-      month: selectedMonth,
+      month: formValues.month,
     };
 
-    // Collect super entries
-    const superEntries = (data?.holdings || [])
+    const superEntries = formValues.holdings
       .filter((h) => h.type === "super")
-      .map((h) => {
-        const entryData = getSuperHoldingData(h.id);
-        return {
-          holdingId: h.id,
-          balance: entryData.balance,
-          employerContrib: entryData.employerContrib || undefined,
-          employeeContrib: entryData.employeeContrib || undefined,
-        };
-      });
+      .map((h) => ({
+        holdingId: h.holdingId,
+        balance: h.balance,
+        employerContrib: h.employerContrib || undefined,
+        employeeContrib: h.employeeContrib || undefined,
+      }));
+    if (superEntries.length > 0) body.super = superEntries;
 
-    if (superEntries.length > 0) {
-      body.super = superEntries;
-    }
-
-    // Collect cash entries
-    const cashEntries = (data?.holdings || [])
+    const cashEntries = formValues.holdings
       .filter((h) => h.type === "cash")
       .map((h) => ({
-        holdingId: h.id,
-        balance: getCashHoldingData(h.id).balance,
+        holdingId: h.holdingId,
+        balance: h.balance,
       }));
+    if (cashEntries.length > 0) body.cash = cashEntries;
 
-    if (cashEntries.length > 0) {
-      body.cash = cashEntries;
-    }
-
-    // Collect debt entries
-    const debtEntries = (data?.holdings || [])
+    const debtEntries = formValues.holdings
       .filter((h) => h.type === "debt")
       .map((h) => ({
-        holdingId: h.id,
-        balance: getDebtHoldingData(h.id).balance,
+        holdingId: h.holdingId,
+        balance: h.balance,
       }));
+    if (debtEntries.length > 0) body.debt = debtEntries;
 
-    if (debtEntries.length > 0) {
-      body.debt = debtEntries;
-    }
-
-    // Execute the mutation
     saveMutation.mutate(body);
   };
 
@@ -833,7 +698,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                 <MonthSelector
                   currentMonth={currentMonth}
                   previousMonth={previousMonth}
-                  selectedMonth={selectedMonth}
+                  selectedMonth={watchedMonth}
                   onSelectMonth={handleMonthChange}
                 />
 
@@ -854,7 +719,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                 {!isLoading && !error && totalHoldings === 0 && (
                   <div className="rounded-lg border border-border bg-card/50 p-4 text-center">
                     <p className="text-muted-foreground">
-                      All holdings are up to date for {formatMonthYear(selectedMonth)}!
+                      All holdings are up to date for {formatMonthYear(watchedMonth)}!
                     </p>
                   </div>
                 )}
@@ -863,7 +728,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                   <div className="rounded-lg border border-border bg-card/50 p-4">
                     <p className="text-sm text-muted-foreground">
                       <span className="text-foreground font-medium">{totalHoldings} holding{totalHoldings !== 1 ? "s" : ""}</span>
-                      {" "}need updating for {formatMonthYear(selectedMonth)}
+                      {" "}need updating for {formatMonthYear(watchedMonth)}
                     </p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {typeOrder.map((type) => {
@@ -944,43 +809,39 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                             )}
                             <div className="space-y-2">
                               {holdings.map((holding) => {
+                                const fieldIdx = holdingIndexMap[holding.id];
+                                if (fieldIdx === undefined) return null;
+
+                                const fieldErrors = form.formState.errors.holdings?.[fieldIdx]?.balance?.message;
+
                                 if (type === "super") {
                                   return (
                                     <SuperHoldingEntry
                                       key={holding.id}
                                       holding={holding}
-                                      data={getSuperHoldingData(holding.id)}
-                                      onDataChange={handleSuperHoldingDataChange}
-                                      error={validationErrors[holding.id]}
+                                      index={fieldIdx}
+                                      balance={watchedHoldings[fieldIdx]?.balance ?? ""}
+                                      employerContrib={watchedHoldings[fieldIdx]?.employerContrib ?? ""}
+                                      employeeContrib={watchedHoldings[fieldIdx]?.employeeContrib ?? ""}
+                                      showContributions={!!showContributions[holding.id]}
+                                      onBalanceChange={(val) => form.setValue(`holdings.${fieldIdx}.balance`, val, { shouldValidate: form.formState.isSubmitted })}
+                                      onEmployerContribChange={(val) => form.setValue(`holdings.${fieldIdx}.employerContrib`, val)}
+                                      onEmployeeContribChange={(val) => form.setValue(`holdings.${fieldIdx}.employeeContrib`, val)}
+                                      onToggleContributions={() => toggleContributions(holding.id)}
+                                      error={fieldErrors}
                                     />
                                   );
                                 }
 
-                                if (type === "cash") {
-                                  return (
-                                    <CashHoldingEntry
-                                      key={holding.id}
-                                      holding={holding}
-                                      data={getCashHoldingData(holding.id)}
-                                      onDataChange={handleCashHoldingDataChange}
-                                      error={validationErrors[holding.id]}
-                                    />
-                                  );
-                                }
-
-                                if (type === "debt") {
-                                  return (
-                                    <DebtHoldingEntry
-                                      key={holding.id}
-                                      holding={holding}
-                                      data={getDebtHoldingData(holding.id)}
-                                      onDataChange={handleDebtHoldingDataChange}
-                                      error={validationErrors[holding.id]}
-                                    />
-                                  );
-                                }
-
-                                return null;
+                                return (
+                                  <BalanceHoldingEntry
+                                    key={holding.id}
+                                    holding={holding}
+                                    balance={watchedHoldings[fieldIdx]?.balance ?? ""}
+                                    onBalanceChange={(val) => form.setValue(`holdings.${fieldIdx}.balance`, val, { shouldValidate: form.formState.isSubmitted })}
+                                    error={fieldErrors}
+                                  />
+                                );
                               })}
                             </div>
                           </div>
@@ -1027,22 +888,14 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                         Check-in Complete!
                       </h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {saveResult.snapshotsCreated} snapshot{saveResult.snapshotsCreated !== 1 ? "s" : ""} saved for {formatMonthYear(selectedMonth)}
+                        {saveResult.snapshotsCreated} snapshot{saveResult.snapshotsCreated !== 1 ? "s" : ""} saved for {formatMonthYear(watchedMonth)}
                       </p>
                     </div>
 
                     {/* Brief list of what was saved */}
                     <div className="space-y-1.5">
                       {(data?.holdings || []).map((holding) => {
-                        let balance = "";
-                        if (holding.type === "super") {
-                          balance = getSuperHoldingData(holding.id).balance;
-                        } else if (holding.type === "cash") {
-                          balance = getCashHoldingData(holding.id).balance;
-                        } else if (holding.type === "debt") {
-                          balance = getDebtHoldingData(holding.id).balance;
-                        }
-
+                        const { balance } = getHoldingData(holding.id);
                         const Icon = typeIcons[holding.type];
 
                         return (
@@ -1066,7 +919,6 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
 
                     {/* Net worth change indicator */}
                     {(() => {
-                      // Calculate total change across all holdings (approximate, same-currency only)
                       let totalChange = 0;
                       let hasAnyChange = false;
 
@@ -1074,20 +926,11 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                         const prevBalance = data?.previousBalances?.[holding.id];
                         if (!prevBalance) continue;
 
-                        let balance = "";
-                        if (holding.type === "super") {
-                          balance = getSuperHoldingData(holding.id).balance;
-                        } else if (holding.type === "cash") {
-                          balance = getCashHoldingData(holding.id).balance;
-                        } else if (holding.type === "debt") {
-                          balance = getDebtHoldingData(holding.id).balance;
-                        }
-
+                        const { balance } = getHoldingData(holding.id);
                         const newNum = parseFloat(balance);
                         const prevNum = parseFloat(prevBalance);
                         if (isNaN(newNum) || isNaN(prevNum)) continue;
 
-                        // For debt, a decrease improves net worth
                         const change = holding.type === "debt"
                           ? -(newNum - prevNum)
                           : newNum - prevNum;
@@ -1128,7 +971,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                   <>
                     <div className="rounded-lg border border-border bg-card/50 p-4">
                       <p className="text-sm text-muted-foreground">
-                        Saving snapshots for <span className="text-foreground font-medium">{formatMonthYear(selectedMonth)}</span>
+                        Saving snapshots for <span className="text-foreground font-medium">{formatMonthYear(watchedMonth)}</span>
                       </p>
                     </div>
 
@@ -1147,20 +990,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                           </h3>
                           <div className="space-y-1.5">
                             {holdings.map((holding) => {
-                              let balance = "";
-                              let employerContrib = "";
-                              let employeeContrib = "";
-
-                              if (type === "super") {
-                                const d = getSuperHoldingData(holding.id);
-                                balance = d.balance;
-                                employerContrib = d.employerContrib;
-                                employeeContrib = d.employeeContrib;
-                              } else if (type === "cash") {
-                                balance = getCashHoldingData(holding.id).balance;
-                              } else if (type === "debt") {
-                                balance = getDebtHoldingData(holding.id).balance;
-                              }
+                              const { balance, employerContrib, employeeContrib } = getHoldingData(holding.id);
 
                               const prevBalance = data?.previousBalances?.[holding.id];
                               const newNum = parseFloat(balance);
