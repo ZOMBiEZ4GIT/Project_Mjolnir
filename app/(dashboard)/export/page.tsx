@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Archive, Loader2 } from "lucide-react";
+import { Download, Archive, Loader2, BarChart3, ArrowRightLeft, Camera } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { staggerItem } from "@/lib/animations";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,7 @@ export default function ExportPage() {
   const [counts, setCounts] = useState<ExportCounts>({ holdings: 0, transactions: 0, snapshots: 0 });
   const [isLoadingCounts, setIsLoadingCounts] = useState(true);
   const [downloadingKey, setDownloadingKey] = useState<ExportKey | null>(null);
+  const reducedMotion = useReducedMotion();
 
   // Download file with loading state and toast notifications
   async function handleDownload(url: string, key: ExportKey, successMessage: string) {
@@ -125,209 +128,172 @@ export default function ExportPage() {
     );
   }
 
+  const staggerContainerCustom = {
+    hidden: {},
+    visible: {
+      transition: { staggerChildren: 0.08 },
+    },
+  };
+
+  const exportCards = [
+    {
+      key: "holdings",
+      icon: BarChart3,
+      title: "Holdings",
+      description: "All holdings including stocks, ETFs, crypto, super, cash, and debt.",
+      count: counts.holdings,
+      countLabel: "holding",
+      csvKey: "holdings-csv" as ExportKey,
+      jsonKey: "holdings-json" as ExportKey,
+      csvUrl: "/api/export/holdings?format=csv",
+      jsonUrl: "/api/export/holdings?format=json",
+      csvMessage: "Holdings exported as CSV",
+      jsonMessage: "Holdings exported as JSON",
+      isAccent: false,
+    },
+    {
+      key: "transactions",
+      icon: ArrowRightLeft,
+      title: "Transactions",
+      description: "BUY, SELL, and DIVIDEND transaction history.",
+      count: counts.transactions,
+      countLabel: "transaction",
+      csvKey: "transactions-csv" as ExportKey,
+      jsonKey: "transactions-json" as ExportKey,
+      csvUrl: "/api/export/transactions?format=csv",
+      jsonUrl: "/api/export/transactions?format=json",
+      csvMessage: "Transactions exported as CSV",
+      jsonMessage: "Transactions exported as JSON",
+      isAccent: false,
+    },
+    {
+      key: "snapshots",
+      icon: Camera,
+      title: "Snapshots",
+      description: "Balance snapshots for super, cash, and debt accounts.",
+      count: counts.snapshots,
+      countLabel: "snapshot",
+      csvKey: "snapshots-csv" as ExportKey,
+      jsonKey: "snapshots-json" as ExportKey,
+      csvUrl: "/api/export/snapshots?format=csv",
+      jsonUrl: "/api/export/snapshots?format=json",
+      csvMessage: "Snapshots exported as CSV",
+      jsonMessage: "Snapshots exported as JSON",
+      isAccent: false,
+    },
+  ];
+
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-foreground mb-6">Export Data</h1>
-      <p className="text-muted-foreground mb-8">
+      <h1 className="text-heading-lg text-foreground mb-2">Export Data</h1>
+      <p className="text-body-sm text-muted-foreground mb-8">
         Download your data as CSV or JSON files for backup or external analysis.
       </p>
 
-      <div className="grid gap-8 lg:grid-cols-2">
-        {/* Holdings Export Section */}
-        <Card className="border-border bg-card/50">
-          <CardHeader>
-            <CardTitle className="text-foreground">Holdings Export</CardTitle>
-            <CardDescription>
-              Export all your holdings including stocks, ETFs, crypto, super, cash, and debt.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {isLoadingCounts ? (
-                "Loading..."
-              ) : (
-                <>
-                  <span className="font-semibold text-foreground">{counts.holdings}</span>{" "}
-                  {counts.holdings === 1 ? "holding" : "holdings"} to export
-                </>
+      <motion.div
+        className="grid gap-6 lg:grid-cols-2"
+        variants={reducedMotion ? undefined : staggerContainerCustom}
+        initial="hidden"
+        animate="visible"
+      >
+        {exportCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <motion.div
+              key={card.key}
+              variants={reducedMotion ? undefined : staggerItem}
+              className={cn(
+                "rounded-2xl border bg-card p-4 sm:p-6 transition-shadow duration-150",
+                "hover:shadow-card-hover",
+                card.isAccent ? "border-accent/30" : "border-border"
               )}
-            </p>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDownload("/api/export/holdings?format=csv", "holdings-csv", "Holdings exported as CSV")}
-                disabled={isLoadingCounts || counts.holdings === 0 || downloadingKey !== null}
-              >
-                {downloadingKey === "holdings-csv" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-                {downloadingKey === "holdings-csv" ? "Exporting..." : "Download CSV"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDownload("/api/export/holdings?format=json", "holdings-json", "Holdings exported as JSON")}
-                disabled={isLoadingCounts || counts.holdings === 0 || downloadingKey !== null}
-              >
-                {downloadingKey === "holdings-json" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-                {downloadingKey === "holdings-json" ? "Exporting..." : "Download JSON"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Transactions Export Section */}
-        <Card className="border-border bg-card/50">
-          <CardHeader>
-            <CardTitle className="text-foreground">Transactions Export</CardTitle>
-            <CardDescription>
-              Export your BUY, SELL, and DIVIDEND transaction history.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {isLoadingCounts ? (
-                "Loading..."
-              ) : (
-                <>
-                  <span className="font-semibold text-foreground">{counts.transactions}</span>{" "}
-                  {counts.transactions === 1 ? "transaction" : "transactions"} to export
-                </>
-              )}
-            </p>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDownload("/api/export/transactions?format=csv", "transactions-csv", "Transactions exported as CSV")}
-                disabled={isLoadingCounts || counts.transactions === 0 || downloadingKey !== null}
-              >
-                {downloadingKey === "transactions-csv" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-                {downloadingKey === "transactions-csv" ? "Exporting..." : "Download CSV"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDownload("/api/export/transactions?format=json", "transactions-json", "Transactions exported as JSON")}
-                disabled={isLoadingCounts || counts.transactions === 0 || downloadingKey !== null}
-              >
-                {downloadingKey === "transactions-json" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-                {downloadingKey === "transactions-json" ? "Exporting..." : "Download JSON"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Snapshots Export Section */}
-        <Card className="border-border bg-card/50">
-          <CardHeader>
-            <CardTitle className="text-foreground">Snapshots Export</CardTitle>
-            <CardDescription>
-              Export balance snapshots for super, cash, and debt accounts.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              {isLoadingCounts ? (
-                "Loading..."
-              ) : (
-                <>
-                  <span className="font-semibold text-foreground">{counts.snapshots}</span>{" "}
-                  {counts.snapshots === 1 ? "snapshot" : "snapshots"} to export
-                </>
-              )}
-            </p>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDownload("/api/export/snapshots?format=csv", "snapshots-csv", "Snapshots exported as CSV")}
-                disabled={isLoadingCounts || counts.snapshots === 0 || downloadingKey !== null}
-              >
-                {downloadingKey === "snapshots-csv" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-                {downloadingKey === "snapshots-csv" ? "Exporting..." : "Download CSV"}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDownload("/api/export/snapshots?format=json", "snapshots-json", "Snapshots exported as JSON")}
-                disabled={isLoadingCounts || counts.snapshots === 0 || downloadingKey !== null}
-              >
-                {downloadingKey === "snapshots-json" ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
-                {downloadingKey === "snapshots-json" ? "Exporting..." : "Download JSON"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Full Backup Section */}
-        <Card className="border-border bg-card/50">
-          <CardHeader>
-            <CardTitle className="text-foreground">Full Backup</CardTitle>
-            <CardDescription>
-              Download a complete JSON backup of all your data including holdings, transactions, snapshots, and contributions.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="text-sm text-muted-foreground">
-              {isLoadingCounts ? (
-                "Loading..."
-              ) : (
-                <div className="space-y-1">
-                  <p>
-                    <span className="font-semibold text-foreground">{counts.holdings}</span>{" "}
-                    {counts.holdings === 1 ? "holding" : "holdings"}
-                  </p>
-                  <p>
-                    <span className="font-semibold text-foreground">{counts.transactions}</span>{" "}
-                    {counts.transactions === 1 ? "transaction" : "transactions"}
-                  </p>
-                  <p>
-                    <span className="font-semibold text-foreground">{counts.snapshots}</span>{" "}
-                    {counts.snapshots === 1 ? "snapshot" : "snapshots"}
-                  </p>
-                </div>
-              )}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleDownload("/api/export/backup", "backup", "Full backup downloaded successfully")}
-              disabled={isLoadingCounts || (counts.holdings === 0 && counts.transactions === 0 && counts.snapshots === 0) || downloadingKey !== null}
             >
-              {downloadingKey === "backup" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Archive className="h-4 w-4" />
-              )}
-              {downloadingKey === "backup" ? "Exporting..." : "Download Backup"}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+              <div className="flex items-start gap-3 mb-3">
+                <Icon className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-foreground">{card.title}</h3>
+                  <p className="text-body-sm text-muted-foreground mt-1">{card.description}</p>
+                </div>
+                {!isLoadingCounts && (
+                  <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground shrink-0">
+                    {card.count} {card.count === 1 ? card.countLabel : `${card.countLabel}s`}
+                  </span>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownload(card.csvUrl, card.csvKey, card.csvMessage)}
+                  disabled={isLoadingCounts || card.count === 0 || downloadingKey !== null}
+                >
+                  {downloadingKey === card.csvKey ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  {downloadingKey === card.csvKey ? "Exporting..." : "CSV"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownload(card.jsonUrl, card.jsonKey, card.jsonMessage)}
+                  disabled={isLoadingCounts || card.count === 0 || downloadingKey !== null}
+                >
+                  {downloadingKey === card.jsonKey ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  {downloadingKey === card.jsonKey ? "Exporting..." : "JSON"}
+                </Button>
+              </div>
+            </motion.div>
+          );
+        })}
+
+        {/* Full Backup Card — accent border */}
+        <motion.div
+          variants={reducedMotion ? undefined : staggerItem}
+          className="rounded-2xl border border-accent/30 bg-card p-4 sm:p-6 transition-shadow duration-150 hover:shadow-card-hover"
+        >
+          <div className="flex items-start gap-3 mb-3">
+            <Archive className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium text-foreground">Full Backup</h3>
+              <p className="text-body-sm text-muted-foreground mt-1">
+                Complete JSON backup of all your data including holdings, transactions, snapshots, and contributions.
+              </p>
+            </div>
+          </div>
+          {!isLoadingCounts && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                {counts.holdings} {counts.holdings === 1 ? "holding" : "holdings"}
+              </span>
+              <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                {counts.transactions} {counts.transactions === 1 ? "transaction" : "transactions"}
+              </span>
+              <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                {counts.snapshots} {counts.snapshots === 1 ? "snapshot" : "snapshots"}
+              </span>
+            </div>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleDownload("/api/export/backup", "backup", "Full backup downloaded successfully")}
+            disabled={isLoadingCounts || (counts.holdings === 0 && counts.transactions === 0 && counts.snapshots === 0) || downloadingKey !== null}
+          >
+            {downloadingKey === "backup" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Archive className="h-4 w-4" />
+            )}
+            {downloadingKey === "backup" ? "Exporting..." : "Download Backup"}
+          </Button>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
