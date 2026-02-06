@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Fragment } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -372,6 +372,43 @@ export default function TransactionsPage() {
   const [editTransaction, setEditTransaction] = useState<TransactionWithHolding | null>(null);
   const [deleteTransaction, setDeleteTransaction] = useState<TransactionWithHolding | null>(null);
 
+  // Highlight animation state — tracks which transaction was just saved
+  const [highlightedTransactionId, setHighlightedTransactionId] = useState<string | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Deleting animation state — tracks which transaction is fading out
+  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+
+  const handleTransactionSaved = useCallback((transactionId: string) => {
+    // Clear any existing timer
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+    setHighlightedTransactionId(transactionId);
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlightedTransactionId(null);
+      highlightTimerRef.current = null;
+    }, 1500);
+  }, []);
+
+  const handleTransactionDeleted = useCallback((transactionId: string) => {
+    setDeletingTransactionId(transactionId);
+    // The fade-out animation runs for 300ms, then we clear the state
+    // The query invalidation in the delete dialog will remove the row from data
+    setTimeout(() => {
+      setDeletingTransactionId(null);
+    }, 400);
+  }, []);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+    };
+  }, []);
+
   // Animation setup
   const shouldReduceMotion = useReducedMotion();
   const totalRows = transactions?.length ?? 0;
@@ -553,7 +590,7 @@ export default function TransactionsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">Transactions</h1>
-        <AddTransactionDialog>
+        <AddTransactionDialog onTransactionSaved={handleTransactionSaved}>
           <Button>Add Transaction</Button>
         </AddTransactionDialog>
       </div>
@@ -618,11 +655,30 @@ export default function TransactionsPage() {
                   </TableRow>
                   {group.transactions.map((transaction) => {
                     const total = calculateTotal(transaction);
+                    const isHighlighted = highlightedTransactionId === transaction.id;
+                    const isDeleting = deletingTransactionId === transaction.id;
                     return (
                       <MotionTableRow
                         key={transaction.id}
                         variants={rowVariants}
-                        className="border-border transition-[background-color] duration-150 hover:bg-accent/5"
+                        className={`border-border transition-[background-color] duration-150 hover:bg-accent/5 ${
+                          isDeleting ? "pointer-events-none" : ""
+                        }`}
+                        animate={
+                          isDeleting
+                            ? { opacity: 0, x: -20, transition: { duration: shouldReduceMotion ? 0 : 0.3 } }
+                            : isHighlighted && !shouldReduceMotion
+                              ? {
+                                  opacity: 1,
+                                  y: 0,
+                                  backgroundColor: [
+                                    "hsl(var(--accent) / 0.1)",
+                                    "hsl(var(--accent) / 0)",
+                                  ],
+                                  transition: { backgroundColor: { duration: 1, ease: "easeOut" } },
+                                }
+                              : "visible"
+                        }
                       >
                         <TableCell className="text-muted-foreground sticky left-0 bg-background z-10">
                           <div className="flex flex-col">
@@ -766,6 +822,7 @@ export default function TransactionsPage() {
           onOpenChange={(open) => {
             if (!open) setEditTransaction(null);
           }}
+          onTransactionSaved={handleTransactionSaved}
         />
       )}
 
@@ -777,6 +834,7 @@ export default function TransactionsPage() {
           onOpenChange={(open) => {
             if (!open) setDeleteTransaction(null);
           }}
+          onDeleted={handleTransactionDeleted}
         />
       )}
     </div>

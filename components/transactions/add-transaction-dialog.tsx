@@ -111,11 +111,13 @@ async function createTransaction(data: CreateTransactionData) {
 interface AddTransactionDialogProps {
   children?: React.ReactNode;
   defaultHoldingId?: string;
+  onTransactionSaved?: (transactionId: string) => void;
 }
 
 export function AddTransactionDialog({
   children,
   defaultHoldingId,
+  onTransactionSaved,
 }: AddTransactionDialogProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
@@ -187,12 +189,13 @@ export function AddTransactionDialog({
 
   const mutation = useMutation({
     mutationFn: createTransaction,
-    onSuccess: () => {
+    onSuccess: (data: { id?: string }) => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({
         queryKey: ["holdings", selectedHoldingId, "quantity"],
       });
       toast.success("Transaction added successfully");
+      if (data?.id) onTransactionSaved?.(data.id);
       handleClose();
     },
     onError: (error: { error?: string }) => {

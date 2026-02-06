@@ -55,6 +55,7 @@ interface EditTransactionDialogProps {
   transaction: TransactionWithHolding;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onTransactionSaved?: (transactionId: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -121,6 +122,7 @@ export function EditTransactionDialog({
   transaction,
   open,
   onOpenChange,
+  onTransactionSaved,
 }: EditTransactionDialogProps) {
   const queryClient = useQueryClient();
 
@@ -204,6 +206,7 @@ export function EditTransactionDialog({
         queryKey: ["holdings", transaction.holdingId, "quantity"],
       });
       toast.success("Transaction updated successfully");
+      onTransactionSaved?.(transaction.id);
       onOpenChange(false);
     },
     onError: (error: { error?: string }) => {

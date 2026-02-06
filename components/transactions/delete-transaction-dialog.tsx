@@ -37,6 +37,7 @@ interface DeleteTransactionDialogProps {
   transaction: TransactionWithHolding;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onDeleted?: (transactionId: string) => void;
 }
 
 async function deleteTransaction(id: string) {
@@ -106,6 +107,7 @@ export function DeleteTransactionDialog({
   transaction,
   open,
   onOpenChange,
+  onDeleted,
 }: DeleteTransactionDialogProps) {
   const queryClient = useQueryClient();
 
@@ -116,7 +118,8 @@ export function DeleteTransactionDialog({
       queryClient.invalidateQueries({
         queryKey: ["holdings", transaction.holdingId, "quantity"],
       });
-      toast.success("Transaction deleted successfully");
+      toast.success("Transaction deleted");
+      onDeleted?.(transaction.id);
       onOpenChange(false);
     },
     onError: (error: Error) => {
