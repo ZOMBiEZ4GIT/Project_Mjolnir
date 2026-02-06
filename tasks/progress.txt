@@ -32,6 +32,11 @@
 - html2canvas backgroundColor requires raw hex — use `#18181b` to match --card token
 - Email templates (components/emails/) use inline hex values — email clients don't support CSS variables
 - Only legitimate remaining hardcoded grey: `bg-gray-500` fallback in category indicator functions (asset-allocation, currency-exposure)
+- Navigation items defined in lib/navigation.ts — import navItems and NavItem type from there (sidebar, mobile nav, command menu)
+- New layout components live in components/layout/ — NavItemLink (nav-item.tsx) uses Framer Motion layoutId='active-nav' for animated active pill
+- TooltipProvider with delayDuration={0} wraps collapsed nav items for instant tooltip display
+- Sidebar collapse state persists in localStorage ('mjolnir-sidebar-collapsed') — use mounted state pattern to avoid hydration mismatch
+- Sidebar is fixed positioned; content area needs dynamic left margin matching sidebar width (240px or 64px)
 
 ---
 
@@ -204,4 +209,61 @@ Started: 2026-02-05
   - AnimationDemo pattern: use key={counter} on motion.div to re-trigger animation on state change (forces remount)
   - Design token dynamic class application works via template literals with class data — no need for Tailwind safelist since all classes are statically analyzable in the data arrays
   - &quot; entity needed in JSX for literal quotes in text content
+---
+
+# UX-2 Layout & Navigation Progress Log
+
+Started: 2026-02-06
+
+---
+
+## 2026-02-06 - US-001
+- Created lib/navigation.ts exporting navItems array and NavItem type
+- NavItem interface: href (string), label (string), icon (LucideIcon), description (string)
+- 7 items: Dashboard, Holdings, Transactions, Snapshots, Import, Export, Settings
+- Icons: LayoutDashboard, Wallet, ArrowRightLeft, Camera, Upload, Download, Settings
+- Dashboard href uses /dashboard (matching existing routes) — PRD suggested / but actual route is /dashboard
+- Export item added with Download icon (was missing from command-menu.tsx)
+- Files changed: lib/navigation.ts (new)
+- **Learnings for future iterations:**
+  - lib/navigation.ts is the single source of truth for nav items — sidebar, mobile nav, command menu should all import from here
+  - NavItem.icon is typed as LucideIcon (imported from lucide-react) — this is the standard type for Lucide icon components
+  - Dashboard route is /dashboard (via app/(dashboard)/dashboard/page.tsx), not /
+  - Export page exists at /export but was not in the original command-menu.tsx navigation items
+---
+
+## 2026-02-06 - US-002
+- Created components/layout/nav-item.tsx as a client component
+- NavItemLink component with props: item (NavItem), isCollapsed (boolean), isActive (boolean)
+- Active state: Framer Motion layoutId='active-nav' creates animated background pill that slides between items
+- Active pill uses bg-accent/20 + shadow-glow-sm from design system
+- Inactive: text-muted-foreground with hover → text-foreground + bg-accent/10
+- When collapsed, wraps in TooltipProvider + Tooltip showing label on right side
+- Icon-only items get aria-label matching their text label
+- Files changed: components/layout/nav-item.tsx (new)
+- **Learnings for future iterations:**
+  - Framer Motion layoutId enables shared layout animations — use the same layoutId string across sibling elements to animate between them
+  - TooltipProvider needs delayDuration={0} for instant tooltip on sidebar hover (no delay)
+  - z-10 on icon and label ensures they render above the absolute-positioned active pill background
+  - components/layout/ directory is the new home for navigation/layout components (sidebar, mobile-nav, nav-item, app-shell, page-wrapper)
+---
+
+## 2026-02-06 - US-003
+- Created components/layout/sidebar.tsx as a client component
+- Sidebar renders on left side of viewport, hidden on mobile (hidden lg:flex)
+- Expanded state: 240px wide (uses layout.sidebarWidth from lib/theme.ts)
+- Collapsed state: 64px wide, icons only via NavItemLink isCollapsed prop
+- Toggle button at bottom with PanelLeftClose/PanelLeftOpen icons
+- Collapse state persists in localStorage under key 'mjolnir-sidebar-collapsed'
+- Uses mounted state to avoid hydration mismatch (defaults to expanded, then reads localStorage)
+- Smooth width transition via transition-[width] duration-200 ease-in-out
+- Design tokens: bg-card background, border-r border-border
+- role='navigation' and aria-label='Main navigation' for accessibility
+- Active route detection: exact match OR starts-with for nested routes (e.g. /holdings/123)
+- Files changed: components/layout/sidebar.tsx (new)
+- **Learnings for future iterations:**
+  - localStorage reads must be in useEffect to avoid SSR hydration mismatch — use mounted state pattern
+  - Sidebar is fixed positioned (fixed inset-y-0 left-0) — content area needs left margin to compensate
+  - Width is applied via inline style (not Tailwind class) to enable smooth CSS transition from numeric value
+  - The sidebar collapse state needs to be shared with app-shell for content margin adjustment — consider lifting state or using a context/zustand store in US-006
 ---

@@ -16,8 +16,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Dashboard href uses /dashboard (matching existing routes) rather than / as PRD suggested. Export item added with Download icon."
     },
     {
       "id": "US-002",
@@ -36,8 +36,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Component exported as NavItemLink. Uses Framer Motion layoutId='active-nav' for animated pill. TooltipProvider wraps each collapsed item for label tooltip on hover."
     },
     {
       "id": "US-003",
@@ -57,8 +57,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Sidebar component at components/layout/sidebar.tsx. Uses localStorage for collapse state persistence. Hidden on mobile via hidden lg:flex. Active state matches on exact path or starts-with for nested routes. Width uses layout.sidebarWidth from lib/theme.ts. Toggle button at bottom with PanelLeftClose/PanelLeftOpen icons."
     },
     {
       "id": "US-004",
