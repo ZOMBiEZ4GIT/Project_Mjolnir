@@ -16,8 +16,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Dashboard href uses /dashboard (matching existing routes) rather than / as PRD suggested. Export item added with Download icon."
     },
     {
       "id": "US-002",
@@ -36,8 +36,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Component exported as NavItemLink. Uses Framer Motion layoutId='active-nav' for animated pill. TooltipProvider wraps each collapsed item for label tooltip on hover."
     },
     {
       "id": "US-003",
@@ -57,8 +57,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Sidebar component at components/layout/sidebar.tsx. Uses localStorage for collapse state persistence. Hidden on mobile via hidden lg:flex. Active state matches on exact path or starts-with for nested routes. Width uses layout.sidebarWidth from lib/theme.ts. Toggle button at bottom with PanelLeftClose/PanelLeftOpen icons."
     },
     {
       "id": "US-004",
@@ -75,8 +75,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Branding section with Zap icon (Mjolnir = lightning/thunder). Uses text-heading-sm for brand name, text-primary for icon. User section shows Clerk UserButton with firstName when expanded, avatar-only when collapsed. Uses useUser() hook from @clerk/nextjs for client-side user data. hasClerkKey check guards rendering when Clerk is not configured."
     },
     {
       "id": "US-005",
@@ -96,8 +96,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Mobile header bar with hamburger (left), Mjolnir branding (center), Clerk UserButton (right). Sheet drawer from left with nav items using shared navItems from lib/navigation.ts. Active item uses bg-accent/20 matching sidebar. Drawer closes on nav item tap. Header bar is fixed positioned with z-30, visible only below lg breakpoint."
     },
     {
       "id": "US-006",
@@ -116,8 +116,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "AppShell component at components/layout/app-shell.tsx. Owns sidebar collapsed state (localStorage persistence) and passes it to Sidebar via props. Sidebar refactored to accept isCollapsed/onToggleCollapsed props. Desktop: sidebar + margin-left content area with transition-[margin-left]. Mobile: pt-14 for fixed mobile header, full-width content. Content area has max-width from layout.maxContentWidth (1400px). Uses mounted state pattern to avoid hydration mismatch on sidebar width."
     },
     {
       "id": "US-007",
@@ -133,8 +133,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced old header-based navigation (DashboardNav, MobileNav from components/dashboard/, UserButton) with AppShell component. DashboardErrorBoundary still wraps children. CommandMenu rendered inside AppShell. Fixed mobile margin-left by using CSS custom property with responsive Tailwind class (ml-0 lg:ml-[var(--sidebar-width)]) instead of inline marginLeft that applied on all screen sizes."
     },
     {
       "id": "US-008",
@@ -151,8 +151,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "PageWrapper component at components/layout/page-wrapper.tsx. Uses fadeIn preset from lib/animations.ts for 200ms opacity fade. Respects prefers-reduced-motion via Framer Motion useReducedMotion hook (initial: false + duration: 0 when reduced motion enabled). Integrated in dashboard layout wrapping children inside DashboardErrorBoundary. Uses typed fadeIn properties directly on motion.div to avoid Record<string,unknown> type incompatibility with Framer Motion props."
     },
     {
       "id": "US-009",
@@ -169,8 +169,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Verification story — no code changes needed. DashboardHeader component renders correctly within AppShell layout with welcome message, refresh button, CurrencySelector, and FxRatesDisplay. All components use design tokens (text-foreground, text-muted-foreground, bg-muted, border-border, text-positive, etc.) with no hardcoded text-white or bg-gray-* classes. Non-dashboard pages (holdings, transactions, snapshots, import, export, settings) all render their own page headers correctly with design tokens. Build and lint pass."
     },
     {
       "id": "US-010",
@@ -185,8 +185,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced local navigationItems array with shared navItems from lib/navigation.ts. Removed 6 duplicated lucide-react icon imports (LayoutDashboard, Wallet, ArrowRightLeft, Camera, Upload, Settings) — only Keyboard icon remains for shortcuts section. Command menu now includes Export item that was previously missing. Nav items in command menu now match sidebar exactly."
     },
     {
       "id": "US-011",
@@ -199,8 +199,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Deleted components/dashboard/nav.tsx and components/dashboard/mobile-nav.tsx. Verified no source code imports reference deleted files (only archive progress.txt and PRD docs). Updated Codebase Patterns in progress.txt to reference new layout components. Build and lint pass."
     },
     {
       "id": "US-012",
@@ -216,8 +216,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring to: NavItemLink (nav-item.tsx), sidebar collapse toggle button (sidebar.tsx), and mobile drawer nav links (mobile-nav.tsx). Sidebar nav items use Next.js Link (native <a> tags) — focusable via Tab and activated by Enter. Collapse toggle uses native <button> — focusable and activated by Enter/Space. Mobile drawer uses Radix Sheet for focus trapping. Cmd+K command menu rendered via AppShell on all pages. Build and lint pass."
     }
   ]
 }
