@@ -43,7 +43,10 @@
 - Mobile header (components/layout/mobile-nav.tsx) is fixed h-14 z-30 — content area needs pt-14 on mobile to avoid overlap
 - Sheet drawer (shadcn/ui) handles focus trapping and Escape close via Radix Dialog primitive
 - AppShell (components/layout/app-shell.tsx) owns sidebar collapsed state — Sidebar receives isCollapsed/onToggleCollapsed as props
-- Content area uses inline style marginLeft matching sidebar width for smooth CSS transition alongside sidebar width transition
+- Content area uses CSS custom property --sidebar-width with responsive Tailwind class ml-0 lg:ml-[var(--sidebar-width)] for responsive dynamic margin
+- For responsive dynamic values, use CSS custom properties + Tailwind arbitrary value classes (inline styles can't be responsive)
+- useAnimationConfig returns Record<string, unknown> — for motion elements, use useReducedMotion + typed preset props directly to avoid type errors
+- PageWrapper (components/layout/page-wrapper.tsx) wraps page content with fade transition — placed inside DashboardErrorBoundary in dashboard layout
 
 ---
 
@@ -328,4 +331,36 @@ Started: 2026-02-06
   - Sidebar width is set via inline style (not Tailwind) for smooth CSS transition — content margin-left must also use inline style
   - Mobile content needs pt-14 (56px) to clear the fixed mobile header, and lg:pt-0 on desktop where there's no header
   - AppShell is a client component because it manages localStorage state — but its children can be server components passed via props
+---
+
+## 2026-02-06 - US-007
+- Replaced old header-based navigation in app/(dashboard)/layout.tsx with AppShell component
+- Removed imports: UserButton, DashboardNav (components/dashboard/nav), MobileNav (components/dashboard/mobile-nav), CommandMenu
+- Added imports: AppShell (components/layout/app-shell)
+- DashboardErrorBoundary still wraps children inside AppShell
+- Fixed mobile margin-left bug: AppShell was using inline style marginLeft which applied on all screen sizes
+  - Changed to CSS custom property `--sidebar-width` with responsive Tailwind class `ml-0 lg:ml-[var(--sidebar-width)]`
+  - This ensures content is full-width on mobile (where sidebar is hidden) and properly offset on desktop
+- Files changed: app/(dashboard)/layout.tsx, components/layout/app-shell.tsx
+- **Learnings for future iterations:**
+  - Inline styles can't be responsive — use CSS custom properties with Tailwind arbitrary value classes for responsive dynamic values
+  - Pattern: `style={{ '--my-var': value } as React.CSSProperties}` + `className="ml-0 lg:ml-[var(--my-var)]"`
+  - The dashboard layout is now a thin wrapper: just AppShell + DashboardErrorBoundary
+  - Old nav components (components/dashboard/nav.tsx, components/dashboard/mobile-nav.tsx) are now unused — clean up in US-011
+---
+
+## 2026-02-06 - US-008
+- Created components/layout/page-wrapper.tsx as a client component
+- PageWrapper wraps children in motion.div with fadeIn animation (200ms opacity 0→1)
+- Uses fadeIn preset from lib/animations.ts directly on motion.div props
+- Respects prefers-reduced-motion via Framer Motion's useReducedMotion hook
+  - When reduced motion enabled: initial=false (skip animation), transition duration=0
+  - When normal: standard fadeIn initial/animate/transition
+- No layout shift: motion.div only animates opacity, no position or dimension changes
+- Integrated into app/(dashboard)/layout.tsx: children wrapped in PageWrapper inside DashboardErrorBoundary
+- Files changed: components/layout/page-wrapper.tsx (new), app/(dashboard)/layout.tsx (modified)
+- **Learnings for future iterations:**
+  - useAnimationConfig hook returns Record<string, unknown> which is incompatible with motion.div's typed props — for direct motion element usage, prefer using useReducedMotion + typed preset properties directly
+  - fadeIn preset from lib/animations.ts has properly typed initial/animate/transition via `as const` — spread or use individual properties directly on motion elements for type safety
+  - PageWrapper wraps page content (not the entire layout) — placed inside DashboardErrorBoundary to only animate the content area
 ---

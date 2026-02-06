@@ -133,8 +133,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced old header-based navigation (DashboardNav, MobileNav from components/dashboard/, UserButton) with AppShell component. DashboardErrorBoundary still wraps children. CommandMenu rendered inside AppShell. Fixed mobile margin-left by using CSS custom property with responsive Tailwind class (ml-0 lg:ml-[var(--sidebar-width)]) instead of inline marginLeft that applied on all screen sizes."
     },
     {
       "id": "US-008",
@@ -151,8 +151,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "PageWrapper component at components/layout/page-wrapper.tsx. Uses fadeIn preset from lib/animations.ts for 200ms opacity fade. Respects prefers-reduced-motion via Framer Motion useReducedMotion hook (initial: false + duration: 0 when reduced motion enabled). Integrated in dashboard layout wrapping children inside DashboardErrorBoundary. Uses typed fadeIn properties directly on motion.div to avoid Record<string,unknown> type incompatibility with Framer Motion props."
     },
     {
       "id": "US-009",
