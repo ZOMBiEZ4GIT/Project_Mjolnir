@@ -261,3 +261,14 @@ Started: 2026-02-07
   - Empty state icon uses text-muted-foreground/50 for extra subtle appearance
 ---
 
+### US-010: Replace hardcoded colours across all import/export components ✅
+- **Status:** PASS (build ✅, lint ✅)
+- **Approach:** Audited all 7 target files for hardcoded colour classes (text-gray-*, bg-gray-*, border-gray-*, text-green-*, etc.)
+- **Finding:** All import/export files already use design tokens — US-001 through US-009 systematically replaced hardcoded colours during implementation
+- **Changes:** Updated import page header from `text-2xl font-bold` to `text-heading-lg` and description to `text-body-sm`
+- **chart-export-button.tsx:** `#18181b` hex retained — html2canvas requires raw hex values, not CSS variables
+- **Learnings:**
+  - When each story properly applies design tokens during implementation, the final audit story becomes trivial
+  - Typography tokens (text-heading-lg, text-body-sm, text-label) are easy to miss — page headers and descriptions should be checked alongside colour tokens
+---
+
