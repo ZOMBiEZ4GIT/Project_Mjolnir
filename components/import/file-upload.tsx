@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Upload, X, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { fadeIn } from "@/lib/animations";
 
 export interface FileUploadProps {
   onFileSelect: (file: File) => void;
@@ -24,6 +26,7 @@ export function FileUpload({
   const [isDragOver, setIsDragOver] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const reducedMotion = useReducedMotion();
 
   const validateFile = (file: File): boolean => {
     const validTypes = [".csv", "text/csv", "application/csv"];
@@ -97,7 +100,10 @@ export function FileUpload({
   };
 
   return (
-    <div className={cn("w-full", className)}>
+    <motion.div
+      className={cn("w-full", className)}
+      {...(reducedMotion ? {} : fadeIn)}
+    >
       <input
         ref={inputRef}
         type="file"
@@ -107,61 +113,94 @@ export function FileUpload({
         disabled={disabled}
       />
 
-      {!selectedFile ? (
-        <div
-          onClick={handleClick}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          className={cn(
-            "flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-8 transition-colors cursor-pointer",
-            isDragOver
-              ? "border-primary bg-primary/5"
-              : "border-muted-foreground/25 hover:border-muted-foreground/50",
-            disabled && "cursor-not-allowed opacity-50",
-            error && "border-destructive"
-          )}
-        >
-          <Upload
+      <AnimatePresence mode="wait">
+        {!selectedFile ? (
+          <motion.div
+            key="dropzone"
+            initial={reducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={reducedMotion ? undefined : { opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={handleClick}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             className={cn(
-              "h-10 w-10",
-              isDragOver ? "text-primary" : "text-muted-foreground"
+              "flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-8 transition-colors cursor-pointer",
+              isDragOver
+                ? "border-accent bg-accent/5"
+                : "border-border hover:border-muted-foreground/50",
+              disabled && "cursor-not-allowed opacity-50",
+              error && "border-destructive"
             )}
-          />
-          <div className="text-center">
-            <p className="text-sm font-medium text-foreground">
-              Drag and drop your CSV file here
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              or click to browse
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-4">
-          <FileText className="h-8 w-8 text-primary shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-foreground truncate">
-              {selectedFile.name}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {(selectedFile.size / 1024).toFixed(1)} KB
-            </p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClear}
-            disabled={disabled}
-            className="shrink-0"
           >
-            <X className="h-4 w-4" />
-            <span className="sr-only">Remove file</span>
-          </Button>
-        </div>
-      )}
+            <motion.div
+              animate={
+                isDragOver && !reducedMotion
+                  ? { scale: [1, 1.1, 1] }
+                  : { scale: 1 }
+              }
+              transition={
+                isDragOver
+                  ? { duration: 1, repeat: Infinity, ease: "easeInOut" }
+                  : { duration: 0.2 }
+              }
+            >
+              <Upload
+                className={cn(
+                  "h-10 w-10 transition-colors",
+                  isDragOver ? "text-accent" : "text-muted-foreground"
+                )}
+              />
+            </motion.div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-foreground">
+                Drag and drop your CSV file here
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                or click to browse
+              </p>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="selected"
+            initial={reducedMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={reducedMotion ? undefined : { opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="flex items-center gap-3 rounded-lg border border-border bg-card p-4"
+          >
+            <motion.div
+              initial={reducedMotion ? false : { scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
+              <FileText className="h-8 w-8 text-accent shrink-0" />
+            </motion.div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                {selectedFile.name}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {(selectedFile.size / 1024).toFixed(1)} KB
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClear}
+              disabled={disabled}
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Remove file</span>
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {error && <p className="text-sm text-destructive mt-2">{error}</p>}
-    </div>
+    </motion.div>
   );
 }
