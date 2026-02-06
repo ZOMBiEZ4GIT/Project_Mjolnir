@@ -56,6 +56,8 @@
 - Capped stagger: `Math.min(0.05, 0.5 / count)` ensures total stagger completes within 500ms regardless of row count
 - `useReducedMotion()` from framer-motion checks OS prefers-reduced-motion — skip animations entirely when true
 - Dormant holdings sorted to bottom of each group via `useMemo` sort in `HoldingsTableContent` and `HoldingsCurrencySection`
+- `useAnimationConfig` hook returns `Record<string, unknown>` — incompatible with `motion.div` strict types; use `useReducedMotion()` directly with inline animation props instead
+- EmptyState component (`components/ui/empty-state.tsx`) is shared across holdings, snapshots, transactions — keep prop API stable
 - `AnimatePresence mode="popLayout"` on HoldingsTable wraps content keyed by typeFilter — handles enter/exit on tab change
 - Holdings table rows are clickable (navigate to `/holdings/[id]`) — action buttons use `stopPropagation` to prevent row click
 - Row hover: `hover:bg-accent/5 hover:scale-[1.005] active:bg-accent/10` with `transition-[background-color,transform] duration-150`
@@ -183,5 +185,24 @@ Started: 2026-02-06
   - Dormant sorting is applied in the rendering components (`HoldingsTableContent` and `HoldingsCurrencySection`), not in the grouping functions — keeps grouping pure and sorting as a UI concern
   - `useMemo` with holdings dependency recalculates sort when holdings change (e.g., toggling show dormant)
   - Both the type-grouped view and currency-grouped view have independent sorting — changes to one don't affect the other
+---
+
+## 2026-02-06 - US-008: Enhance empty state component
+- Updated `components/ui/empty-state.tsx` to use Framer Motion `motion.div` with slideUp animation (opacity 0→1, y 20→0, 300ms ease-out)
+- Added `"use client"` directive for Framer Motion compatibility
+- Changed icon container from `bg-card` to `bg-muted` with `border border-border` for subtle visual boundary
+- Added `useReducedMotion()` check — when OS prefers-reduced-motion is on, initial is `false` and transition is `{ duration: 0 }`
+- Updated holdings page with three distinct empty state scenarios:
+  1. **No holdings at all**: "No holdings yet" with "Add your first holding" CTA (unchanged)
+  2. **Filter returns no results**: Type-specific title "No [type] holdings" with "Try a different filter" description, no CTA button
+  3. **All holdings dormant + toggle OFF**: "All holdings are dormant" with Switch toggle CTA to show dormant holdings
+- Added dormant detection: separate TanStack Query `["holdings", { showDormant: true }]` that only activates when main list is empty and dormant toggle is off
+- `hasDormantHoldings` boolean derived from comparing main query (empty) with all-holdings query (non-empty)
+- Files changed: `components/ui/empty-state.tsx`, `app/(dashboard)/holdings/page.tsx`
+- **Learnings for future iterations:**
+  - `useAnimationConfig` hook returns `Record<string, unknown>` which is incompatible with Framer Motion's strict `motion.div` types — use `useReducedMotion()` directly and inline the animation props instead
+  - To detect "all dormant" state without API changes, use a conditional TanStack Query with `enabled: ...condition` to lazily fetch all holdings only when needed
+  - EmptyState is shared across holdings, snapshots, and transactions pages — changes must be backward-compatible (same prop API)
+  - The `bg-card` token was already correct in the original component (not `bg-gray-800` as mentioned in AC) — the component was already using design tokens
 ---
 
