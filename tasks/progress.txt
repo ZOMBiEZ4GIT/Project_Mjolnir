@@ -166,3 +166,15 @@ Started: 2026-02-07
   - File selected state: bg-card (not bg-muted/50 which was previous)
 ---
 
+## 2026-02-07 - US-002
+- Rebuilt import-progress.tsx with custom progress bar (not shadcn Progress)
+- Added shimmer keyframe animation to tailwind.config.ts
+- Files changed: components/import/import-progress.tsx, tailwind.config.ts
+- **Learnings for future iterations:**
+  - Added `animate-shimmer` keyframe (200%→-200% backgroundPosition, 2s linear infinite)
+  - Custom progress bar uses CSS transition (not Framer Motion) for width changes — simpler and more performant
+  - `shadow-glow-sm` on progress fill creates subtle accent glow effect
+  - ImportProgress now accepts optional `currentRow` for "row X of Y" text (backward-compatible)
+  - Indeterminate mode still uses the asymptotic approach to 90% for perceived progress
+---
+
