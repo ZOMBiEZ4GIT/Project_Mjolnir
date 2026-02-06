@@ -225,3 +225,15 @@ Started: 2026-02-07
   - Error row badge changed from bg-destructive/10 to bg-muted rounded-full pill
 ---
 
+## 2026-02-07 - US-007
+- Enhanced error section with animated expand/collapse and fix suggestions
+- Files changed: components/import/import-results.tsx
+- **Learnings for future iterations:**
+  - Rotating chevron: `motion.div animate={{ rotate: isExpanded ? 180 : 0 }}` — cleaner than ChevronUp/Down toggle
+  - AnimatePresence initial={false} skips enter animation on mount — use for collapsed sections
+  - `generateSuggestion()` exported for reuse (US-008 error report will need it)
+  - Fix suggestion patterns: check lowercase message against known keywords, return template strings
+  - Auto-expand if <= 5 errors via useState initializer function
+  - Error row stagger: 30ms delay per row (errorStaggerContainer), slides in from left (x: -8 → 0)
+---
+
