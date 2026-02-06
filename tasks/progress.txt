@@ -125,6 +125,8 @@
 - Flash highlight pattern: bg-accent/15 with transitionDuration 0ms→400ms trick for instant-on, fade-off effect
 - CurrencyDisplay shows rich tooltip (conversion info + rate) only when showNative=true and currencies differ — no tooltip otherwise
 - Effective exchange rate: compute from amount/nativeAmount rather than passing rates as prop
+- NativeCurrencyToggle accepts `showDescription` prop for optional descriptive text; Switch override: `data-[state=checked]:bg-accent data-[state=unchecked]:bg-muted`
+- CurrencyDisplay flash also triggers on showNative change for components with different native currency
 
 ---
 
@@ -181,4 +183,15 @@ Started: 2026-02-06
   - Native currency parenthetical uses text-body-sm (design token) instead of text-xs (hardcoded)
   - Removed FormatCurrencyOptions import — no longer needed after refactoring tooltip content
   - valueSpan extracted as variable to avoid duplicating the animated display markup between tooltip and non-tooltip paths
+---
+
+## 2026-02-06 - US-005
+- Polished native currency toggle with design tokens and optional description
+- Added flash highlight on CurrencyDisplay when showNative toggles
+- Files changed: components/ui/native-currency-toggle.tsx, components/ui/currency-display.tsx
+- **Learnings for future iterations:**
+  - Switch component accepts className to override track colours: `data-[state=checked]:bg-accent data-[state=unchecked]:bg-muted`
+  - NativeCurrencyToggle now accepts `showDescription` prop for optional descriptive text below label
+  - CurrencyDisplay flash triggers on showNative change — only flashes on components where nativeCurrency differs from currency
+  - prevShowNativeRef pattern added alongside prevAmountRef/prevCurrencyRef to track showNative changes independently
 ---
