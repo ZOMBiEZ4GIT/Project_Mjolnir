@@ -120,6 +120,9 @@
 - TanStack Query: `isFetching && !isLoading` detects background refetches without triggering initial skeleton
 
 - CurrencyToggle (components/ui/currency-toggle.tsx) is a horizontal pill toggle with Framer Motion layoutId='currency-indicator' — replaces CurrencySelector dropdown on dashboard
+- CURRENCY_SYMBOLS exported from lib/utils/currency.ts — use for displaying currency symbol separately from formatted number
+- CurrencyDisplay uses useSpring for animated number transitions; motionValue.jump() for instant, motionValue.set() for animated
+- Flash highlight pattern: bg-accent/15 with transitionDuration 0ms→400ms trick for instant-on, fade-off effect
 
 ---
 
@@ -149,4 +152,18 @@ Started: 2026-02-06
   - Compact mode shows just currency code, full mode shows flag + code in trigger and flag + code + "— Full Name" in dropdown items
   - SelectContent/SelectItem design tokens: bg-card border-border for content, focus:bg-accent/10 for item highlight
   - Settings page currency selector width increased from 180px to 220px to fit flag + full name in dropdown
+---
+
+## 2026-02-06 - US-003
+- Animated currency values on display currency change
+- Files changed: components/ui/currency-display.tsx (rewritten), lib/utils/currency.ts (exported CURRENCY_SYMBOLS)
+- **Learnings for future iterations:**
+  - CURRENCY_SYMBOLS is now exported from lib/utils/currency.ts — use when you need symbol without full formatCurrency
+  - CurrencyDisplay now uses useSpring + useMotionValue for lightweight number animation (not per-digit)
+  - motionValue.jump(amount) sets value instantly without animation — use for initial render
+  - motionValue.set(amount) animates to new value via spring — use for subsequent changes
+  - Flash highlight: bg-accent/15 with transitionDuration trick (0ms on, 400ms off) for instant-on, fade-off effect
+  - AnimatePresence mode="wait" with initial={false} prevents animation on first render but crossfades on symbol change
+  - formatNumber() helper strips currency symbol (uses AUD with showSymbol:false) — the symbol is rendered separately for crossfade
+  - isInitialMount ref prevents animation from 0 on first render — all subsequent value/currency changes animate
 ---
