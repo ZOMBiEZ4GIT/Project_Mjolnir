@@ -118,6 +118,8 @@
 - PriceTimestamp (components/holdings/price-timestamp.tsx) shows relative time + tooltip with exact time — three states: fresh/stale/error
 - PriceSkeleton (components/holdings/price-skeleton.tsx) loading skeleton for price cells — variant="price" (3-bar) or variant="value" (single-bar)
 - TanStack Query: `isFetching && !isLoading` detects background refetches without triggering initial skeleton
+- Currency bar colours: AUD=`bg-positive` (green), NZD=`bg-blue-400` (blue), USD=`bg-amber-500` (amber) — use in progress bars and charts
+- AnimatedPercentage pattern: requestAnimationFrame loop with ease-out cubic for lightweight percentage transitions (no framer-motion dependency)
 
 - CurrencyToggle (components/ui/currency-toggle.tsx) is a horizontal pill toggle with Framer Motion layoutId='currency-indicator' — replaces CurrencySelector dropdown on dashboard
 - CURRENCY_SYMBOLS exported from lib/utils/currency.ts — use for displaying currency symbol separately from formatted number
@@ -208,4 +210,19 @@ Started: 2026-02-06
   - `text-body-sm` design token used instead of `text-xs` for timestamp line
   - Tooltip styled with `bg-card border border-border rounded-lg p-3 shadow-lg` — consistent with CurrencyDisplay tooltip pattern
   - Inline mode uses `bg-card/50` instead of `bg-background/50` — matches card container pattern from codebase
+---
+
+## 2026-02-06 - US-007
+- Animated currency exposure progress bars with stagger, NumberTicker, and hover effects
+- Files changed: components/dashboard/currency-exposure.tsx
+- **Learnings for future iterations:**
+  - Progress bars use Framer Motion `motion.div` with `initial={{ width: "0%" }}` → `animate={{ width: target }}` for smooth fill animation
+  - Stagger delay on progress bars: `delay: index * 0.05` on each bar's transition — separate from staggerContainer children stagger
+  - Rows stagger in via `exposureStaggerContainer` (50ms staggerChildren) + `staggerItem` variants on each `ExposureItem`
+  - AnimatedPercentage uses raw `requestAnimationFrame` loop with ease-out cubic — lighter than useSpring for simple percentage labels
+  - `getCurrencyBarColor` returns design token colours: AUD=`bg-positive`, NZD=`bg-blue-400`, USD=`bg-amber-500`
+  - `getCurrencyBadgeColor` returns `/20` opacity variants for the currency icon badge background
+  - Old `getCurrencyColor` + `bg-opacity-20` pattern replaced — Tailwind v3+ supports `bg-positive/20` directly
+  - Row hover: `hover:bg-accent/5` with `rounded-lg px-2 py-1.5 -mx-2` for padded hover area without affecting layout
+  - NumberTicker used for value amounts — animates on currency change (e.g., AUD→USD recalculation)
 ---
