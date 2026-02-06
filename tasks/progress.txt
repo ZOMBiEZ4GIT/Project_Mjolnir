@@ -213,3 +213,15 @@ Started: 2026-02-07
   - `cn()` for conditional className merging: `state === "success" && "text-positive border-positive/30"`
 ---
 
+## 2026-02-07 - US-006
+- Enhanced import-results.tsx with animated counts and stagger animations
+- Files changed: components/import/import-results.tsx
+- **Learnings for future iterations:**
+  - AnimatedCount: useSpring + useMotionValue + .on("change") for performant integer animation
+  - motionValue.jump() for instant (reduced motion), motionValue.set() for animated
+  - Three-card grid (grid-cols-3 gap-3) for Imported/Skipped/Errors — always show all three
+  - Added `suggestion` field to ImportError interface in preparation for US-007
+  - Success banner: border-positive/30 bg-positive/10 with CheckCircle2 icon
+  - Error row badge changed from bg-destructive/10 to bg-muted rounded-full pill
+---
+
