@@ -175,3 +175,19 @@ Started: 2026-02-07
   - `pointer-events-none` and `aria-hidden="true"` on decorative background layers is important
 ---
 
+## 2026-02-07 - US-002
+- Created `components/effects/hero-beams.tsx` — 5 thin semi-transparent purple beams that drift upward
+- Added `beam-drift` keyframe to tailwind.config.ts — translateY(100%) to translateY(-100%) with opacity fade
+- 5 animation variants (beam-drift-1 through beam-drift-5) with staggered delays (0-4s) and varied durations (10-14s)
+- Beams use `w-px` (1px) or `w-[2px]` with purple-400/10 to purple-500/15 gradient opacity (10-15% range)
+- Integrated HeroBeams into net-worth-hero.tsx — renders when `!shouldReduceMotion`
+- Beams contained via `overflow-hidden rounded-2xl` on container — no bleed outside card
+- GPU-accelerated: only transform (translateY, scaleY) and opacity animated
+- Files changed: components/effects/hero-beams.tsx (new), tailwind.config.ts, components/dashboard/net-worth-hero.tsx
+- **Learnings for future iterations:**
+  - Beam containment: `overflow-hidden rounded-2xl` on absolute container matches parent card's border radius
+  - Conditional rendering with `{!shouldReduceMotion && <Effect />}` is cleaner than CSS-only hide for pure decorative effects
+  - Staggered animation delays (2s, 3s, 4s) create more natural movement than synchronized beams
+  - `bg-gradient-to-t from-transparent via-color to-transparent` creates a nice beam line that fades at both ends
+---
+
