@@ -72,6 +72,9 @@
 - Transaction action colour mapping: BUY=positive/green, SELL=destructive/red, DIVIDEND=accent/purple, SPLIT=blue-400/blue-500
 - onTransactionSaved/onDeleted callbacks enable row highlight and fade-out animations from parent component
 
+- CheckInModal is a 3-step wizard (Select Month → Update Holdings → Review & Save) with currentStep state (0-2)
+- animate-shake keyframes defined in tailwind.config.ts — use `animate-shake` class with useState toggle + setTimeout auto-clear
+- Type icon mapping: super=Landmark, cash=Wallet, debt=CreditCard (from lucide-react)
 - CheckinPrompt (components/dashboard/checkin-prompt.tsx) replaces CheckInPromptCard — moved to dashboard/ directory
 - sessionStorage dismissal pattern: use `mounted` state + useEffect to avoid hydration mismatch when reading sessionStorage
 - Accent glow prompt card: `border-accent/30 bg-card/50 shadow-glow-sm` for attention-grabbing cards
@@ -123,5 +126,24 @@ Started: 2026-02-06
   - MonthSelector uses same `formatMonthYear` helper as check-in-modal — could be extracted to shared util later
   - Card selection pattern: `border-accent bg-accent/10` for selected, `border-border bg-card/50` for unselected
   - Grid layout `grid-cols-1 sm:grid-cols-2` provides responsive card arrangement
+---
+
+## 2026-02-06 - US-004
+- Refactored check-in-modal.tsx into 3-step wizard: Select Month → Update Holdings → Review & Save
+- Integrated CheckinStepper (US-002) at top of modal showing progress
+- Integrated MonthSelector (US-003) as the Step 1 UI replacing the old Select dropdown
+- Step 1 shows holdings count + type breakdown badges (Landmark/Wallet/CreditCard icons)
+- Step 2 preserves all existing holding entry forms, adds validation on Continue
+- Step 3 shows review summary with formatted currency amounts, grouped by type with icons
+- Added error shake animation (`animate-shake` keyframes in tailwind.config.ts) on validation failure
+- Footer navigation: Cancel/Continue on Step 1, Back/Continue on Step 2, Back/Save All on Step 3
+- Removed unused Select component imports (replaced by MonthSelector)
+- Files changed: components/check-in/check-in-modal.tsx (refactored), tailwind.config.ts (added shake animation)
+- **Learnings for future iterations:**
+  - Wizard state (currentStep) resets on modal close via handleOpenChange
+  - Error shake pattern: `useState(shakeStep2)` + `setTimeout(() => setShake(false), 500)` to auto-clear
+  - Focus first error input: query `.border-destructive input` within step ref container
+  - Review step uses `formatCurrency()` helper for consistent display — could be extracted to shared util
+  - `typeIcons` mapping (Landmark=super, Wallet=cash, CreditCard=debt) — reusable for other type displays
 ---
 
