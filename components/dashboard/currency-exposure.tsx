@@ -68,7 +68,7 @@ function getCurrencyBarColor(currency: Currency): string {
     case "USD":
       return "bg-amber-500";
     default:
-      return "bg-gray-500";
+      return "bg-muted";
   }
 }
 
@@ -84,7 +84,7 @@ function getCurrencyBadgeColor(currency: Currency): string {
     case "USD":
       return "bg-amber-500/20";
     default:
-      return "bg-gray-500/20";
+      return "bg-muted/20";
   }
 }
 
@@ -229,7 +229,7 @@ function ExposureItem({
             <span className="font-medium text-foreground">
               {currency}
             </span>
-            <span className="text-body-sm text-muted-foreground ml-2">
+            <span className="text-body-sm text-foreground font-medium ml-2">
               {getCurrencyDisplayName(currency)}
             </span>
             <span className="text-body-sm text-muted-foreground ml-2">
