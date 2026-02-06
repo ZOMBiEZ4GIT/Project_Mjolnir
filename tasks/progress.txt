@@ -264,3 +264,13 @@ Started: 2026-02-06
   - Balance field: `z.coerce.number()` handles string-to-number conversion automatically, eliminating manual `parseFloat` calls
 ---
 
+## 2026-02-06 - US-011
+- What was implemented: Migrated delete-snapshot-dialog.tsx and delete-transaction-dialog.tsx from plain AlertDialog to AnimatedAlertDialog. Migrated delete-transaction-dialog.tsx from raw `toast` calls to `showSuccess`/`showError` helpers.
+- Files changed: components/snapshots/delete-snapshot-dialog.tsx, components/transactions/delete-transaction-dialog.tsx
+- **Learnings for future iterations:**
+  - Delete dialog migration is a straightforward import swap — AlertDialog→AnimatedAlertDialog, AlertDialogX→AnimatedAlertDialogX prefix change
+  - delete-snapshot-dialog.tsx was already using toast helpers from US-006 — only needed the AlertDialog→AnimatedAlertDialog swap
+  - delete-transaction-dialog.tsx still had raw `toast.success`/`toast.error` from sonner — migrated to `showSuccess`/`showError` from toast-helpers
+  - All detail information (holding names, amounts, warnings, cost basis notice) preserved unchanged — only wrapper components changed
+---
+

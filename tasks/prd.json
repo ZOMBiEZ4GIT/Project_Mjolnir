@@ -201,8 +201,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced AlertDialog imports with AnimatedAlertDialog equivalents in both delete-snapshot-dialog.tsx and delete-transaction-dialog.tsx. Migrated delete-transaction-dialog.tsx from raw toast.success/toast.error to showSuccess/showError helpers. delete-snapshot-dialog.tsx already had toast helpers from US-006. All existing detail information (holding name, amounts, warnings) preserved unchanged."
     },
     {
       "id": "US-012",
