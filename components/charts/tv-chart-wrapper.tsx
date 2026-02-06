@@ -17,6 +17,7 @@ import {
   ColorType,
   CrosshairMode,
   type Time,
+  type MouseEventParams,
 } from "lightweight-charts";
 
 // ---------------------------------------------------------------------------
@@ -35,6 +36,16 @@ export interface TVDataPoint {
   value: number;
 }
 
+/** Crosshair move event data passed to onCrosshairMove callback */
+export interface TVCrosshairData {
+  time: Time;
+  value: number;
+  /** Logical x position relative to chart container (pixels) */
+  x: number;
+  /** Logical y position relative to chart container (pixels) */
+  y: number;
+}
+
 export interface TVChartWrapperProps {
   data: TVDataPoint[];
   height?: number;
@@ -43,6 +54,8 @@ export interface TVChartWrapperProps {
   areaStyle?: AreaSeriesPartialOptions;
   /** Additional chart options to merge */
   chartOptions?: DeepPartial<ChartOptions>;
+  /** Callback fired on crosshair move — null when cursor leaves */
+  onCrosshairMove?: (data: TVCrosshairData | null) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -54,10 +67,13 @@ export function TVChartWrapper({
   className,
   areaStyle,
   chartOptions,
+  onCrosshairMove,
 }: TVChartWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
+  const onCrosshairMoveRef = useRef(onCrosshairMove);
+  onCrosshairMoveRef.current = onCrosshairMove;
 
   // Stable callback to build the chart
   const initChart = useCallback(() => {
@@ -110,6 +126,30 @@ export function TVChartWrapper({
 
     series.setData(data);
     chart.timeScale().fitContent();
+
+    // Subscribe to crosshair move for custom tooltip
+    chart.subscribeCrosshairMove((param: MouseEventParams) => {
+      const cb = onCrosshairMoveRef.current;
+      if (!cb) return;
+
+      if (!param.time || !param.point) {
+        cb(null);
+        return;
+      }
+
+      const seriesData = param.seriesData.get(series);
+      if (!seriesData || !("value" in seriesData)) {
+        cb(null);
+        return;
+      }
+
+      cb({
+        time: param.time,
+        value: (seriesData as { value: number }).value,
+        x: param.point.x,
+        y: param.point.y,
+      });
+    });
 
     chartRef.current = chart;
     seriesRef.current = series;

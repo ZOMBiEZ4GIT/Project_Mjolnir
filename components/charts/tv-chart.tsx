@@ -16,4 +16,4 @@ const TVChart = dynamic<TVChartWrapperProps>(
 );
 
 export { TVChart };
-export type { TVChartWrapperProps, TVDataPoint } from "./tv-chart-wrapper";
+export type { TVChartWrapperProps, TVDataPoint, TVCrosshairData } from "./tv-chart-wrapper";
