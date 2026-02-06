@@ -5,6 +5,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { SkipLink } from "@/components/shared/skip-link";
+import { AxeProvider } from "@/components/providers/axe-provider";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -21,6 +22,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         <SkipLink />
         {children}
         <Toaster />
+        <AxeProvider />
       </body>
     </html>
   );
