@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
@@ -160,6 +160,31 @@ function formatDate(dateString: string): string {
 }
 
 /**
+ * Get the month key from a date string (YYYY-MM)
+ */
+function getMonthKey(dateString: string): string {
+  return dateString.slice(0, 7);
+}
+
+/**
+ * Format a month key (YYYY-MM) to display format (e.g., "February 2026")
+ */
+function formatMonthLabel(monthKey: string): string {
+  const [year, month] = monthKey.split("-");
+  const date = new Date(Number(year), Number(month) - 1, 1);
+  return date.toLocaleDateString("en-AU", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+interface TransactionGroup {
+  monthKey: string;
+  label: string;
+  transactions: TransactionWithHolding[];
+}
+
+/**
  * Get the color class for an action type
  * BUY/DIVIDEND: green
  * SELL: red
@@ -304,6 +329,34 @@ export default function TransactionsPage() {
       displayCurrencyCode,
     };
   }, [transactions, convert, displayCurrency]);
+
+  // Group transactions by month (reverse chronological)
+  const transactionGroups = useMemo<TransactionGroup[]>(() => {
+    if (!transactions || transactions.length === 0) {
+      return [];
+    }
+
+    const groupMap = new Map<string, TransactionWithHolding[]>();
+
+    for (const transaction of transactions) {
+      const key = getMonthKey(transaction.date);
+      const group = groupMap.get(key);
+      if (group) {
+        group.push(transaction);
+      } else {
+        groupMap.set(key, [transaction]);
+      }
+    }
+
+    // Sort groups by month key descending (most recent first)
+    const sortedKeys = Array.from(groupMap.keys()).sort((a, b) => b.localeCompare(a));
+
+    return sortedKeys.map((key) => ({
+      monthKey: key,
+      label: formatMonthLabel(key),
+      transactions: groupMap.get(key)!,
+    }));
+  }, [transactions]);
 
   // State for edit and delete dialogs
   const [editTransaction, setEditTransaction] = useState<TransactionWithHolding | null>(null);
@@ -497,137 +550,159 @@ export default function TransactionsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.map((transaction) => {
-              const total = calculateTotal(transaction);
-              return (
-                <TableRow key={transaction.id} className="border-border">
-                  <TableCell className="text-muted-foreground sticky left-0 bg-background z-10">
-                    <div className="flex flex-col">
-                      <span>{formatDate(transaction.date)}</span>
-                      {/* Show holding name on mobile only (since Holding column is hidden) */}
-                      <span className="text-xs text-muted-foreground sm:hidden">
-                        {transaction.holding.symbol || transaction.holding.name}
+            {transactionGroups.map((group) => (
+              <Fragment key={group.monthKey}>
+                {/* Sticky month header */}
+                <TableRow
+                  className="border-border hover:bg-transparent"
+                >
+                  <TableCell
+                    colSpan={8}
+                    className="sticky top-0 z-20 bg-background border-b border-border px-4 py-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-semibold text-foreground">
+                        {group.label}
                       </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-foreground font-medium hidden sm:table-cell">
-                    {transaction.holding.symbol || transaction.holding.name}
-                    {transaction.holding.symbol && (
-                      <span className="text-muted-foreground text-sm ml-2 hidden md:inline">
-                        {transaction.holding.name}
+                      <span className="text-xs text-muted-foreground">
+                        {group.transactions.length} transaction{group.transactions.length !== 1 ? "s" : ""}
                       </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium ${getActionColorClass(
-                        transaction.action
-                      )}`}
-                    >
-                      {transaction.action}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-right font-mono hidden md:table-cell">
-                    {transaction.action === "SPLIT"
-                      ? `${transaction.quantity}:1`
-                      : Number(transaction.quantity).toLocaleString("en-AU", {
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 8,
-                        })}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-right font-mono hidden sm:table-cell">
-                    {transaction.action === "SPLIT" ? (
-                      "—"
-                    ) : (
-                      <CurrencyDisplay
-                        amount={Number(transaction.unitPrice)}
-                        currency={transaction.currency}
-                        isLoading={currencyLoading}
-                        className="justify-end"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-right font-mono hidden lg:table-cell">
-                    {transaction.action === "SPLIT" ||
-                    Number(transaction.fees) === 0 ? (
-                      "—"
-                    ) : (
-                      <CurrencyDisplay
-                        amount={Number(transaction.fees)}
-                        currency={transaction.currency}
-                        isLoading={currencyLoading}
-                        className="justify-end"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell className="text-foreground text-right font-mono font-medium">
-                    {transaction.action === "SPLIT" ? (
-                      "—"
-                    ) : (
-                      <CurrencyDisplay
-                        amount={total}
-                        currency={transaction.currency}
-                        isLoading={currencyLoading}
-                        className="justify-end"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-0.5 sm:gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-foreground"
-                        onClick={() => setEditTransaction(transaction)}
-                      >
-                        <span className="sr-only">Edit</span>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="sm:w-4 sm:h-4"
-                        >
-                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                          <path d="m15 5 4 4" />
-                        </svg>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleteTransaction(transaction)}
-                      >
-                        <span className="sr-only">Delete</span>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="sm:w-4 sm:h-4"
-                        >
-                          <path d="M3 6h18" />
-                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                          <line x1="10" x2="10" y1="11" y2="17" />
-                          <line x1="14" x2="14" y1="11" y2="17" />
-                        </svg>
-                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
-              );
-            })}
+                {group.transactions.map((transaction) => {
+                  const total = calculateTotal(transaction);
+                  return (
+                    <TableRow key={transaction.id} className="border-border">
+                      <TableCell className="text-muted-foreground sticky left-0 bg-background z-10">
+                        <div className="flex flex-col">
+                          <span>{formatDate(transaction.date)}</span>
+                          {/* Show holding name on mobile only (since Holding column is hidden) */}
+                          <span className="text-xs text-muted-foreground sm:hidden">
+                            {transaction.holding.symbol || transaction.holding.name}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-foreground font-medium hidden sm:table-cell">
+                        {transaction.holding.symbol || transaction.holding.name}
+                        {transaction.holding.symbol && (
+                          <span className="text-muted-foreground text-sm ml-2 hidden md:inline">
+                            {transaction.holding.name}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium ${getActionColorClass(
+                            transaction.action
+                          )}`}
+                        >
+                          {transaction.action}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-right font-mono hidden md:table-cell">
+                        {transaction.action === "SPLIT"
+                          ? `${transaction.quantity}:1`
+                          : Number(transaction.quantity).toLocaleString("en-AU", {
+                              minimumFractionDigits: 0,
+                              maximumFractionDigits: 8,
+                            })}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-right font-mono hidden sm:table-cell">
+                        {transaction.action === "SPLIT" ? (
+                          "—"
+                        ) : (
+                          <CurrencyDisplay
+                            amount={Number(transaction.unitPrice)}
+                            currency={transaction.currency}
+                            isLoading={currencyLoading}
+                            className="justify-end"
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-right font-mono hidden lg:table-cell">
+                        {transaction.action === "SPLIT" ||
+                        Number(transaction.fees) === 0 ? (
+                          "—"
+                        ) : (
+                          <CurrencyDisplay
+                            amount={Number(transaction.fees)}
+                            currency={transaction.currency}
+                            isLoading={currencyLoading}
+                            className="justify-end"
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell className="text-foreground text-right font-mono font-medium">
+                        {transaction.action === "SPLIT" ? (
+                          "—"
+                        ) : (
+                          <CurrencyDisplay
+                            amount={total}
+                            currency={transaction.currency}
+                            isLoading={currencyLoading}
+                            className="justify-end"
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-0.5 sm:gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-foreground"
+                            onClick={() => setEditTransaction(transaction)}
+                          >
+                            <span className="sr-only">Edit</span>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="sm:w-4 sm:h-4"
+                            >
+                              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                              <path d="m15 5 4 4" />
+                            </svg>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => setDeleteTransaction(transaction)}
+                          >
+                            <span className="sr-only">Delete</span>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="sm:w-4 sm:h-4"
+                            >
+                              <path d="M3 6h18" />
+                              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                              <line x1="10" x2="10" y1="11" y2="17" />
+                              <line x1="14" x2="14" y1="11" y2="17" />
+                            </svg>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </Fragment>
+            ))}
           </TableBody>
         </Table>
       </div>
