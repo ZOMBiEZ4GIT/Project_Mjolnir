@@ -477,6 +477,7 @@ export default function HoldingsPage() {
         onRetryPrice={handleRetryPrice}
         retryingPriceIds={retryingPriceIds}
         groupBy="type"
+        typeFilter={typeFilter}
       />
     </div>
   );
