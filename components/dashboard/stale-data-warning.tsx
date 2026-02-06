@@ -161,24 +161,24 @@ export function StaleDataWarning() {
   const staleCount = data.staleHoldings.length;
 
   return (
-    <div className="rounded-lg border border-yellow-600/50 bg-yellow-900/20 overflow-hidden">
+    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 overflow-hidden">
       {/* Header - always visible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-yellow-900/30 transition-colors"
+        className="w-full flex items-center justify-between p-4 hover:bg-amber-500/15 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0" />
+          <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
           <div className="text-left">
-            <p className="text-sm font-medium text-yellow-400">
+            <p className="text-sm font-medium text-amber-400">
               {staleCount} holding{staleCount !== 1 ? "s" : ""} with stale data
             </p>
-            <p className="text-xs text-yellow-500/80">
+            <p className="text-xs text-amber-500/80">
               Your net worth calculation may not be fully accurate
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-yellow-500">
+        <div className="flex items-center gap-2 text-amber-500">
           <span className="text-xs">View details</span>
           {isExpanded ? (
             <ChevronUp className="h-4 w-4" />
@@ -190,15 +190,15 @@ export function StaleDataWarning() {
 
       {/* Expanded content - list of stale holdings */}
       {isExpanded && (
-        <div className="border-t border-yellow-600/30 bg-yellow-950/20">
-          <div className="divide-y divide-yellow-600/20">
+        <div className="border-t border-amber-500/20 bg-amber-950/20">
+          <div className="divide-y divide-amber-500/20">
             {data.staleHoldings.map((holding) => (
               <div
                 key={holding.holdingId}
-                className="p-4 flex items-center justify-between hover:bg-yellow-900/20 transition-colors"
+                className="p-4 flex items-center justify-between hover:bg-amber-500/10 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-yellow-500/10 text-yellow-500">
+                  <div className="p-2 rounded-full bg-amber-500/10 text-amber-500">
                     {getStaleReasonIcon(holding.reason)}
                   </div>
                   <div>
@@ -220,7 +220,7 @@ export function StaleDataWarning() {
                   {(holding.reason === "price_expired" ||
                     holding.reason === "no_price") && (
                     <button
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-yellow-600/20 text-yellow-400 hover:bg-yellow-600/30 transition-colors"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors"
                       title={getActionText(holding.reason)}
                     >
                       <RefreshCw className="h-3 w-3" />
@@ -240,8 +240,8 @@ export function StaleDataWarning() {
           </div>
 
           {/* Footer with summary */}
-          <div className="p-4 border-t border-yellow-600/20 bg-yellow-950/30">
-            <p className="text-xs text-yellow-500/80">
+          <div className="p-4 border-t border-amber-500/20 bg-amber-950/30">
+            <p className="text-xs text-amber-500/80">
               {data.staleHoldings.some(
                 (h) => h.reason === "price_expired" || h.reason === "no_price"
               ) && (
