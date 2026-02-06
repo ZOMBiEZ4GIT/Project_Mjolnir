@@ -28,6 +28,10 @@
 - Delete confirm button: `bg-destructive hover:bg-destructive/90 text-foreground`; cancel: `bg-card border-border text-foreground hover:bg-muted`
 - Select dropdowns: `bg-background border-border text-muted-foreground` for trigger, `focus:bg-card focus:text-foreground` for items
 - Warning/info colours (yellow-*, blue-*) are semantic and intentionally NOT part of design token migration
+- Interactive toggle buttons (show/hide contributions): use `text-primary hover:text-primary/80` pattern
+- html2canvas backgroundColor requires raw hex — use `#18181b` to match --card token
+- Email templates (components/emails/) use inline hex values — email clients don't support CSS variables
+- Only legitimate remaining hardcoded grey: `bg-gray-500` fallback in category indicator functions (asset-allocation, currency-exposure)
 
 ---
 
@@ -162,4 +166,24 @@ Started: 2026-02-05
   - Delete confirmation buttons: `bg-destructive hover:bg-destructive/90 text-foreground` with cancel buttons using `bg-card border-border text-foreground hover:bg-muted`
   - Dividend totals and positive values should use `text-positive` (not text-green-500)
   - Info boxes (like split explanation) use blue-* which are intentional semantic colours, not grey-based theme tokens
+---
+
+## 2026-02-06 - US-010
+- Replaced all remaining hardcoded Tailwind colour classes across 30 files with design token equivalents
+- components/check-in/: text-blue-400 hover:text-blue-300 → text-primary hover:text-primary/80 (contributions toggle)
+- components/snapshots/: same blue toggle pattern → text-primary hover:text-primary/80
+- components/charts/: chart-export-button.tsx hex #1f2937 → #18181b (matches --card), chart-skeleton.tsx SVG hex → #3f3f46 (matches muted)
+- components/ui/: tooltip (bg-gray-900 → bg-background), currency-selector/display/toggle/empty-state (bg-gray-700 → bg-muted, text-gray-* → text-muted-foreground/text-foreground), fx-rates-display (all grey classes → design tokens, text-green-500 → text-positive)
+- app/page.tsx: text-white → text-foreground, text-gray-400 → text-muted-foreground
+- app/test-currency/page.tsx: all grey/white → design tokens
+- app/unsubscribed/page.tsx: bg-gray-900 → bg-background, bg-gray-800 → bg-card, border-gray-700 → border-border, text-green-500 → text-positive, text-red-500 → text-destructive, bg-blue-600 → bg-primary, bg-gray-700 → bg-muted
+- Also included uncommitted changes from previous iterations: app/(auth)/ pages, app/(dashboard)/ pages, components/check-in/, components/import/, components/settings/, components/snapshots/, components/charts/ chart-error.tsx
+- Intentionally preserved: yellow-* warning colours, blue-*/purple-* category indicators, Recharts SVG hex values, email template hex colours, bg-gray-500 category fallback in asset-allocation/currency-exposure
+- **Learnings for future iterations:**
+  - Interactive toggle buttons (show/hide) should use text-primary hover:text-primary/80 (not text-blue-400)
+  - html2canvas backgroundColor needs a raw hex — use #18181b to match --card token
+  - SVG stroke in skeletons: use #3f3f46 (zinc-700) to match the muted token
+  - components/ui/ files had many grey classes that were overlooked in initial scans — always check components/ui/ directory
+  - Email templates (components/emails/) use inline hex by necessity — email clients don't support CSS variables
+  - The only legitimate remaining hardcoded grey classes are bg-gray-500 fallbacks in category indicator functions (asset-allocation.tsx, currency-exposure.tsx)
 ---
