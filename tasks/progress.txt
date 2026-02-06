@@ -83,6 +83,8 @@
 - Step container needs `overflow-hidden` to clip sliding content during transitions
 - Accordion expand animation: `motion.div` with `height: 0` → `height: "auto"`, `overflow-hidden`, wrapped in `AnimatePresence initial={false}`
 - Check-in status API returns `latestContributions` for pre-populating super contribution fields
+- Success summary pattern: store mutation result in state + `showSuccess` boolean, render different content in same step (no extra wizard step)
+- CheckinStepper accepts currentStep=3 (beyond max) to mark all steps completed — no code change needed in stepper
 
 ---
 
@@ -197,5 +199,26 @@ Started: 2026-02-06
   - Debt change colour inversion: `isDebt ? changeAmount < 0 : changeAmount > 0` for "positive" (green) change
   - Percentage change calculation: `Math.abs((new - prev) / prev) * 100` — guard against division by zero when prevNum is 0
   - Warning/info yellow colours (yellow-500) are intentionally NOT design tokens — used for semantic warnings
+---
+
+## 2026-02-06 - US-008
+- Added success summary that replaces Step 3 review content after successful save
+- Animated checkmark: spring animation with green circle (bg-positive/20) and Check icon
+- Displays "Check-in Complete!" title + "X snapshots saved for [Month]" subtitle
+- Brief list of saved holdings showing icon, name, and balance in compact card format
+- Net worth change indicator: sums balance changes across all holdings (debt inverted), shows green/red card with arrow
+- 'Done' button replaces footer navigation in success state
+- Stepper shows all steps completed (passes currentStep=3, beyond max index)
+- Modal close after success triggers net-worth and net-worth-history cache invalidation
+- Toast already fires from onSuccess handler (unchanged)
+- Save mutation now stores result in state and sets showSuccess flag instead of closing modal
+- Files changed: components/check-in/check-in-modal.tsx (updated)
+- **Learnings for future iterations:**
+  - `showSuccess` flag pattern: store mutation result in state, toggle flag, render different content in same step
+  - Spring animation for checkmark: `type: "spring", stiffness: 200, damping: 15` with staggered delay for inner/outer elements
+  - Stepper accepts currentStep beyond max index — all steps show as completed (index < currentStep), none as current
+  - Net worth change approximation: sum balance changes, invert debt changes (decrease = positive for net worth)
+  - `formatCurrency(String(totalChange), "AUD")` — cast number to string for the helper
+  - IIFE pattern `{(() => {...})()}` in JSX for complex conditional rendering with calculations
 ---
 
