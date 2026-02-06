@@ -2,15 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import {
-  LayoutDashboard,
-  Wallet,
-  ArrowRightLeft,
-  Camera,
-  Upload,
-  Settings,
-  Keyboard,
-} from "lucide-react";
+import { Keyboard } from "lucide-react";
+import { navItems } from "@/lib/navigation";
 
 import {
   CommandDialog,
@@ -22,45 +15,6 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from "@/components/ui/command";
-
-const navigationItems = [
-  {
-    href: "/dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    description: "View net worth overview",
-  },
-  {
-    href: "/holdings",
-    label: "Holdings",
-    icon: Wallet,
-    description: "Manage your assets",
-  },
-  {
-    href: "/transactions",
-    label: "Transactions",
-    icon: ArrowRightLeft,
-    description: "View buy/sell history",
-  },
-  {
-    href: "/snapshots",
-    label: "Snapshots",
-    icon: Camera,
-    description: "Track balances over time",
-  },
-  {
-    href: "/import",
-    label: "Import",
-    icon: Upload,
-    description: "Import data from CSV",
-  },
-  {
-    href: "/settings",
-    label: "Settings",
-    icon: Settings,
-    description: "Configure preferences",
-  },
-];
 
 export function CommandMenu() {
   const [open, setOpen] = React.useState(false);
@@ -90,7 +44,7 @@ export function CommandMenu() {
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
         <CommandGroup heading="Navigation">
-          {navigationItems.map((item) => (
+          {navItems.map((item) => (
             <CommandItem
               key={item.href}
               value={item.label}

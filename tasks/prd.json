@@ -185,8 +185,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced local navigationItems array with shared navItems from lib/navigation.ts. Removed 6 duplicated lucide-react icon imports (LayoutDashboard, Wallet, ArrowRightLeft, Camera, Upload, Settings) — only Keyboard icon remains for shortcuts section. Command menu now includes Export item that was previously missing. Nav items in command menu now match sidebar exactly."
     },
     {
       "id": "US-011",

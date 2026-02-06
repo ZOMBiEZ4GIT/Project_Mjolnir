@@ -381,3 +381,16 @@ Started: 2026-02-06
   - amber-400 for stale data warnings is an intentional semantic color, not a design token violation
   - All 6 non-dashboard page files already used design tokens from previous UX-1 design token migration
 ---
+
+## 2026-02-06 - US-010
+- Updated components/command-menu.tsx to import navItems from lib/navigation.ts
+- Removed local navigationItems array (duplicated nav item definitions)
+- Removed 6 unused lucide-react icon imports (LayoutDashboard, Wallet, ArrowRightLeft, Camera, Upload, Settings) — only Keyboard icon remains for shortcuts section
+- Command menu now includes Export item that was previously missing from the local array
+- Navigation items in command menu now match sidebar exactly (7 items vs previous 6)
+- Files changed: components/command-menu.tsx
+- **Learnings for future iterations:**
+  - Command menu previously had its own nav items array that was out of sync with lib/navigation.ts (missing Export)
+  - After this change, lib/navigation.ts is the single source of truth — sidebar, mobile nav, and command menu all import from there
+  - The NavItem type from lib/navigation.ts has the same shape needed by command menu (href, label, icon, description)
+---
