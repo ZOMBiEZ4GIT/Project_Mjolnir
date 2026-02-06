@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
@@ -79,10 +79,19 @@ function formatMonthYear(dateStr: string): string {
   return date.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
 }
 
+// Latest contributions data from API
+interface LatestContributions {
+  [holdingId: string]: {
+    employerContrib: string;
+    employeeContrib: string;
+  };
+}
+
 // Fetch holdings needing updates for a specific month
 async function fetchHoldingsForMonth(month: string): Promise<{
   holdings: HoldingToUpdate[];
   currentMonth: string;
+  latestContributions: LatestContributions;
 }> {
   const response = await fetch(`/api/check-in/status?month=${month}`);
   if (!response.ok) {
@@ -252,6 +261,7 @@ function SuperHoldingEntry({
   error,
 }: SuperHoldingEntryProps) {
   const currencySymbol = currencySymbols[holding.currency] || holding.currency;
+  const reducedMotion = useReducedMotion();
 
   const handleBalanceChange = (value: string) => {
     onDataChange(holding.id, { ...data, balance: value });
@@ -322,44 +332,55 @@ function SuperHoldingEntry({
               : "Add Contributions"}
           </button>
 
-          {data.showContributions && (
-            <div className="pl-4 space-y-3 border-l-2 border-border">
-              <div className="flex items-center justify-between">
-                <label className="text-sm text-muted-foreground">
-                  Employer Contribution
-                </label>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">{currencySymbol}</span>
-                  <Input
-                    type="number"
-                    placeholder="0.00"
-                    value={data.employerContrib}
-                    onChange={(e) => handleEmployerContribChange(e.target.value)}
-                    className="w-28 bg-background border-border text-foreground text-right"
-                    step="0.01"
-                    min="0"
-                  />
+          <AnimatePresence initial={false}>
+            {data.showContributions && (
+              <motion.div
+                key="contributions"
+                initial={reducedMotion ? false : { height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={reducedMotion ? undefined : { height: 0, opacity: 0 }}
+                transition={reducedMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
+                className="overflow-hidden"
+              >
+                <div className="pl-4 space-y-3 border-l-2 border-border">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm text-muted-foreground">
+                      Employer Contribution
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">{currencySymbol}</span>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        value={data.employerContrib}
+                        onChange={(e) => handleEmployerContribChange(e.target.value)}
+                        className="w-28 bg-background border-border text-foreground text-right"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm text-muted-foreground">
+                      Employee Contribution
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">{currencySymbol}</span>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        value={data.employeeContrib}
+                        onChange={(e) => handleEmployeeContribChange(e.target.value)}
+                        className="w-28 bg-background border-border text-foreground text-right"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <label className="text-sm text-muted-foreground">
-                  Employee Contribution
-                </label>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">{currencySymbol}</span>
-                  <Input
-                    type="number"
-                    placeholder="0.00"
-                    value={data.employeeContrib}
-                    onChange={(e) => handleEmployeeContribChange(e.target.value)}
-                    className="w-28 bg-background border-border text-foreground text-right"
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       )}
     </div>
@@ -423,6 +444,46 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     queryFn: () => fetchHoldingsForMonth(selectedMonth),
     enabled: isLoaded && isSignedIn && open,
   });
+
+  // Pre-populate super holdings with previous contribution values
+  useEffect(() => {
+    if (!data?.latestContributions || !data?.holdings) return;
+
+    const contribs = data.latestContributions;
+    const superHoldings = data.holdings.filter(
+      (h) => h.type === "super" && !h.isDormant
+    );
+
+    const initialData: Record<string, SuperHoldingData> = {};
+    for (const holding of superHoldings) {
+      const prev = contribs[holding.id];
+      if (prev) {
+        const employer = parseFloat(prev.employerContrib);
+        const employee = parseFloat(prev.employeeContrib);
+        if (employer > 0 || employee > 0) {
+          initialData[holding.id] = {
+            balance: "",
+            employerContrib: prev.employerContrib,
+            employeeContrib: prev.employeeContrib,
+            showContributions: true,
+          };
+        }
+      }
+    }
+
+    if (Object.keys(initialData).length > 0) {
+      setSuperHoldingsData((prev) => {
+        // Only set initial data for holdings not already modified by user
+        const merged = { ...initialData };
+        for (const [id, val] of Object.entries(prev)) {
+          if (val.balance || val.employerContrib || val.employeeContrib) {
+            merged[id] = val;
+          }
+        }
+        return merged;
+      });
+    }
+  }, [data?.latestContributions, data?.holdings]);
 
   // Group holdings by type
   const groupedHoldings = useMemo(() => {

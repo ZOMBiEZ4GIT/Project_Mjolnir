@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
-import { holdings, snapshots } from "@/lib/db/schema";
-import { eq, isNull, and, inArray } from "drizzle-orm";
+import { holdings, snapshots, contributions } from "@/lib/db/schema";
+import { eq, isNull, and, inArray, desc } from "drizzle-orm";
 
 // Valid snapshot types (non-tradeable holdings)
 const snapshotTypes = ["super", "cash", "debt"] as const;
@@ -118,11 +118,52 @@ export async function GET(request: NextRequest) {
     (h) => !holdingIdsWithSnapshot.has(h.id)
   );
 
+  // Get latest contributions for active (non-dormant) super holdings
+  const superHoldingIds = holdingsMissingSnapshot
+    .filter((h) => h.type === "super" && !h.isDormant)
+    .map((h) => h.id);
+
+  const latestContributions: Record<string, { employerContrib: string; employeeContrib: string }> = {};
+
+  if (superHoldingIds.length > 0) {
+    // For each super holding, get the most recent contribution
+    const allContribs = await db
+      .select({
+        holdingId: contributions.holdingId,
+        date: contributions.date,
+        employerContrib: contributions.employerContrib,
+        employeeContrib: contributions.employeeContrib,
+      })
+      .from(contributions)
+      .where(
+        and(
+          isNull(contributions.deletedAt),
+          inArray(contributions.holdingId, superHoldingIds)
+        )
+      )
+      .orderBy(desc(contributions.date));
+
+    // Take the first (most recent) per holding
+    for (const c of allContribs) {
+      if (!latestContributions[c.holdingId]) {
+        const employer = parseFloat(c.employerContrib);
+        const employee = parseFloat(c.employeeContrib);
+        if (employer > 0 || employee > 0) {
+          latestContributions[c.holdingId] = {
+            employerContrib: c.employerContrib,
+            employeeContrib: c.employeeContrib,
+          };
+        }
+      }
+    }
+  }
+
   return NextResponse.json({
     needsCheckIn: holdingsMissingSnapshot.length > 0,
     holdingsToUpdate: holdingsMissingSnapshot.length,
     totalSnapshotHoldings: allSnapshotHoldings.length,
     currentMonth: formatMonthYear(currentMonth),
     holdings: holdingsMissingSnapshot,
+    latestContributions,
   });
 }
