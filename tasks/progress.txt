@@ -153,3 +153,16 @@ Started: 2026-02-07
 
 ---
 
+## 2026-02-07 - US-001
+- Polished file-upload.tsx with Framer Motion animations and design token states
+- Files changed: components/import/file-upload.tsx
+- **Learnings for future iterations:**
+  - Component already used mostly design tokens; main changes were animation additions
+  - AnimatePresence mode="wait" works well for toggling between dropzone and file-selected states
+  - Upload icon pulse uses `animate` with keyframe array `[1, 1.1, 1]` and `repeat: Infinity`
+  - File icon scale-in uses `initial: { scale: 0.8, opacity: 0 }` with 200ms easeOut
+  - `useReducedMotion()` returns boolean — pass `false` as initial to skip animations
+  - Drag-over state: border-accent + bg-accent/5 (not border-primary which was previous)
+  - File selected state: bg-card (not bg-muted/50 which was previous)
+---
+
