@@ -1,4 +1,6 @@
 ## Codebase Patterns
+- Warning colours: always use `text-warning`, `bg-warning/10`, `border-warning/20` — never hardcode yellow-500, yellow-400, or amber-500
+- All dialogs must use AnimatedDialog/AnimatedAlertDialog (from animated-dialog.tsx / animated-alert-dialog.tsx) — only exception is command.tsx (base shadcn)
 - Badge contrast: use `bg-accent/10` and `bg-destructive/10` (not /20) for badge backgrounds with matching text-{color} to meet WCAG AA 4.5:1
 - Design token contrast: accent is 263 84% 70%, destructive is 0 84% 63% — both verified WCAG AA on background and card surfaces
 - useRovingTabIndex hook (hooks/use-roving-tabindex.ts): provides arrow key navigation + roving tabindex for tablist/radiogroup components — returns { containerRef, handleKeyDown, getTabIndex }
@@ -381,5 +383,22 @@ Started: 2026-02-07
   - `sharp` package (already available via Next.js image processing) can generate PNGs from SVG buffers — no need for ImageMagick/rsvg
   - PWA manifest: `display: "standalone"` makes the app look native when added to home screen
   - `themeColor` in Next.js Metadata sets the `<meta name="theme-color">` tag — matches browser chrome to app background
+---
+
+## 2026-02-07 - US-013
+- Comprehensive cross-page consistency audit and fix across 15 files
+- **Warning colours:** Migrated all hardcoded `text-yellow-500`, `text-yellow-400`, `text-amber-500`, `bg-yellow-500/10`, `bg-amber-500/10` to `text-warning`, `bg-warning/10`, `border-warning/20` design tokens (10 files: unsubscribed page, check-in modal, check-in prompt card, stale indicator, delete holding/snapshot/transaction dialogs, add/edit transaction dialogs, holding detail page)
+- **Dialog animations:** Converted 3 remaining plain Dialog/AlertDialog usages to AnimatedDialog/AnimatedAlertDialog — delete-holding-dialog, add-transaction-dialog, edit-transaction-dialog
+- **Typography:** Section headings standardized to text-heading-sm/text-heading-md (checkin-prompt, group-header, settings-section, unsubscribed page), portfolio % badge uses text-label
+- **Card rounding:** Fixed unsubscribed page (rounded-lg → rounded-2xl) and check-in-prompt-card (rounded-lg → rounded-2xl)
+- **Spacing:** Import page grid gap-8 → gap-6 for consistency with other pages
+- **Reduced motion:** Fixed ImportPreview outer motion.div to fully respect prefers-reduced-motion (animate and transition now conditional)
+- **Verified as already consistent (no changes needed):** Card styling across dashboard/holdings/charts, page transitions (fade 200ms via PageWrapper), section spacing (gap-6/space-y-6), card padding (p-4 sm:p-6), reduced motion handling in all other Framer Motion components
+- Files changed: 15 files
+- **Learnings for future iterations:**
+  - `text-warning` and `bg-warning` design tokens (--warning: 38 92% 50%) should be used for ALL warning states — no hardcoded yellow/amber
+  - When using `replace_all` with Edit tool, be careful with tag prefixes like `<Dialog ` → `<AnimatedDialog` — the trailing space matters for opening tags but closing tags like `</DialogTitle>` won't match `</Dialog>` replacement
+  - Command palette's Dialog import is intentionally plain (base shadcn component) — don't convert to AnimatedDialog
+  - For text-heading-sm/md: these include font-weight 600, so remove `font-semibold` when switching to avoid redundancy
 ---
 
