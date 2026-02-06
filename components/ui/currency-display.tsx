@@ -124,6 +124,7 @@ export function CurrencyDisplay({
   const isInitialMount = React.useRef(true);
   const prevAmountRef = React.useRef(amount);
   const prevCurrencyRef = React.useRef(currency);
+  const prevShowNativeRef = React.useRef(showNative);
   const [showFlash, setShowFlash] = React.useState(false);
 
   // Update spring value when amount changes
@@ -139,11 +140,13 @@ export function CurrencyDisplay({
       isInitialMount.current = false;
       prevAmountRef.current = amount;
       prevCurrencyRef.current = currency;
+      prevShowNativeRef.current = showNative;
       return;
     }
 
     const amountChanged = prevAmountRef.current !== amount;
     const currencyChanged = prevCurrencyRef.current !== currency;
+    const showNativeChanged = prevShowNativeRef.current !== showNative;
 
     if (amountChanged || currencyChanged) {
       if (shouldReduceMotion) {
@@ -163,7 +166,15 @@ export function CurrencyDisplay({
       prevAmountRef.current = amount;
       prevCurrencyRef.current = currency;
     }
-  }, [amount, currency, motionValue, shouldReduceMotion, compact, isLoading]);
+
+    // Flash when showNative toggled (only if this display has different native currency)
+    if (showNativeChanged) {
+      if (!shouldReduceMotion && nativeCurrency && nativeCurrency !== currency) {
+        setShowFlash(true);
+      }
+      prevShowNativeRef.current = showNative;
+    }
+  }, [amount, currency, showNative, nativeCurrency, motionValue, shouldReduceMotion, compact, isLoading]);
 
   // Subscribe to spring changes and update the display
   React.useEffect(() => {
