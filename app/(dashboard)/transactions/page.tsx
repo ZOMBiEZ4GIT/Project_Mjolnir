@@ -1,18 +1,18 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, Fragment } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import type { Variants } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import {
   Table,
-  TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-  TableFooter,
 } from "@/components/ui/table";
 import {
   Select,
@@ -29,9 +29,12 @@ import { AddTransactionDialog } from "@/components/transactions/add-transaction-
 import { EditTransactionDialog } from "@/components/transactions/edit-transaction-dialog";
 import { DeleteTransactionDialog } from "@/components/transactions/delete-transaction-dialog";
 import { CurrencyDisplay } from "@/components/ui/currency-display";
+import { TransactionSummary } from "@/components/transactions/transaction-summary";
 import { CurrencyFilter, type CurrencyFilterValue } from "@/components/holdings/currency-filter";
 import type { Holding } from "@/lib/db/schema";
 import type { Currency } from "@/lib/utils/currency";
+
+const MotionTableRow = motion.create(TableRow);
 
 export const dynamic = "force-dynamic";
 
@@ -139,7 +142,12 @@ interface AggregatedTotals {
   totalSells: number;
   totalDividends: number;
   netCashFlow: number;
+  buyCount: number;
+  sellCount: number;
+  dividendCount: number;
+  totalCount: number;
   hasMixedCurrencies: boolean;
+  displayCurrencyCode: Currency;
 }
 
 /**
@@ -155,20 +163,52 @@ function formatDate(dateString: string): string {
 }
 
 /**
- * Get the color class for an action type
- * BUY/DIVIDEND: green
- * SELL: red
- * SPLIT: blue
+ * Get the month key from a date string (YYYY-MM)
+ */
+function getMonthKey(dateString: string): string {
+  return dateString.slice(0, 7);
+}
+
+/**
+ * Format a month key (YYYY-MM) to display format (e.g., "February 2026")
+ */
+function formatMonthLabel(monthKey: string): string {
+  const [year, month] = monthKey.split("-");
+  const date = new Date(Number(year), Number(month) - 1, 1);
+  return date.toLocaleDateString("en-AU", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+interface TransactionGroup {
+  monthKey: string;
+  label: string;
+  transactions: TransactionWithHolding[];
+}
+
+/**
+ * Capped stagger: 50ms per row but total stagger completes within 500ms
+ */
+function getCappedStaggerDelay(count: number): number {
+  if (count <= 1) return 0;
+  return Math.min(0.05, 0.5 / count);
+}
+
+/**
+ * Get the color class for an action type badge
+ * BUY: green, SELL: red, DIVIDEND: purple/accent, SPLIT: blue
  */
 function getActionColorClass(action: TransactionWithHolding["action"]): string {
   switch (action) {
     case "BUY":
-    case "DIVIDEND":
       return "bg-positive/20 text-positive";
     case "SELL":
       return "bg-destructive/20 text-destructive";
+    case "DIVIDEND":
+      return "bg-accent/20 text-accent";
     case "SPLIT":
-      return "bg-blue-900 text-blue-300";
+      return "bg-blue-500/20 text-blue-400";
     default:
       return "bg-muted text-muted-foreground";
   }
@@ -248,10 +288,12 @@ export default function TransactionsPage() {
     let totalBuys = 0;
     let totalSells = 0;
     let totalDividends = 0;
+    let buyCount = 0;
+    let sellCount = 0;
+    let dividendCount = 0;
 
     for (const transaction of transactions) {
       const total = calculateTotal(transaction);
-      // Convert to display currency if mixed, otherwise use native value
       const convertedTotal = hasMixedCurrencies
         ? convert(total, transaction.currency as Currency)
         : total;
@@ -259,14 +301,17 @@ export default function TransactionsPage() {
       switch (transaction.action) {
         case "BUY": {
           totalBuys += convertedTotal;
+          buyCount++;
           break;
         }
         case "SELL": {
           totalSells += convertedTotal;
+          sellCount++;
           break;
         }
         case "DIVIDEND": {
           totalDividends += convertedTotal;
+          dividendCount++;
           break;
         }
         // SPLIT has no monetary value
@@ -276,18 +321,120 @@ export default function TransactionsPage() {
     // Net cash flow: sells + dividends - buys (money in minus money out)
     const netCashFlow = totalSells + totalDividends - totalBuys;
 
+    // Currency for display: use display currency if mixed, otherwise the common native currency
+    const displayCurrencyCode: Currency = hasMixedCurrencies
+      ? displayCurrency
+      : (transactions[0].currency as Currency);
+
     return {
       totalBuys,
       totalSells,
       totalDividends,
       netCashFlow,
+      buyCount,
+      sellCount,
+      dividendCount,
+      totalCount: transactions.length,
       hasMixedCurrencies,
+      displayCurrencyCode,
     };
-  }, [transactions, convert]);
+  }, [transactions, convert, displayCurrency]);
+
+  // Group transactions by month (reverse chronological)
+  const transactionGroups = useMemo<TransactionGroup[]>(() => {
+    if (!transactions || transactions.length === 0) {
+      return [];
+    }
+
+    const groupMap = new Map<string, TransactionWithHolding[]>();
+
+    for (const transaction of transactions) {
+      const key = getMonthKey(transaction.date);
+      const group = groupMap.get(key);
+      if (group) {
+        group.push(transaction);
+      } else {
+        groupMap.set(key, [transaction]);
+      }
+    }
+
+    // Sort groups by month key descending (most recent first)
+    const sortedKeys = Array.from(groupMap.keys()).sort((a, b) => b.localeCompare(a));
+
+    return sortedKeys.map((key) => ({
+      monthKey: key,
+      label: formatMonthLabel(key),
+      transactions: groupMap.get(key)!,
+    }));
+  }, [transactions]);
 
   // State for edit and delete dialogs
   const [editTransaction, setEditTransaction] = useState<TransactionWithHolding | null>(null);
   const [deleteTransaction, setDeleteTransaction] = useState<TransactionWithHolding | null>(null);
+
+  // Highlight animation state — tracks which transaction was just saved
+  const [highlightedTransactionId, setHighlightedTransactionId] = useState<string | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Deleting animation state — tracks which transaction is fading out
+  const [deletingTransactionId, setDeletingTransactionId] = useState<string | null>(null);
+
+  const handleTransactionSaved = useCallback((transactionId: string) => {
+    // Clear any existing timer
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+    setHighlightedTransactionId(transactionId);
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlightedTransactionId(null);
+      highlightTimerRef.current = null;
+    }, 1500);
+  }, []);
+
+  const handleTransactionDeleted = useCallback((transactionId: string) => {
+    setDeletingTransactionId(transactionId);
+    // The fade-out animation runs for 300ms, then we clear the state
+    // The query invalidation in the delete dialog will remove the row from data
+    setTimeout(() => {
+      setDeletingTransactionId(null);
+    }, 400);
+  }, []);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (highlightTimerRef.current) {
+        clearTimeout(highlightTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Animation setup
+  const shouldReduceMotion = useReducedMotion();
+  const totalRows = transactions?.length ?? 0;
+  const staggerDelay = getCappedStaggerDelay(totalRows);
+
+  const containerVariants: Variants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: shouldReduceMotion ? 0 : staggerDelay,
+      },
+    },
+  };
+
+  const rowVariants: Variants = shouldReduceMotion
+    ? {
+        hidden: { opacity: 1 },
+        visible: { opacity: 1, transition: { duration: 0 } },
+      }
+    : {
+        hidden: { opacity: 0, y: 10 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } },
+      };
+
+  // Key for AnimatePresence — changes trigger exit/enter animations
+  const filterKey = `${selectedHoldingId ?? "all"}-${selectedAction ?? "all"}-${selectedCurrency}`;
 
   // Filter controls component
   const FilterControls = () => (
@@ -443,11 +590,25 @@ export default function TransactionsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-foreground">Transactions</h1>
-        <AddTransactionDialog>
+        <AddTransactionDialog onTransactionSaved={handleTransactionSaved}>
           <Button>Add Transaction</Button>
         </AddTransactionDialog>
       </div>
       <FilterControls />
+      {aggregatedTotals && (
+        <TransactionSummary
+          totalBuys={aggregatedTotals.totalBuys}
+          totalSells={aggregatedTotals.totalSells}
+          totalDividends={aggregatedTotals.totalDividends}
+          netCashFlow={aggregatedTotals.netCashFlow}
+          buyCount={aggregatedTotals.buyCount}
+          sellCount={aggregatedTotals.sellCount}
+          dividendCount={aggregatedTotals.dividendCount}
+          totalCount={aggregatedTotals.totalCount}
+          currency={aggregatedTotals.displayCurrencyCode}
+          isLoading={currencyLoading}
+        />
+      )}
       <div className="rounded-lg border border-border overflow-x-auto">
         <Table>
           <TableHeader>
@@ -462,204 +623,194 @@ export default function TransactionsPage() {
               <TableHead className="text-muted-foreground text-right w-[80px] sm:w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {transactions.map((transaction) => {
-              const total = calculateTotal(transaction);
-              return (
-                <TableRow key={transaction.id} className="border-border">
-                  <TableCell className="text-muted-foreground sticky left-0 bg-background z-10">
-                    <div className="flex flex-col">
-                      <span>{formatDate(transaction.date)}</span>
-                      {/* Show holding name on mobile only (since Holding column is hidden) */}
-                      <span className="text-xs text-muted-foreground sm:hidden">
-                        {transaction.holding.symbol || transaction.holding.name}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-foreground font-medium hidden sm:table-cell">
-                    {transaction.holding.symbol || transaction.holding.name}
-                    {transaction.holding.symbol && (
-                      <span className="text-muted-foreground text-sm ml-2 hidden md:inline">
-                        {transaction.holding.name}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span
-                      className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium ${getActionColorClass(
-                        transaction.action
-                      )}`}
+          <AnimatePresence mode="wait">
+            <motion.tbody
+              key={filterKey}
+              className="[&_tr:last-child]:border-0"
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              exit={shouldReduceMotion ? undefined : { opacity: 0 }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.1 }}
+            >
+              {transactionGroups.map((group) => (
+                <Fragment key={group.monthKey}>
+                  {/* Sticky month header */}
+                  <TableRow
+                    className="border-border hover:bg-transparent"
+                  >
+                    <TableCell
+                      colSpan={8}
+                      className="sticky top-0 z-20 bg-background border-b border-border px-4 py-2"
                     >
-                      {transaction.action}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-right font-mono hidden md:table-cell">
-                    {transaction.action === "SPLIT"
-                      ? `${transaction.quantity}:1`
-                      : Number(transaction.quantity).toLocaleString("en-AU", {
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 8,
-                        })}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-right font-mono hidden sm:table-cell">
-                    {transaction.action === "SPLIT" ? (
-                      "—"
-                    ) : (
-                      <CurrencyDisplay
-                        amount={Number(transaction.unitPrice)}
-                        currency={transaction.currency}
-                        isLoading={currencyLoading}
-                        className="justify-end"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-right font-mono hidden lg:table-cell">
-                    {transaction.action === "SPLIT" ||
-                    Number(transaction.fees) === 0 ? (
-                      "—"
-                    ) : (
-                      <CurrencyDisplay
-                        amount={Number(transaction.fees)}
-                        currency={transaction.currency}
-                        isLoading={currencyLoading}
-                        className="justify-end"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell className="text-foreground text-right font-mono font-medium">
-                    {transaction.action === "SPLIT" ? (
-                      "—"
-                    ) : (
-                      <CurrencyDisplay
-                        amount={total}
-                        currency={transaction.currency}
-                        isLoading={currencyLoading}
-                        className="justify-end"
-                      />
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-0.5 sm:gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-foreground"
-                        onClick={() => setEditTransaction(transaction)}
-                      >
-                        <span className="sr-only">Edit</span>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="sm:w-4 sm:h-4"
-                        >
-                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                          <path d="m15 5 4 4" />
-                        </svg>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleteTransaction(transaction)}
-                      >
-                        <span className="sr-only">Delete</span>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="sm:w-4 sm:h-4"
-                        >
-                          <path d="M3 6h18" />
-                          <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                          <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                          <line x1="10" x2="10" y1="11" y2="17" />
-                          <line x1="14" x2="14" y1="11" y2="17" />
-                        </svg>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-          {aggregatedTotals && (
-            <TableFooter className="border-t border-border">
-              <TableRow className="bg-card/50 hover:bg-card/50">
-                <TableCell className="text-muted-foreground text-sm sticky left-0 bg-card/50 z-10">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">Totals</span>
-                    {aggregatedTotals.hasMixedCurrencies && (
-                      <span className="text-xs text-muted-foreground hidden sm:inline">
-                        (converted to {displayCurrency})
-                      </span>
-                    )}
-                  </div>
-                </TableCell>
-                {/* Hidden cells to match responsive column visibility */}
-                <TableCell className="hidden sm:table-cell" />
-                <TableCell />
-                <TableCell className="hidden md:table-cell" />
-                <TableCell className="hidden sm:table-cell" />
-                <TableCell className="hidden lg:table-cell" />
-                <TableCell className="text-right">
-                  <div className="flex flex-col gap-1 text-sm">
-                    <div className="flex justify-end items-center gap-2 sm:gap-4">
-                      <span className="text-muted-foreground text-xs sm:text-sm">Buys:</span>
-                      <CurrencyDisplay
-                        amount={aggregatedTotals.totalBuys}
-                        currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
-                        isLoading={currencyLoading}
-                        className="text-destructive font-mono text-xs sm:text-sm"
-                      />
-                    </div>
-                    <div className="flex justify-end items-center gap-2 sm:gap-4">
-                      <span className="text-muted-foreground text-xs sm:text-sm">Sells:</span>
-                      <CurrencyDisplay
-                        amount={aggregatedTotals.totalSells}
-                        currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
-                        isLoading={currencyLoading}
-                        className="text-positive font-mono text-xs sm:text-sm"
-                      />
-                    </div>
-                    {aggregatedTotals.totalDividends > 0 && (
-                      <div className="flex justify-end items-center gap-2 sm:gap-4">
-                        <span className="text-muted-foreground text-xs sm:text-sm">Dividends:</span>
-                        <CurrencyDisplay
-                          amount={aggregatedTotals.totalDividends}
-                          currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
-                          isLoading={currencyLoading}
-                          className="text-positive font-mono text-xs sm:text-sm"
-                        />
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-foreground">
+                          {group.label}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {group.transactions.length} transaction{group.transactions.length !== 1 ? "s" : ""}
+                        </span>
                       </div>
-                    )}
-                    <div className="flex justify-end items-center gap-2 sm:gap-4 pt-1 border-t border-border">
-                      <span className="text-muted-foreground font-medium text-xs sm:text-sm">Net:</span>
-                      <CurrencyDisplay
-                        amount={aggregatedTotals.netCashFlow}
-                        currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
-                        isLoading={currencyLoading}
-                        className={`font-mono font-bold text-xs sm:text-sm ${aggregatedTotals.netCashFlow >= 0 ? "text-positive" : "text-destructive"}`}
-                      />
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell />
-              </TableRow>
-            </TableFooter>
-          )}
+                    </TableCell>
+                  </TableRow>
+                  {group.transactions.map((transaction) => {
+                    const total = calculateTotal(transaction);
+                    const isHighlighted = highlightedTransactionId === transaction.id;
+                    const isDeleting = deletingTransactionId === transaction.id;
+                    return (
+                      <MotionTableRow
+                        key={transaction.id}
+                        variants={rowVariants}
+                        className={`border-border transition-[background-color] duration-150 hover:bg-accent/5 ${
+                          isDeleting ? "pointer-events-none" : ""
+                        }`}
+                        animate={
+                          isDeleting
+                            ? { opacity: 0, x: -20, transition: { duration: shouldReduceMotion ? 0 : 0.3 } }
+                            : isHighlighted && !shouldReduceMotion
+                              ? {
+                                  opacity: 1,
+                                  y: 0,
+                                  backgroundColor: [
+                                    "hsl(var(--accent) / 0.1)",
+                                    "hsl(var(--accent) / 0)",
+                                  ],
+                                  transition: { backgroundColor: { duration: 1, ease: "easeOut" } },
+                                }
+                              : "visible"
+                        }
+                      >
+                        <TableCell className="text-muted-foreground sticky left-0 bg-background z-10">
+                          <div className="flex flex-col">
+                            <span>{formatDate(transaction.date)}</span>
+                            {/* Show holding name on mobile only (since Holding column is hidden) */}
+                            <span className="text-xs text-muted-foreground sm:hidden">
+                              {transaction.holding.symbol || transaction.holding.name}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-foreground font-medium hidden sm:table-cell">
+                          {transaction.holding.symbol || transaction.holding.name}
+                          {transaction.holding.symbol && (
+                            <span className="text-muted-foreground text-sm ml-2 hidden md:inline">
+                              {transaction.holding.name}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getActionColorClass(
+                              transaction.action
+                            )}`}
+                          >
+                            {transaction.action}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-right font-mono hidden md:table-cell">
+                          {transaction.action === "SPLIT"
+                            ? `${transaction.quantity}:1`
+                            : Number(transaction.quantity).toLocaleString("en-AU", {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 8,
+                              })}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-right font-mono hidden sm:table-cell">
+                          {transaction.action === "SPLIT" ? (
+                            "—"
+                          ) : (
+                            <CurrencyDisplay
+                              amount={Number(transaction.unitPrice)}
+                              currency={transaction.currency}
+                              isLoading={currencyLoading}
+                              className="justify-end"
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-right font-mono hidden lg:table-cell">
+                          {transaction.action === "SPLIT" ||
+                          Number(transaction.fees) === 0 ? (
+                            "—"
+                          ) : (
+                            <CurrencyDisplay
+                              amount={Number(transaction.fees)}
+                              currency={transaction.currency}
+                              isLoading={currencyLoading}
+                              className="justify-end"
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-foreground text-right font-mono font-medium">
+                          {transaction.action === "SPLIT" ? (
+                            "—"
+                          ) : (
+                            <CurrencyDisplay
+                              amount={total}
+                              currency={transaction.currency}
+                              isLoading={currencyLoading}
+                              className="justify-end"
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-0.5 sm:gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-foreground"
+                              onClick={() => setEditTransaction(transaction)}
+                            >
+                              <span className="sr-only">Edit</span>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="sm:w-4 sm:h-4"
+                              >
+                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                <path d="m15 5 4 4" />
+                              </svg>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => setDeleteTransaction(transaction)}
+                            >
+                              <span className="sr-only">Delete</span>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                className="sm:w-4 sm:h-4"
+                              >
+                                <path d="M3 6h18" />
+                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                <line x1="10" x2="10" y1="11" y2="17" />
+                                <line x1="14" x2="14" y1="11" y2="17" />
+                              </svg>
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </MotionTableRow>
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </motion.tbody>
+          </AnimatePresence>
         </Table>
       </div>
 
@@ -671,6 +822,7 @@ export default function TransactionsPage() {
           onOpenChange={(open) => {
             if (!open) setEditTransaction(null);
           }}
+          onTransactionSaved={handleTransactionSaved}
         />
       )}
 
@@ -682,6 +834,7 @@ export default function TransactionsPage() {
           onOpenChange={(open) => {
             if (!open) setDeleteTransaction(null);
           }}
+          onDeleted={handleTransactionDeleted}
         />
       )}
     </div>

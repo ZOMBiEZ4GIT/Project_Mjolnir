@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useForm, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -13,8 +16,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -23,62 +24,58 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { TypeSelector, type TransactionType } from "./type-selector";
 import type { Holding } from "@/lib/db/schema";
 
-const TRANSACTION_ACTIONS = [
-  { value: "BUY", label: "Buy", description: "Purchase shares/units" },
-  { value: "SELL", label: "Sell", description: "Sell shares/units" },
-  { value: "DIVIDEND", label: "Dividend", description: "Dividend payment received" },
-  { value: "SPLIT", label: "Split", description: "Stock split adjustment" },
-] as const;
+// Re-export for backwards compat
+export type TransactionAction = TransactionType;
 
-export type TransactionAction = (typeof TRANSACTION_ACTIONS)[number]["value"];
+// ---------------------------------------------------------------------------
+// Zod schemas — conditional validation per transaction type
+// ---------------------------------------------------------------------------
 
-interface AddTransactionDialogProps {
-  children?: React.ReactNode;
-  /** Pre-select a holding when opening the dialog */
-  defaultHoldingId?: string;
-}
+const formSchema = z.object({
+  date: z.string().min(1, "Date is required"),
+  notes: z.string().optional(),
+  quantity: z.coerce.number().positive("Quantity must be positive"),
+  unitPrice: z.coerce
+    .number()
+    .min(0, "Unit price must be non-negative")
+    .default(0),
+  fees: z.coerce
+    .number()
+    .min(0, "Fees must be non-negative")
+    .default(0),
+});
 
-interface FormData {
-  date: string;
-  quantity: string;
-  unitPrice: string;
-  fees: string;
-  notes: string;
-}
+type FormValues = z.infer<typeof formSchema>;
 
-interface FormErrors {
-  date?: string;
-  quantity?: string;
-  unit_price?: string;
-  fees?: string;
-  notes?: string;
-  holding_id?: string;
-  action?: string;
-  currency?: string;
-}
+// ---------------------------------------------------------------------------
+// API helpers
+// ---------------------------------------------------------------------------
 
 async function fetchTradeableHoldings(): Promise<Holding[]> {
   const response = await fetch("/api/holdings?include_dormant=true");
   if (!response.ok) {
-    if (response.status === 401) {
-      throw new Error("Unauthorized");
-    }
+    if (response.status === 401) throw new Error("Unauthorized");
     throw new Error("Failed to fetch holdings");
   }
   const holdings: Holding[] = await response.json();
-  // Filter to tradeable types only (stock, etf, crypto)
-  return holdings.filter((h) =>
-    ["stock", "etf", "crypto"].includes(h.type)
-  );
+  return holdings.filter((h) => ["stock", "etf", "crypto"].includes(h.type));
 }
 
 async function fetchHoldingQuantity(holdingId: string): Promise<number> {
   const response = await fetch(`/api/holdings/${holdingId}/quantity`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch quantity");
-  }
+  if (!response.ok) throw new Error("Failed to fetch quantity");
   const data = await response.json();
   return data.quantity;
 }
@@ -86,7 +83,7 @@ async function fetchHoldingQuantity(holdingId: string): Promise<number> {
 interface CreateTransactionData {
   holding_id: string;
   date: string;
-  action: TransactionAction;
+  action: TransactionType;
   quantity: string;
   unit_price: string;
   fees: string;
@@ -100,28 +97,36 @@ async function createTransaction(data: CreateTransactionData) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
-
   if (!response.ok) {
     const error = await response.json();
     throw error;
   }
-
   return response.json();
 }
 
-export function AddTransactionDialog({ children, defaultHoldingId }: AddTransactionDialogProps) {
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+interface AddTransactionDialogProps {
+  children?: React.ReactNode;
+  defaultHoldingId?: string;
+  onTransactionSaved?: (transactionId: string) => void;
+}
+
+export function AddTransactionDialog({
+  children,
+  defaultHoldingId,
+  onTransactionSaved,
+}: AddTransactionDialogProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
-  const [selectedHoldingId, setSelectedHoldingId] = useState<string>(defaultHoldingId || "");
-  const [selectedAction, setSelectedAction] = useState<TransactionAction | "">("");
-  const [formData, setFormData] = useState<FormData>({
-    date: new Date().toISOString().split("T")[0],
-    quantity: "",
-    unitPrice: "",
-    fees: "",
-    notes: "",
-  });
-  const [errors, setErrors] = useState<FormErrors>({});
+  const [selectedHoldingId, setSelectedHoldingId] = useState<string>(
+    defaultHoldingId || ""
+  );
+  const [selectedAction, setSelectedAction] = useState<TransactionType | "">(
+    ""
+  );
 
   const queryClient = useQueryClient();
 
@@ -132,178 +137,142 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
     enabled: open,
   });
 
+  const selectedHolding = holdings?.find((h) => h.id === selectedHoldingId);
+
   // Fetch current quantity for SELL validation
   const { data: currentQuantity, isLoading: quantityLoading } = useQuery({
     queryKey: ["holdings", selectedHoldingId, "quantity"],
     queryFn: () => fetchHoldingQuantity(selectedHoldingId),
-    enabled: open && step === 2 && selectedAction === "SELL" && !!selectedHoldingId,
+    enabled:
+      open && step === 2 && selectedAction === "SELL" && !!selectedHoldingId,
   });
 
-  const selectedHolding = holdings?.find((h) => h.id === selectedHoldingId);
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema) as unknown as Resolver<FormValues>,
+    defaultValues: {
+      date: new Date().toISOString().split("T")[0],
+      quantity: undefined as unknown as number,
+      unitPrice: undefined as unknown as number,
+      fees: 0,
+      notes: "",
+    },
+  });
+
+  const watchQuantity = form.watch("quantity");
+  const watchUnitPrice = form.watch("unitPrice");
+  const watchFees = form.watch("fees");
+
+  // Calculated total
+  const calculatedTotal = useMemo(() => {
+    const qty = Number(watchQuantity) || 0;
+    const price = Number(watchUnitPrice) || 0;
+    const fees = Number(watchFees) || 0;
+    if (qty <= 0 || (selectedAction !== "SPLIT" && price <= 0)) return null;
+    if (selectedAction === "SPLIT") return null;
+    const base = qty * price;
+    if (selectedAction === "BUY") return base + fees;
+    if (selectedAction === "SELL") return base - fees;
+    return base; // DIVIDEND
+  }, [watchQuantity, watchUnitPrice, watchFees, selectedAction]);
+
+  // Sell validation helpers
+  const isSellingAll = useMemo(() => {
+    if (selectedAction !== "SELL" || currentQuantity === undefined) return false;
+    const qty = Number(watchQuantity) || 0;
+    return qty > 0 && Math.abs(qty - currentQuantity) < 0.00000001;
+  }, [selectedAction, currentQuantity, watchQuantity]);
+
+  const exceedsHoldings = useMemo(() => {
+    if (selectedAction !== "SELL" || currentQuantity === undefined) return false;
+    return (Number(watchQuantity) || 0) > currentQuantity;
+  }, [selectedAction, currentQuantity, watchQuantity]);
 
   const mutation = useMutation({
     mutationFn: createTransaction,
-    onSuccess: () => {
+    onSuccess: (data: { id?: string }) => {
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["holdings", selectedHoldingId, "quantity"] });
+      queryClient.invalidateQueries({
+        queryKey: ["holdings", selectedHoldingId, "quantity"],
+      });
       toast.success("Transaction added successfully");
+      if (data?.id) onTransactionSaved?.(data.id);
       handleClose();
     },
-    onError: (error: { errors?: FormErrors; error?: string }) => {
-      if (error.errors) {
-        setErrors(error.errors);
-      } else {
-        toast.error(error.error || "Failed to add transaction");
-      }
+    onError: (error: { error?: string }) => {
+      toast.error(error.error || "Failed to add transaction");
     },
   });
 
-  // Calculate total for BUY/SELL and DIVIDEND
-  const calculatedTotal = useMemo(() => {
-    const qty = parseFloat(formData.quantity) || 0;
-    const price = parseFloat(formData.unitPrice) || 0;
-    const fees = parseFloat(formData.fees) || 0;
-
-    if (qty <= 0) return null;
-
-    // DIVIDEND: just qty * price (no fees)
-    if (selectedAction === "DIVIDEND") {
-      if (price <= 0) return null;
-      return qty * price;
-    }
-
-    if (price <= 0) return null;
-
-    const baseAmount = qty * price;
-    if (selectedAction === "BUY") {
-      return baseAmount + fees;
-    } else if (selectedAction === "SELL") {
-      return baseAmount - fees;
-    }
-    return baseAmount;
-  }, [formData.quantity, formData.unitPrice, formData.fees, selectedAction]);
-
-  // Check if selling all shares
-  const isSellingAll = useMemo(() => {
-    if (selectedAction !== "SELL" || currentQuantity === undefined) return false;
-    const sellQty = parseFloat(formData.quantity) || 0;
-    return sellQty > 0 && Math.abs(sellQty - currentQuantity) < 0.00000001;
-  }, [selectedAction, currentQuantity, formData.quantity]);
-
-  // Check if exceeding holdings
-  const exceedsHoldings = useMemo(() => {
-    if (selectedAction !== "SELL" || currentQuantity === undefined) return false;
-    const sellQty = parseFloat(formData.quantity) || 0;
-    return sellQty > currentQuantity;
-  }, [selectedAction, currentQuantity, formData.quantity]);
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
 
   const handleClose = () => {
     setOpen(false);
-    // Reset state when closing
     setStep(1);
     setSelectedHoldingId(defaultHoldingId || "");
     setSelectedAction("");
-    setFormData({
+    form.reset({
       date: new Date().toISOString().split("T")[0],
-      quantity: "",
-      unitPrice: "",
-      fees: "",
+      quantity: undefined as unknown as number,
+      unitPrice: undefined as unknown as number,
+      fees: 0,
       notes: "",
     });
-    setErrors({});
   };
 
   const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      handleClose();
-    } else {
-      setOpen(true);
-    }
+    if (!newOpen) handleClose();
+    else setOpen(true);
   };
 
   const handleContinue = () => {
-    if (selectedHoldingId && selectedAction) {
-      setStep(2);
-    }
+    if (selectedHoldingId && selectedAction) setStep(2);
   };
 
   const handleBack = () => {
     setStep(1);
-    setErrors({});
-    setFormData({
+    form.reset({
       date: new Date().toISOString().split("T")[0],
-      quantity: "",
-      unitPrice: "",
-      fees: "",
+      quantity: undefined as unknown as number,
+      unitPrice: undefined as unknown as number,
+      fees: 0,
       notes: "",
     });
   };
 
-  const handleSubmit = () => {
-    const newErrors: FormErrors = {};
-
-    // Validate date (required for all)
-    if (!formData.date) {
-      newErrors.date = "Date is required";
+  const onSubmit = (values: FormValues) => {
+    // Per-action validation
+    if (selectedAction !== "SPLIT" && (!values.unitPrice || values.unitPrice <= 0)) {
+      form.setError("unitPrice", {
+        message:
+          selectedAction === "DIVIDEND"
+            ? "Dividend per share must be positive"
+            : "Unit price must be positive",
+      });
+      return;
     }
-
-    // Validate quantity (required for all)
-    const qty = parseFloat(formData.quantity);
-    if (!formData.quantity || isNaN(qty) || qty <= 0) {
-      newErrors.quantity = "Quantity must be a positive number";
-    }
-
-    // Validate unit price (required for BUY/SELL/DIVIDEND, not for SPLIT)
-    if (selectedAction !== "SPLIT") {
-      const price = parseFloat(formData.unitPrice);
-      if (!formData.unitPrice || isNaN(price) || price < 0) {
-        newErrors.unit_price = "Unit price must be a non-negative number";
-      }
-    }
-
-    // Validate fees if provided (for BUY/SELL only, not DIVIDEND/SPLIT)
-    if ((selectedAction === "BUY" || selectedAction === "SELL") && formData.fees) {
-      const feesNum = parseFloat(formData.fees);
-      if (isNaN(feesNum) || feesNum < 0) {
-        newErrors.fees = "Fees must be a non-negative number";
-      }
-    }
-
-    // For SELL: check if exceeds holdings
     if (selectedAction === "SELL" && exceedsHoldings) {
-      newErrors.quantity = "Sell quantity exceeds holdings";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+      form.setError("quantity", { message: "Sell quantity exceeds holdings" });
       return;
     }
 
-    // Determine values based on action type
-    let unitPrice = formData.unitPrice;
-    let fees = formData.fees || "0";
+    const unitPrice =
+      selectedAction === "SPLIT" ? "0" : String(values.unitPrice || 0);
+    const fees =
+      selectedAction === "BUY" || selectedAction === "SELL"
+        ? String(values.fees || 0)
+        : "0";
 
-    // SPLIT: unit_price and fees are always 0
-    if (selectedAction === "SPLIT") {
-      unitPrice = "0";
-      fees = "0";
-    }
-
-    // DIVIDEND: fees are always 0
-    if (selectedAction === "DIVIDEND") {
-      fees = "0";
-    }
-
-    // Submit the transaction
     mutation.mutate({
       holding_id: selectedHoldingId,
-      date: formData.date,
-      action: selectedAction as TransactionAction,
-      quantity: formData.quantity,
+      date: values.date,
+      action: selectedAction as TransactionType,
+      quantity: String(values.quantity),
       unit_price: unitPrice,
       fees,
       currency: selectedHolding?.currency || "AUD",
-      notes: formData.notes.trim() || undefined,
+      notes: values.notes?.trim() || undefined,
     });
   };
 
@@ -311,6 +280,10 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
   const isBuySell = selectedAction === "BUY" || selectedAction === "SELL";
   const isDividend = selectedAction === "DIVIDEND";
   const isSplit = selectedAction === "SPLIT";
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -330,20 +303,26 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
             <div className="grid gap-4 py-4">
               {/* Holding selector */}
               <div className="grid gap-2">
-                <Label htmlFor="holding">Holding</Label>
+                <label className="text-sm font-medium">Holding</label>
                 <Select
                   value={selectedHoldingId}
                   onValueChange={setSelectedHoldingId}
                   disabled={holdingsLoading}
                 >
-                  <SelectTrigger id="holding">
-                    <SelectValue placeholder={holdingsLoading ? "Loading..." : "Select a holding"} />
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        holdingsLoading ? "Loading..." : "Select a holding"
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     {holdings?.map((holding) => (
                       <SelectItem key={holding.id} value={holding.id}>
                         <div className="flex items-center gap-2">
-                          <span className="font-medium">{holding.symbol || holding.name}</span>
+                          <span className="font-medium">
+                            {holding.symbol || holding.name}
+                          </span>
                           {holding.symbol && (
                             <span className="text-muted-foreground text-sm">
                               {holding.name}
@@ -354,46 +333,29 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
                     ))}
                     {holdings?.length === 0 && (
                       <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                        No tradeable holdings found. Add a stock, ETF, or crypto first.
+                        No tradeable holdings found. Add a stock, ETF, or crypto
+                        first.
                       </div>
                     )}
                   </SelectContent>
                 </Select>
                 {selectedHolding && (
                   <p className="text-sm text-muted-foreground">
-                    {selectedHolding.type.toUpperCase()} · {selectedHolding.currency}
-                    {selectedHolding.exchange && ` · ${selectedHolding.exchange}`}
+                    {selectedHolding.type.toUpperCase()} ·{" "}
+                    {selectedHolding.currency}
+                    {selectedHolding.exchange &&
+                      ` · ${selectedHolding.exchange}`}
                   </p>
                 )}
               </div>
 
-              {/* Action type selector */}
+              {/* Type selector */}
               <div className="grid gap-2">
-                <Label>Transaction Type</Label>
-                <RadioGroup
+                <label className="text-sm font-medium">Transaction Type</label>
+                <TypeSelector
                   value={selectedAction}
-                  onValueChange={(value) => setSelectedAction(value as TransactionAction)}
-                  className="grid grid-cols-2 gap-3"
-                >
-                  {TRANSACTION_ACTIONS.map((action) => (
-                    <div key={action.value}>
-                      <RadioGroupItem
-                        value={action.value}
-                        id={`action-${action.value}`}
-                        className="peer sr-only"
-                      />
-                      <Label
-                        htmlFor={`action-${action.value}`}
-                        className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-3 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary cursor-pointer transition-colors [&:has([data-state=checked])]:border-primary"
-                      >
-                        <span className="text-sm font-medium">{action.label}</span>
-                        <span className="text-xs text-muted-foreground mt-0.5">
-                          {action.description}
-                        </span>
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
+                  onChange={setSelectedAction}
+                />
               </div>
             </div>
 
@@ -406,404 +368,334 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
               </Button>
             </DialogFooter>
           </>
-        ) : isBuySell ? (
-          <>
-            <DialogHeader>
-              <DialogTitle>
-                {selectedAction === "BUY" ? "Buy" : "Sell"} {selectedHolding?.symbol || selectedHolding?.name}
-              </DialogTitle>
-              <DialogDescription>
-                Enter the transaction details.
-              </DialogDescription>
-            </DialogHeader>
+        ) : (
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              className="space-y-0"
+            >
+              <DialogHeader>
+                <DialogTitle>
+                  {isSplit
+                    ? `Stock Split - ${selectedHolding?.symbol || selectedHolding?.name}`
+                    : isDividend
+                      ? `Dividend - ${selectedHolding?.symbol || selectedHolding?.name}`
+                      : `${selectedAction === "BUY" ? "Buy" : "Sell"} ${selectedHolding?.symbol || selectedHolding?.name}`}
+                </DialogTitle>
+                <DialogDescription>
+                  {isSplit
+                    ? "Record a stock split or reverse split."
+                    : isDividend
+                      ? "Record a dividend payment received."
+                      : "Enter the transaction details."}
+                </DialogDescription>
+              </DialogHeader>
 
-            <div className="grid gap-4 py-4">
-              {/* Currency display (read-only) */}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Currency:</span>
-                <span className="font-medium text-foreground">{selectedHolding?.currency}</span>
-              </div>
-
-              {/* Current quantity for SELL */}
-              {selectedAction === "SELL" && (
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground">Current holdings:</span>
-                  {quantityLoading ? (
-                    <span className="text-muted-foreground">Loading...</span>
-                  ) : (
-                    <span className="font-mono font-medium">
-                      {currentQuantity?.toLocaleString(undefined, { maximumFractionDigits: 8 })} shares
-                    </span>
-                  )}
+              <div className="grid gap-4 py-4">
+                {/* Currency display (read-only) */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>Currency:</span>
+                  <span className="font-medium text-foreground">
+                    {selectedHolding?.currency}
+                  </span>
                 </div>
-              )}
 
-              {/* Date field */}
-              <div className="grid gap-2">
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => {
-                    setFormData({ ...formData, date: e.target.value });
-                    if (errors.date) setErrors({ ...errors, date: undefined });
-                  }}
-                  className={errors.date ? "border-destructive focus-visible:ring-destructive" : ""}
-                />
-                {errors.date && (
-                  <p className="text-sm text-destructive">{errors.date}</p>
-                )}
-              </div>
-
-              {/* Quantity field */}
-              <div className="grid gap-2">
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder="0"
-                  value={formData.quantity}
-                  onChange={(e) => {
-                    setFormData({ ...formData, quantity: e.target.value });
-                    if (errors.quantity) setErrors({ ...errors, quantity: undefined });
-                  }}
-                  className={errors.quantity ? "border-destructive focus-visible:ring-destructive" : ""}
-                />
-                {errors.quantity && (
-                  <p className="text-sm text-destructive">{errors.quantity}</p>
-                )}
-                {/* Warning when selling all shares */}
-                {isSellingAll && !errors.quantity && (
-                  <p className="text-sm text-yellow-500">
-                    ⚠️ This will sell all your shares
-                  </p>
-                )}
-                {/* Warning when exceeding holdings - not an error yet */}
-                {exceedsHoldings && !errors.quantity && currentQuantity !== undefined && (
-                  <p className="text-sm text-destructive">
-                    Exceeds current holdings ({currentQuantity.toLocaleString(undefined, { maximumFractionDigits: 8 })})
-                  </p>
-                )}
-              </div>
-
-              {/* Unit Price field */}
-              <div className="grid gap-2">
-                <Label htmlFor="unitPrice">Unit Price ({selectedHolding?.currency})</Label>
-                <Input
-                  id="unitPrice"
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder="0.00"
-                  value={formData.unitPrice}
-                  onChange={(e) => {
-                    setFormData({ ...formData, unitPrice: e.target.value });
-                    if (errors.unit_price) setErrors({ ...errors, unit_price: undefined });
-                  }}
-                  className={errors.unit_price ? "border-destructive focus-visible:ring-destructive" : ""}
-                />
-                {errors.unit_price && (
-                  <p className="text-sm text-destructive">{errors.unit_price}</p>
-                )}
-              </div>
-
-              {/* Fees field */}
-              <div className="grid gap-2">
-                <Label htmlFor="fees">Fees ({selectedHolding?.currency})</Label>
-                <Input
-                  id="fees"
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder="0.00"
-                  value={formData.fees}
-                  onChange={(e) => {
-                    setFormData({ ...formData, fees: e.target.value });
-                    if (errors.fees) setErrors({ ...errors, fees: undefined });
-                  }}
-                  className={errors.fees ? "border-destructive focus-visible:ring-destructive" : ""}
-                />
-                {errors.fees && (
-                  <p className="text-sm text-destructive">{errors.fees}</p>
-                )}
-              </div>
-
-              {/* Notes field */}
-              <div className="grid gap-2">
-                <Label htmlFor="notes">Notes (optional)</Label>
-                <Input
-                  id="notes"
-                  placeholder="Add any notes..."
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                />
-              </div>
-
-              {/* Calculated total */}
-              {calculatedTotal !== null && (
-                <div className="rounded-md border border-border bg-muted/50 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Total {selectedAction === "BUY" ? "Cost" : "Proceeds"}
+                {/* Current quantity for SELL */}
+                {selectedAction === "SELL" && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">
+                      Current holdings:
                     </span>
-                    <span className="text-lg font-semibold font-mono">
-                      {selectedHolding?.currency} {calculatedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formData.quantity} × {selectedHolding?.currency} {parseFloat(formData.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    {parseFloat(formData.fees) > 0 && (
-                      <> {selectedAction === "BUY" ? "+" : "−"} {selectedHolding?.currency} {parseFloat(formData.fees).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} fees</>
-                    )}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={handleBack}>
-                Back
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={mutation.isPending || (selectedAction === "SELL" && quantityLoading)}
-              >
-                {mutation.isPending ? "Saving..." : "Save"}
-              </Button>
-            </DialogFooter>
-          </>
-        ) : isDividend ? (
-          // DIVIDEND form
-          <>
-            <DialogHeader>
-              <DialogTitle>
-                Dividend - {selectedHolding?.symbol || selectedHolding?.name}
-              </DialogTitle>
-              <DialogDescription>
-                Record a dividend payment received.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-4">
-              {/* Currency display (read-only) */}
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Currency:</span>
-                <span className="font-medium text-foreground">{selectedHolding?.currency}</span>
-              </div>
-
-              {/* Date field */}
-              <div className="grid gap-2">
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => {
-                    setFormData({ ...formData, date: e.target.value });
-                    if (errors.date) setErrors({ ...errors, date: undefined });
-                  }}
-                  className={errors.date ? "border-destructive focus-visible:ring-destructive" : ""}
-                />
-                {errors.date && (
-                  <p className="text-sm text-destructive">{errors.date}</p>
-                )}
-              </div>
-
-              {/* Shares Held (quantity) field */}
-              <div className="grid gap-2">
-                <Label htmlFor="quantity">Shares Held</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder="Number of shares at dividend date"
-                  value={formData.quantity}
-                  onChange={(e) => {
-                    setFormData({ ...formData, quantity: e.target.value });
-                    if (errors.quantity) setErrors({ ...errors, quantity: undefined });
-                  }}
-                  className={errors.quantity ? "border-destructive focus-visible:ring-destructive" : ""}
-                />
-                {errors.quantity && (
-                  <p className="text-sm text-destructive">{errors.quantity}</p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Enter the number of shares you held when this dividend was paid
-                </p>
-              </div>
-
-              {/* Dividend Per Share (unit_price) field */}
-              <div className="grid gap-2">
-                <Label htmlFor="unitPrice">Dividend Per Share ({selectedHolding?.currency})</Label>
-                <Input
-                  id="unitPrice"
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder="0.00"
-                  value={formData.unitPrice}
-                  onChange={(e) => {
-                    setFormData({ ...formData, unitPrice: e.target.value });
-                    if (errors.unit_price) setErrors({ ...errors, unit_price: undefined });
-                  }}
-                  className={errors.unit_price ? "border-destructive focus-visible:ring-destructive" : ""}
-                />
-                {errors.unit_price && (
-                  <p className="text-sm text-destructive">{errors.unit_price}</p>
-                )}
-              </div>
-
-              {/* Notes field */}
-              <div className="grid gap-2">
-                <Label htmlFor="notes">Notes (optional)</Label>
-                <Input
-                  id="notes"
-                  placeholder="e.g., Q4 2025 dividend"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                />
-              </div>
-
-              {/* Calculated total dividend */}
-              {calculatedTotal !== null && (
-                <div className="rounded-md border border-border bg-muted/50 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
-                      Total Dividend
-                    </span>
-                    <span className="text-lg font-semibold font-mono text-positive">
-                      {selectedHolding?.currency} {calculatedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {formData.quantity} shares × {selectedHolding?.currency} {parseFloat(formData.unitPrice).toLocaleString(undefined, { minimumFractionDigits: 4, maximumFractionDigits: 4 })} per share
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={handleBack}>
-                Back
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={mutation.isPending}
-              >
-                {mutation.isPending ? "Saving..." : "Save"}
-              </Button>
-            </DialogFooter>
-          </>
-        ) : isSplit ? (
-          // SPLIT form
-          <>
-            <DialogHeader>
-              <DialogTitle>
-                Stock Split - {selectedHolding?.symbol || selectedHolding?.name}
-              </DialogTitle>
-              <DialogDescription>
-                Record a stock split or reverse split.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="grid gap-4 py-4">
-              {/* Explanation */}
-              <div className="rounded-md border border-blue-500/20 bg-blue-500/10 p-3">
-                <p className="text-sm text-blue-400">
-                  <strong>How splits work:</strong> A 2:1 split doubles your shares and halves the price per share.
-                  Your total investment value stays the same, but the share count and price per share change.
-                </p>
-              </div>
-
-              {/* Date field */}
-              <div className="grid gap-2">
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => {
-                    setFormData({ ...formData, date: e.target.value });
-                    if (errors.date) setErrors({ ...errors, date: undefined });
-                  }}
-                  className={errors.date ? "border-destructive focus-visible:ring-destructive" : ""}
-                />
-                {errors.date && (
-                  <p className="text-sm text-destructive">{errors.date}</p>
-                )}
-              </div>
-
-              {/* Split Ratio field */}
-              <div className="grid gap-2">
-                <Label htmlFor="quantity">Split Ratio</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="quantity"
-                    type="number"
-                    step="any"
-                    min="0"
-                    placeholder="2"
-                    value={formData.quantity}
-                    onChange={(e) => {
-                      setFormData({ ...formData, quantity: e.target.value });
-                      if (errors.quantity) setErrors({ ...errors, quantity: undefined });
-                    }}
-                    className={`w-24 ${errors.quantity ? "border-destructive focus-visible:ring-destructive" : ""}`}
-                  />
-                  <span className="text-muted-foreground">: 1</span>
-                </div>
-                {errors.quantity && (
-                  <p className="text-sm text-destructive">{errors.quantity}</p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  {formData.quantity && parseFloat(formData.quantity) > 0 ? (
-                    parseFloat(formData.quantity) >= 1 ? (
-                      <>
-                        A {formData.quantity}:1 split multiplies your shares by {formData.quantity}.
-                        {parseFloat(formData.quantity) === 2 && " (e.g., 100 shares become 200)"}
-                        {parseFloat(formData.quantity) === 3 && " (e.g., 100 shares become 300)"}
-                        {parseFloat(formData.quantity) === 4 && " (e.g., 100 shares become 400)"}
-                      </>
+                    {quantityLoading ? (
+                      <span className="text-muted-foreground">Loading...</span>
                     ) : (
-                      <>
-                        A {formData.quantity}:1 reverse split reduces your shares to {(parseFloat(formData.quantity) * 100).toFixed(0)}% of the original.
-                      </>
-                    )
-                  ) : (
-                    "Enter 2 for a 2:1 split, 0.5 for a 1:2 reverse split"
+                      <span className="font-mono font-medium">
+                        {currentQuantity?.toLocaleString(undefined, {
+                          maximumFractionDigits: 8,
+                        })}{" "}
+                        shares
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Split explanation */}
+                {isSplit && (
+                  <div className="rounded-md border border-blue-500/20 bg-blue-500/10 p-3">
+                    <p className="text-sm text-blue-400">
+                      <strong>How splits work:</strong> A 2:1 split doubles your
+                      shares and halves the price per share. Your total
+                      investment value stays the same.
+                    </p>
+                  </div>
+                )}
+
+                {/* Date field */}
+                <FormField
+                  control={form.control}
+                  name="date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </p>
-              </div>
-
-              {/* Notes field */}
-              <div className="grid gap-2">
-                <Label htmlFor="notes">Notes (optional)</Label>
-                <Input
-                  id="notes"
-                  placeholder="e.g., 2-for-1 stock split"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 />
-              </div>
-            </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button variant="outline" onClick={handleBack}>
-                Back
-              </Button>
-              <Button
-                onClick={handleSubmit}
-                disabled={mutation.isPending}
-              >
-                {mutation.isPending ? "Saving..." : "Save"}
-              </Button>
-            </DialogFooter>
-          </>
-        ) : null}
+                {/* Quantity field */}
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {isSplit
+                          ? "Split Ratio"
+                          : isDividend
+                            ? "Shares Held"
+                            : "Quantity"}
+                      </FormLabel>
+                      {isSplit ? (
+                        <div className="flex items-center gap-2">
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="any"
+                              min="0"
+                              placeholder="2"
+                              className="w-24"
+                              {...field}
+                              value={field.value ?? ""}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value === ""
+                                    ? ""
+                                    : e.target.value
+                                )
+                              }
+                            />
+                          </FormControl>
+                          <span className="text-muted-foreground">: 1</span>
+                        </div>
+                      ) : (
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="any"
+                            min="0"
+                            placeholder={
+                              isDividend
+                                ? "Number of shares at dividend date"
+                                : "0"
+                            }
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value === ""
+                                  ? ""
+                                  : e.target.value
+                              )
+                            }
+                          />
+                        </FormControl>
+                      )}
+                      <FormMessage />
+                      {/* Sell-specific warnings */}
+                      {isSellingAll &&
+                        !form.formState.errors.quantity && (
+                          <p className="text-sm text-yellow-500">
+                            This will sell all your shares
+                          </p>
+                        )}
+                      {exceedsHoldings &&
+                        !form.formState.errors.quantity &&
+                        currentQuantity !== undefined && (
+                          <p className="text-sm text-destructive">
+                            Exceeds current holdings (
+                            {currentQuantity.toLocaleString(undefined, {
+                              maximumFractionDigits: 8,
+                            })}
+                            )
+                          </p>
+                        )}
+                      {isDividend && (
+                        <FormDescription>
+                          Enter the number of shares you held when this dividend
+                          was paid
+                        </FormDescription>
+                      )}
+                      {isSplit && (
+                        <FormDescription>
+                          {watchQuantity && Number(watchQuantity) > 0
+                            ? Number(watchQuantity) >= 1
+                              ? `A ${watchQuantity}:1 split multiplies your shares by ${watchQuantity}.`
+                              : `A ${watchQuantity}:1 reverse split reduces your shares to ${(Number(watchQuantity) * 100).toFixed(0)}% of the original.`
+                            : "Enter 2 for a 2:1 split, 0.5 for a 1:2 reverse split"}
+                        </FormDescription>
+                      )}
+                    </FormItem>
+                  )}
+                />
+
+                {/* Unit Price field (not for SPLIT) */}
+                {!isSplit && (
+                  <FormField
+                    control={form.control}
+                    name="unitPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          {isDividend
+                            ? `Dividend Per Share (${selectedHolding?.currency})`
+                            : `Unit Price (${selectedHolding?.currency})`}
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="any"
+                            min="0"
+                            placeholder="0.00"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value === ""
+                                  ? ""
+                                  : e.target.value
+                              )
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Fees field (only for BUY/SELL) */}
+                {isBuySell && (
+                  <FormField
+                    control={form.control}
+                    name="fees"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          Fees ({selectedHolding?.currency})
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            step="any"
+                            min="0"
+                            placeholder="0.00"
+                            {...field}
+                            value={field.value ?? ""}
+                            onChange={(e) =>
+                              field.onChange(
+                                e.target.value === ""
+                                  ? ""
+                                  : e.target.value
+                              )
+                            }
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {/* Notes field */}
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes (optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={
+                            isDividend
+                              ? "e.g., Q4 2025 dividend"
+                              : isSplit
+                                ? "e.g., 2-for-1 stock split"
+                                : "Add any notes..."
+                          }
+                          {...field}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {/* Calculated total */}
+                {calculatedTotal !== null && (
+                  <div className="rounded-md border border-border bg-muted/50 p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">
+                        {isDividend
+                          ? "Total Dividend"
+                          : selectedAction === "BUY"
+                            ? "Total Cost"
+                            : "Total Proceeds"}
+                      </span>
+                      <span
+                        className={`text-lg font-semibold font-mono ${isDividend ? "text-positive" : ""}`}
+                      >
+                        {selectedHolding?.currency}{" "}
+                        {calculatedTotal.toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {watchQuantity}
+                      {isDividend && " shares"} ×{" "}
+                      {selectedHolding?.currency}{" "}
+                      {(Number(watchUnitPrice) || 0).toLocaleString(undefined, {
+                        minimumFractionDigits: isDividend ? 4 : 2,
+                        maximumFractionDigits: isDividend ? 4 : 2,
+                      })}
+                      {isDividend && " per share"}
+                      {isBuySell && Number(watchFees) > 0 && (
+                        <>
+                          {" "}
+                          {selectedAction === "BUY" ? "+" : "−"}{" "}
+                          {selectedHolding?.currency}{" "}
+                          {Number(watchFees).toLocaleString(undefined, {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}{" "}
+                          fees
+                        </>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button type="button" variant="outline" onClick={handleBack}>
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    mutation.isPending ||
+                    (selectedAction === "SELL" && quantityLoading)
+                  }
+                >
+                  {mutation.isPending ? "Saving..." : "Save"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        )}
       </DialogContent>
     </Dialog>
   );

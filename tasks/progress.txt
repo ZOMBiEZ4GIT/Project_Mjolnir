@@ -71,3 +71,149 @@ Started: 2026-02-06
 
 ---
 
+## 2026-02-06 - US-001
+- Created `components/transactions/type-selector.tsx` — animated tab bar with BUY/SELL/DIVIDEND/SPLIT options
+- Sliding background indicator using Framer Motion `layoutId="active-transaction-type"`
+- Colour-coded: BUY=positive/green, SELL=destructive/red, DIVIDEND=accent/purple, SPLIT=blue-400/blue-500
+- Controlled component with `value`, `onChange`, `disabled` props
+- Disabled mode: shows active type but prevents interaction, reduces opacity on inactive tabs
+- Follows same pattern as `filter-tabs.tsx` (layoutId sliding indicator)
+- Files changed: `components/transactions/type-selector.tsx` (new)
+- **Learnings for future iterations:**
+  - TypeSelector exports `TransactionType` type — import from `type-selector.tsx` instead of `add-transaction-dialog.tsx`
+  - Uses `bg-muted p-1` container with `rounded-lg` for the pill-bar look
+  - layoutId must be unique per AnimatePresence scope — used `"active-transaction-type"` to avoid conflicts with other layoutIds
+---
+
+## 2026-02-06 - US-002
+- Refactored `add-transaction-dialog.tsx` from manual useState to react-hook-form + zod
+- Installed react-hook-form, zod, @hookform/resolvers; added shadcn/ui form component
+- Created unified `formSchema` with z.coerce.number() fields; per-action validation in onSubmit
+- Replaced RadioGroup with TypeSelector from US-001
+- Preserved two-step flow: Step 1 (holding + type) → Step 2 (details via react-hook-form)
+- SELL validation checks available quantity and prevents overselling
+- Real-time calculated totals using form.watch()
+- Files changed: `components/transactions/add-transaction-dialog.tsx`, `components/ui/form.tsx` (new), `package.json`
+- **Learnings for future iterations:**
+  - z.coerce.number() has input type `unknown` — causes TS mismatch with useForm<FormValues>. Fix: cast resolver as `zodResolver(schema) as unknown as Resolver<FormValues>`
+  - Import `Resolver` type from `react-hook-form` for the cast
+  - For numeric inputs with z.coerce, pass `field.value ?? ""` to prevent "undefined" showing; use `e.target.value === "" ? "" : e.target.value` for onChange to allow clearing
+  - Unified schema approach (single schema + onSubmit validation) is simpler than discriminated union schemas with refine
+---
+
+## 2026-02-06 - US-003
+- Refactored `edit-transaction-dialog.tsx` from manual useState/errors to react-hook-form + zod
+- Uses same `formSchema` and `FormValues` type as add dialog for consistency
+- `useForm` pre-populated with transaction data via `form.reset()` in useEffect when dialog opens
+- Replaced manual Label+Input+error with FormField/FormControl/FormMessage components
+- Added TypeSelector in disabled mode (shows action type visually but prevents interaction)
+- SELL validation accounts for the transaction being edited: `availableForSell = currentQuantity + originalSellQty`
+- Holding name, currency, and action type displayed as read-only info above the form
+- Real-time calculated totals using `form.watch()`
+- Uses toast for error feedback (simplified from inline server errors)
+- Files changed: `components/transactions/edit-transaction-dialog.tsx`
+- **Learnings for future iterations:**
+  - Edit dialogs need `form.reset()` in useEffect keyed on `[open, transaction, form]` to sync form with new transaction data
+  - For edit dialogs, simplified `onError` to just toast (no inline server errors) since form validation catches most issues client-side
+  - TypeSelector `disabled` prop + empty `onChange={() => {}}` provides clean read-only display of transaction type
+---
+
+## 2026-02-06 - US-004
+- Created `components/transactions/transaction-summary.tsx` — 4 summary cards (Total Bought, Total Sold, Dividends Received, Net Cash Flow)
+- Cards use staggerContainer/staggerItem animation presets from lib/animations.ts
+- Grid responsive: 1 col mobile, 2 cols md, 4 cols lg+
+- Each card shows label, formatted dollar amount (via CurrencyDisplay), and transaction count
+- Colour-coded: Bought=text-positive, Sold=text-destructive, Dividends=text-accent, Net=dynamic based on sign
+- Uses design tokens: bg-card/50, border-border
+- Respects prefers-reduced-motion via useReducedMotion()
+- Updated transactions page to compute per-action counts in aggregatedTotals useMemo
+- Removed TableFooter (aggregated totals now shown in summary cards above table)
+- Summary cards respect current filter state (holding, action, currency) since they consume the same aggregatedTotals derived from filtered transactions
+- Files changed: `components/transactions/transaction-summary.tsx` (new), `app/(dashboard)/transactions/page.tsx`
+- **Learnings for future iterations:**
+  - AggregatedTotals interface extended with `buyCount`, `sellCount`, `dividendCount`, `totalCount`, `displayCurrencyCode` for summary card consumption
+  - `displayCurrencyCode` precomputed in useMemo: uses display currency if mixed, otherwise the common native currency — avoids currency logic in child components
+  - Card container pattern: `border border-border bg-card/50 p-4 rounded-lg` for consistent card look
+---
+
+## 2026-02-06 - US-005
+- Grouped transactions by month with sticky headers in the transactions page
+- Added helper functions: `getMonthKey()` (extracts YYYY-MM), `formatMonthLabel()` (formats as "February 2026"), `TransactionGroup` interface
+- Added `transactionGroups` useMemo that groups transactions by month key, sorted reverse chronologically
+- Replaced flat `transactions.map()` with `transactionGroups.map()` rendering `Fragment` per group
+- Month headers: full-width `TableRow` with `colSpan={8}`, sticky `top-0 z-20 bg-background`, `border-b border-border`
+- Month header displays: month/year name (left, `text-sm font-semibold`), transaction count (right, `text-xs text-muted-foreground`)
+- Grouping recalculates automatically when filters change since `transactionGroups` depends on `transactions` query data
+- Empty months naturally excluded — only months with transactions appear
+- Files changed: `app/(dashboard)/transactions/page.tsx`
+- **Learnings for future iterations:**
+  - Use `Fragment` (not `<>`) when mapping groups that need keys — shorthand fragments can't accept key props
+  - `colSpan={8}` must match actual column count in the table for sticky headers to span full width
+  - Sticky headers in tables: use `sticky top-0 z-20 bg-background` on the TableCell (not TableRow) to ensure proper stacking context
+  - `getMonthKey()` using `dateString.slice(0, 7)` is simpler and safer than date parsing for YYYY-MM-DD strings
+---
+
+## 2026-02-06 - US-006
+- Added stagger animation and row hover effects to transaction table rows
+- Created `MotionTableRow` via `motion.create(TableRow)` — same pattern as holdings table
+- Replaced `<TableBody>` with `<motion.tbody>` using container/row variants for stagger animation
+- Wrapped tbody in `AnimatePresence mode="wait"` keyed by filter state (`filterKey`) for exit/enter on filter change
+- Row hover: `hover:bg-accent/5` with `transition-[background-color] duration-150`
+- Capped stagger delay: `Math.min(0.05, 0.5 / count)` — 50ms per row, total animation within 500ms
+- Exit animation: fade out (100ms) when filters change, new rows stagger in
+- Respects `prefers-reduced-motion`: `useReducedMotion()` → sets duration: 0 and skips y-transform variants
+- Removed unused `TableBody` import since motion.tbody replaced it
+- Files changed: `app/(dashboard)/transactions/page.tsx`
+- **Learnings for future iterations:**
+  - When replacing `<TableBody>` with `<motion.tbody>`, remember to remove unused `TableBody` import or lint will fail
+  - `AnimatePresence mode="wait"` ensures exit completes before enter — use for filter-change transitions
+  - `filterKey` pattern (concatenating all filter values) gives a single key for AnimatePresence to detect filter changes
+  - Month headers (sticky `<TableRow>`) don't need animation variants — only data rows use `MotionTableRow`
+---
+
+## 2026-02-06 - US-007
+- Polished transaction type badges with consistent design tokens
+- Updated `getActionColorClass()` in page.tsx: separated BUY and DIVIDEND (were sharing same colour), gave DIVIDEND `bg-accent/20 text-accent` to match type-selector and summary cards
+- Fixed SPLIT badge from hardcoded `bg-blue-900 text-blue-300` to `bg-blue-500/20 text-blue-400`
+- Changed badge shape from `rounded` to `rounded-full` (pill-shaped) with normalized `px-2 py-0.5` padding
+- Verified colour scheme consistency across all three components: table badges (page.tsx), type selector (type-selector.tsx), summary cards (transaction-summary.tsx)
+- Files changed: `app/(dashboard)/transactions/page.tsx`
+- **Learnings for future iterations:**
+  - Transaction action colour mapping is defined in three places: `getActionColorClass()` in page.tsx, `TYPE_COLOURS` in type-selector.tsx, and card `colorClass` in transaction-summary.tsx — keep all three in sync
+  - SPLIT uses hardcoded `text-blue-400`/`bg-blue-500/20` intentionally — there's no semantic "info" token in the design system
+  - The previous code grouped BUY and DIVIDEND together as both "green" — they should be distinct (BUY=positive/green, DIVIDEND=accent/purple)
+---
+
+## 2026-02-06 - US-008
+- Added success confirmation animations on transaction save/edit/delete
+- **Highlight animation:** `highlightedTransactionId` state tracks which row was just saved — Framer Motion animates `backgroundColor` from `accent/0.1` → transparent over 1s
+- **Deletion fade-out:** `deletingTransactionId` state tracks which row is being removed — animates with `opacity: 0, x: -20` over 300ms, then state clears after 400ms
+- Added `onTransactionSaved` callback prop to `AddTransactionDialog` and `EditTransactionDialog` — passes transaction ID back to parent
+- Added `onDeleted` callback prop to `DeleteTransactionDialog` — fires after successful deletion
+- Toast messages already use `toast.success()` from Sonner which shows checkmark icon by default
+- Delete toast changed from "Transaction deleted successfully" to "Transaction deleted" for brevity
+- Both highlight and deletion animations respect `prefers-reduced-motion` via `shouldReduceMotion` (durations set to 0)
+- Highlight auto-clears after 1.5s via `setTimeout` with `useRef` for cleanup on unmount
+- Files changed: `app/(dashboard)/transactions/page.tsx`, `components/transactions/add-transaction-dialog.tsx`, `components/transactions/edit-transaction-dialog.tsx`, `components/transactions/delete-transaction-dialog.tsx`
+- **Learnings for future iterations:**
+  - API POST `/api/transactions` returns the full created object with `.id` via Drizzle `.returning()` — safe to extract ID from response for callbacks
+  - For row-level Framer Motion animations that override stagger variants, set `animate` to an object (not a variant name) — this overrides the parent's variant-driven animation
+  - `isDeleting` rows should get `pointer-events-none` to prevent interaction during fade-out
+  - `useRef` for timer cleanup prevents stale closure issues and memory leaks on fast unmount/remount
+---
+
+## 2026-02-06 - US-009
+- Audited all files in `components/transactions/` and `app/(dashboard)/transactions/page.tsx` for hardcoded colours
+- **Result:** All transaction components are already fully using design tokens — no changes needed
+- Previous stories (US-001 through US-008) already migrated all green/red/grey/white colours to semantic tokens
+- Verified: `bg-positive/20 text-positive` (BUY), `bg-destructive/20 text-destructive` (SELL), `bg-accent/20 text-accent` (DIVIDEND), `text-foreground`, `text-muted-foreground`, `bg-card/50`, `border-border`, `bg-background`, `bg-muted/50`
+- Remaining hardcoded colours are intentionally exempt: `text-yellow-*`/`bg-yellow-*` (warning), `text-blue-400`/`bg-blue-500/20` (SPLIT info) — per codebase patterns these are semantic and NOT part of design token migration
+- Filter dropdowns: already using `bg-background border-border text-foreground`
+- Empty state: uses shared `EmptyState` component with token-based styles
+- Typecheck (`npm run build`) and lint (`npm run lint`) both pass
+- Files changed: `tasks/prd.json`, `tasks/progress.txt` (no code changes needed)
+- **Learnings for future iterations:**
+  - When previous stories incrementally migrate colours, audit stories may find no remaining work — this is a success case
+  - Yellow/blue hardcoded colours are intentionally kept as semantic colours (warning/info) and should NOT be replaced with design tokens
+---
+
