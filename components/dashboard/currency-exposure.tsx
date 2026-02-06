@@ -89,7 +89,7 @@ function getCurrencyFlag(currency: Currency): string {
  */
 function ExposureSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
       <div className="animate-pulse">
         <div className="h-5 w-40 bg-muted rounded mb-6" />
         <div className="space-y-4">
@@ -143,10 +143,10 @@ function ExposureItem({
             <span className="font-medium text-foreground">
               {currency}
             </span>
-            <span className="text-xs text-muted-foreground ml-2">
+            <span className="text-body-sm text-muted-foreground ml-2">
               {getCurrencyDisplayName(currency)}
             </span>
-            <span className="text-xs text-muted-foreground ml-2">
+            <span className="text-body-sm text-muted-foreground ml-2">
               ({count} holding{count !== 1 ? "s" : ""})
             </span>
           </div>
@@ -155,7 +155,7 @@ function ExposureItem({
           <div className="font-medium text-foreground">
             {formatCurrency(value, displayCurrency, { compact: true })}
           </div>
-          <div className="text-xs text-muted-foreground">{formatPercentage(percentage)}</div>
+          <div className="text-body-sm text-muted-foreground">{formatPercentage(percentage)}</div>
         </div>
       </div>
       {/* Progress bar */}
@@ -205,7 +205,7 @@ export function CurrencyExposure() {
   // Show error state
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive bg-destructive/10 p-6">
+      <div className="rounded-2xl border border-destructive bg-destructive/10 p-6">
         <p className="text-destructive">Failed to load currency exposure</p>
       </div>
     );
@@ -221,8 +221,8 @@ export function CurrencyExposure() {
   // Empty state
   if (exposure.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+        <h3 className="text-label uppercase text-muted-foreground mb-4">
           Currency Exposure
         </h3>
         <p className="text-muted-foreground text-center py-8">
@@ -233,8 +233,8 @@ export function CurrencyExposure() {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
-      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-6">
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+      <h3 className="text-label uppercase text-muted-foreground mb-6">
         Currency Exposure
       </h3>
       <div className="space-y-5">
