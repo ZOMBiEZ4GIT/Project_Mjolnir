@@ -1,6 +1,5 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen, Zap } from "lucide-react";
 import { UserButton, useUser } from "@clerk/nextjs";
@@ -10,31 +9,16 @@ import { layout } from "@/lib/theme";
 import { navItems } from "@/lib/navigation";
 import { NavItemLink } from "@/components/layout/nav-item";
 
-const STORAGE_KEY = "mjolnir-sidebar-collapsed";
+interface SidebarProps {
+  isCollapsed: boolean;
+  onToggleCollapsed: () => void;
+}
 
-export function Sidebar() {
+export function Sidebar({ isCollapsed, onToggleCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const { user } = useUser();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   const hasClerkKey = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "true") {
-      setIsCollapsed(true);
-    }
-    setMounted(true);
-  }, []);
-
-  const toggleCollapsed = useCallback(() => {
-    setIsCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem(STORAGE_KEY, String(next));
-      return next;
-    });
-  }, []);
 
   const width = isCollapsed ? 64 : layout.sidebarWidth;
 
@@ -42,7 +26,7 @@ export function Sidebar() {
     <aside
       role="navigation"
       aria-label="Main navigation"
-      style={{ width: mounted ? width : layout.sidebarWidth }}
+      style={{ width }}
       className={cn(
         "fixed inset-y-0 left-0 z-30 flex flex-col border-r border-border bg-card transition-[width] duration-200 ease-in-out",
         "hidden lg:flex"
@@ -103,7 +87,7 @@ export function Sidebar() {
       {/* Collapse toggle */}
       <div className="border-t border-border px-2 py-2">
         <button
-          onClick={toggleCollapsed}
+          onClick={onToggleCollapsed}
           aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           className="flex w-full items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent/10 hover:text-foreground"
         >

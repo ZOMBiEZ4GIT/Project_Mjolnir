@@ -96,8 +96,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Mobile header bar with hamburger (left), Mjolnir branding (center), Clerk UserButton (right). Sheet drawer from left with nav items using shared navItems from lib/navigation.ts. Active item uses bg-accent/20 matching sidebar. Drawer closes on nav item tap. Header bar is fixed positioned with z-30, visible only below lg breakpoint."
     },
     {
       "id": "US-006",
@@ -116,8 +116,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "AppShell component at components/layout/app-shell.tsx. Owns sidebar collapsed state (localStorage persistence) and passes it to Sidebar via props. Sidebar refactored to accept isCollapsed/onToggleCollapsed props. Desktop: sidebar + margin-left content area with transition-[margin-left]. Mobile: pt-14 for fixed mobile header, full-width content. Content area has max-width from layout.maxContentWidth (1400px). Uses mounted state pattern to avoid hydration mismatch on sidebar width."
     },
     {
       "id": "US-007",

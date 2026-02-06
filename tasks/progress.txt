@@ -40,6 +40,10 @@
 - Sidebar layout order: Branding (h-14, border-b) → Nav items (flex-1) → User section (border-t, Clerk UserButton) → Collapse toggle (border-t)
 - useUser() from @clerk/nextjs for client-side user data; currentUser() from @clerk/nextjs/server for server components
 - Zap icon from lucide-react is the Mjolnir brand icon
+- Mobile header (components/layout/mobile-nav.tsx) is fixed h-14 z-30 — content area needs pt-14 on mobile to avoid overlap
+- Sheet drawer (shadcn/ui) handles focus trapping and Escape close via Radix Dialog primitive
+- AppShell (components/layout/app-shell.tsx) owns sidebar collapsed state — Sidebar receives isCollapsed/onToggleCollapsed as props
+- Content area uses inline style marginLeft matching sidebar width for smooth CSS transition alongside sidebar width transition
 
 ---
 
@@ -286,4 +290,42 @@ Started: 2026-02-06
   - Zap icon from lucide-react used as Mjolnir brand icon (lightning/thunder)
   - UserButton's afterSignOutUrl prop controls redirect after sign-out
   - The sidebar now has 4 vertical sections: branding (h-14 fixed), nav (flex-1 scrollable), user (border-t), toggle (border-t)
+---
+
+## 2026-02-06 - US-005
+- Created components/layout/mobile-nav.tsx as a client component
+- Mobile header bar: fixed, inset-x-0, h-14, z-30, visible below lg breakpoint (lg:hidden)
+- Layout: hamburger button (left) → Mjolnir branding with Zap icon (center) → Clerk UserButton (right)
+- Hamburger opens Sheet drawer from left side (side="left")
+- Drawer uses shared navItems from lib/navigation.ts with icons + labels
+- Active item: bg-accent/20 text-foreground (matches sidebar active state)
+- Inactive: text-muted-foreground hover:bg-accent/10 hover:text-foreground
+- Drawer closes on nav item tap via setOpen(false) onClick handler
+- Sheet handles Escape key close automatically (Radix Dialog primitive)
+- hasClerkKey guard for UserButton rendering; placeholder div maintains layout when Clerk not configured
+- Active route detection: exact match OR starts-with for nested routes (same logic as sidebar)
+- Files changed: components/layout/mobile-nav.tsx (new)
+- **Learnings for future iterations:**
+  - Mobile header needs to be fixed positioned to stay visible during scroll — content area will need top padding (pt-14) to avoid overlap
+  - Sheet from shadcn/ui uses Radix Dialog primitive — handles focus trapping and Escape key close automatically
+  - When no UserButton is available, use a same-sized placeholder div to keep the center-aligned branding truly centered
+  - The new mobile-nav in components/layout/ replaces the old one in components/dashboard/ — the old one will be cleaned up in US-011
+---
+
+## 2026-02-06 - US-006
+- Created components/layout/app-shell.tsx as a client component
+- AppShell composes: Sidebar (desktop) + MobileNav (mobile) + content area + CommandMenu
+- Owns sidebar collapsed state with localStorage persistence (key: mjolnir-sidebar-collapsed)
+- Uses mounted state pattern to avoid hydration mismatch on margin-left
+- Desktop: content area uses margin-left matching sidebar width (240px or 64px), with transition-[margin-left] for smooth animation
+- Mobile: content area has pt-14 to clear fixed mobile header, full-width (no margin-left since sidebar hidden)
+- Content area max-width: 1400px from layout.maxContentWidth, with p-4 mobile / p-6 desktop padding
+- Refactored Sidebar to accept isCollapsed and onToggleCollapsed as props (state lifted to AppShell)
+- Removed useState/useEffect/useCallback and localStorage logic from Sidebar — now a pure presentational component regarding collapse state
+- Files changed: components/layout/app-shell.tsx (new), components/layout/sidebar.tsx (modified)
+- **Learnings for future iterations:**
+  - Sidebar collapse state needs to be shared between Sidebar and content area — lifted to AppShell parent component
+  - Sidebar width is set via inline style (not Tailwind) for smooth CSS transition — content margin-left must also use inline style
+  - Mobile content needs pt-14 (56px) to clear the fixed mobile header, and lg:pt-0 on desktop where there's no header
+  - AppShell is a client component because it manages localStorage state — but its children can be server components passed via props
 ---
