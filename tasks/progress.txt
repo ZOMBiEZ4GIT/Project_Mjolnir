@@ -37,6 +37,9 @@
 - TooltipProvider with delayDuration={0} wraps collapsed nav items for instant tooltip display
 - Sidebar collapse state persists in localStorage ('mjolnir-sidebar-collapsed') — use mounted state pattern to avoid hydration mismatch
 - Sidebar is fixed positioned; content area needs dynamic left margin matching sidebar width (240px or 64px)
+- Sidebar layout order: Branding (h-14, border-b) → Nav items (flex-1) → User section (border-t, Clerk UserButton) → Collapse toggle (border-t)
+- useUser() from @clerk/nextjs for client-side user data; currentUser() from @clerk/nextjs/server for server components
+- Zap icon from lucide-react is the Mjolnir brand icon
 
 ---
 
@@ -266,4 +269,21 @@ Started: 2026-02-06
   - Sidebar is fixed positioned (fixed inset-y-0 left-0) — content area needs left margin to compensate
   - Width is applied via inline style (not Tailwind class) to enable smooth CSS transition from numeric value
   - The sidebar collapse state needs to be shared with app-shell for content margin adjustment — consider lifting state or using a context/zustand store in US-006
+---
+
+## 2026-02-06 - US-004
+- Added branding section at top of sidebar with Zap icon (lightning bolt = Mjolnir)
+- Expanded: Zap icon + "Mjolnir" text (text-heading-sm); Collapsed: Zap icon centered
+- Branding section has h-14 fixed height with border-b border-border
+- Added user section between nav items and collapse toggle
+- Uses Clerk's useUser() hook for client-side user data (firstName)
+- Expanded: UserButton avatar (w-8 h-8) + firstName; Collapsed: avatar only, centered
+- hasClerkKey guard prevents rendering when Clerk is not configured
+- Sidebar layout order: Branding (top) → Nav items (flex-1) → User section → Collapse toggle (bottom)
+- Files changed: components/layout/sidebar.tsx
+- **Learnings for future iterations:**
+  - useUser() from @clerk/nextjs provides client-side user data — use in client components; currentUser() from @clerk/nextjs/server for server components
+  - Zap icon from lucide-react used as Mjolnir brand icon (lightning/thunder)
+  - UserButton's afterSignOutUrl prop controls redirect after sign-out
+  - The sidebar now has 4 vertical sections: branding (h-14 fixed), nav (flex-1 scrollable), user (border-t), toggle (border-t)
 ---
