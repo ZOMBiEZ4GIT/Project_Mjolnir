@@ -487,28 +487,28 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
         </AnimatePresence>
       )}
 
-      {/* Timestamp with tooltip + retry */}
-      <div className="flex items-center gap-1">
-        {isRetrying ? (
-          <span className="text-xs flex items-center gap-0.5 text-muted-foreground">
-            <RotateCw className="h-3 w-3 animate-spin" />
-            Retrying...
-          </span>
-        ) : (
-          <PriceTimestamp fetchedAt={fetchedAt} isStale={isStale} error={error} />
-        )}
-        {showRetry && !isRetrying && (
-          <button
+      {/* Timestamp */}
+      <PriceTimestamp fetchedAt={fetchedAt} isStale={isStale} error={error} />
+
+      {/* Retry button (pill-shaped, with entrance/exit animation) */}
+      <AnimatePresence>
+        {showRetry && (
+          <motion.button
             type="button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             onClick={(e) => { e.stopPropagation(); onRetry?.(); }}
-            className="ml-1 p-0.5 rounded hover:bg-muted transition-colors"
+            disabled={isRetrying}
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs bg-muted text-muted-foreground hover:bg-accent/20 hover:text-foreground transition-colors disabled:opacity-60 disabled:pointer-events-none"
             title="Retry price fetch"
           >
-            <RotateCw className="h-3 w-3 text-muted-foreground" />
-            <span className="sr-only">Retry</span>
-          </button>
+            <RotateCw className={`h-3 w-3 ${isRetrying ? "animate-spin" : ""}`} />
+            {isRetrying ? "Retrying..." : "Retry"}
+          </motion.button>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   );
 }
