@@ -3,9 +3,10 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion, type Variants } from "framer-motion";
-import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown, RotateCw } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle, TrendingUp, TrendingDown, RotateCw } from "lucide-react";
 import { PriceFlash } from "./price-flash";
 import { PriceNumberTicker } from "./price-number-ticker";
+import { PriceTimestamp } from "./price-timestamp";
 import type { Holding } from "@/lib/db/schema";
 import type { HoldingTypeFilter } from "./filter-tabs";
 import {
@@ -210,29 +211,6 @@ function formatChangeAbsolute(value: number, currency: string): string {
     maximumFractionDigits: 2,
   });
   return `${symbol}${absValue}`;
-}
-
-/**
- * Format a date as "X ago" (e.g., "5 min ago", "2 hours ago")
- */
-function formatTimeAgo(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSeconds = Math.floor(diffMs / 1000);
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMinutes < 1) {
-    return "just now";
-  }
-  if (diffMinutes < 60) {
-    return `${diffMinutes} min ago`;
-  }
-  if (diffHours < 24) {
-    return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
-  }
-  return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
 }
 
 /**
@@ -509,41 +487,28 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
         </AnimatePresence>
       )}
 
-      {/* Staleness/timestamp indicator with optional retry button */}
-      <span
-        className={`text-xs flex items-center gap-0.5 ${
-          isStale || error ? "text-yellow-400" : "text-muted-foreground"
-        }`}
-      >
+      {/* Timestamp with tooltip + retry */}
+      <div className="flex items-center gap-1">
         {isRetrying ? (
-          <RotateCw className="h-3 w-3 animate-spin" />
+          <span className="text-xs flex items-center gap-0.5 text-muted-foreground">
+            <RotateCw className="h-3 w-3 animate-spin" />
+            Retrying...
+          </span>
         ) : (
-          <>
-            {isStale && <AlertTriangle className="h-3 w-3" />}
-            {error && !isStale && <AlertTriangle className="h-3 w-3" />}
-            {!isStale && !error && fetchedAt && <Clock className="h-3 w-3" />}
-          </>
-        )}
-        {isRetrying ? (
-          <span>Retrying...</span>
-        ) : (
-          <>
-            {fetchedAt ? formatTimeAgo(fetchedAt) : "unknown"}
-            {error && <span className="ml-1">(error)</span>}
-          </>
+          <PriceTimestamp fetchedAt={fetchedAt} isStale={isStale} error={error} />
         )}
         {showRetry && !isRetrying && (
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onRetry?.(); }}
-            className="ml-1.5 p-0.5 rounded hover:bg-muted transition-colors"
+            className="ml-1 p-0.5 rounded hover:bg-muted transition-colors"
             title="Retry price fetch"
           >
-            <RotateCw className="h-3 w-3" />
+            <RotateCw className="h-3 w-3 text-muted-foreground" />
             <span className="sr-only">Retry</span>
           </button>
         )}
-      </span>
+      </div>
     </div>
   );
 }
