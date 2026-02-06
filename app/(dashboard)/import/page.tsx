@@ -205,7 +205,7 @@ export default function ImportPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-gray-400">Loading...</div>
+          <div className="text-muted-foreground">Loading...</div>
         </div>
       </div>
     );
@@ -216,8 +216,8 @@ export default function ImportPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <h2 className="text-xl text-white">Sign in to import data</h2>
-          <p className="text-gray-400">You need to be authenticated to access this page.</p>
+          <h2 className="text-xl text-foreground">Sign in to import data</h2>
+          <p className="text-muted-foreground">You need to be authenticated to access this page.</p>
         </div>
       </div>
     );
@@ -225,16 +225,16 @@ export default function ImportPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-white mb-6">Import Data</h1>
-      <p className="text-gray-400 mb-8">
+      <h1 className="text-2xl font-bold text-foreground mb-6">Import Data</h1>
+      <p className="text-muted-foreground mb-8">
         Import your historical data from CSV files. The import process is idempotent—re-running the same file won&apos;t create duplicates.
       </p>
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Transaction Import Section */}
-        <Card className="border-gray-800 bg-gray-900/50">
+        <Card className="border-border bg-card/50">
           <CardHeader>
-            <CardTitle className="text-white">Import Transactions</CardTitle>
+            <CardTitle className="text-foreground">Import Transactions</CardTitle>
             <CardDescription>
               Import BUY, SELL, and DIVIDEND transactions for stocks, ETFs, and crypto.
             </CardDescription>
@@ -270,26 +270,26 @@ export default function ImportPage() {
             )}
 
             {/* CSV Format Example */}
-            <div className="rounded-lg border border-gray-800 bg-gray-950 p-4">
+            <div className="rounded-lg border border-border bg-background p-4">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium text-gray-300">CSV Format</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">CSV Format</h4>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 text-xs text-gray-400 hover:text-white"
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
                   onClick={() => downloadCsv(TRANSACTIONS_TEMPLATE, "transactions-template.csv")}
                 >
                   <Download className="h-3 w-3 mr-1" />
                   Download Template
                 </Button>
               </div>
-              <pre className="text-xs text-gray-400 overflow-x-auto whitespace-pre-wrap">
+              <pre className="text-xs text-muted-foreground overflow-x-auto whitespace-pre-wrap">
 {`date,symbol,action,quantity,unit_price,fees,currency,exchange,notes
 2024-03-15,VAS.AX,BUY,10,95.50,9.50,AUD,ASX,
 2024-03-20,BTC,BUY,0.5,65000,0,USD,,DCA purchase
 2024-04-01,VAS.AX,DIVIDEND,10,0.85,0,AUD,ASX,Quarterly dividend`}
               </pre>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 Required: date, symbol, action, quantity, unit_price. Optional: fees, currency, exchange, notes.
               </p>
             </div>
@@ -297,9 +297,9 @@ export default function ImportPage() {
         </Card>
 
         {/* Snapshot Import Section */}
-        <Card className="border-gray-800 bg-gray-900/50">
+        <Card className="border-border bg-card/50">
           <CardHeader>
-            <CardTitle className="text-white">Import Snapshots</CardTitle>
+            <CardTitle className="text-foreground">Import Snapshots</CardTitle>
             <CardDescription>
               Import balance snapshots for super, cash, and debt accounts.
             </CardDescription>
@@ -335,26 +335,26 @@ export default function ImportPage() {
             )}
 
             {/* CSV Format Example */}
-            <div className="rounded-lg border border-gray-800 bg-gray-950 p-4">
+            <div className="rounded-lg border border-border bg-background p-4">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium text-gray-300">CSV Format</h4>
+                <h4 className="text-sm font-medium text-muted-foreground">CSV Format</h4>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-7 text-xs text-gray-400 hover:text-white"
+                  className="h-7 text-xs text-muted-foreground hover:text-foreground"
                   onClick={() => downloadCsv(SNAPSHOTS_TEMPLATE, "snapshots-template.csv")}
                 >
                   <Download className="h-3 w-3 mr-1" />
                   Download Template
                 </Button>
               </div>
-              <pre className="text-xs text-gray-400 overflow-x-auto whitespace-pre-wrap">
+              <pre className="text-xs text-muted-foreground overflow-x-auto whitespace-pre-wrap">
 {`date,fund_name,balance,employer_contrib,employee_contrib,currency
 2024-03-31,AustralianSuper,185000,1200,500,AUD
 2024-03-31,Savings Account,25000,,,AUD
 2024-03-31,Credit Card,-3500,,,AUD`}
               </pre>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-muted-foreground mt-2">
                 Required: date, fund_name, balance. Optional: employer_contrib, employee_contrib, currency.
               </p>
             </div>
@@ -364,7 +364,7 @@ export default function ImportPage() {
 
       {/* Recent Imports Section */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-white mb-4">Recent Imports</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">Recent Imports</h2>
         <RecentImports imports={recentImports} isLoading={recentImportsLoading} />
       </div>
     </div>

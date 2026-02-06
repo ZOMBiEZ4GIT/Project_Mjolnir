@@ -164,13 +164,13 @@ function getActionColorClass(action: TransactionWithHolding["action"]): string {
   switch (action) {
     case "BUY":
     case "DIVIDEND":
-      return "bg-green-900 text-green-300";
+      return "bg-positive/20 text-positive";
     case "SELL":
-      return "bg-red-900 text-red-300";
+      return "bg-destructive/20 text-destructive";
     case "SPLIT":
       return "bg-blue-900 text-blue-300";
     default:
-      return "bg-gray-700 text-gray-300";
+      return "bg-muted text-muted-foreground";
   }
 }
 
@@ -293,20 +293,20 @@ export default function TransactionsPage() {
   const FilterControls = () => (
     <div className="flex flex-wrap gap-4 mb-4">
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="holding-filter" className="text-gray-400 text-sm">
+        <Label htmlFor="holding-filter" className="text-muted-foreground text-sm">
           Holding
         </Label>
         <Select
           value={selectedHoldingId || "all"}
           onValueChange={handleHoldingChange}
         >
-          <SelectTrigger id="holding-filter" className="w-[200px] bg-gray-900 border-gray-700 text-white">
+          <SelectTrigger id="holding-filter" className="w-[200px] bg-background border-border text-foreground">
             <SelectValue placeholder="All holdings" />
           </SelectTrigger>
-          <SelectContent className="bg-gray-900 border-gray-700">
-            <SelectItem value="all" className="text-white">All holdings</SelectItem>
+          <SelectContent className="bg-background border-border">
+            <SelectItem value="all" className="text-foreground">All holdings</SelectItem>
             {tradeableHoldings?.map((holding) => (
-              <SelectItem key={holding.id} value={holding.id} className="text-white">
+              <SelectItem key={holding.id} value={holding.id} className="text-foreground">
                 {holding.symbol || holding.name}
               </SelectItem>
             ))}
@@ -314,20 +314,20 @@ export default function TransactionsPage() {
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="action-filter" className="text-gray-400 text-sm">
+        <Label htmlFor="action-filter" className="text-muted-foreground text-sm">
           Action
         </Label>
         <Select
           value={selectedAction || "all"}
           onValueChange={handleActionChange}
         >
-          <SelectTrigger id="action-filter" className="w-[140px] bg-gray-900 border-gray-700 text-white">
+          <SelectTrigger id="action-filter" className="w-[140px] bg-background border-border text-foreground">
             <SelectValue placeholder="All actions" />
           </SelectTrigger>
-          <SelectContent className="bg-gray-900 border-gray-700">
-            <SelectItem value="all" className="text-white">All</SelectItem>
+          <SelectContent className="bg-background border-border">
+            <SelectItem value="all" className="text-foreground">All</SelectItem>
             {transactionActions.map((action) => (
-              <SelectItem key={action} value={action} className="text-white">
+              <SelectItem key={action} value={action} className="text-foreground">
                 {action}
               </SelectItem>
             ))}
@@ -335,7 +335,7 @@ export default function TransactionsPage() {
         </Select>
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label className="text-gray-400 text-sm">
+        <Label className="text-muted-foreground text-sm">
           Currency
         </Label>
         <CurrencyFilter
@@ -351,7 +351,7 @@ export default function TransactionsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-gray-400">Loading...</div>
+          <div className="text-muted-foreground">Loading...</div>
         </div>
       </div>
     );
@@ -362,8 +362,8 @@ export default function TransactionsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <h2 className="text-xl text-white">Sign in to view your transactions</h2>
-          <p className="text-gray-400">You need to be authenticated to access this page.</p>
+          <h2 className="text-xl text-foreground">Sign in to view your transactions</h2>
+          <p className="text-muted-foreground">You need to be authenticated to access this page.</p>
         </div>
       </div>
     );
@@ -373,10 +373,10 @@ export default function TransactionsPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-white mb-6">Transactions</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-6">Transactions</h1>
         <FilterControls />
         <div className="flex items-center justify-center min-h-[30vh]">
-          <div className="text-gray-400">Loading transactions...</div>
+          <div className="text-muted-foreground">Loading transactions...</div>
         </div>
       </div>
     );
@@ -386,11 +386,11 @@ export default function TransactionsPage() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-white mb-6">Transactions</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-6">Transactions</h1>
         <FilterControls />
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-2">
-          <p className="text-red-400">Failed to load transactions</p>
-          <p className="text-gray-500 text-sm">{error.message}</p>
+          <p className="text-destructive">Failed to load transactions</p>
+          <p className="text-muted-foreground text-sm">{error.message}</p>
         </div>
       </div>
     );
@@ -403,7 +403,7 @@ export default function TransactionsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-white">Transactions</h1>
+          <h1 className="text-2xl font-bold text-foreground">Transactions</h1>
           {!hasFilters && (
             <AddTransactionDialog>
               <Button>Add Transaction</Button>
@@ -442,44 +442,44 @@ export default function TransactionsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Transactions</h1>
+        <h1 className="text-2xl font-bold text-foreground">Transactions</h1>
         <AddTransactionDialog>
           <Button>Add Transaction</Button>
         </AddTransactionDialog>
       </div>
       <FilterControls />
-      <div className="rounded-lg border border-gray-800 overflow-x-auto">
+      <div className="rounded-lg border border-border overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="border-gray-800 hover:bg-transparent">
-              <TableHead className="text-gray-400 sticky left-0 bg-gray-950 z-10">Date</TableHead>
-              <TableHead className="text-gray-400 hidden sm:table-cell">Holding</TableHead>
-              <TableHead className="text-gray-400">Action</TableHead>
-              <TableHead className="text-gray-400 text-right hidden md:table-cell">Quantity</TableHead>
-              <TableHead className="text-gray-400 text-right hidden sm:table-cell">Unit Price</TableHead>
-              <TableHead className="text-gray-400 text-right hidden lg:table-cell">Fees</TableHead>
-              <TableHead className="text-gray-400 text-right">Total</TableHead>
-              <TableHead className="text-gray-400 text-right w-[80px] sm:w-24">Actions</TableHead>
+            <TableRow className="border-border hover:bg-transparent">
+              <TableHead className="text-muted-foreground sticky left-0 bg-background z-10">Date</TableHead>
+              <TableHead className="text-muted-foreground hidden sm:table-cell">Holding</TableHead>
+              <TableHead className="text-muted-foreground">Action</TableHead>
+              <TableHead className="text-muted-foreground text-right hidden md:table-cell">Quantity</TableHead>
+              <TableHead className="text-muted-foreground text-right hidden sm:table-cell">Unit Price</TableHead>
+              <TableHead className="text-muted-foreground text-right hidden lg:table-cell">Fees</TableHead>
+              <TableHead className="text-muted-foreground text-right">Total</TableHead>
+              <TableHead className="text-muted-foreground text-right w-[80px] sm:w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {transactions.map((transaction) => {
               const total = calculateTotal(transaction);
               return (
-                <TableRow key={transaction.id} className="border-gray-800">
-                  <TableCell className="text-gray-300 sticky left-0 bg-gray-950 z-10">
+                <TableRow key={transaction.id} className="border-border">
+                  <TableCell className="text-muted-foreground sticky left-0 bg-background z-10">
                     <div className="flex flex-col">
                       <span>{formatDate(transaction.date)}</span>
                       {/* Show holding name on mobile only (since Holding column is hidden) */}
-                      <span className="text-xs text-gray-500 sm:hidden">
+                      <span className="text-xs text-muted-foreground sm:hidden">
                         {transaction.holding.symbol || transaction.holding.name}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-white font-medium hidden sm:table-cell">
+                  <TableCell className="text-foreground font-medium hidden sm:table-cell">
                     {transaction.holding.symbol || transaction.holding.name}
                     {transaction.holding.symbol && (
-                      <span className="text-gray-500 text-sm ml-2 hidden md:inline">
+                      <span className="text-muted-foreground text-sm ml-2 hidden md:inline">
                         {transaction.holding.name}
                       </span>
                     )}
@@ -493,7 +493,7 @@ export default function TransactionsPage() {
                       {transaction.action}
                     </span>
                   </TableCell>
-                  <TableCell className="text-gray-300 text-right font-mono hidden md:table-cell">
+                  <TableCell className="text-muted-foreground text-right font-mono hidden md:table-cell">
                     {transaction.action === "SPLIT"
                       ? `${transaction.quantity}:1`
                       : Number(transaction.quantity).toLocaleString("en-AU", {
@@ -501,7 +501,7 @@ export default function TransactionsPage() {
                           maximumFractionDigits: 8,
                         })}
                   </TableCell>
-                  <TableCell className="text-gray-300 text-right font-mono hidden sm:table-cell">
+                  <TableCell className="text-muted-foreground text-right font-mono hidden sm:table-cell">
                     {transaction.action === "SPLIT" ? (
                       "—"
                     ) : (
@@ -513,7 +513,7 @@ export default function TransactionsPage() {
                       />
                     )}
                   </TableCell>
-                  <TableCell className="text-gray-300 text-right font-mono hidden lg:table-cell">
+                  <TableCell className="text-muted-foreground text-right font-mono hidden lg:table-cell">
                     {transaction.action === "SPLIT" ||
                     Number(transaction.fees) === 0 ? (
                       "—"
@@ -526,7 +526,7 @@ export default function TransactionsPage() {
                       />
                     )}
                   </TableCell>
-                  <TableCell className="text-white text-right font-mono font-medium">
+                  <TableCell className="text-foreground text-right font-mono font-medium">
                     {transaction.action === "SPLIT" ? (
                       "—"
                     ) : (
@@ -543,7 +543,7 @@ export default function TransactionsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-gray-400 hover:text-white"
+                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-foreground"
                         onClick={() => setEditTransaction(transaction)}
                       >
                         <span className="sr-only">Edit</span>
@@ -566,7 +566,7 @@ export default function TransactionsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-gray-400 hover:text-red-400"
+                        className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-destructive"
                         onClick={() => setDeleteTransaction(transaction)}
                       >
                         <span className="sr-only">Delete</span>
@@ -596,13 +596,13 @@ export default function TransactionsPage() {
             })}
           </TableBody>
           {aggregatedTotals && (
-            <TableFooter className="border-t border-gray-700">
-              <TableRow className="bg-gray-900/50 hover:bg-gray-900/50">
-                <TableCell className="text-gray-400 text-sm sticky left-0 bg-gray-900/50 z-10">
+            <TableFooter className="border-t border-border">
+              <TableRow className="bg-card/50 hover:bg-card/50">
+                <TableCell className="text-muted-foreground text-sm sticky left-0 bg-card/50 z-10">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">Totals</span>
                     {aggregatedTotals.hasMixedCurrencies && (
-                      <span className="text-xs text-gray-500 hidden sm:inline">
+                      <span className="text-xs text-muted-foreground hidden sm:inline">
                         (converted to {displayCurrency})
                       </span>
                     )}
@@ -617,41 +617,41 @@ export default function TransactionsPage() {
                 <TableCell className="text-right">
                   <div className="flex flex-col gap-1 text-sm">
                     <div className="flex justify-end items-center gap-2 sm:gap-4">
-                      <span className="text-gray-400 text-xs sm:text-sm">Buys:</span>
+                      <span className="text-muted-foreground text-xs sm:text-sm">Buys:</span>
                       <CurrencyDisplay
                         amount={aggregatedTotals.totalBuys}
                         currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
                         isLoading={currencyLoading}
-                        className="text-red-400 font-mono text-xs sm:text-sm"
+                        className="text-destructive font-mono text-xs sm:text-sm"
                       />
                     </div>
                     <div className="flex justify-end items-center gap-2 sm:gap-4">
-                      <span className="text-gray-400 text-xs sm:text-sm">Sells:</span>
+                      <span className="text-muted-foreground text-xs sm:text-sm">Sells:</span>
                       <CurrencyDisplay
                         amount={aggregatedTotals.totalSells}
                         currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
                         isLoading={currencyLoading}
-                        className="text-green-400 font-mono text-xs sm:text-sm"
+                        className="text-positive font-mono text-xs sm:text-sm"
                       />
                     </div>
                     {aggregatedTotals.totalDividends > 0 && (
                       <div className="flex justify-end items-center gap-2 sm:gap-4">
-                        <span className="text-gray-400 text-xs sm:text-sm">Dividends:</span>
+                        <span className="text-muted-foreground text-xs sm:text-sm">Dividends:</span>
                         <CurrencyDisplay
                           amount={aggregatedTotals.totalDividends}
                           currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
                           isLoading={currencyLoading}
-                          className="text-green-400 font-mono text-xs sm:text-sm"
+                          className="text-positive font-mono text-xs sm:text-sm"
                         />
                       </div>
                     )}
-                    <div className="flex justify-end items-center gap-2 sm:gap-4 pt-1 border-t border-gray-700">
-                      <span className="text-gray-300 font-medium text-xs sm:text-sm">Net:</span>
+                    <div className="flex justify-end items-center gap-2 sm:gap-4 pt-1 border-t border-border">
+                      <span className="text-muted-foreground font-medium text-xs sm:text-sm">Net:</span>
                       <CurrencyDisplay
                         amount={aggregatedTotals.netCashFlow}
                         currency={aggregatedTotals.hasMixedCurrencies ? displayCurrency : (transactions?.[0]?.currency as Currency) || displayCurrency}
                         isLoading={currencyLoading}
-                        className={`font-mono font-bold text-xs sm:text-sm ${aggregatedTotals.netCashFlow >= 0 ? "text-green-400" : "text-red-400"}`}
+                        className={`font-mono font-bold text-xs sm:text-sm ${aggregatedTotals.netCashFlow >= 0 ? "text-positive" : "text-destructive"}`}
                       />
                     </div>
                   </div>

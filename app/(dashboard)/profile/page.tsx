@@ -8,7 +8,7 @@ export default function ProfilePage() {
   if (!hasClerkKey) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <p className="text-gray-400">Profile management unavailable</p>
+        <p className="text-muted-foreground">Profile management unavailable</p>
       </div>
     );
   }
@@ -19,7 +19,7 @@ export default function ProfilePage() {
         appearance={{
           elements: {
             rootBox: "w-full",
-            card: "bg-gray-900 border-gray-800",
+            card: "bg-card border-border",
           },
         }}
       />

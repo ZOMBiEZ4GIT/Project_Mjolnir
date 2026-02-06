@@ -107,7 +107,7 @@ export default function ExportPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-gray-400">Loading...</div>
+          <div className="text-muted-foreground">Loading...</div>
         </div>
       </div>
     );
@@ -118,8 +118,8 @@ export default function ExportPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <h2 className="text-xl text-white">Sign in to export data</h2>
-          <p className="text-gray-400">You need to be authenticated to access this page.</p>
+          <h2 className="text-xl text-foreground">Sign in to export data</h2>
+          <p className="text-muted-foreground">You need to be authenticated to access this page.</p>
         </div>
       </div>
     );
@@ -127,27 +127,27 @@ export default function ExportPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-white mb-6">Export Data</h1>
-      <p className="text-gray-400 mb-8">
+      <h1 className="text-2xl font-bold text-foreground mb-6">Export Data</h1>
+      <p className="text-muted-foreground mb-8">
         Download your data as CSV or JSON files for backup or external analysis.
       </p>
 
       <div className="grid gap-8 lg:grid-cols-2">
         {/* Holdings Export Section */}
-        <Card className="border-gray-800 bg-gray-900/50">
+        <Card className="border-border bg-card/50">
           <CardHeader>
-            <CardTitle className="text-white">Holdings Export</CardTitle>
+            <CardTitle className="text-foreground">Holdings Export</CardTitle>
             <CardDescription>
               Export all your holdings including stocks, ETFs, crypto, super, cash, and debt.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {isLoadingCounts ? (
                 "Loading..."
               ) : (
                 <>
-                  <span className="font-semibold text-white">{counts.holdings}</span>{" "}
+                  <span className="font-semibold text-foreground">{counts.holdings}</span>{" "}
                   {counts.holdings === 1 ? "holding" : "holdings"} to export
                 </>
               )}
@@ -184,20 +184,20 @@ export default function ExportPage() {
         </Card>
 
         {/* Transactions Export Section */}
-        <Card className="border-gray-800 bg-gray-900/50">
+        <Card className="border-border bg-card/50">
           <CardHeader>
-            <CardTitle className="text-white">Transactions Export</CardTitle>
+            <CardTitle className="text-foreground">Transactions Export</CardTitle>
             <CardDescription>
               Export your BUY, SELL, and DIVIDEND transaction history.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {isLoadingCounts ? (
                 "Loading..."
               ) : (
                 <>
-                  <span className="font-semibold text-white">{counts.transactions}</span>{" "}
+                  <span className="font-semibold text-foreground">{counts.transactions}</span>{" "}
                   {counts.transactions === 1 ? "transaction" : "transactions"} to export
                 </>
               )}
@@ -234,20 +234,20 @@ export default function ExportPage() {
         </Card>
 
         {/* Snapshots Export Section */}
-        <Card className="border-gray-800 bg-gray-900/50">
+        <Card className="border-border bg-card/50">
           <CardHeader>
-            <CardTitle className="text-white">Snapshots Export</CardTitle>
+            <CardTitle className="text-foreground">Snapshots Export</CardTitle>
             <CardDescription>
               Export balance snapshots for super, cash, and debt accounts.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-muted-foreground">
               {isLoadingCounts ? (
                 "Loading..."
               ) : (
                 <>
-                  <span className="font-semibold text-white">{counts.snapshots}</span>{" "}
+                  <span className="font-semibold text-foreground">{counts.snapshots}</span>{" "}
                   {counts.snapshots === 1 ? "snapshot" : "snapshots"} to export
                 </>
               )}
@@ -284,29 +284,29 @@ export default function ExportPage() {
         </Card>
 
         {/* Full Backup Section */}
-        <Card className="border-gray-800 bg-gray-900/50">
+        <Card className="border-border bg-card/50">
           <CardHeader>
-            <CardTitle className="text-white">Full Backup</CardTitle>
+            <CardTitle className="text-foreground">Full Backup</CardTitle>
             <CardDescription>
               Download a complete JSON backup of all your data including holdings, transactions, snapshots, and contributions.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-sm text-gray-400">
+            <div className="text-sm text-muted-foreground">
               {isLoadingCounts ? (
                 "Loading..."
               ) : (
                 <div className="space-y-1">
                   <p>
-                    <span className="font-semibold text-white">{counts.holdings}</span>{" "}
+                    <span className="font-semibold text-foreground">{counts.holdings}</span>{" "}
                     {counts.holdings === 1 ? "holding" : "holdings"}
                   </p>
                   <p>
-                    <span className="font-semibold text-white">{counts.transactions}</span>{" "}
+                    <span className="font-semibold text-foreground">{counts.transactions}</span>{" "}
                     {counts.transactions === 1 ? "transaction" : "transactions"}
                   </p>
                   <p>
-                    <span className="font-semibold text-white">{counts.snapshots}</span>{" "}
+                    <span className="font-semibold text-foreground">{counts.snapshots}</span>{" "}
                     {counts.snapshots === 1 ? "snapshot" : "snapshots"}
                   </p>
                 </div>

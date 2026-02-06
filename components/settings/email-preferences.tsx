@@ -243,17 +243,17 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
     return (
       <div className={`space-y-6 ${className ?? ""}`}>
         <div className="flex items-center gap-3">
-          <span className="h-6 w-6 rounded bg-gray-700 animate-pulse" />
-          <span className="h-5 w-48 rounded bg-gray-700 animate-pulse" />
+          <span className="h-6 w-6 rounded bg-muted animate-pulse" />
+          <span className="h-5 w-48 rounded bg-muted animate-pulse" />
         </div>
         <div className="space-y-4 pl-9">
           <div className="flex items-center gap-3">
-            <span className="h-5 w-9 rounded-full bg-gray-700 animate-pulse" />
-            <span className="h-4 w-32 rounded bg-gray-700 animate-pulse" />
+            <span className="h-5 w-9 rounded-full bg-muted animate-pulse" />
+            <span className="h-4 w-32 rounded bg-muted animate-pulse" />
           </div>
           <div className="flex items-center gap-3">
-            <span className="h-9 w-24 rounded bg-gray-700 animate-pulse" />
-            <span className="h-4 w-40 rounded bg-gray-700 animate-pulse" />
+            <span className="h-9 w-24 rounded bg-muted animate-pulse" />
+            <span className="h-4 w-40 rounded bg-muted animate-pulse" />
           </div>
         </div>
       </div>
@@ -266,11 +266,11 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
   return (
     <div className={`space-y-6 ${className ?? ""}`}>
       {/* Email address display */}
-      <div className="flex items-center gap-3 text-gray-300">
-        <Mail className="h-5 w-5 text-gray-400" />
+      <div className="flex items-center gap-3 text-muted-foreground">
+        <Mail className="h-5 w-5 text-muted-foreground" />
         <span className="text-sm">
           Reminders will be sent to{" "}
-          <span className="font-medium text-white">{userEmail ?? "your email"}</span>
+          <span className="font-medium text-foreground">{userEmail ?? "your email"}</span>
         </span>
       </div>
 
@@ -286,7 +286,7 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
           />
           <Label
             htmlFor="email-reminders"
-            className="text-gray-300 cursor-pointer text-sm"
+            className="text-muted-foreground cursor-pointer text-sm"
           >
             Enable monthly check-in reminders
           </Label>
@@ -294,8 +294,8 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
 
         {/* Reminder day selector */}
         <div className="flex items-center gap-3">
-          <Calendar className="h-4 w-4 text-gray-400" />
-          <Label htmlFor="reminder-day" className="text-gray-300 text-sm">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <Label htmlFor="reminder-day" className="text-muted-foreground text-sm">
             Send reminder on the
           </Label>
           <Select
@@ -318,12 +318,12 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
               ))}
             </SelectContent>
           </Select>
-          <span className="text-gray-300 text-sm">of each month</span>
+          <span className="text-muted-foreground text-sm">of each month</span>
         </div>
 
         {/* Helper text */}
         {emailReminders && (
-          <p className="text-xs text-gray-500 pl-7">
+          <p className="text-xs text-muted-foreground pl-7">
             You&apos;ll receive an email reminder when your super, cash, or debt balances need updating.
           </p>
         )}
@@ -349,7 +349,7 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
               </>
             )}
           </Button>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Send a test reminder email to verify your email configuration.
           </p>
         </div>

@@ -289,7 +289,7 @@ export default function HoldingsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-gray-400">Loading...</div>
+          <div className="text-muted-foreground">Loading...</div>
         </div>
       </div>
     );
@@ -300,8 +300,8 @@ export default function HoldingsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <h2 className="text-xl text-white">Sign in to view your holdings</h2>
-          <p className="text-gray-400">You need to be authenticated to access this page.</p>
+          <h2 className="text-xl text-foreground">Sign in to view your holdings</h2>
+          <p className="text-muted-foreground">You need to be authenticated to access this page.</p>
         </div>
       </div>
     );
@@ -311,9 +311,9 @@ export default function HoldingsPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-white mb-6">Holdings</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-6">Holdings</h1>
         <div className="flex items-center justify-center min-h-[30vh]">
-          <div className="text-gray-400">Loading holdings...</div>
+          <div className="text-muted-foreground">Loading holdings...</div>
         </div>
       </div>
     );
@@ -323,10 +323,10 @@ export default function HoldingsPage() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-white mb-6">Holdings</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-6">Holdings</h1>
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-2">
-          <p className="text-red-400">Failed to load holdings</p>
-          <p className="text-gray-500 text-sm">{error.message}</p>
+          <p className="text-destructive">Failed to load holdings</p>
+          <p className="text-muted-foreground text-sm">{error.message}</p>
         </div>
       </div>
     );
@@ -337,7 +337,7 @@ export default function HoldingsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-white">Holdings</h1>
+          <h1 className="text-2xl font-bold text-foreground">Holdings</h1>
         </div>
         <EmptyState
           icon={Briefcase}
@@ -358,7 +358,7 @@ export default function HoldingsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-white">Holdings</h1>
+          <h1 className="text-2xl font-bold text-foreground">Holdings</h1>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -383,7 +383,7 @@ export default function HoldingsPage() {
               checked={showDormant}
               onCheckedChange={handleShowDormantChange}
             />
-            <Label htmlFor="show-dormant-filtered" className="text-gray-300 cursor-pointer text-sm">
+            <Label htmlFor="show-dormant-filtered" className="text-muted-foreground cursor-pointer text-sm">
               Show dormant holdings
             </Label>
           </div>
@@ -416,10 +416,10 @@ export default function HoldingsPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-white">Holdings</h1>
+          <h1 className="text-2xl font-bold text-foreground">Holdings</h1>
           {/* Subtle background refresh indicator */}
           {backgroundRefreshMutation.isPending && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <RefreshCw className="h-3 w-3 animate-spin" />
               <span>Updating prices...</span>
             </div>
@@ -449,7 +449,7 @@ export default function HoldingsPage() {
             checked={showDormant}
             onCheckedChange={handleShowDormantChange}
           />
-          <Label htmlFor="show-dormant" className="text-gray-300 cursor-pointer text-sm">
+          <Label htmlFor="show-dormant" className="text-muted-foreground cursor-pointer text-sm">
             Show dormant holdings
           </Label>
         </div>

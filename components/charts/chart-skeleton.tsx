@@ -33,9 +33,9 @@ export function ChartSkeleton({
 }: ChartSkeletonProps) {
   const content = (
     <div className="animate-pulse">
-      {title && <div className="h-5 w-48 bg-gray-700 rounded mb-6" />}
+      {title && <div className="h-5 w-48 bg-muted rounded mb-6" />}
       <div
-        className={`${height} bg-gray-700/50 rounded flex items-center justify-center`}
+        className={`${height} bg-muted/50 rounded flex items-center justify-center`}
       >
         {variant === "bar" && <BarSkeleton />}
         {variant === "pie" && <PieSkeleton />}
@@ -46,7 +46,7 @@ export function ChartSkeleton({
 
   if (withContainer) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
+      <div className="rounded-lg border border-border bg-card/50 p-6">
         {content}
       </div>
     );
@@ -67,7 +67,7 @@ function BarSkeleton() {
       {heights.map((h, i) => (
         <div
           key={i}
-          className="w-4 bg-gray-600 rounded-t"
+          className="w-4 bg-muted rounded-t"
           style={{ height: `${h}%` }}
         />
       ))}
@@ -79,7 +79,7 @@ function BarSkeleton() {
  * Pie chart skeleton pattern.
  */
 function PieSkeleton() {
-  return <div className="w-48 h-48 bg-gray-600 rounded-full" />;
+  return <div className="w-48 h-48 bg-muted rounded-full" />;
 }
 
 /**
@@ -96,7 +96,7 @@ function LineSkeleton() {
         <path
           d="M0,80 L25,70 L50,75 L75,50 L100,60 L125,40 L150,45 L175,30 L200,35 L225,20 L250,25 L275,15 L300,20"
           fill="none"
-          stroke="#4B5563"
+          stroke="#3f3f46"
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"

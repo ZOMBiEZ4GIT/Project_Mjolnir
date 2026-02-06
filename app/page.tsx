@@ -16,8 +16,8 @@ export default async function Home() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
-        <h1 className="text-6xl font-bold text-white">Mjolnir</h1>
-        <p className="text-xl text-gray-400">Personal Net Worth Tracker</p>
+        <h1 className="text-6xl font-bold text-foreground">Mjolnir</h1>
+        <p className="text-xl text-muted-foreground">Personal Net Worth Tracker</p>
         {isSignedIn ? (
           <Button size="lg" asChild>
             <Link href="/dashboard">Go to Dashboard</Link>

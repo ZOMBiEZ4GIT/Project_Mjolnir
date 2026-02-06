@@ -154,25 +154,25 @@ function CashHoldingEntry({
   };
 
   return (
-    <div className={`p-3 rounded-lg bg-gray-800 border ${error ? "border-red-500" : "border-gray-700"}`}>
+    <div className={`p-3 rounded-lg bg-card border ${error ? "border-destructive" : "border-border"}`}>
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-white font-medium">{holding.name}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">
+            <span className="text-foreground font-medium">{holding.name}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
               {holding.currency}
             </span>
           </div>
-          {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+          {error && <p className="text-xs text-destructive mt-1">{error}</p>}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">{currencySymbol}</span>
+          <span className="text-sm text-muted-foreground">{currencySymbol}</span>
           <Input
             type="number"
             placeholder="Balance"
             value={data.balance}
             onChange={(e) => handleBalanceChange(e.target.value)}
-            className={`w-32 bg-gray-900 text-white text-right ${error ? "border-red-500" : "border-gray-600"}`}
+            className={`w-32 bg-background text-foreground text-right ${error ? "border-destructive" : "border-border"}`}
             step="0.01"
             min="0"
           />
@@ -204,25 +204,25 @@ function DebtHoldingEntry({
   };
 
   return (
-    <div className={`p-3 rounded-lg bg-gray-800 border ${error ? "border-red-500" : "border-gray-700"}`}>
+    <div className={`p-3 rounded-lg bg-card border ${error ? "border-destructive" : "border-border"}`}>
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-white font-medium">{holding.name}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">
+            <span className="text-foreground font-medium">{holding.name}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
               {holding.currency}
             </span>
           </div>
-          {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+          {error && <p className="text-xs text-destructive mt-1">{error}</p>}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">{currencySymbol}</span>
+          <span className="text-sm text-muted-foreground">{currencySymbol}</span>
           <Input
             type="number"
             placeholder="Balance"
             value={data.balance}
             onChange={(e) => handleBalanceChange(e.target.value)}
-            className={`w-32 bg-gray-900 text-white text-right ${error ? "border-red-500" : "border-gray-600"}`}
+            className={`w-32 bg-background text-foreground text-right ${error ? "border-destructive" : "border-border"}`}
             step="0.01"
             min="0"
           />
@@ -261,31 +261,31 @@ function SuperHoldingEntry({
   };
 
   return (
-    <div className={`p-3 rounded-lg bg-gray-800 border ${error ? "border-red-500" : "border-gray-700"} space-y-3`}>
+    <div className={`p-3 rounded-lg bg-card border ${error ? "border-destructive" : "border-border"} space-y-3`}>
       {/* Holding name and balance input row */}
       <div className="flex items-center gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-white font-medium">{holding.name}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-400">
+            <span className="text-foreground font-medium">{holding.name}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
               {holding.currency}
             </span>
             {holding.isDormant && (
-              <span className="text-xs px-2 py-0.5 rounded bg-gray-700 text-gray-400">
+              <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
                 Dormant
               </span>
             )}
           </div>
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-400">{currencySymbol}</span>
+          <span className="text-sm text-muted-foreground">{currencySymbol}</span>
           <Input
             type="number"
             placeholder="Balance"
             value={data.balance}
             onChange={(e) => handleBalanceChange(e.target.value)}
-            className={`w-32 bg-gray-900 text-white text-right ${error ? "border-red-500" : "border-gray-600"}`}
+            className={`w-32 bg-background text-foreground text-right ${error ? "border-destructive" : "border-border"}`}
             step="0.01"
             min="0"
           />
@@ -298,7 +298,7 @@ function SuperHoldingEntry({
           <button
             type="button"
             onClick={toggleContributions}
-            className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+            className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
           >
             {data.showContributions ? (
               <ChevronDown className="w-4 h-4" />
@@ -311,36 +311,36 @@ function SuperHoldingEntry({
           </button>
 
           {data.showContributions && (
-            <div className="pl-4 space-y-3 border-l-2 border-gray-700">
+            <div className="pl-4 space-y-3 border-l-2 border-border">
               <div className="flex items-center justify-between">
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted-foreground">
                   Employer Contribution
                 </label>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-400">{currencySymbol}</span>
+                  <span className="text-sm text-muted-foreground">{currencySymbol}</span>
                   <Input
                     type="number"
                     placeholder="0.00"
                     value={data.employerContrib}
                     onChange={(e) => handleEmployerContribChange(e.target.value)}
-                    className="w-28 bg-gray-900 border-gray-600 text-white text-right"
+                    className="w-28 bg-background border-border text-foreground text-right"
                     step="0.01"
                     min="0"
                   />
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <label className="text-sm text-gray-300">
+                <label className="text-sm text-muted-foreground">
                   Employee Contribution
                 </label>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-400">{currencySymbol}</span>
+                  <span className="text-sm text-muted-foreground">{currencySymbol}</span>
                   <Input
                     type="number"
                     placeholder="0.00"
                     value={data.employeeContrib}
                     onChange={(e) => handleEmployeeContribChange(e.target.value)}
-                    className="w-28 bg-gray-900 border-gray-600 text-white text-right"
+                    className="w-28 bg-background border-border text-foreground text-right"
                     step="0.01"
                     min="0"
                   />
@@ -635,26 +635,26 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto border-gray-700 bg-gray-900">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto border-border bg-background">
         <DialogHeader>
-          <DialogTitle className="text-white">Monthly Check-in</DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogTitle className="text-foreground">Monthly Check-in</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
             Update your balances for the selected month
           </DialogDescription>
         </DialogHeader>
 
         {/* Month Selector */}
         <div className="flex items-center gap-4 py-4">
-          <label className="text-sm font-medium text-gray-300">Month:</label>
+          <label className="text-sm font-medium text-muted-foreground">Month:</label>
           <Select value={selectedMonth} onValueChange={handleMonthChange}>
-            <SelectTrigger className="w-[200px] bg-gray-800 border-gray-700 text-white">
+            <SelectTrigger className="w-[200px] bg-card border-border text-foreground">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-gray-800 border-gray-700">
-              <SelectItem value={currentMonth} className="text-white">
+            <SelectContent className="bg-card border-border">
+              <SelectItem value={currentMonth} className="text-foreground">
                 {formatMonthYear(currentMonth)} (Current)
               </SelectItem>
-              <SelectItem value={previousMonth} className="text-white">
+              <SelectItem value={previousMonth} className="text-foreground">
                 {formatMonthYear(previousMonth)}
               </SelectItem>
             </SelectContent>
@@ -663,7 +663,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
 
         {/* Progress Indicator */}
         {totalHoldings > 0 && (
-          <div className="text-sm text-gray-400 mb-4">
+          <div className="text-sm text-muted-foreground mb-4">
             {updatedCount} of {totalHoldings} holding
             {totalHoldings !== 1 ? "s" : ""} updated
           </div>
@@ -671,21 +671,21 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
 
         {/* Loading State */}
         {isLoading && (
-          <div className="py-8 text-center text-gray-400">
+          <div className="py-8 text-center text-muted-foreground">
             Loading holdings...
           </div>
         )}
 
         {/* Error State */}
         {error && (
-          <div className="py-8 text-center text-red-400">
+          <div className="py-8 text-center text-destructive">
             Failed to load holdings. Please try again.
           </div>
         )}
 
         {/* Empty State */}
         {!isLoading && !error && totalHoldings === 0 && (
-          <div className="py-8 text-center text-gray-400">
+          <div className="py-8 text-center text-muted-foreground">
             All holdings are up to date for {formatMonthYear(selectedMonth)}!
           </div>
         )}
@@ -699,12 +699,12 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
 
               return (
                 <div key={type} className="space-y-3">
-                  <h3 className="text-lg font-semibold text-white border-b border-gray-700 pb-2">
+                  <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
                     {typeLabels[type] || type}
                   </h3>
                   {/* Debt section explanatory text */}
                   {type === "debt" && (
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-muted-foreground">
                       Enter as positive number (e.g., 5000 for $5,000 owed)
                     </p>
                   )}
@@ -759,11 +759,11 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
         )}
 
         {/* Footer with Skip and Save All Buttons */}
-        <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-gray-700">
+        <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-border">
           <Button
             variant="outline"
             onClick={() => handleOpenChange(false)}
-            className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            className="border-border text-foreground hover:bg-muted"
             disabled={saveMutation.isPending}
           >
             Skip
@@ -772,7 +772,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
             <Button
               onClick={handleSaveAll}
               disabled={saveMutation.isPending || updatedCount === 0}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {saveMutation.isPending ? (
                 <>

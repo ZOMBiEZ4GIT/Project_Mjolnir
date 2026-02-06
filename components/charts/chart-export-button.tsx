@@ -51,7 +51,7 @@ export function ChartExportButton({
     setIsExporting(true);
     try {
       const canvas = await html2canvas(chartRef.current, {
-        backgroundColor: "#1f2937", // gray-800 background
+        backgroundColor: "#18181b", // matches --card (zinc-900)
         scale: 2, // Higher resolution
         logging: false,
         useCORS: true,
@@ -75,8 +75,8 @@ export function ChartExportButton({
       disabled={isExporting}
       className={`
         flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium
-        transition-colors bg-gray-700/50 hover:bg-gray-700
-        text-gray-400 hover:text-white disabled:opacity-50
+        transition-colors bg-muted/50 hover:bg-muted
+        text-muted-foreground hover:text-foreground disabled:opacity-50
         disabled:cursor-not-allowed
         ${className ?? ""}
       `}

@@ -171,23 +171,23 @@ function PageSkeleton() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="animate-pulse">
-        <div className="h-6 w-24 bg-gray-700 rounded mb-6" />
-        <div className="h-10 w-64 bg-gray-700 rounded mb-2" />
-        <div className="h-5 w-32 bg-gray-700 rounded mb-8" />
+        <div className="h-6 w-24 bg-muted rounded mb-6" />
+        <div className="h-10 w-64 bg-muted rounded mb-2" />
+        <div className="h-5 w-32 bg-muted rounded mb-8" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="rounded-lg border border-gray-700 bg-gray-800/50 p-6"
+              className="rounded-lg border border-border bg-card/50 p-6"
             >
-              <div className="h-4 w-20 bg-gray-700 rounded mb-3" />
-              <div className="h-8 w-32 bg-gray-700 rounded" />
+              <div className="h-4 w-20 bg-muted rounded mb-3" />
+              <div className="h-8 w-32 bg-muted rounded" />
             </div>
           ))}
         </div>
-        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-          <div className="h-5 w-40 bg-gray-700 rounded mb-6" />
-          <div className="h-64 bg-gray-700/50 rounded" />
+        <div className="rounded-lg border border-border bg-card/50 p-6">
+          <div className="h-5 w-40 bg-muted rounded mb-6" />
+          <div className="h-64 bg-muted/50 rounded" />
         </div>
       </div>
     </div>
@@ -240,13 +240,13 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
       <div className="container mx-auto px-4 py-8">
         <Link
           href="/holdings"
-          className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Holdings
         </Link>
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-4">
-          <p className="text-red-400 text-lg">
+          <p className="text-destructive text-lg">
             {error.message === "Holding not found"
               ? "Holding not found"
               : "Failed to load holding"}
@@ -279,7 +279,7 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
       {/* Back link */}
       <Link
         href="/holdings"
-        className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Holdings
@@ -288,12 +288,12 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">{holding.name}</h1>
+          <h1 className="text-3xl font-bold text-foreground mb-1">{holding.name}</h1>
           <div className="flex items-center gap-3">
             {holding.symbol && (
-              <span className="text-gray-400 text-lg">{holding.symbol}</span>
+              <span className="text-muted-foreground text-lg">{holding.symbol}</span>
             )}
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
               {HOLDING_TYPE_LABELS[holding.type] || holding.type}
             </span>
             {holding.isDormant && (
@@ -317,26 +317,26 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {/* Price or Balance card */}
-        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+        <div className="rounded-lg border border-border bg-card/50 p-6">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
             {isTradeable ? "Current Price" : "Balance"}
           </h3>
           {isTradeable ? (
             priceLoading ? (
-              <div className="animate-pulse h-8 w-32 bg-gray-700 rounded" />
+              <div className="animate-pulse h-8 w-32 bg-muted rounded" />
             ) : priceData?.price ? (
               <div>
                 <CurrencyDisplay
                   amount={priceData.price}
                   currency={priceData.currency as Currency}
-                  className="text-2xl font-bold text-white"
+                  className="text-2xl font-bold text-foreground"
                 />
                 {priceData.changePercent !== null && (
                   <div
                     className={`flex items-center gap-1 mt-1 ${
                       priceData.changePercent >= 0
-                        ? "text-green-400"
-                        : "text-red-400"
+                        ? "text-positive"
+                        : "text-destructive"
                     }`}
                   >
                     {priceData.changePercent >= 0 ? (
@@ -353,7 +353,7 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
                 {priceData.fetchedAt && (
                   <div
                     className={`flex items-center gap-1 mt-2 text-xs ${
-                      priceData.isStale ? "text-yellow-400" : "text-gray-500"
+                      priceData.isStale ? "text-yellow-400" : "text-muted-foreground"
                     }`}
                   >
                     {priceData.isStale ? (
@@ -366,32 +366,32 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
                 )}
               </div>
             ) : (
-              <span className="text-gray-500 text-lg">No price data</span>
+              <span className="text-muted-foreground text-lg">No price data</span>
             )
           ) : holding.latestSnapshot ? (
             <div>
               <CurrencyDisplay
                 amount={Number(holding.latestSnapshot.balance)}
                 currency={holding.latestSnapshot.currency as Currency}
-                className="text-2xl font-bold text-white"
+                className="text-2xl font-bold text-foreground"
               />
-              <p className="text-gray-500 text-sm mt-1">
+              <p className="text-muted-foreground text-sm mt-1">
                 as of {formatSnapshotDate(holding.latestSnapshot.date)}
               </p>
             </div>
           ) : (
-            <span className="text-gray-500 text-lg">No balance recorded</span>
+            <span className="text-muted-foreground text-lg">No balance recorded</span>
           )}
         </div>
 
         {/* Market Value / Cost Basis card (tradeable only) */}
         {isTradeable && (
-          <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+          <div className="rounded-lg border border-border bg-card/50 p-6">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
               Market Value
             </h3>
             {currencyLoading ? (
-              <div className="animate-pulse h-8 w-32 bg-gray-700 rounded" />
+              <div className="animate-pulse h-8 w-32 bg-muted rounded" />
             ) : marketValue !== null ? (
               <div>
                 <CurrencyDisplay
@@ -400,9 +400,9 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
                   showNative
                   nativeCurrency={holdingCurrency}
                   nativeAmount={marketValue}
-                  className="text-2xl font-bold text-white"
+                  className="text-2xl font-bold text-foreground"
                 />
-                <p className="text-gray-500 text-sm mt-1">
+                <p className="text-muted-foreground text-sm mt-1">
                   {holding.quantity?.toLocaleString("en-AU", {
                     maximumFractionDigits: 4,
                   })}{" "}
@@ -410,19 +410,19 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
                 </p>
               </div>
             ) : (
-              <span className="text-gray-500 text-lg">—</span>
+              <span className="text-muted-foreground text-lg">—</span>
             )}
           </div>
         )}
 
         {/* Gain/Loss card (tradeable only) */}
         {isTradeable && (
-          <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+          <div className="rounded-lg border border-border bg-card/50 p-6">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
               Unrealized Gain/Loss
             </h3>
             {currencyLoading ? (
-              <div className="animate-pulse h-8 w-32 bg-gray-700 rounded" />
+              <div className="animate-pulse h-8 w-32 bg-muted rounded" />
             ) : gainLoss !== null ? (
               <div>
                 <CurrencyDisplay
@@ -432,12 +432,12 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
                   nativeCurrency={holdingCurrency}
                   nativeAmount={gainLoss.amount}
                   className={`text-2xl font-bold ${
-                    gainLoss.amount >= 0 ? "text-green-400" : "text-red-400"
+                    gainLoss.amount >= 0 ? "text-positive" : "text-destructive"
                   }`}
                 />
                 <p
                   className={`text-sm mt-1 ${
-                    gainLoss.percent >= 0 ? "text-green-400" : "text-red-400"
+                    gainLoss.percent >= 0 ? "text-positive" : "text-destructive"
                   }`}
                 >
                   {gainLoss.percent >= 0 ? "+" : ""}
@@ -445,37 +445,37 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
                 </p>
               </div>
             ) : (
-              <span className="text-gray-500 text-lg">—</span>
+              <span className="text-muted-foreground text-lg">—</span>
             )}
           </div>
         )}
 
         {/* Currency card (for non-tradeable) */}
         {!isTradeable && (
-          <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+          <div className="rounded-lg border border-border bg-card/50 p-6">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
               Currency
             </h3>
-            <p className="text-2xl font-bold text-white">{holding.currency}</p>
+            <p className="text-2xl font-bold text-foreground">{holding.currency}</p>
           </div>
         )}
 
         {/* Exchange card (for tradeable with exchange) */}
         {isTradeable && holding.exchange && (
-          <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+          <div className="rounded-lg border border-border bg-card/50 p-6">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
               Exchange
             </h3>
-            <p className="text-2xl font-bold text-white">{holding.exchange}</p>
-            <p className="text-gray-500 text-sm mt-1">{holding.currency}</p>
+            <p className="text-2xl font-bold text-foreground">{holding.exchange}</p>
+            <p className="text-muted-foreground text-sm mt-1">{holding.currency}</p>
           </div>
         )}
       </div>
 
       {/* Price Chart (tradeable only) */}
       {isTradeable && (
-        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-6">
+        <div className="rounded-lg border border-border bg-card/50 p-6">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-6">
             Price & Quantity History
           </h3>
           <HoldingPriceChart
@@ -487,8 +487,8 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
 
       {/* Balance & Contribution Chart (super only) */}
       {isSuper && (
-        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6">
-          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-6">
+        <div className="rounded-lg border border-border bg-card/50 p-6">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-6">
             Balance & Contribution History
           </h3>
           <SuperBalanceHistoryChart
@@ -500,11 +500,11 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
 
       {/* Notes section */}
       {holding.notes && (
-        <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-6 mt-6">
-          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-2">
+        <div className="rounded-lg border border-border bg-card/50 p-6 mt-6">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
             Notes
           </h3>
-          <p className="text-gray-300 whitespace-pre-wrap">{holding.notes}</p>
+          <p className="text-muted-foreground whitespace-pre-wrap">{holding.notes}</p>
         </div>
       )}
 

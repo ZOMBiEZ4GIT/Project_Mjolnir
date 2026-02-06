@@ -296,10 +296,10 @@ export function EditSnapshotModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md border-gray-700 bg-gray-900">
+      <DialogContent className="max-w-md border-border bg-background">
         <DialogHeader>
-          <DialogTitle className="text-white">Edit Snapshot</DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogTitle className="text-foreground">Edit Snapshot</DialogTitle>
+          <DialogDescription className="text-muted-foreground">
             Update the balance and notes for this snapshot
           </DialogDescription>
         </DialogHeader>
@@ -308,31 +308,31 @@ export function EditSnapshotModal({
           {/* Read-only holding and date info */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Holding</span>
-              <span className="text-white font-medium">
+              <span className="text-muted-foreground">Holding</span>
+              <span className="text-foreground font-medium">
                 {snapshot.holdingName}
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Date</span>
-              <span className="text-white">{formatMonthYear(snapshot.date)}</span>
+              <span className="text-muted-foreground">Date</span>
+              <span className="text-foreground">{formatMonthYear(snapshot.date)}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-400">Type</span>
-              <span className="text-gray-300 capitalize">
+              <span className="text-muted-foreground">Type</span>
+              <span className="text-muted-foreground capitalize">
                 {snapshot.holdingType}
               </span>
             </div>
           </div>
 
-          <div className="border-t border-gray-700 pt-4">
+          <div className="border-t border-border pt-4">
             {/* Balance input */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">
+              <label className="text-sm font-medium text-muted-foreground">
                 Balance
               </label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-400">{currencySymbol}</span>
+                <span className="text-sm text-muted-foreground">{currencySymbol}</span>
                 <Input
                   type="number"
                   value={balance}
@@ -340,25 +340,25 @@ export function EditSnapshotModal({
                     setBalance(e.target.value);
                     if (errors.balance) setErrors({ ...errors, balance: undefined });
                   }}
-                  className={`bg-gray-800 border-gray-600 text-white text-right ${
-                    errors.balance ? "border-red-500 focus-visible:ring-red-500" : ""
+                  className={`bg-card border-border text-foreground text-right ${
+                    errors.balance ? "border-destructive focus-visible:ring-destructive" : ""
                   }`}
                   step="0.01"
                   min="0"
                 />
               </div>
               {errors.balance && (
-                <p className="text-sm text-red-500">{errors.balance}</p>
+                <p className="text-sm text-destructive">{errors.balance}</p>
               )}
             </div>
 
             {/* Notes input */}
             <div className="space-y-2 mt-4">
-              <label className="text-sm font-medium text-gray-300">Notes</label>
+              <label className="text-sm font-medium text-muted-foreground">Notes</label>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="bg-gray-800 border-gray-600 text-white resize-none"
+                className="bg-card border-border text-foreground resize-none"
                 rows={2}
                 placeholder="Optional notes..."
               />
@@ -366,9 +366,9 @@ export function EditSnapshotModal({
 
             {/* Contributions section for super holdings */}
             {snapshot.holdingType === "super" && (
-              <div className="mt-4 pt-4 border-t border-gray-700">
+              <div className="mt-4 pt-4 border-t border-border">
                 {isLoadingContribution ? (
-                  <div className="text-sm text-gray-400">
+                  <div className="text-sm text-muted-foreground">
                     Loading contributions...
                   </div>
                 ) : (
@@ -376,7 +376,7 @@ export function EditSnapshotModal({
                     <button
                       type="button"
                       onClick={() => setShowContributions(!showContributions)}
-                      className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                      className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
                     >
                       {showContributions ? (
                         <ChevronDown className="w-4 h-4" />
@@ -393,14 +393,14 @@ export function EditSnapshotModal({
                     </button>
 
                     {showContributions && (
-                      <div className="mt-3 pl-4 space-y-3 border-l-2 border-gray-700">
+                      <div className="mt-3 pl-4 space-y-3 border-l-2 border-border">
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
-                            <label className="text-sm text-gray-300">
+                            <label className="text-sm text-muted-foreground">
                               Employer Contribution
                             </label>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-400">
+                              <span className="text-sm text-muted-foreground">
                                 {currencySymbol}
                               </span>
                               <Input
@@ -411,8 +411,8 @@ export function EditSnapshotModal({
                                   setEmployerContrib(e.target.value);
                                   if (errors.employerContrib) setErrors({ ...errors, employerContrib: undefined });
                                 }}
-                                className={`w-28 bg-gray-800 border-gray-600 text-white text-right ${
-                                  errors.employerContrib ? "border-red-500 focus-visible:ring-red-500" : ""
+                                className={`w-28 bg-card border-border text-foreground text-right ${
+                                  errors.employerContrib ? "border-destructive focus-visible:ring-destructive" : ""
                                 }`}
                                 step="0.01"
                                 min="0"
@@ -420,16 +420,16 @@ export function EditSnapshotModal({
                             </div>
                           </div>
                           {errors.employerContrib && (
-                            <p className="text-xs text-red-500 text-right">{errors.employerContrib}</p>
+                            <p className="text-xs text-destructive text-right">{errors.employerContrib}</p>
                           )}
                         </div>
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
-                            <label className="text-sm text-gray-300">
+                            <label className="text-sm text-muted-foreground">
                               Employee Contribution
                             </label>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-400">
+                              <span className="text-sm text-muted-foreground">
                                 {currencySymbol}
                               </span>
                               <Input
@@ -440,8 +440,8 @@ export function EditSnapshotModal({
                                   setEmployeeContrib(e.target.value);
                                   if (errors.employeeContrib) setErrors({ ...errors, employeeContrib: undefined });
                                 }}
-                                className={`w-28 bg-gray-800 border-gray-600 text-white text-right ${
-                                  errors.employeeContrib ? "border-red-500 focus-visible:ring-red-500" : ""
+                                className={`w-28 bg-card border-border text-foreground text-right ${
+                                  errors.employeeContrib ? "border-destructive focus-visible:ring-destructive" : ""
                                 }`}
                                 step="0.01"
                                 min="0"
@@ -449,7 +449,7 @@ export function EditSnapshotModal({
                             </div>
                           </div>
                           {errors.employeeContrib && (
-                            <p className="text-xs text-red-500 text-right">{errors.employeeContrib}</p>
+                            <p className="text-xs text-destructive text-right">{errors.employeeContrib}</p>
                           )}
                         </div>
                       </div>
@@ -462,11 +462,11 @@ export function EditSnapshotModal({
         </div>
 
         {/* Footer with Cancel and Save buttons */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-gray-700">
+        <div className="flex justify-end gap-3 pt-4 border-t border-border">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="border-gray-600 text-gray-300 hover:bg-gray-800"
+            className="border-border text-muted-foreground hover:bg-muted"
             disabled={isPending}
           >
             Cancel
@@ -474,7 +474,7 @@ export function EditSnapshotModal({
           <Button
             onClick={handleSave}
             disabled={isPending || !balance}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             {isPending ? (
               <>

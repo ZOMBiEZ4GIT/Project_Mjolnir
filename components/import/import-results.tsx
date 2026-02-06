@@ -32,7 +32,7 @@ export function ImportResults({
       {/* Success header */}
       {isSuccess && (
         <div className="flex items-center gap-2 mb-4">
-          <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+          <CheckCircle2 className="h-5 w-5 text-positive" />
           <span className="text-sm font-medium text-foreground">Import Complete</span>
         </div>
       )}
@@ -41,8 +41,8 @@ export function ImportResults({
       <div className="flex flex-wrap gap-4">
         {/* Imported count (green) */}
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/10">
-            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-positive/10">
+            <CheckCircle2 className="h-4 w-4 text-positive" />
           </div>
           <div>
             <p className="text-sm font-medium text-foreground">{imported}</p>

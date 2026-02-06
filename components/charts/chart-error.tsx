@@ -39,7 +39,7 @@ export function ChartError({
     <div
       className={`flex flex-col items-center justify-center gap-4 py-8 ${className}`}
     >
-      <div className="flex items-center gap-2 text-red-400">
+      <div className="flex items-center gap-2 text-destructive">
         <AlertTriangle className="h-5 w-5" />
         <p className="text-sm font-medium">{message}</p>
       </div>
@@ -48,7 +48,7 @@ export function ChartError({
           variant="outline"
           size="sm"
           onClick={onRetry}
-          className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
+          className="border-border text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <RefreshCw className="h-4 w-4 mr-2" />
           Retry
@@ -59,7 +59,7 @@ export function ChartError({
 
   if (withContainer) {
     return (
-      <div className="rounded-lg border border-red-700/50 bg-red-900/10 p-6">
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6">
         {content}
       </div>
     );
