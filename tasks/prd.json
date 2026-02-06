@@ -76,8 +76,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "react-hook-form, @hookform/resolvers, zod already installed. Created FormField (input), FormTextareaField, FormSelectField — all use Controller with focusGlow animation, border-destructive on error, text-sm text-destructive error messages. Select field uses Radix Select (no motion wrapper needed). Import from @/components/ui/form-field, form-textarea-field, form-select-field."
     },
     {
       "id": "US-005",

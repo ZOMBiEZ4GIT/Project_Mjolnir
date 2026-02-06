@@ -131,6 +131,8 @@
 - Radix + Framer Motion: use `asChild` + `motion.div` pattern (not `motion.create(Primitive)`) to avoid `onDrag` type conflict
 - AnimatedDialog/AnimatedAlertDialog: drop-in replacements for Dialog/AlertDialog — import from `@/components/ui/animated-dialog` or `animated-alert-dialog`
 - Framer Motion centering: use `style={{ x: "-50%", y: "-50%" }}` not CSS translate classes (FM overwrites transform)
+- FormField/FormTextareaField/FormSelectField: convenience wrappers in components/ui/ — use Controller + useFormContext, require FormProvider parent
+- FormField uses motion.input with focusGlow for purple glow on focus; FormSelectField uses Radix Select (no motion wrapper)
 
 ---
 
@@ -169,5 +171,18 @@ Started: 2026-02-06
   - Same `asChild` + `motion.div` pattern works identically for AlertDialog content as for Dialog content
   - AlertDialogHeader uses `space-y-2` (not `space-y-1.5` like Dialog) — kept consistent with original shadcn alert-dialog styling
   - Import from `@/components/ui/animated-alert-dialog` — drop-in replacement for `@/components/ui/alert-dialog`
+---
+
+## 2026-02-06 - US-004
+- What was implemented: Created three form field wrapper components (FormField, FormTextareaField, FormSelectField) using Controller from react-hook-form
+- Files changed: components/ui/form-field.tsx, components/ui/form-textarea-field.tsx, components/ui/form-select-field.tsx
+- **Learnings for future iterations:**
+  - react-hook-form, @hookform/resolvers, zod were already installed — check package.json before installing
+  - shadcn/ui form.tsx already provides FormField/FormItem/FormLabel/FormControl/FormMessage primitives — new components are convenience wrappers
+  - FormField and FormTextareaField use `motion.input`/`motion.textarea` with `focusGlow` spread for purple glow effect on focus
+  - FormSelectField uses Radix Select (no motion wrapper needed since Select has its own animation)
+  - `field.value ?? ""` prevents "undefined" showing in inputs when form values are initially undefined
+  - Export as named re-export: `export { Component as FormField }` to get clean import names
+  - These wrapper components require `<FormProvider>` (or `<Form>`) wrapping the form — they use `useFormContext()` internally
 ---
 
