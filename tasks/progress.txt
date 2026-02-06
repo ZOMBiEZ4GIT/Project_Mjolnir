@@ -248,3 +248,16 @@ Started: 2026-02-07
   - Filename pattern: import-errors-YYYY-MM-DD.csv using ISO date split
 ---
 
+## 2026-02-07 - US-009
+- Polished recent-imports.tsx with stagger animations and design tokens
+- Files changed: components/import/recent-imports.tsx, app/(dashboard)/import/page.tsx
+- **Learnings for future iterations:**
+  - Type badge colours: Transactions=accent (purple), Snapshots=positive (green)
+  - Row hover: `transition-colors duration-150 hover:bg-accent/5` for subtle hover
+  - Expanded details show first 3 errors max, with "...and X more" truncation
+  - `format(date, "PPpp")` gives full locale-aware date+time string
+  - Section title uses `text-label uppercase text-muted-foreground` for label typography
+  - Skeleton loading now uses bg-muted (design token) not bg-card
+  - Empty state icon uses text-muted-foreground/50 for extra subtle appearance
+---
+
