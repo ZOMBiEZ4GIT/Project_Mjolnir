@@ -108,8 +108,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/toast-helpers.ts with showSuccess (3s auto-dismiss), showError (persists, optional onRetry action button), showInfo (4s auto-dismiss). Updated sonner.tsx with 4s default duration. Migrated add-holding-dialog, delete-snapshot-dialog, and check-in-modal to use new helpers. check-in-modal uses aliased imports (toastSuccess/toastError) to avoid shadowing local showSuccess state."
     },
     {
       "id": "US-007",

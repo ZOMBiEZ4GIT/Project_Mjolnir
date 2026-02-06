@@ -135,6 +135,9 @@
 - FormField uses motion.input with focusGlow for purple glow on focus; FormSelectField uses Radix Select (no motion wrapper)
 - useFormShake hook (hooks/use-form-shake.ts): returns { formRef, triggerShake } — attach ref to form container, call triggerShake() in handleSubmit onInvalid callback
 - animate-shake CSS class defined in tailwind.config.ts — use for CSS-based shake animations (500ms ease-in-out)
+- Toast helpers: import { showSuccess, showError, showInfo } from "@/lib/toast-helpers" — success auto-dismiss 3s, error persists until dismissed, info 4s
+- showError accepts optional { onRetry } to render a Retry action button; use for retryable operations
+- check-in-modal.tsx: use aliased imports (toastSuccess/toastError) because local `showSuccess` state variable shadows the import
 
 ---
 
@@ -199,5 +202,16 @@ Started: 2026-02-06
   - Selects first error via `[aria-invalid="true"], .border-destructive, [data-invalid]` — covers RHF native, shadcn/ui, and custom patterns
   - Respects prefers-reduced-motion: skips shake animation but still focuses first error field
   - check-in-modal.tsx already has a manual shake implementation (useState + setTimeout) — can be refactored to use this hook in US-009
+---
+
+## 2026-02-06 - US-006
+- What was implemented: Created lib/toast-helpers.ts with standardised showSuccess/showError/showInfo helpers, updated sonner.tsx with default duration, migrated 3 components to use new helpers
+- Files changed: lib/toast-helpers.ts (new), components/ui/sonner.tsx, components/holdings/add-holding-dialog.tsx, components/snapshots/delete-snapshot-dialog.tsx, components/check-in/check-in-modal.tsx
+- **Learnings for future iterations:**
+  - check-in-modal.tsx has a local `showSuccess` state variable — import toast helpers with aliases (`toastSuccess`, `toastError`) to avoid shadowing
+  - showError uses `duration: Infinity` to persist until dismissed; showSuccess uses 3s; showInfo uses 4s
+  - showError accepts optional `onRetry` callback which renders a Retry action button on the toast
+  - Sonner toast.success/toast.error/toast.info already render appropriate icons (checkmark, X, info) — no custom icon config needed
+  - Import from `@/lib/toast-helpers` — use `showSuccess`, `showError`, `showInfo` instead of raw `toast.*` calls
 ---
 
