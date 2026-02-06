@@ -1,10 +1,18 @@
 "use client";
 
 import * as React from "react";
+import {
+  useSpring,
+  useMotionValue,
+  motion,
+  AnimatePresence,
+  useReducedMotion,
+} from "framer-motion";
 
 import { cn } from "@/lib/utils";
 import {
   formatCurrency,
+  CURRENCY_SYMBOLS,
   type Currency,
   type FormatCurrencyOptions,
 } from "@/lib/utils/currency";
@@ -14,6 +22,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { numberSpring } from "@/lib/animations";
 
 /**
  * Props for the CurrencyDisplay component.
@@ -81,31 +90,23 @@ function CurrencyDisplaySkeleton({ className }: { className?: string }) {
 }
 
 /**
+ * Formats a number (without currency symbol) for display.
+ */
+function formatNumber(amount: number, compact: boolean): string {
+  return formatCurrency(amount, "AUD", { compact, showSymbol: false });
+}
+
+/**
  * CurrencyDisplay Component
  *
  * A reusable component for displaying currency values with:
+ * - Animated value transitions using useSpring on currency change
+ * - Currency symbol crossfade with AnimatePresence
+ * - Brief flash highlight on value changes
  * - Hover/tooltip showing the currency code
  * - Optional native currency indicator when currencies differ
  * - Loading skeleton state
- *
- * @example
- * // Basic usage
- * <CurrencyDisplay amount={1234.56} currency="AUD" />
- *
- * // With native currency indicator
- * <CurrencyDisplay
- *   amount={1890.00} // converted to display currency
- *   currency="AUD"
- *   showNative={true}
- *   nativeCurrency="USD"
- *   nativeAmount={1234.56}
- * />
- *
- * // Loading state
- * <CurrencyDisplay amount={0} currency="AUD" isLoading />
- *
- * // Compact notation
- * <CurrencyDisplay amount={1234567} currency="AUD" compact />
+ * - Respects prefers-reduced-motion
  */
 export function CurrencyDisplay({
   amount,
@@ -117,6 +118,72 @@ export function CurrencyDisplay({
   compact = false,
   className,
 }: CurrencyDisplayProps) {
+  const shouldReduceMotion = useReducedMotion();
+  const motionValue = useMotionValue(amount);
+  const springValue = useSpring(motionValue, numberSpring);
+  const displayRef = React.useRef<HTMLSpanElement>(null);
+  const isInitialMount = React.useRef(true);
+  const prevAmountRef = React.useRef(amount);
+  const prevCurrencyRef = React.useRef(currency);
+  const [showFlash, setShowFlash] = React.useState(false);
+
+  // Update spring value when amount changes
+  React.useEffect(() => {
+    if (isLoading) return;
+
+    if (isInitialMount.current) {
+      // Initial render: show value instantly (no animation from 0)
+      motionValue.jump(amount);
+      if (displayRef.current) {
+        displayRef.current.textContent = formatNumber(amount, compact);
+      }
+      isInitialMount.current = false;
+      prevAmountRef.current = amount;
+      prevCurrencyRef.current = currency;
+      return;
+    }
+
+    const amountChanged = prevAmountRef.current !== amount;
+    const currencyChanged = prevCurrencyRef.current !== currency;
+
+    if (amountChanged || currencyChanged) {
+      if (shouldReduceMotion) {
+        // Reduced motion: update instantly
+        motionValue.jump(amount);
+        if (displayRef.current) {
+          displayRef.current.textContent = formatNumber(amount, compact);
+        }
+      } else {
+        // Animate to new value
+        motionValue.set(amount);
+
+        // Trigger flash highlight
+        setShowFlash(true);
+      }
+
+      prevAmountRef.current = amount;
+      prevCurrencyRef.current = currency;
+    }
+  }, [amount, currency, motionValue, shouldReduceMotion, compact, isLoading]);
+
+  // Subscribe to spring changes and update the display
+  React.useEffect(() => {
+    if (isLoading) return;
+    const unsubscribe = springValue.on("change", (latest) => {
+      if (displayRef.current) {
+        displayRef.current.textContent = formatNumber(latest, compact);
+      }
+    });
+    return unsubscribe;
+  }, [springValue, compact, isLoading]);
+
+  // Auto-clear flash after 400ms
+  React.useEffect(() => {
+    if (!showFlash) return;
+    const timer = setTimeout(() => setShowFlash(false), 400);
+    return () => clearTimeout(timer);
+  }, [showFlash]);
+
   // Show loading skeleton
   if (isLoading) {
     return <CurrencyDisplaySkeleton className={className} />;
@@ -145,17 +212,43 @@ export function CurrencyDisplay({
       )} ${nativeCurrency})`
     : `${formattedAmount} ${currency}`;
 
+  const isNegative = amount < 0;
+  const symbol = CURRENCY_SYMBOLS[currency];
+
   return (
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <span
             className={cn(
-              "cursor-default inline-flex items-center gap-1",
+              "cursor-default inline-flex items-center gap-1 rounded-sm transition-colors",
+              showFlash && !shouldReduceMotion && "bg-accent/15",
               className
             )}
+            style={{
+              fontVariantNumeric: "tabular-nums",
+              transitionDuration: showFlash ? "0ms" : "400ms",
+            }}
           >
-            <span>{formattedAmount}</span>
+            <span className="inline-flex items-baseline">
+              {/* Currency symbol with crossfade */}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={symbol}
+                  initial={shouldReduceMotion ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: shouldReduceMotion ? 0 : 0.15 }}
+                >
+                  {isNegative ? "-" : ""}
+                  {symbol}
+                </motion.span>
+              </AnimatePresence>
+              {/* Animated number */}
+              <span ref={displayRef}>
+                {formatNumber(amount, compact)}
+              </span>
+            </span>
             {hasDifferentNativeCurrency && (
               <span
                 className="text-xs text-muted-foreground font-normal"
