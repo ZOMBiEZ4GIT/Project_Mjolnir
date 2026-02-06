@@ -13,6 +13,7 @@ import {
   Legend,
 } from "recharts";
 import { ChartSkeleton, ChartError } from "@/components/charts";
+import { NumberTicker } from "@/components/dashboard/number-ticker";
 import { useCallback } from "react";
 
 interface HoldingValue {
@@ -274,7 +275,7 @@ export function AssetAllocationPieChart() {
       <h3 className="text-label uppercase text-muted-foreground mb-6">
         Asset Allocation
       </h3>
-      <div className="h-64">
+      <div className="relative h-64">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -302,6 +303,21 @@ export function AssetAllocationPieChart() {
             />
           </PieChart>
         </ResponsiveContainer>
+        {/* Centre overlay — positioned over the donut hole */}
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{ marginBottom: 40 }}
+        >
+          <div className="flex flex-col items-center">
+            <span className="text-xs text-muted-foreground">Total</span>
+            <NumberTicker
+              value={netWorthData.netWorth}
+              currency={displayCurrency}
+              compact
+              className="text-lg font-semibold text-foreground"
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
