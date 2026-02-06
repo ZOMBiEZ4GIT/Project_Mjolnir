@@ -367,3 +367,19 @@ Started: 2026-02-07
   - axe-core is already a transitive dependency via eslint-plugin-jsx-a11y — `@axe-core/react` adds the React integration layer
 ---
 
+## 2026-02-07 - US-012
+- Created `app/icon.svg` — SVG favicon with purple hammer + lightning bolt on dark background (#09090b)
+- Created `app/apple-icon.png` — 180×180px Apple touch icon (generated from SVG via sharp)
+- Created `public/icon-192.png` and `public/icon-512.png` — PWA icons (generated from SVG via sharp)
+- Created `public/manifest.json` — PWA manifest with name, short_name, start_url, display: standalone, background/theme colours, icons
+- Updated `app/layout.tsx` metadata: added manifest link, themeColor (#09090b), openGraph (title, description, type, siteName), twitter card (summary)
+- Next.js App Router automatically serves `app/icon.svg` as favicon and `app/apple-icon.png` as Apple touch icon via file conventions
+- Files changed: app/icon.svg (new), app/apple-icon.png (new), public/icon-192.png (new), public/icon-512.png (new), public/manifest.json (new), app/layout.tsx
+- **Learnings for future iterations:**
+  - Next.js App Router favicon convention: place `icon.svg` or `icon.png` in `app/` directory — automatically served as favicon without manual `<link>` tag
+  - Next.js apple-icon convention: `app/apple-icon.png` automatically generates Apple touch icon `<link>` tag
+  - `sharp` package (already available via Next.js image processing) can generate PNGs from SVG buffers — no need for ImageMagick/rsvg
+  - PWA manifest: `display: "standalone"` makes the app look native when added to home screen
+  - `themeColor` in Next.js Metadata sets the `<meta name="theme-color">` tag — matches browser chrome to app background
+---
+
