@@ -1,6 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import { Calendar, CalendarClock } from "lucide-react";
+import { useRovingTabIndex } from "@/hooks/use-roving-tabindex";
 
 interface MonthSelectorProps {
   currentMonth: string;
@@ -35,9 +37,25 @@ export function MonthSelector({
     },
   ];
 
+  const monthValues = useMemo(
+    () => [currentMonth, previousMonth],
+    [currentMonth, previousMonth]
+  );
+  const { containerRef, handleKeyDown, getTabIndex } = useRovingTabIndex(
+    monthValues,
+    selectedMonth,
+    onSelectMonth
+  );
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Select month">
+      <div
+        ref={containerRef}
+        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+        role="radiogroup"
+        aria-label="Select month"
+        onKeyDown={handleKeyDown}
+      >
         {options.map((option) => {
           const isSelected = selectedMonth === option.value;
           const Icon = option.icon;
@@ -48,10 +66,12 @@ export function MonthSelector({
               type="button"
               role="radio"
               aria-checked={isSelected}
+              tabIndex={getTabIndex(option.value)}
               onClick={() => onSelectMonth(option.value)}
               className={`
                 flex items-center gap-3 rounded-lg border p-4 text-left
                 transition-colors duration-150
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background
                 ${
                   isSelected
                     ? "border-accent bg-accent/10"

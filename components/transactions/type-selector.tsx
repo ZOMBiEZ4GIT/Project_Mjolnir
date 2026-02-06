@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useRovingTabIndex } from "@/hooks/use-roving-tabindex";
 
 export type TransactionType = "BUY" | "SELL" | "DIVIDEND" | "SPLIT";
 
@@ -10,6 +11,8 @@ const TYPES: { value: TransactionType; label: string }[] = [
   { value: "DIVIDEND", label: "Dividend" },
   { value: "SPLIT", label: "Split" },
 ];
+
+const TYPE_VALUES = TYPES.map((t) => t.value);
 
 /** Colour classes per transaction type */
 const TYPE_COLOURS: Record<
@@ -41,11 +44,20 @@ interface TypeSelectorProps {
 }
 
 export function TypeSelector({ value, onChange, disabled }: TypeSelectorProps) {
+  const activeValue = (value || "BUY") as TransactionType;
+  const { containerRef, handleKeyDown, getTabIndex } = useRovingTabIndex(
+    TYPE_VALUES,
+    activeValue,
+    onChange
+  );
+
   return (
     <div
+      ref={containerRef}
       className="flex gap-1 rounded-lg bg-muted p-1"
       role="tablist"
       aria-label="Transaction type"
+      onKeyDown={disabled ? undefined : handleKeyDown}
     >
       {TYPES.map((type) => {
         const isActive = type.value === value;
@@ -57,6 +69,7 @@ export function TypeSelector({ value, onChange, disabled }: TypeSelectorProps) {
             role="tab"
             type="button"
             aria-selected={isActive}
+            tabIndex={getTabIndex(type.value)}
             disabled={disabled && !isActive}
             onClick={() => !disabled && onChange(type.value)}
             className={`relative flex-1 rounded-md px-3 py-2 min-h-[44px] sm:min-h-0 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${

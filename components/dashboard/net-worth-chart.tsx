@@ -6,6 +6,7 @@ import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency } from "@/lib/utils/currency";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useRovingTabIndex } from "@/hooks/use-roving-tabindex";
 import { LineChart as LineChartIcon, BarChart3 } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { fadeIn } from "@/lib/animations";
@@ -68,14 +69,29 @@ interface ChartViewToggleProps {
   onChange: (mode: ChartViewMode) => void;
 }
 
+const CHART_VIEW_MODES: ChartViewMode[] = ["networth", "assetsvsdebt"];
+
 function ChartViewToggle({ viewMode, onChange }: ChartViewToggleProps) {
+  const { containerRef, handleKeyDown, getTabIndex } = useRovingTabIndex(
+    CHART_VIEW_MODES,
+    viewMode,
+    onChange
+  );
+
   return (
-    <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1" role="tablist" aria-label="Chart view">
+    <div
+      ref={containerRef}
+      className="flex items-center gap-1 bg-muted/50 rounded-lg p-1"
+      role="tablist"
+      aria-label="Chart view"
+      onKeyDown={handleKeyDown}
+    >
       <button
         role="tab"
         aria-selected={viewMode === "networth"}
+        tabIndex={getTabIndex("networth")}
         onClick={() => onChange("networth")}
-        className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-md text-sm font-medium transition-colors ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
           viewMode === "networth"
             ? "bg-muted text-foreground"
             : "text-muted-foreground hover:text-foreground"
@@ -88,8 +104,9 @@ function ChartViewToggle({ viewMode, onChange }: ChartViewToggleProps) {
       <button
         role="tab"
         aria-selected={viewMode === "assetsvsdebt"}
+        tabIndex={getTabIndex("assetsvsdebt")}
         onClick={() => onChange("assetsvsdebt")}
-        className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-md text-sm font-medium transition-colors ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
           viewMode === "assetsvsdebt"
             ? "bg-muted text-foreground"
             : "text-muted-foreground hover:text-foreground"
