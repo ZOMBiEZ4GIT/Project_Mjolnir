@@ -27,7 +27,7 @@
 - Form validation pattern: `border-destructive focus-visible:ring-destructive` on inputs, `text-destructive` on error messages
 - Delete confirm button: `bg-destructive hover:bg-destructive/90 text-foreground`; cancel: `bg-card border-border text-foreground hover:bg-muted`
 - Select dropdowns: `bg-background border-border text-muted-foreground` for trigger, `focus:bg-card focus:text-foreground` for items
-- Warning colours use text-warning/bg-warning design tokens (--warning: 38 92% 50% ≈ amber-500) — added in UX-9 US-010
+- Warning colours now use text-warning/bg-warning/border-warning design tokens (migrated from amber-* in UX-8)
 - Info colours (blue-*) are semantic and intentionally NOT part of design token migration
 - Interactive toggle buttons (show/hide contributions): use `text-primary hover:text-primary/80` pattern
 - html2canvas backgroundColor requires raw hex — use `#18181b` to match --card token
@@ -118,147 +118,114 @@
 - PriceTimestamp (components/holdings/price-timestamp.tsx) shows relative time + tooltip with exact time — three states: fresh/stale/error
 - PriceSkeleton (components/holdings/price-skeleton.tsx) loading skeleton for price cells — variant="price" (3-bar) or variant="value" (single-bar)
 - TanStack Query: `isFetching && !isLoading` detects background refetches without triggering initial skeleton
-- Currency bar colours: AUD=`bg-positive` (green), NZD=`bg-blue-400` (blue), USD=`bg-amber-500` (amber) — use in progress bars and charts
-- AnimatedPercentage pattern: requestAnimationFrame loop with ease-out cubic for lightweight percentage transitions (no framer-motion dependency)
-
-- CurrencyToggle (components/ui/currency-toggle.tsx) is a horizontal pill toggle with Framer Motion layoutId='currency-indicator' — replaces CurrencySelector dropdown on dashboard
-- CURRENCY_SYMBOLS exported from lib/utils/currency.ts — use for displaying currency symbol separately from formatted number
-- CurrencyDisplay uses useSpring for animated number transitions; motionValue.jump() for instant, motionValue.set() for animated
-- Flash highlight pattern: bg-accent/15 with transitionDuration 0ms→400ms trick for instant-on, fade-off effect
-- CurrencyDisplay shows rich tooltip (conversion info + rate) only when showNative=true and currencies differ — no tooltip otherwise
-- Effective exchange rate: compute from amount/nativeAmount rather than passing rates as prop
-- NativeCurrencyToggle accepts `showDescription` prop for optional descriptive text; Switch override: `data-[state=checked]:bg-accent data-[state=unchecked]:bg-muted`
-- CurrencyDisplay flash also triggers on showNative change for components with different native currency
 
 ---
 
-# UX-9 Multi-Currency Display Progress Log
+# UX-8 Live Price UI Progress Log
 
 Started: 2026-02-06
 
 ---
 
 ## 2026-02-06 - US-001
-- Implemented animated currency toggle pills for dashboard header
-- Files changed: components/ui/currency-toggle.tsx (new), components/dashboard/dashboard-header.tsx (modified)
+- Created `components/holdings/price-flash.tsx` — wrapper component that flashes green (bg-positive/20) on value increase and red (bg-destructive/20) on value decrease
+- Uses useRef to track previous value, skips flash on initial mount
+- CSS transition (400ms) for smooth flash-to-transparent, no full re-render
+- Respects `prefers-reduced-motion` via framer-motion `useReducedMotion()`
+- Files changed: `components/holdings/price-flash.tsx` (new)
 - **Learnings for future iterations:**
-  - CurrencyToggle uses layoutId='currency-indicator' for the sliding pill — avoid reusing this layoutId in other components
-  - CurrencySelector (components/ui/currency-selector.tsx) still exists for use on settings page — dashboard now uses CurrencyToggle instead
-  - useCurrency() hook from currency-provider.tsx provides displayCurrency, setDisplayCurrency, isLoading
-  - useReducedMotion() from framer-motion returns boolean — use to set transition duration to 0 for instant switch
-  - Spring transition { stiffness: 300, damping: 25 } gives a snappy but smooth slide for the indicator pill
+  - PriceFlash uses inline-block + rounded-sm for minimal layout impact when wrapping table cell content
+  - bg-transparent is the explicit "no flash" state — ensures the transition works correctly from coloured → transparent
 ---
 
 ## 2026-02-06 - US-002
-- Polished settings page currency selector with flag emojis and design tokens
-- Files changed: components/ui/currency-selector.tsx, app/(dashboard)/settings/page.tsx
+- Created `components/holdings/price-number-ticker.tsx` — lightweight number ticker for price cells
+- Updated PriceCell in `holdings-table.tsx` to wrap price in PriceFlash + PriceNumberTicker
+- Currency prefix (A$, NZ$, US$) rendered as static `<span>`, only digits animate
+- Change percentage crossfades on update using AnimatePresence mode="wait" (150ms)
+- Removed unused `formatPrice` function (replaced by PriceNumberTicker)
+- Files changed: `components/holdings/price-number-ticker.tsx` (new), `components/holdings/holdings-table.tsx` (modified)
 - **Learnings for future iterations:**
-  - CURRENCY_OPTIONS now includes `flag` field (🇦🇺, 🇳🇿, 🇺🇸) — use for any currency display needing flag emojis
-  - DollarSign icon removed from CurrencySelector trigger — flags serve as the visual identifier now
-  - Compact mode shows just currency code, full mode shows flag + code in trigger and flag + code + "— Full Name" in dropdown items
-  - SelectContent/SelectItem design tokens: bg-card border-border for content, focus:bg-accent/10 for item highlight
-  - Settings page currency selector width increased from 180px to 220px to fit flag + full name in dropdown
+  - PriceNumberTicker is separate from dashboard NumberTicker — simpler, no formatCurrency dependency, uses will-change:transform for table perf
+  - AnimatePresence mode="wait" with key={`${changePercent}-${changeAbsolute}`} ensures crossfade only on actual value changes
 ---
 
 ## 2026-02-06 - US-003
-- Animated currency values on display currency change
-- Files changed: components/ui/currency-display.tsx (rewritten), lib/utils/currency.ts (exported CURRENCY_SYMBOLS)
+- Enhanced refresh button in `dashboard-header.tsx`: shows "Refreshing..." with spinning RefreshCw icon during refresh
+- Toast on completion: success="Refreshed X prices", partial failure=warning "Refreshed X prices, Y failed"
+- API now returns total count alongside success/errors
+- Removed mobile-only "..." text (spinner icon is sufficient on small screens)
+- Files changed: `components/dashboard/dashboard-header.tsx` (modified)
 - **Learnings for future iterations:**
-  - CURRENCY_SYMBOLS is now exported from lib/utils/currency.ts — use when you need symbol without full formatCurrency
-  - CurrencyDisplay now uses useSpring + useMotionValue for lightweight number animation (not per-digit)
-  - motionValue.jump(amount) sets value instantly without animation — use for initial render
-  - motionValue.set(amount) animates to new value via spring — use for subsequent changes
-  - Flash highlight: bg-accent/15 with transitionDuration trick (0ms on, 400ms off) for instant-on, fade-off effect
-  - AnimatePresence mode="wait" with initial={false} prevents animation on first render but crossfades on symbol change
-  - formatNumber() helper strips currency symbol (uses AUD with showSymbol:false) — the symbol is rendered separately for crossfade
-  - isInitialMount ref prevents animation from 0 on first render — all subsequent value/currency changes animate
+  - The prices POST API returns all results at once (Promise.all), no streaming — so real-time X/Y counter isn't possible without API changes
+  - Use toast.warning() (not toast.success) for partial failure scenarios
 ---
 
 ## 2026-02-06 - US-004
-- Enhanced native currency tooltip display with rich conversion info
-- Files changed: components/ui/currency-display.tsx
+- Created `components/holdings/price-timestamp.tsx` — dedicated timestamp display with tooltip
+- Shows relative time ("just now", "2 min ago", etc.) that auto-updates every 30 seconds
+- Tooltip shows exact timestamp on hover via shadcn/ui Tooltip
+- Three visual states: fresh (Clock, muted), stale (AlertTriangle, text-warning), error (AlertTriangle, text-destructive + "(failed)")
+- Replaced inline timestamp logic in PriceCell; removed unused `formatTimeAgo`
+- Files changed: `components/holdings/price-timestamp.tsx` (new), `components/holdings/holdings-table.tsx` (modified)
 - **Learnings for future iterations:**
-  - CurrencyDisplay now shows rich tooltip only when hasDifferentNativeCurrency is true — no tooltip when currencies are same or showNative is off
-  - Tooltip shows "Converted from [native amount] [native currency]" + "Rate: 1 [native] = X.XXXX [display]"
-  - Effective exchange rate computed from amount/nativeAmount — no need to pass rates as prop
-  - Tooltip styled with bg-card border border-border rounded-lg p-2 shadow-lg — matches design system elevated surface pattern
-  - Native currency parenthetical uses text-body-sm (design token) instead of text-xs (hardcoded)
-  - Removed FormatCurrencyOptions import — no longer needed after refactoring tooltip content
-  - valueSpan extracted as variable to avoid duplicating the animated display markup between tooltip and non-tooltip paths
+  - Each PriceTimestamp wraps its own TooltipProvider for table cell isolation
 ---
 
 ## 2026-02-06 - US-005
-- Polished native currency toggle with design tokens and optional description
-- Added flash highlight on CurrencyDisplay when showNative toggles
-- Files changed: components/ui/native-currency-toggle.tsx, components/ui/currency-display.tsx
-- **Learnings for future iterations:**
-  - Switch component accepts className to override track colours: `data-[state=checked]:bg-accent data-[state=unchecked]:bg-muted`
-  - NativeCurrencyToggle now accepts `showDescription` prop for optional descriptive text below label
-  - CurrencyDisplay flash triggers on showNative change — only flashes on components where nativeCurrency differs from currency
-  - prevShowNativeRef pattern added alongside prevAmountRef/prevCurrencyRef to track showNative changes independently
+- Polished retry button in PriceCell: pill-shaped (rounded-full px-2 py-0.5) with RotateCw icon + "Retry" text
+- Default: bg-muted text-muted-foreground, hover: bg-accent/20 text-foreground
+- Retrying state: icon spins, text "Retrying...", button disabled
+- AnimatePresence wraps retry button for fade in/out entrance/exit animations
+- Files changed: `components/holdings/holdings-table.tsx` (modified)
 ---
 
 ## 2026-02-06 - US-006
-- Polished FX rates display with design tokens and auto-updating timestamp
-- Files changed: components/ui/fx-rates-display.tsx
-- **Learnings for future iterations:**
-  - Auto-updating relative timestamp: `useState` tick counter + `setInterval` every 30s — minimal rerenders to keep timestamp fresh
-  - Replaced `Info` icon with `TrendingUp` for compact mode button — better semantic match for exchange rates
-  - `text-amber-400` replaced with `text-warning` design token throughout
-  - Stale state shows "Rates may be outdated" message above the timestamp line
-  - Clock icon added next to relative timestamp for visual clarity
-  - `text-body-sm` design token used instead of `text-xs` for timestamp line
-  - Tooltip styled with `bg-card border border-border rounded-lg p-3 shadow-lg` — consistent with CurrencyDisplay tooltip pattern
-  - Inline mode uses `bg-card/50` instead of `bg-background/50` — matches card container pattern from codebase
+- Created `components/holdings/price-skeleton.tsx` with two variants: "price" (3-bar skeleton) and "value" (single-bar)
+- Replaced "Loading..." text in PriceCell with PriceSkeleton variant="price"
+- Replaced CurrencyDisplay isLoading in MarketValueCell and GainLossCell with PriceSkeleton variant="value"
+- All skeletons use bg-muted + animate-pulse (design tokens)
+- Files changed: `components/holdings/price-skeleton.tsx` (new), `components/holdings/holdings-table.tsx` (modified)
 ---
 
 ## 2026-02-06 - US-007
-- Animated currency exposure progress bars with stagger, NumberTicker, and hover effects
-- Files changed: components/dashboard/currency-exposure.tsx
-- **Learnings for future iterations:**
-  - Progress bars use Framer Motion `motion.div` with `initial={{ width: "0%" }}` → `animate={{ width: target }}` for smooth fill animation
-  - Stagger delay on progress bars: `delay: index * 0.05` on each bar's transition — separate from staggerContainer children stagger
-  - Rows stagger in via `exposureStaggerContainer` (50ms staggerChildren) + `staggerItem` variants on each `ExposureItem`
-  - AnimatedPercentage uses raw `requestAnimationFrame` loop with ease-out cubic — lighter than useSpring for simple percentage labels
-  - `getCurrencyBarColor` returns design token colours: AUD=`bg-positive`, NZD=`bg-blue-400`, USD=`bg-amber-500`
-  - `getCurrencyBadgeColor` returns `/20` opacity variants for the currency icon badge background
-  - Old `getCurrencyColor` + `bg-opacity-20` pattern replaced — Tailwind v3+ supports `bg-positive/20` directly
-  - Row hover: `hover:bg-accent/5` with `rounded-lg px-2 py-1.5 -mx-2` for padded hover area without affecting layout
-  - NumberTicker used for value amounts — animates on currency change (e.g., AUD→USD recalculation)
+- Stale prices: price text dimmed to text-muted-foreground, amber left border (border-l-2 border-warning/50)
+- Fresh prices: border-transparent (invisible), transition-all duration-200 for smooth stale↔fresh toggle
+- PriceTimestamp already handles amber warning styling (US-004)
+- Both fresh and stale states use border-l-2 + pl-2 to prevent layout shift on state change
+- Files changed: `components/holdings/holdings-table.tsx` (modified)
 ---
 
 ## 2026-02-06 - US-008
-- Polished currency exposure card with design tokens
-- Files changed: components/dashboard/currency-exposure.tsx
-- **Learnings for future iterations:**
-  - Currency exposure card was already mostly using design tokens from US-007 work
-  - Changed currency display name from `text-muted-foreground` to `text-foreground font-medium` per AC
-  - Replaced `bg-gray-500` fallback in getCurrencyBarColor with `bg-muted` design token
-  - Replaced `bg-gray-500/20` fallback in getCurrencyBadgeColor with `bg-muted/20` design token
-  - Skeleton loading already used `bg-muted animate-pulse` pattern — no changes needed
-  - All dashboard cards consistently use `bg-card` (not `bg-card/50`) — keep this pattern
+- Three-state change indicator: positive (TrendingUp, text-positive), negative (TrendingDown, text-destructive), zero (Minus, text-muted-foreground)
+- AnimatePresence key based on direction ("up"/"down"/"zero") — crossfades (150ms) on direction change
+- Absolute change value shown in parentheses with text-muted-foreground
+- All colours already use design tokens (text-positive, text-destructive)
+- Files changed: `components/holdings/holdings-table.tsx` (modified)
 ---
 
 ## 2026-02-06 - US-009
-- Polished currency filter dropdown on holdings page with flag emojis and design tokens
-- Files changed: components/holdings/currency-filter.tsx
+- Added `pricesRefreshing` prop threaded through HoldingsTable → Section → TableContent → PriceCell
+- PriceCell shows `animate-pulse` class when refreshing — subtle indicator without replacing content
+- Holdings page derives `pricesRefreshingState` from: mutation isPending + TanStack Query isFetching (but not initial isLoading)
+- Background auto-refresh uses same pulse treatment (no toast — existing behavior)
+- Files changed: `app/(dashboard)/holdings/page.tsx` (modified), `components/holdings/holdings-table.tsx` (modified)
 - **Learnings for future iterations:**
-  - CurrencyFilter options now include flag emojis: 🇦🇺 AUD, 🇳🇿 NZD, 🇺🇸 USD (All Currencies has no flag)
-  - SelectTrigger: `bg-card border border-border text-foreground` — matches card surface pattern
-  - SelectContent: `bg-card border-border` — uses card background for elevated dropdown
-  - SelectItem: `text-foreground focus:bg-accent/10 focus:text-foreground` — accent highlight on focus/selection
-  - Width increased from 160px to 180px to accommodate flag emojis
-  - Filter icon keeps `text-muted-foreground` as a subdued visual cue
+  - TanStack Query `isFetching` is true during both initial load AND refetches; `isLoading` is only true for initial load
+  - Use `(isFetching && !isLoading)` to detect background refetches without triggering during initial skeleton load
+  - Existing `isRefreshing` variable in holdings page conflicts — use distinct name (`pricesRefreshingState`)
 ---
 
 ## 2026-02-06 - US-010
-- Replaced hardcoded colours across all currency components; added warning design token
-- Files changed: app/globals.css, tailwind.config.ts, components/dashboard/currency-exposure.tsx
-- **Learnings for future iterations:**
-  - Added `--warning` CSS variable (38 92% 50% — amber-500 equivalent) + `warning` colour in tailwind.config.ts
-  - `text-warning` / `bg-warning` now resolve properly — previously these classes were used in code but had no backing token
-  - Replaced `bg-amber-500` → `bg-warning` and `bg-amber-500/20` → `bg-warning/20` in getCurrencyBarColor/getCurrencyBadgeColor
-  - `bg-blue-400` for NZD is an intentional category indicator colour — kept as-is per codebase patterns
-  - All 8 target files audited: currency-provider, currency-selector, currency-display, native-currency-toggle, fx-rates-display, currency-filter, currency-exposure, settings/page — all clean of text-white, text-gray-*, bg-gray-*, border-gray-*, text-green-*, text-amber-*, text-yellow-*
-  - currency-provider.tsx lives at components/providers/ not components/ui/
+- Replaced text-yellow-400 → text-warning in holdings-table.tsx (2 instances for snapshot staleness)
+- Replaced all amber-* hardcoded colours in stale-data-warning.tsx with design tokens:
+  - border-amber-500/30 → border-warning/30
+  - bg-amber-500/10 → bg-warning/10
+  - text-amber-500 → text-warning
+  - text-amber-400 → text-warning
+  - bg-amber-950/20 → bg-background
+  - bg-amber-950/30 → bg-muted
+- dashboard-header.tsx and holdings/page.tsx had no hardcoded colours
+- Files changed: `components/holdings/holdings-table.tsx`, `components/dashboard/stale-data-warning.tsx`
 ---
+

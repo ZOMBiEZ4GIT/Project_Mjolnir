@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { CurrencySelector } from "@/components/ui/currency-selector";
+import { CurrencyToggle } from "@/components/ui/currency-toggle";
 import { FxRatesDisplay } from "@/components/ui/fx-rates-display";
 
 /**
@@ -104,7 +104,7 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
       </h1>
       <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
         <FxRatesDisplay mode="compact" />
-        <CurrencySelector />
+        <CurrencyToggle />
         <Button
           onClick={handleRefresh}
           disabled={isRefreshing}

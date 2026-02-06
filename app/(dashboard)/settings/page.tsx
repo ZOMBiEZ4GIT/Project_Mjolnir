@@ -52,7 +52,7 @@ export default function SettingsPage() {
               <CurrencySelector
                 compact={false}
                 showLoadingState={true}
-                className="w-[180px]"
+                className="w-[220px]"
               />
             </div>
 

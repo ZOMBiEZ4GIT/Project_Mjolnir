@@ -116,7 +116,7 @@ export interface FormatCurrencyOptions {
  * Currency symbols for supported currencies.
  * AUD uses plain $, NZD uses NZ$, USD uses US$ to differentiate.
  */
-const CURRENCY_SYMBOLS: Record<Currency, string> = {
+export const CURRENCY_SYMBOLS: Record<Currency, string> = {
   AUD: "$",
   NZD: "NZ$",
   USD: "US$",

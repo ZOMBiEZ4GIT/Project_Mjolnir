@@ -1,6 +1,7 @@
 "use client";
 
-import { TrendingUp, AlertTriangle, Info } from "lucide-react";
+import { useState, useEffect } from "react";
+import { TrendingUp, AlertTriangle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/components/providers/currency-provider";
 import {
@@ -116,6 +117,14 @@ export function FxRatesDisplay({
 }: FxRatesDisplayProps) {
   const { rates, isLoading, isStale, ratesFetchedAt } = useCurrency();
 
+  // Auto-update relative timestamp every 30 seconds
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!ratesFetchedAt) return;
+    const interval = setInterval(() => setTick((t) => t + 1), 30_000);
+    return () => clearInterval(interval);
+  }, [ratesFetchedAt]);
+
   // Show loading skeleton
   if (showLoadingState && isLoading) {
     return mode === "compact" ? (
@@ -142,8 +151,8 @@ export function FxRatesDisplay({
                 <AlertTriangle className="h-4 w-4" />
               </button>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-sm">
-              <p>Exchange rates unavailable</p>
+            <TooltipContent side="bottom" className="bg-card border border-border rounded-lg p-3 shadow-lg">
+              <p className="text-sm text-foreground">Exchange rates unavailable</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -180,14 +189,19 @@ export function FxRatesDisplay({
         <span className="text-muted-foreground">1 NZD =</span>
         <span className="font-mono text-foreground">{formatRate(nzdRate)} AUD</span>
       </div>
+      {isStale && (
+        <p className="text-body-sm text-warning font-medium">
+          Rates may be outdated
+        </p>
+      )}
       <div
         className={cn(
-          "text-xs flex items-center gap-1",
-          isStale ? "text-amber-400" : "text-muted-foreground"
+          "text-body-sm flex items-center gap-1",
+          isStale ? "text-warning" : "text-muted-foreground"
         )}
       >
-        {isStale && <AlertTriangle className="h-3 w-3" />}
-        <span>as of {fetchedAt}</span>
+        <Clock className="h-3 w-3" />
+        <span>Updated {fetchedAt}</span>
       </div>
     </div>
   );
@@ -201,15 +215,15 @@ export function FxRatesDisplay({
             <button
               className={cn(
                 "inline-flex h-8 w-8 items-center justify-center rounded border border-border hover:bg-card transition-colors",
-                isStale ? "text-amber-400" : "text-muted-foreground",
+                isStale ? "text-warning" : "text-muted-foreground",
                 className
               )}
               aria-label="View exchange rates"
             >
-              <Info className="h-4 w-4" />
+              <TrendingUp className="h-4 w-4" />
             </button>
-            </TooltipTrigger>
-          <TooltipContent side="bottom" align="end" className="p-3 min-w-[200px]">
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="end" className="bg-card border border-border rounded-lg p-3 shadow-lg min-w-[200px]">
             {ratesContent}
           </TooltipContent>
         </Tooltip>
@@ -221,7 +235,7 @@ export function FxRatesDisplay({
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-background/50 p-3",
+        "rounded-lg border border-border bg-card/50 p-3",
         className
       )}
     >
