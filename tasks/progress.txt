@@ -351,3 +351,19 @@ Started: 2026-02-07
   - Use Node.js script with WCAG relative luminance formula for accurate contrast calculation — don't eyeball it
 ---
 
+## 2026-02-07 - US-011
+- Installed `@axe-core/react` as dev dependency
+- Created `components/providers/axe-provider.tsx` — client component that initializes axe-core in development mode only
+- Uses dynamic imports inside useEffect (guarded by `NODE_ENV !== 'development'`) so axe-core is tree-shaken in production
+- `@axe-core/react` called with 1000ms debounce — logs WCAG violations to browser console after each render
+- Added `<AxeProvider />` to root layout (`app/layout.tsx`) after Toaster — renders null, side-effect only
+- Setup documented in brief comment block at top of axe-provider.tsx
+- Build and lint pass cleanly
+- Files changed: components/providers/axe-provider.tsx (new), app/layout.tsx, package.json, package-lock.json
+- **Learnings for future iterations:**
+  - `@axe-core/react` requires React and ReactDOM passed as arguments — dynamic import both inside useEffect
+  - `axe.default(React.default, ReactDOM, delayMs)` is the call signature with dynamic imports (default export)
+  - Placing AxeProvider at end of body (after content) ensures it audits the full page
+  - axe-core is already a transitive dependency via eslint-plugin-jsx-a11y — `@axe-core/react` adds the React integration layer
+---
+
