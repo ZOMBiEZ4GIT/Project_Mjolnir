@@ -1,0 +1,176 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/ux3-holdings-ui-enhancement",
+  "description": "UX-3: Holdings UI Enhancement — Transform the holdings list into a premium animated portfolio view with type filter tabs, collapsible group sections, stagger animations, row hover effects, speed-dial FAB, and improved empty/dormant states.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create animated type filter tabs",
+      "description": "As a user, I want filter tabs so I can quickly view holdings by type without navigating away.",
+      "acceptanceCriteria": [
+        "Create components/holdings/filter-tabs.tsx with tabs: All, Crypto, Stocks, ETFs, Super, Cash, Debt",
+        "Active tab has sliding background indicator using Framer Motion layoutId for the pill",
+        "Active tab uses bg-accent/20 with text-foreground",
+        "Inactive tabs use text-muted-foreground, hover → text-foreground",
+        "Tab indicator slides smoothly (200ms, ease-in-out)",
+        "Tabs are horizontally scrollable on mobile (overflow-x-auto with hidden scrollbar)",
+        "Filter state stored in URL search params (type param) via router.replace()",
+        "Remove group-by-selector.tsx from the holdings page",
+        "Currency filter dropdown remains alongside tabs (positioned to the right)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Implement hybrid grouping — groups on All, flat list on specific type",
+      "description": "As a user, I want holdings visually grouped by type when viewing all, but a clean flat list when filtered to a specific type.",
+      "acceptanceCriteria": [
+        "When All tab is active: holdings display in collapsible group sections (Stocks, ETFs, Crypto, Super, Cash, Debt)",
+        "When a specific type tab is active: holdings display as a flat list with no group header",
+        "Group sections expanded by default on page load",
+        "Each group section has a collapsible header — clicking toggles content visibility",
+        "Collapse/expand uses Framer Motion height animation (200ms, ease-out)",
+        "Chevron icon in group header rotates on collapse (90° → 0° transition)",
+        "Empty groups are hidden (don't show header if user has no holdings of that type)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Add group summary stats",
+      "description": "As a user, I want to see a quick summary for each holding group so I can understand portfolio composition at a glance.",
+      "acceptanceCriteria": [
+        "Create components/holdings/group-header.tsx displaying: group name, count of holdings, total value in display currency, percentage of portfolio as badge",
+        "For debt groups: total shown as negative with text-destructive colour",
+        "Summary values update when currency toggle or display currency changes",
+        "Stats are right-aligned on desktop, wrap below group name on mobile",
+        "Uses design tokens: text-muted-foreground for secondary text, bg-card background",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Add stagger animation on holdings list",
+      "description": "As a user, I want smooth animations when holdings appear so changes feel intentional and polished.",
+      "acceptanceCriteria": [
+        "Wrap holdings list in Framer Motion stagger container (staggerContainer preset from lib/animations.ts)",
+        "Each holding row uses staggerItem preset — fades in with 50ms delay between rows",
+        "On filter tab change: existing rows animate out (fade 100ms), new rows stagger in",
+        "Use AnimatePresence with mode='popLayout' to handle enter/exit of rows",
+        "On initial page load: rows stagger in after data loads",
+        "Respects prefers-reduced-motion — instant display, no stagger",
+        "Cap delay so stagger animation completes within 500ms total regardless of row count",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Polish table row hover effects",
+      "description": "As a user, I want subtle hover feedback on holdings rows so I know they're interactive.",
+      "acceptanceCriteria": [
+        "Update holdings-table.tsx row styling: default bg-transparent, hover bg-accent/5 with 150ms transition",
+        "Hover: slight scale effect (1.005) using CSS transform — barely perceptible but adds lift",
+        "Active/pressed: bg-accent/10",
+        "Clicking a row navigates to holding detail page (/holdings/[id])",
+        "Entire row is clickable with cursor-pointer — action buttons use stopPropagation",
+        "Row hover does not cause layout shift (use transform, not padding/margin)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Create speed-dial floating action button",
+      "description": "As a user, I want quick access to common actions from anywhere on the holdings page.",
+      "acceptanceCriteria": [
+        "Create components/shared/speed-dial.tsx — FAB that expands to show multiple actions",
+        "FAB positioned fixed bottom-right (bottom-6 right-6)",
+        "Default state: round button with + icon, bg-accent background",
+        "On click: expands upward revealing 3 action buttons: Add Holding, Add Transaction, Monthly Check-in",
+        "Each action button has icon + text label to its left",
+        "Expand animation: actions stagger in from bottom (50ms delay each), main button rotates 45° (+ becomes ×)",
+        "Backdrop overlay (subtle dark) appears when expanded, clicking it collapses",
+        "FAB has shadow-lg and hover shadow-glow-sm",
+        "Hidden on mobile screens below 640px (sm breakpoint)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Improve dormant holdings visual treatment",
+      "description": "As a user, I want dormant holdings to be visually distinct so I can focus on active holdings.",
+      "acceptanceCriteria": [
+        "Dormant holding rows have reduced opacity (60%) applied to entire row",
+        "Dormant badge: subtle pill showing 'Dormant' in text-muted-foreground with bg-muted background",
+        "When Show dormant toggle is OFF: dormant holdings completely hidden",
+        "When Show dormant toggle is ON: dormant holdings appear at bottom of each group section",
+        "Dormant toggle uses design tokens (no hardcoded colours)",
+        "Toggle uses Switch component with label 'Show dormant'",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Enhance empty state component",
+      "description": "As a user, I want helpful empty states so I know what to do when a section has no data.",
+      "acceptanceCriteria": [
+        "Update components/ui/empty-state.tsx: replace hardcoded bg-gray-800 with bg-muted, hardcoded text colours with text-muted-foreground and text-foreground",
+        "Add Framer Motion entrance animation (fadeIn + slideUp preset)",
+        "Icon container gets subtle border (border border-border)",
+        "No holdings at all: 'No holdings yet' with 'Add your first holding' CTA button",
+        "Filter returns no results: 'No [type] holdings' with 'Try a different filter' message (no CTA)",
+        "All holdings dormant + toggle OFF: 'All holdings are dormant' with toggle CTA",
+        "Empty state animation respects prefers-reduced-motion",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Replace hardcoded colours across holdings components",
+      "description": "As a developer, I want all holdings components using design system tokens so styles are consistent.",
+      "acceptanceCriteria": [
+        "Audit all files in components/holdings/ for hardcoded colour classes (gray-*, green-*, red-*, yellow-*, blue-*, white)",
+        "Replace with semantic design tokens: text-white → text-foreground, text-gray-* → text-muted-foreground, bg-gray-* → bg-muted or bg-card, border-gray-* → border-border, text-green-* → text-positive, text-red-* → text-destructive or text-negative",
+        "Replace in app/(dashboard)/holdings/page.tsx and app/(dashboard)/holdings/[id]/page.tsx",
+        "Replace in holdings-table.tsx and sub-components",
+        "Visual appearance preserved — tokens map to equivalent colours",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}
