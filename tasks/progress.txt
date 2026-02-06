@@ -137,3 +137,14 @@ Started: 2026-02-06
 
 ---
 
+## 2026-02-06 - US-001
+- What was implemented: Extended lib/animations.ts with modal, sheet, error shake, focus glow, accordion, and checkmark animation presets
+- Files changed: lib/animations.ts
+- **Learnings for future iterations:**
+  - modalAnimation combines modalScale + modalExit into a single spread-friendly preset — use this in animated dialog wrappers
+  - accordionAnimation uses Variants type with "collapsed"/"expanded" keys — use with `variants` prop and `animate` prop toggle
+  - checkmark preset uses spring physics for pathLength and scale — spread onto motion.path for SVG check animations
+  - reducedMotionOverride provides `{ transition: { duration: 0 } }` — spread on top of any preset when `useReducedMotion()` returns true
+  - errorShake uses keyframe array for x: [0, -8, 8, -4, 4, 0] — trigger by conditionally applying to `animate` prop
+---
+

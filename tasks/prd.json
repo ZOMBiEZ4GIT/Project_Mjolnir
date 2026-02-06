@@ -19,8 +19,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "All presets added to lib/animations.ts. reducedMotionOverride export provided for runtime reduced-motion handling."
     },
     {
       "id": "US-002",
