@@ -13,6 +13,19 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Mjölnir - Net Worth Tracker",
   description: "Personal net worth tracking dashboard",
+  manifest: "/manifest.json",
+  themeColor: "#09090b",
+  openGraph: {
+    title: "Mjölnir - Net Worth Tracker",
+    description: "Personal net worth tracking dashboard",
+    type: "website",
+    siteName: "Mjölnir",
+  },
+  twitter: {
+    card: "summary",
+    title: "Mjölnir - Net Worth Tracker",
+    description: "Personal net worth tracking dashboard",
+  },
 };
 
 function AppContent({ children }: { children: React.ReactNode }) {
