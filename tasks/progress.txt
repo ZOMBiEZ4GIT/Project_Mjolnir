@@ -140,6 +140,9 @@
 - Toast helpers: import { showSuccess, showError, showInfo } from "@/lib/toast-helpers" — success auto-dismiss 3s, error persists until dismissed, info 4s
 - showError accepts optional { onRetry } to render a Retry action button; use for retryable operations
 - check-in-modal.tsx: use aliased imports (toastSuccess/toastError) because local `showSuccess` state variable shadows the import
+- shadcn/ui Accordion requires `accordion-down`/`accordion-up` keyframes in tailwind.config.ts — add manually after `shadcn add accordion`
+- SettingsSection (components/settings/settings-section.tsx) wraps AccordionItem with icon+title+description trigger — use for settings-style pages
+- Global `prefers-reduced-motion: reduce` in globals.css disables all CSS animations/transitions (0.01ms duration)
 
 ---
 
@@ -272,5 +275,18 @@ Started: 2026-02-06
   - delete-snapshot-dialog.tsx was already using toast helpers from US-006 — only needed the AlertDialog→AnimatedAlertDialog swap
   - delete-transaction-dialog.tsx still had raw `toast.success`/`toast.error` from sonner — migrated to `showSuccess`/`showError` from toast-helpers
   - All detail information (holding names, amounts, warnings, cost basis notice) preserved unchanged — only wrapper components changed
+---
+
+## 2026-02-06 - US-012
+- What was implemented: Refactored settings page to use accordion sections. Installed shadcn/ui Accordion component. Created SettingsSection wrapper. Reorganized page into 4 collapsible sections: Currency Preferences (expanded by default), Email Reminders, Keyboard Shortcuts, About (new). Updated skeleton to match accordion layout. Added accordion keyframes to tailwind.config.ts. Added global prefers-reduced-motion CSS rule.
+- Files changed: app/(dashboard)/settings/page.tsx, app/globals.css, components/settings/settings-section.tsx (new), components/settings/settings-skeleton.tsx, components/ui/accordion.tsx (new), tailwind.config.ts, package.json, package-lock.json
+- **Learnings for future iterations:**
+  - shadcn/ui Accordion requires `accordion-down`/`accordion-up` keyframes in tailwind.config.ts — these are NOT added automatically by `shadcn add accordion`
+  - Radix Accordion uses CSS custom property `--radix-accordion-content-height` for height animation — keyframes reference this variable
+  - Accordion `type="multiple"` allows multiple sections open simultaneously; `defaultValue` accepts string array of initially open items
+  - SettingsSection pattern: AccordionItem with custom trigger (icon+title+description) and AccordionContent with pl-8 indent — reusable for any settings-like page
+  - Default shadcn AccordionItem has `border-b` and AccordionTrigger has `hover:underline` — override with `className` on SettingsSection
+  - Global `prefers-reduced-motion: reduce` rule in globals.css sets all animation/transition durations to 0.01ms — covers accordion, shake, and all CSS animations
+  - `data-[state=open]:shadow-card` on AccordionItem gives subtle elevation to expanded sections
 ---
 

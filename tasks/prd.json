@@ -220,8 +220,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Installed shadcn/ui Accordion (Radix AccordionPrimitive). Created SettingsSection wrapper component with icon+title+description trigger and animated content. Refactored settings page to use Accordion type='multiple' with defaultValue=['currency']. Four sections: Currency Preferences, Email Reminders, Keyboard Shortcuts, About (new). Added accordion-down/accordion-up keyframes to tailwind.config.ts. Updated SettingsSkeleton to match accordion layout. Added global prefers-reduced-motion rule to globals.css for instant show/hide."
     },
     {
       "id": "US-013",
