@@ -1,0 +1,265 @@
+## Codebase Patterns
+- Project uses Next.js 14+ App Router with TypeScript
+- Drizzle ORM is already installed (drizzle-orm, drizzle-kit, @neondatabase/serverless)
+- shadcn/ui components available in components/ui
+- Dark mode only - no light mode support
+- Quality checks: `npm run build` and `npm run lint`
+- ESLint 9 with flat config format (eslint.config.mjs) - do not use .eslintrc.json
+- Tailwind CSS with shadcn/ui CSS variable pattern using HSL format: hsl(var(--variable))
+- CSS variables stored without hsl() wrapper e.g. --background: 240 10% 3.9%
+- Glow shadows use rgba() since HSL variables can't express box-shadow alpha
+- Inter font loaded via next/font/google in app/layout.tsx (applied via inter.className on body)
+- Framer Motion components require "use client" directive
+- Toast notifications use Sonner - import toast from sonner
+- Dashboard navigation uses components/layout/sidebar.tsx and components/layout/mobile-nav.tsx
+- Tailwind has semantic tokens: text-positive/bg-positive (green), text-negative/bg-negative (red), shadow-glow-sm/md/lg, shadow-glow-positive, shadow-glow-negative, shadow-card, shadow-card-hover
+- Layout & spacing constants live in lib/theme.ts (sidebarWidth, cardRadius, spacing xs→2xl) — use instead of magic numbers
+- Animation presets live in lib/animations.ts — import and spread onto motion.div elements (e.g. `<motion.div {...fadeIn}>`)
+- Stagger presets (staggerContainer, staggerItem) use Variants type with "hidden"/"visible" keys — use with variants prop
+- numberSpring is a Transition object for animating numeric values (e.g. useSpring, useMotionValue)
+- Reduced motion: use `useReducedMotion()` from framer-motion directly — returns boolean for OS prefers-reduced-motion
+- Hooks live in hooks/ directory (not lib/) — follow this convention for custom React hooks
+- Recharts SVG props (stroke, fill) require raw hex values — CSS variables not supported in SVG rendering
+- Category indicator colours (asset types, currencies) use hardcoded Tailwind colours (bg-blue-500 etc.) — these are intentional and distinct from theme tokens
+- Card container pattern: `border-border bg-card/50` for bordered cards, `bg-muted` for skeleton placeholders
+- Error state pattern: `border-destructive bg-destructive/10` with `text-destructive` for error messages
+- Toggle pattern: active=`bg-muted text-foreground`, inactive=`text-muted-foreground hover:text-foreground`
+- Form validation pattern: `border-destructive focus-visible:ring-destructive` on inputs, `text-destructive` on error messages
+- Delete confirm button: `bg-destructive hover:bg-destructive/90 text-foreground`; cancel: `bg-card border-border text-foreground hover:bg-muted`
+- Select dropdowns: `bg-background border-border text-muted-foreground` for trigger, `focus:bg-card focus:text-foreground` for items
+- Warning/info colours (yellow-*, blue-*) are semantic and intentionally NOT part of design token migration
+- Interactive toggle buttons (show/hide contributions): use `text-primary hover:text-primary/80` pattern
+- html2canvas backgroundColor requires raw hex — use `#18181b` to match --card token
+- Email templates (components/emails/) use inline hex values — email clients don't support CSS variables
+- Only legitimate remaining hardcoded grey: `bg-gray-500` fallback in category indicator functions (asset-allocation, currency-exposure)
+- Navigation items defined in lib/navigation.ts — import navItems and NavItem type from there (sidebar, mobile nav, command menu)
+- New layout components live in components/layout/ — NavItemLink (nav-item.tsx) uses Framer Motion layoutId='active-nav' for animated active pill
+- TooltipProvider with delayDuration={0} wraps collapsed nav items for instant tooltip display
+- Sidebar collapse state persists in localStorage ('mjolnir-sidebar-collapsed') — use mounted state pattern to avoid hydration mismatch
+- Sidebar is fixed positioned; content area needs dynamic left margin matching sidebar width (240px or 64px)
+- AppShell (components/layout/app-shell.tsx) owns sidebar collapsed state — Sidebar receives isCollapsed/onToggleCollapsed as props
+- Content area uses CSS custom property --sidebar-width with responsive Tailwind class ml-0 lg:ml-[var(--sidebar-width)] for responsive dynamic margin
+- For responsive dynamic values, use CSS custom properties + Tailwind arbitrary value classes (inline styles can't be responsive)
+- PageWrapper (components/layout/page-wrapper.tsx) wraps page content with fade transition — placed inside DashboardErrorBoundary in dashboard layout
+- Mobile header (components/layout/mobile-nav.tsx) is fixed h-14 z-30 — content area needs pt-14 on mobile
+- Sheet drawer (shadcn/ui) handles focus trapping and Escape close via Radix Dialog primitive
+- Focus ring pattern: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring` matches shadcn/ui conventions
+- Shared UI components (e.g. SpeedDial) live in `components/shared/` directory
+- To open AddHoldingDialog/AddTransactionDialog programmatically: pass a hidden `<button ref={ref} />` as children, then call `ref.current?.click()`
+- CheckInModal uses controlled `open`/`onOpenChange` props — can be opened from any external trigger
+- HoldingsTable hybrid grouping: `typeFilter="all"` shows collapsible grouped sections, specific type shows flat list via `HoldingsFlatSection`
+- Shared table rendering: `HoldingsTableContent` component handles row rendering for both grouped and flat views
+- GroupHeader (components/holdings/group-header.tsx) shows label, count, total value, portfolio % badge — receives calculated values as props
+- `calculateGroupTotal()` in holdings-table.tsx converts holdings to display currency — use for any group-level value aggregation
+- `motion.create(TableRow)` creates a motion-enhanced `MotionTableRow` for stagger animations on table rows
+- Stagger rows use `motion.tbody` as container with `variants` + `initial="hidden" animate="visible"` pattern
+- Capped stagger: `Math.min(0.05, 0.5 / count)` ensures total stagger completes within 500ms regardless of row count
+- `useReducedMotion()` from framer-motion checks OS prefers-reduced-motion — skip animations entirely when true
+- Dormant holdings sorted to bottom of each group via `useMemo` sort in `HoldingsTableContent` and `HoldingsCurrencySection`
+- EmptyState component (`components/ui/empty-state.tsx`) is shared across holdings, snapshots, transactions — keep prop API stable
+- `AnimatePresence mode="popLayout"` on HoldingsTable wraps content keyed by typeFilter — handles enter/exit on tab change
+- Holdings table rows are clickable (navigate to `/holdings/[id]`) — action buttons use `stopPropagation` to prevent row click
+- Row hover: `hover:bg-accent/5 hover:scale-[1.005] active:bg-accent/10` with `transition-[background-color,transform] duration-150`
+- Filter tabs (components/holdings/filter-tabs.tsx) use Framer Motion layoutId for animated sliding indicator
+- scrollbar-hide utility class added to globals.css for hidden scrollbar on overflow-x-auto elements
+- TypeSelector (components/transactions/type-selector.tsx) uses layoutId="active-transaction-type" for animated tab indicator
+- react-hook-form + zod installed; shadcn/ui form.tsx component available in components/ui/form.tsx
+- z.coerce.number() with useForm requires casting resolver: `zodResolver(schema) as unknown as Resolver<FormValues>`
+- For numeric inputs with z.coerce: pass `field.value ?? ""` to prevent "undefined" showing
+- TransactionSummary cards use stagger animation with motion.div and variants pattern
+- Transaction table uses monthly grouping with sticky headers (sticky top-0 z-20 bg-background)
+- MotionTableRow with stagger variants + AnimatePresence mode="wait" keyed by filterKey for table animations
+- Transaction action colour mapping: BUY=positive/green, SELL=destructive/red, DIVIDEND=accent/purple, SPLIT=blue-400/blue-500
+- onTransactionSaved/onDeleted callbacks enable row highlight and fade-out animations from parent component
+
+- Check-in form uses react-hook-form + zod with useFieldArray for dynamic holdings list; showContributions is UI-only state (not in form schema)
+- useFieldArray `replace()` syncs form fields with API data; use a ref-based sync key to prevent re-replacing on every render
+- form.trigger(`holdings.${idx}.balance`) validates individual field array items for per-step validation in wizard flows
+- form.setValue with `{ shouldValidate: form.formState.isSubmitted }` re-validates on change only after first validation attempt
+- Check-in status API returns `previousBalances` keyed by holdingId — most recent snapshot balance before target month
+- CheckInModal is a 3-step wizard (Select Month → Update Holdings → Review & Save) with currentStep state (0-2)
+- animate-shake keyframes defined in tailwind.config.ts — use `animate-shake` class with useState toggle + setTimeout auto-clear
+- Type icon mapping: super=Landmark, cash=Wallet, debt=CreditCard (from lucide-react)
+- CheckinPrompt (components/dashboard/checkin-prompt.tsx) replaces CheckInPromptCard — moved to dashboard/ directory
+- sessionStorage dismissal pattern: use `mounted` state + useEffect to avoid hydration mismatch when reading sessionStorage
+- Accent glow prompt card: `border-accent/30 bg-card/50 shadow-glow-sm` for attention-grabbing cards
+- Directional step transitions: use variants with `custom` prop on AnimatePresence to pass direction to exiting components — enter slides from `100*d%`, exit slides to `-100*d%` (d=1 forward, d=-1 backward)
+- Step container needs `overflow-hidden` to clip sliding content during transitions
+- Accordion expand animation: `motion.div` with `height: 0` → `height: "auto"`, `overflow-hidden`, wrapped in `AnimatePresence initial={false}`
+- Check-in status API returns `latestContributions` for pre-populating super contribution fields
+- Success summary pattern: store mutation result in state + `showSuccess` boolean, render different content in same step (no extra wizard step)
+- CheckinStepper accepts currentStep=3 (beyond max) to mark all steps completed — no code change needed in stepper
+
+---
+
+# UX-5 Snapshot & Check-in Polish Progress Log
+
+Started: 2026-02-06
+
+---
+
+## 2026-02-06 - US-001
+- Implemented CheckinPrompt component at components/dashboard/checkin-prompt.tsx
+- Replaced old CheckInPromptCard from components/check-in/check-in-prompt-card.tsx
+- Moved check-in prompt to top of dashboard (after header, before net worth hero)
+- Added: accent border/glow, animated slide-down entrance, CalendarCheck icon, "Remind me later" with sessionStorage dismissal
+- Respects prefers-reduced-motion via useReducedMotion()
+- Files changed: components/dashboard/checkin-prompt.tsx (new), components/dashboard/dashboard-content.tsx (updated)
+- **Learnings for future iterations:**
+  - Old check-in-prompt-card.tsx still exists but is no longer imported — can be cleaned up later
+  - sessionStorage reads must be deferred to useEffect to avoid SSR hydration mismatch
+  - `motion.div initial={reducedMotion ? false : {...}}` is the pattern to disable animations for reduced motion
+---
+
+## 2026-02-06 - US-002
+- Created CheckinStepper component at components/check-in/checkin-stepper.tsx
+- 3-step horizontal stepper: "Select Month" → "Update Holdings" → "Review & Save"
+- Step states: Completed (accent + checkmark), Current (accent + number + pulsing glow), Upcoming (muted + number)
+- Animated connection lines fill with accent colour when step completed
+- Respects prefers-reduced-motion via useReducedMotion()
+- Files changed: components/check-in/checkin-stepper.tsx (new)
+- **Learnings for future iterations:**
+  - Framer Motion `animate` with keyframes array creates pulsing glow effect: `boxShadow: ["0 0 0 0 ...", "0 0 0 6px ...", "0 0 0 0 ..."]`
+  - HSL CSS variable in boxShadow keyframes: use `hsl(var(--accent) / 0.2)` syntax
+  - Connection line between steps: use `overflow-hidden` parent with inner `motion.div` that animates width 0%→100%
+  - Labels below circles with `self-start mt-4 mb-5` on connection line to align with circle centres
+---
+
+## 2026-02-06 - US-003
+- Created MonthSelector component at components/check-in/month-selector.tsx
+- Two styled card options: Current Month and Previous Month with Calendar/CalendarClock icons
+- Selected state uses accent border/background (border-accent bg-accent/10)
+- Unselected state uses card/border tokens with hover transition
+- Helpful note below: "You can log on the 5th for the previous month"
+- Component is controlled: receives currentMonth, previousMonth, selectedMonth, onSelectMonth props
+- Files changed: components/check-in/month-selector.tsx (new)
+- **Learnings for future iterations:**
+  - MonthSelector uses same `formatMonthYear` helper as check-in-modal — could be extracted to shared util later
+  - Card selection pattern: `border-accent bg-accent/10` for selected, `border-border bg-card/50` for unselected
+  - Grid layout `grid-cols-1 sm:grid-cols-2` provides responsive card arrangement
+---
+
+## 2026-02-06 - US-004
+- Refactored check-in-modal.tsx into 3-step wizard: Select Month → Update Holdings → Review & Save
+- Integrated CheckinStepper (US-002) at top of modal showing progress
+- Integrated MonthSelector (US-003) as the Step 1 UI replacing the old Select dropdown
+- Step 1 shows holdings count + type breakdown badges (Landmark/Wallet/CreditCard icons)
+- Step 2 preserves all existing holding entry forms, adds validation on Continue
+- Step 3 shows review summary with formatted currency amounts, grouped by type with icons
+- Added error shake animation (`animate-shake` keyframes in tailwind.config.ts) on validation failure
+- Footer navigation: Cancel/Continue on Step 1, Back/Continue on Step 2, Back/Save All on Step 3
+- Removed unused Select component imports (replaced by MonthSelector)
+- Files changed: components/check-in/check-in-modal.tsx (refactored), tailwind.config.ts (added shake animation)
+- **Learnings for future iterations:**
+  - Wizard state (currentStep) resets on modal close via handleOpenChange
+  - Error shake pattern: `useState(shakeStep2)` + `setTimeout(() => setShake(false), 500)` to auto-clear
+  - Focus first error input: query `.border-destructive input` within step ref container
+  - Review step uses `formatCurrency()` helper for consistent display — could be extracted to shared util
+  - `typeIcons` mapping (Landmark=super, Wallet=cash, CreditCard=debt) — reusable for other type displays
+---
+
+## 2026-02-06 - US-005
+- Added directional step transitions to check-in wizard using Framer Motion AnimatePresence
+- Forward navigation: current step slides out left, new step slides in from right
+- Backward navigation: current step slides out right, new step slides in from left
+- Used variants pattern with `custom` prop (direction: 1 or -1) for dynamic enter/exit animations
+- Step container has `overflow-hidden` and `min-h-[200px]` to prevent layout shift and clip sliding content
+- Transition duration: 250ms ease-in-out
+- Respects prefers-reduced-motion via `useReducedMotion()` — returns empty objects from variants when true + duration: 0
+- Direction state tracked alongside currentStep, set before step change, reset on modal close
+- Files changed: components/check-in/check-in-modal.tsx (updated)
+- **Learnings for future iterations:**
+  - AnimatePresence `custom` prop passes latest value to exiting components — critical for directional transitions
+  - Variants with function signatures `(d: number) => ({...})` are the cleanest way to handle dynamic custom values
+  - `overflow-hidden` on the step container is essential — without it, sliding content overflows the modal
+  - `reducedMotion` check returns empty `{}` from variants (not `false`) since variants expect objects
+---
+
+## 2026-02-06 - US-006
+- Added Framer Motion height animation to super contributions expand/collapse (200ms ease-out)
+- Wrapped contributions section in AnimatePresence + motion.div with height: 0 → "auto" animation
+- Updated check-in status API to return latest contributions for active super holdings
+- Added useEffect to pre-populate and auto-expand contributions section when previous values exist
+- Pre-population only applies to holdings user hasn't already modified (merge logic)
+- Dormant super already correctly excluded from contributions section (no changes needed)
+- Files changed: components/check-in/check-in-modal.tsx (updated), app/api/check-in/status/route.ts (updated)
+- **Learnings for future iterations:**
+  - Framer Motion `height: 0` → `height: "auto"` with `overflow-hidden` is the clean pattern for accordion/expand animations
+  - `AnimatePresence initial={false}` prevents animation on first mount — use when content should appear expanded immediately
+  - Pre-population via useEffect watching query data: merge with existing state to avoid overwriting user edits
+  - API returns `latestContributions` keyed by holdingId — only populated for active (non-dormant) super holdings with non-zero values
+---
+
+## 2026-02-06 - US-007
+- Enhanced check-in status API to return `previousBalances` (most recent snapshot before target month per holding)
+- Revamped Step 3 review to show comparison cards: holding name, new balance, previous balance (or "First entry"), change amount with direction arrows
+- For debt: inverted change colour logic (decrease=green, increase=red)
+- Added large change warning (>50%) with amber AlertTriangle icon — informational only, doesn't block save
+- Super contributions (employer/employee) shown below holding name when entered
+- Files changed: app/api/check-in/status/route.ts (added previousBalances query), components/check-in/check-in-modal.tsx (revamped Step 3)
+- **Learnings for future iterations:**
+  - `lt()` from drizzle-orm filters snapshots before target month for "previous balance" lookups
+  - `previousBalances` API pattern: query all snapshots < target date, ordered desc, take first per holdingId
+  - Debt change colour inversion: `isDebt ? changeAmount < 0 : changeAmount > 0` for "positive" (green) change
+  - Percentage change calculation: `Math.abs((new - prev) / prev) * 100` — guard against division by zero when prevNum is 0
+  - Warning/info yellow colours (yellow-500) are intentionally NOT design tokens — used for semantic warnings
+---
+
+## 2026-02-06 - US-008
+- Added success summary that replaces Step 3 review content after successful save
+- Animated checkmark: spring animation with green circle (bg-positive/20) and Check icon
+- Displays "Check-in Complete!" title + "X snapshots saved for [Month]" subtitle
+- Brief list of saved holdings showing icon, name, and balance in compact card format
+- Net worth change indicator: sums balance changes across all holdings (debt inverted), shows green/red card with arrow
+- 'Done' button replaces footer navigation in success state
+- Stepper shows all steps completed (passes currentStep=3, beyond max index)
+- Modal close after success triggers net-worth and net-worth-history cache invalidation
+- Toast already fires from onSuccess handler (unchanged)
+- Save mutation now stores result in state and sets showSuccess flag instead of closing modal
+- Files changed: components/check-in/check-in-modal.tsx (updated)
+- **Learnings for future iterations:**
+  - `showSuccess` flag pattern: store mutation result in state, toggle flag, render different content in same step
+  - Spring animation for checkmark: `type: "spring", stiffness: 200, damping: 15` with staggered delay for inner/outer elements
+  - Stepper accepts currentStep beyond max index — all steps show as completed (index < currentStep), none as current
+  - Net worth change approximation: sum balance changes, invert debt changes (decrease = positive for net worth)
+  - `formatCurrency(String(totalChange), "AUD")` — cast number to string for the helper
+  - IIFE pattern `{(() => {...})()}` in JSX for complex conditional rendering with calculations
+---
+
+## 2026-02-06 - US-009
+- Refactored check-in modal from manual useState to react-hook-form + zod
+- Created zod schema: `checkInFormSchema` with `month` (required string) and `holdings` array of `holdingEntrySchema` (holdingId, type, balance required, employerContrib/employeeContrib optional)
+- Used `useFieldArray` for dynamic holdings list managed by `fields` and `replace()`
+- Sync API holdings data to form fields via useEffect with ref-based sync key (`lastSyncedRef`) to prevent infinite re-replace loops
+- `showContributions` kept as separate UI-only state (not part of form schema)
+- Removed 6 separate useState hooks (superHoldingsData, cashHoldingsData, debtHoldingsData, updatedHoldingIds, validationErrors, selectedMonth) — all replaced by useForm
+- Merged CashHoldingEntry and DebtHoldingEntry into single `BalanceHoldingEntry` (identical UI)
+- Validation via `form.trigger('holdings.${idx}.balance')` per field on Step 2 Continue
+- Error shake + focus first empty balance preserved with existing DOM query pattern
+- form.setValue with `{ shouldValidate: form.formState.isSubmitted }` ensures re-validation only after first validation attempt
+- `holdingIndexMap` useMemo provides O(1) lookup from holdingId to field array index
+- `getHoldingData` useCallback wraps index lookup + watched values for review/success steps
+- Net reduction of 170 lines (439 removed, 269 added)
+- Files changed: components/check-in/check-in-modal.tsx (refactored)
+- **Learnings for future iterations:**
+  - When syncing useFieldArray with async API data, use a ref-based sync key (e.g. `lastSyncedRef.current = syncKey`) to prevent re-replacing on every render
+  - `replace()` from useFieldArray resets all fields — don't call it if data hasn't changed
+  - `form.trigger('holdings.${idx}.balance')` validates individual items — use Promise.all for batch per-step validation
+  - `form.watch("holdings")` returns the live array — derive computed values (updatedCount, getHoldingData) from this
+  - `zodResolver(schema) as unknown as Resolver<FormValues>` casting pattern still needed (documented in codebase patterns)
+  - showContributions toggle is UI-only state — keep it in separate useState, not in form schema
+  - `form.formState.errors.holdings?.[idx]?.balance?.message` is the path to field array item errors
+---
+
+## 2026-02-06 - US-010
+- Audited all 5 target files for hardcoded colour classes: check-in-modal.tsx, checkin-prompt.tsx, snapshots/page.tsx, edit-snapshot-modal.tsx, delete-snapshot-dialog.tsx
+- Searched for: text-white, text-gray-*, bg-gray-*, border-gray-*, text-green-*, text-red-*, bg-green-*, bg-red-*, border-green-*, border-red-*
+- Result: ZERO hardcoded colours found — all files already use design tokens (text-foreground, text-muted-foreground, bg-card, bg-muted, border-border, text-positive, text-destructive, etc.)
+- Previous UX epic iterations (UX-1 through UX-4) already migrated these files to design tokens
+- Build and lint pass clean
+- Files changed: none (audit only — prd.json and progress.txt updated)
+- **Learnings for future iterations:**
+  - Design token migration was already completed by earlier UX epics — future audits may find the same
+  - The codebase patterns section documents which hardcoded colours are intentionally kept (yellow-*, blue-* for warnings/info, bg-gray-500 for category indicators, hex in email templates and html2canvas)
+---
+

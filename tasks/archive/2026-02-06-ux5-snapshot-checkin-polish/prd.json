@@ -1,0 +1,194 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/ux5-snapshot-checkin-polish",
+  "description": "UX-5: Snapshot & Check-in Polish — Convert check-in modal to 3-step wizard with animated transitions, prominent dashboard prompt card, visual stepper, success summary, and design token cleanup.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create check-in prompt card for dashboard",
+      "description": "As a user, I want a prominent reminder on my dashboard when my monthly check-in is due so I don't forget.",
+      "acceptanceCriteria": [
+        "Create components/dashboard/checkin-prompt.tsx (replaces existing check-in-prompt-card.tsx)",
+        "Card appears at top of dashboard content when check-in is needed",
+        "Card has accent border/glow (border-accent/30 shadow-glow-sm)",
+        "Animated entrance: slides down with fade-in",
+        "Content: icon, title 'Monthly Check-in Due', description 'X holdings need updating for [Month]', 'Start Check-in' button, 'Remind me later' button",
+        "'Remind me later' stores dismissal in sessionStorage (mjolnir-checkin-dismissed)",
+        "Card hidden when: no holdings need check-in, or dismissed for session",
+        "Uses design tokens throughout",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Create check-in stepper component",
+      "description": "As a user, I want to see my progress through the check-in flow so I know how much is left.",
+      "acceptanceCriteria": [
+        "Create components/check-in/checkin-stepper.tsx",
+        "Displays 3 steps: 'Select Month' → 'Update Holdings' → 'Review & Save'",
+        "Each step shows: step number (circle), label text, connection line to next step",
+        "Step states: Completed (accent circle + checkmark), Current (accent circle + number + pulsing glow), Upcoming (muted circle + number)",
+        "Horizontal layout on desktop, compact on mobile (labels below circles)",
+        "Respects prefers-reduced-motion",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Create month selector component",
+      "description": "As a user, I want a clear month picker that only allows valid months.",
+      "acceptanceCriteria": [
+        "Create components/check-in/month-selector.tsx",
+        "Displays two options as styled cards: 'Current Month' and 'Previous Month'",
+        "Selected month has accent border/background (bg-accent/10 border-accent)",
+        "Current month selected by default",
+        "No other months selectable (hard limit)",
+        "Shows helpful note below: 'You can log on the 5th for the previous month'",
+        "Uses design tokens, no hardcoded colours",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Convert check-in modal to 3-step wizard structure",
+      "description": "As a user, I want a guided check-in flow so I can focus on one thing at a time.",
+      "acceptanceCriteria": [
+        "Refactor components/check-in/check-in-modal.tsx into wizard with 3 steps",
+        "Step 1 — Select Month: MonthSelector, shows which holdings need updating, Continue button",
+        "Step 2 — Update Holdings: Holdings grouped by type (Super/Cash/Debt), Back and Continue buttons",
+        "Step 3 — Review & Save: Summary of entered data, Back and Save All buttons",
+        "Stepper component (US-002) displayed at top of modal",
+        "Modal width: max-w-2xl",
+        "Continue on Step 2 validates all balances filled (error shake if not)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Add directional step transitions",
+      "description": "As a user, I want step transitions to feel spatial — forward slides left, backward slides right.",
+      "acceptanceCriteria": [
+        "Wrap step content in AnimatePresence with mode='wait'",
+        "Forward transition: current slides out left, new slides in from right",
+        "Backward transition: current slides out right, new slides in from left",
+        "Transition duration: 250ms, ease-in-out",
+        "Direction determined by comparing current and previous step indices",
+        "Key each step content by step index",
+        "Respects prefers-reduced-motion — instant switch, no slide",
+        "No layout shift (step container has fixed min-height)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Polish super contributions section",
+      "description": "As a user, I want the super contributions section to expand smoothly and feel part of the flow.",
+      "acceptanceCriteria": [
+        "Super entries in Step 2 show: balance input + expandable contributions section",
+        "Contributions toggle: 'Add contributions' link below balance field",
+        "Expand/collapse uses Framer Motion height animation (200ms ease-out)",
+        "Contributions fields: Employer Contribution, Employee Contribution (both optional, default 0)",
+        "If contributions have previous values, pre-populate and auto-expand",
+        "Dormant super: no contributions section (balance only)",
+        "Active super: contributions collapsed by default unless pre-populated",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Create review step with change comparison",
+      "description": "As a user, I want to see a summary of what I'm about to save, including how values changed from last month.",
+      "acceptanceCriteria": [
+        "Step 3 displays summary cards for all holdings being updated",
+        "Each card shows: holding name + type icon, new balance, previous balance (or 'First entry'), change amount with green/red colour, direction arrow",
+        "For super: also show employer + employee contributions if entered",
+        "Holdings grouped by type (Super/Cash/Debt) with group headers",
+        "For debt: decrease is positive (green), increase is negative (red)",
+        "Save All button at bottom with accent styling",
+        "Large change warning (>50%): subtle amber 'Large change detected' — informational only",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Add success summary on completion",
+      "description": "As a user, I want to see what was saved after completing check-in.",
+      "acceptanceCriteria": [
+        "After successful save, Step 3 transforms into success summary (no new step)",
+        "Success shows: checkmark animation, title 'Check-in Complete!', subtitle 'X snapshots saved for [Month]'",
+        "Brief list of what was saved: holding name + balance for each",
+        "Net worth change indicator if calculable",
+        "'Done' button closes the modal",
+        "Modal close triggers cache invalidation",
+        "Success toast fires: 'Check-in complete! X snapshots saved.'",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Refactor check-in modal to react-hook-form + zod",
+      "description": "As a developer, I want the check-in form using standardised validation.",
+      "acceptanceCriteria": [
+        "Replace manual useState with useForm from react-hook-form",
+        "Create zod schema: month (required string), holdings array with holdingId, balance, employerContrib, employeeContrib",
+        "Validation on Step 2 Continue: all balance fields filled",
+        "Error shake on validation failure, focus moves to first empty balance",
+        "Use useFieldArray for dynamic holdings list",
+        "Form state persists across step navigation (back doesn't lose data)",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Replace hardcoded colours across check-in and snapshot components",
+      "description": "As a developer, I want all check-in and snapshot components using design tokens.",
+      "acceptanceCriteria": [
+        "Audit and update: check-in-modal.tsx, checkin-prompt.tsx, snapshots/page.tsx, edit-snapshot-modal.tsx, delete-snapshot-dialog.tsx",
+        "Replace: text-white → text-foreground, text-gray-* → text-muted-foreground",
+        "Replace: bg-gray-* → bg-card/bg-muted/bg-background, border-gray-* → border-border",
+        "Replace: text-green-* → text-positive, text-red-* → text-destructive",
+        "Visual appearance preserved",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Audit confirmed all 5 target files already use design tokens — no hardcoded colours found."
+    }
+  ]
+}
