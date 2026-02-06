@@ -27,7 +27,7 @@
 - Form validation pattern: `border-destructive focus-visible:ring-destructive` on inputs, `text-destructive` on error messages
 - Delete confirm button: `bg-destructive hover:bg-destructive/90 text-foreground`; cancel: `bg-card border-border text-foreground hover:bg-muted`
 - Select dropdowns: `bg-background border-border text-muted-foreground` for trigger, `focus:bg-card focus:text-foreground` for items
-- Warning colours now use text-warning/bg-warning/border-warning design tokens (migrated from amber-* in UX-8)
+- Warning colours use text-warning/bg-warning design tokens (--warning: 38 92% 50% ≈ amber-500) — added in UX-9 US-010
 - Info colours (blue-*) are semantic and intentionally NOT part of design token migration
 - Interactive toggle buttons (show/hide contributions): use `text-primary hover:text-primary/80` pattern
 - html2canvas backgroundColor requires raw hex — use `#18181b` to match --card token
@@ -249,4 +249,16 @@ Started: 2026-02-06
   - SelectItem: `text-foreground focus:bg-accent/10 focus:text-foreground` — accent highlight on focus/selection
   - Width increased from 160px to 180px to accommodate flag emojis
   - Filter icon keeps `text-muted-foreground` as a subdued visual cue
+---
+
+## 2026-02-06 - US-010
+- Replaced hardcoded colours across all currency components; added warning design token
+- Files changed: app/globals.css, tailwind.config.ts, components/dashboard/currency-exposure.tsx
+- **Learnings for future iterations:**
+  - Added `--warning` CSS variable (38 92% 50% — amber-500 equivalent) + `warning` colour in tailwind.config.ts
+  - `text-warning` / `bg-warning` now resolve properly — previously these classes were used in code but had no backing token
+  - Replaced `bg-amber-500` → `bg-warning` and `bg-amber-500/20` → `bg-warning/20` in getCurrencyBarColor/getCurrencyBadgeColor
+  - `bg-blue-400` for NZD is an intentional category indicator colour — kept as-is per codebase patterns
+  - All 8 target files audited: currency-provider, currency-selector, currency-display, native-currency-toggle, fx-rates-display, currency-filter, currency-exposure, settings/page — all clean of text-white, text-gray-*, bg-gray-*, border-gray-*, text-green-*, text-amber-*, text-yellow-*
+  - currency-provider.tsx lives at components/providers/ not components/ui/
 ---
