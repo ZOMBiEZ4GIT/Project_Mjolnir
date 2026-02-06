@@ -3,7 +3,11 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion, type Variants } from "framer-motion";
-import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown, RotateCw } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle, TrendingUp, TrendingDown, Minus, RotateCw } from "lucide-react";
+import { PriceFlash } from "./price-flash";
+import { PriceNumberTicker } from "./price-number-ticker";
+import { PriceTimestamp } from "./price-timestamp";
+import { PriceSkeleton } from "./price-skeleton";
 import type { Holding } from "@/lib/db/schema";
 import type { HoldingTypeFilter } from "./filter-tabs";
 import {
@@ -92,6 +96,7 @@ interface HoldingsTableProps {
   holdings: HoldingWithData[];
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  pricesRefreshing?: boolean;
   onRetryPrice?: (holdingId: string) => void;
   retryingPriceIds?: Set<string>;
   groupBy?: GroupByValue;
@@ -188,17 +193,6 @@ function formatQuantity(value: number | null): string {
 }
 
 /**
- * Format price with currency symbol
- */
-function formatPrice(price: number, currency: string): string {
-  const symbol = CURRENCY_SYMBOLS[currency] || currency;
-  return `${symbol}${price.toLocaleString("en-AU", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-/**
  * Format change percent with sign and color indicator
  */
 function formatChangePercent(percent: number): { text: string; isPositive: boolean } {
@@ -219,29 +213,6 @@ function formatChangeAbsolute(value: number, currency: string): string {
     maximumFractionDigits: 2,
   });
   return `${symbol}${absValue}`;
-}
-
-/**
- * Format a date as "X ago" (e.g., "5 min ago", "2 hours ago")
- */
-function formatTimeAgo(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSeconds = Math.floor(diffMs / 1000);
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMinutes < 1) {
-    return "just now";
-  }
-  if (diffMinutes < 60) {
-    return `${diffMinutes} min ago`;
-  }
-  if (diffHours < 24) {
-    return `${diffHours} ${diffHours === 1 ? "hour" : "hours"} ago`;
-  }
-  return `${diffDays} ${diffDays === 1 ? "day" : "days"} ago`;
 }
 
 /**
@@ -277,7 +248,7 @@ function formatGainLossPercent(percent: number): string {
   return `${sign}${percent.toFixed(2)}%`;
 }
 
-export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, retryingPriceIds, groupBy = "type", typeFilter = "all", sparklineData, sparklineLoading }: HoldingsTableProps) {
+export function HoldingsTable({ holdings, prices, pricesLoading, pricesRefreshing, onRetryPrice, retryingPriceIds, groupBy = "type", typeFilter = "all", sparklineData, sparklineLoading }: HoldingsTableProps) {
   const [editingHolding, setEditingHolding] = useState<HoldingWithData | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
   const groupedByType = groupHoldingsByType(holdings);
@@ -337,6 +308,7 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
                     holdings={typeHoldings}
                     prices={prices}
                     pricesLoading={pricesLoading}
+                    pricesRefreshing={pricesRefreshing}
                     onEdit={setEditingHolding}
                     onDelete={setDeletingHolding}
                     onRetryPrice={onRetryPrice}
@@ -360,6 +332,7 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
                 isSnapshotType={flatIsSnapshot}
                 prices={prices}
                 pricesLoading={pricesLoading}
+                pricesRefreshing={pricesRefreshing}
                 onEdit={setEditingHolding}
                 onDelete={setDeletingHolding}
                 onRetryPrice={onRetryPrice}
@@ -430,6 +403,7 @@ interface HoldingsTypeSectionProps {
   holdings: HoldingWithData[];
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  pricesRefreshing?: boolean;
   onEdit: (holding: HoldingWithData) => void;
   onDelete: (holding: HoldingWithData) => void;
   onRetryPrice?: (holdingId: string) => void;
@@ -452,14 +426,15 @@ interface PriceCellProps {
   holdingCurrency: string;
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  pricesRefreshing?: boolean;
   onRetry?: () => void;
   isRetrying?: boolean;
 }
 
-function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry, isRetrying }: PriceCellProps) {
-  // Loading state for initial price fetch
+function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, pricesRefreshing, onRetry, isRetrying }: PriceCellProps) {
+  // Loading state — shaped skeleton
   if (pricesLoading) {
-    return <span className="text-muted-foreground text-sm">Loading...</span>;
+    return <PriceSkeleton variant="price" />;
   }
 
   // No price data available
@@ -470,77 +445,87 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
 
   const { price, currency, changePercent, changeAbsolute, fetchedAt, isStale, error } = priceData;
   const displayCurrency = currency || holdingCurrency;
-
-  // Format change display
-  const hasChange = changePercent !== null && changeAbsolute !== null;
-  const changeInfo = hasChange ? formatChangePercent(changePercent) : null;
+  const currencyPrefix = CURRENCY_SYMBOLS[displayCurrency] || displayCurrency;
 
   // Show retry button for errors or if currently retrying
   const showRetry = (error || isRetrying) && onRetry;
 
-  return (
-    <div className="flex flex-col gap-0.5 items-end">
-      {/* Main price */}
-      <span className="text-foreground font-mono">
-        {formatPrice(price, displayCurrency)}
-      </span>
+  // Stale visual treatment: dimmed text + amber left border
+  const priceTextClass = isStale
+    ? "text-muted-foreground font-mono"
+    : "text-foreground font-mono";
 
-      {/* Change indicator */}
-      {hasChange && changeInfo && (
-        <span
-          className={`text-xs flex items-center gap-0.5 ${
-            changeInfo.isPositive ? "text-positive" : "text-destructive"
-          }`}
-        >
-          {changeInfo.isPositive ? (
-            <TrendingUp className="h-3 w-3" />
-          ) : (
-            <TrendingDown className="h-3 w-3" />
-          )}
-          {changeInfo.text}
-          {changeAbsolute !== null && (
-            <span className="text-muted-foreground ml-1">
-              ({formatChangeAbsolute(changeAbsolute, displayCurrency)})
-            </span>
-          )}
-        </span>
+  return (
+    <div
+      className={`flex flex-col gap-0.5 items-end transition-all duration-200 ${
+        isStale ? "border-l-2 border-warning/50 pl-2" : "border-l-2 border-transparent pl-2"
+      } ${pricesRefreshing ? "animate-pulse" : ""}`}
+    >
+      {/* Main price with flash + number ticker */}
+      <PriceFlash value={price}>
+        <PriceNumberTicker
+          value={price}
+          prefix={currencyPrefix}
+          className={priceTextClass}
+        />
+      </PriceFlash>
+
+      {/* Change indicator with crossfade on direction change */}
+      {changePercent !== null && (
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={changePercent > 0 ? "up" : changePercent < 0 ? "down" : "zero"}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className={`text-xs flex items-center gap-0.5 ${
+              changePercent > 0
+                ? "text-positive"
+                : changePercent < 0
+                  ? "text-destructive"
+                  : "text-muted-foreground"
+            }`}
+          >
+            {changePercent > 0 ? (
+              <TrendingUp className="h-3 w-3" />
+            ) : changePercent < 0 ? (
+              <TrendingDown className="h-3 w-3" />
+            ) : (
+              <Minus className="h-3 w-3" />
+            )}
+            {changePercent === 0 ? "0.00%" : formatChangePercent(changePercent).text}
+            {changeAbsolute !== null && (
+              <span className="text-muted-foreground ml-1">
+                ({formatChangeAbsolute(changeAbsolute, displayCurrency)})
+              </span>
+            )}
+          </motion.span>
+        </AnimatePresence>
       )}
 
-      {/* Staleness/timestamp indicator with optional retry button */}
-      <span
-        className={`text-xs flex items-center gap-0.5 ${
-          isStale || error ? "text-yellow-400" : "text-muted-foreground"
-        }`}
-      >
-        {isRetrying ? (
-          <RotateCw className="h-3 w-3 animate-spin" />
-        ) : (
-          <>
-            {isStale && <AlertTriangle className="h-3 w-3" />}
-            {error && !isStale && <AlertTriangle className="h-3 w-3" />}
-            {!isStale && !error && fetchedAt && <Clock className="h-3 w-3" />}
-          </>
-        )}
-        {isRetrying ? (
-          <span>Retrying...</span>
-        ) : (
-          <>
-            {fetchedAt ? formatTimeAgo(fetchedAt) : "unknown"}
-            {error && <span className="ml-1">(error)</span>}
-          </>
-        )}
-        {showRetry && !isRetrying && (
-          <button
+      {/* Timestamp */}
+      <PriceTimestamp fetchedAt={fetchedAt} isStale={isStale} error={error} />
+
+      {/* Retry button (pill-shaped, with entrance/exit animation) */}
+      <AnimatePresence>
+        {showRetry && (
+          <motion.button
             type="button"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             onClick={(e) => { e.stopPropagation(); onRetry?.(); }}
-            className="ml-1.5 p-0.5 rounded hover:bg-muted transition-colors"
+            disabled={isRetrying}
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs bg-muted text-muted-foreground hover:bg-accent/20 hover:text-foreground transition-colors disabled:opacity-60 disabled:pointer-events-none"
             title="Retry price fetch"
           >
-            <RotateCw className="h-3 w-3" />
-            <span className="sr-only">Retry</span>
-          </button>
+            <RotateCw className={`h-3 w-3 ${isRetrying ? "animate-spin" : ""}`} />
+            {isRetrying ? "Retrying..." : "Retry"}
+          </motion.button>
         )}
-      </span>
+      </AnimatePresence>
     </div>
   );
 }
@@ -572,9 +557,9 @@ function MarketValueCell({
   currencyLoading,
   showNativeCurrency,
 }: MarketValueCellProps) {
-  // Loading state
+  // Loading state — shaped skeleton
   if (pricesLoading || currencyLoading) {
-    return <CurrencyDisplay amount={0} currency={displayCurrency} isLoading />;
+    return <PriceSkeleton variant="value" />;
   }
 
   // No quantity - cannot calculate market value
@@ -651,9 +636,9 @@ function GainLossCell({
   currencyLoading,
   showNativeCurrency,
 }: GainLossCellProps) {
-  // Loading state
+  // Loading state — shaped skeleton
   if (pricesLoading || currencyLoading) {
-    return <CurrencyDisplay amount={0} currency={displayCurrency} isLoading />;
+    return <PriceSkeleton variant="value" />;
   }
 
   // No quantity - cannot calculate market value
@@ -785,6 +770,7 @@ function HoldingsTypeSection({
   holdings,
   prices,
   pricesLoading,
+  pricesRefreshing,
   onEdit,
   onDelete,
   onRetryPrice,
@@ -851,6 +837,7 @@ function HoldingsTypeSection({
                 isSnapshotType={isSnapshotType}
                 prices={prices}
                 pricesLoading={pricesLoading}
+                pricesRefreshing={pricesRefreshing}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onRetryPrice={onRetryPrice}
@@ -880,6 +867,7 @@ interface HoldingsFlatSectionProps {
   isSnapshotType: boolean;
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  pricesRefreshing?: boolean;
   onEdit: (holding: HoldingWithData) => void;
   onDelete: (holding: HoldingWithData) => void;
   onRetryPrice?: (holdingId: string) => void;
@@ -898,6 +886,7 @@ function HoldingsFlatSection({
   isSnapshotType,
   prices,
   pricesLoading,
+  pricesRefreshing,
   onEdit,
   onDelete,
   onRetryPrice,
@@ -917,6 +906,7 @@ function HoldingsFlatSection({
         isSnapshotType={isSnapshotType}
         prices={prices}
         pricesLoading={pricesLoading}
+        pricesRefreshing={pricesRefreshing}
         onEdit={onEdit}
         onDelete={onDelete}
         onRetryPrice={onRetryPrice}
@@ -949,6 +939,7 @@ interface HoldingsTableContentProps {
   isSnapshotType: boolean;
   prices?: Map<string, PriceData>;
   pricesLoading?: boolean;
+  pricesRefreshing?: boolean;
   onEdit: (holding: HoldingWithData) => void;
   onDelete: (holding: HoldingWithData) => void;
   onRetryPrice?: (holdingId: string) => void;
@@ -967,6 +958,7 @@ function HoldingsTableContent({
   isSnapshotType,
   prices,
   pricesLoading,
+  pricesRefreshing,
   onEdit,
   onDelete,
   onRetryPrice,
@@ -1072,7 +1064,7 @@ function HoldingsTableContent({
                       </span>
                       <span
                         className={`text-xs flex items-center gap-1 ${
-                          isStale ? "text-yellow-400" : "text-muted-foreground"
+                          isStale ? "text-warning" : "text-muted-foreground"
                         }`}
                       >
                         {isStale && (
@@ -1100,6 +1092,7 @@ function HoldingsTableContent({
                       holdingCurrency={holding.currency}
                       prices={prices}
                       pricesLoading={pricesLoading}
+                      pricesRefreshing={pricesRefreshing}
                       onRetry={onRetryPrice ? () => onRetryPrice(holding.id) : undefined}
                       isRetrying={retryingPriceIds?.has(holding.id)}
                     />
@@ -1404,7 +1397,7 @@ function HoldingsCurrencySection({
                           </span>
                           <span
                             className={`text-xs flex items-center gap-1 ${
-                              isStale ? "text-yellow-400" : "text-muted-foreground"
+                              isStale ? "text-warning" : "text-muted-foreground"
                             }`}
                           >
                             {isStale && (

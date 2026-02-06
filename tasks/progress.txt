@@ -27,7 +27,8 @@
 - Form validation pattern: `border-destructive focus-visible:ring-destructive` on inputs, `text-destructive` on error messages
 - Delete confirm button: `bg-destructive hover:bg-destructive/90 text-foreground`; cancel: `bg-card border-border text-foreground hover:bg-muted`
 - Select dropdowns: `bg-background border-border text-muted-foreground` for trigger, `focus:bg-card focus:text-foreground` for items
-- Warning/info colours (yellow-*, blue-*) are semantic and intentionally NOT part of design token migration
+- Warning colours now use text-warning/bg-warning/border-warning design tokens (migrated from amber-* in UX-8)
+- Info colours (blue-*) are semantic and intentionally NOT part of design token migration
 - Interactive toggle buttons (show/hide contributions): use `text-primary hover:text-primary/80` pattern
 - html2canvas backgroundColor requires raw hex — use `#18181b` to match --card token
 - Email templates (components/emails/) use inline hex values — email clients don't support CSS variables
@@ -112,6 +113,11 @@
 - All chart tooltips use `bg-card` (not `bg-background`) for consistent elevated surface styling
 - Chart hex colours centralised in `lib/chart-palette.ts` — import CHART_GRID, CHART_TEXT, CHART_AXIS, POSITIVE, NEGATIVE, etc. instead of hardcoding hex
 - Category asset type colours (STOCK, ETF, CRYPTO, SUPER, CASH) also in chart-palette.ts — use in getAssetHexColor() and similar functions
+- PriceFlash (components/holdings/price-flash.tsx) wraps children with green/red flash on value change — use `<PriceFlash value={num}>{children}</PriceFlash>`
+- PriceNumberTicker (components/holdings/price-number-ticker.tsx) animates price digits with spring animation — prefix prop stays static, only digits animate
+- PriceTimestamp (components/holdings/price-timestamp.tsx) shows relative time + tooltip with exact time — three states: fresh/stale/error
+- PriceSkeleton (components/holdings/price-skeleton.tsx) loading skeleton for price cells — variant="price" (3-bar) or variant="value" (single-bar)
+- TanStack Query: `isFetching && !isLoading` detects background refetches without triggering initial skeleton
 
 ---
 
@@ -119,5 +125,107 @@
 
 Started: 2026-02-06
 
+---
+
+## 2026-02-06 - US-001
+- Created `components/holdings/price-flash.tsx` — wrapper component that flashes green (bg-positive/20) on value increase and red (bg-destructive/20) on value decrease
+- Uses useRef to track previous value, skips flash on initial mount
+- CSS transition (400ms) for smooth flash-to-transparent, no full re-render
+- Respects `prefers-reduced-motion` via framer-motion `useReducedMotion()`
+- Files changed: `components/holdings/price-flash.tsx` (new)
+- **Learnings for future iterations:**
+  - PriceFlash uses inline-block + rounded-sm for minimal layout impact when wrapping table cell content
+  - bg-transparent is the explicit "no flash" state — ensures the transition works correctly from coloured → transparent
+---
+
+## 2026-02-06 - US-002
+- Created `components/holdings/price-number-ticker.tsx` — lightweight number ticker for price cells
+- Updated PriceCell in `holdings-table.tsx` to wrap price in PriceFlash + PriceNumberTicker
+- Currency prefix (A$, NZ$, US$) rendered as static `<span>`, only digits animate
+- Change percentage crossfades on update using AnimatePresence mode="wait" (150ms)
+- Removed unused `formatPrice` function (replaced by PriceNumberTicker)
+- Files changed: `components/holdings/price-number-ticker.tsx` (new), `components/holdings/holdings-table.tsx` (modified)
+- **Learnings for future iterations:**
+  - PriceNumberTicker is separate from dashboard NumberTicker — simpler, no formatCurrency dependency, uses will-change:transform for table perf
+  - AnimatePresence mode="wait" with key={`${changePercent}-${changeAbsolute}`} ensures crossfade only on actual value changes
+---
+
+## 2026-02-06 - US-003
+- Enhanced refresh button in `dashboard-header.tsx`: shows "Refreshing..." with spinning RefreshCw icon during refresh
+- Toast on completion: success="Refreshed X prices", partial failure=warning "Refreshed X prices, Y failed"
+- API now returns total count alongside success/errors
+- Removed mobile-only "..." text (spinner icon is sufficient on small screens)
+- Files changed: `components/dashboard/dashboard-header.tsx` (modified)
+- **Learnings for future iterations:**
+  - The prices POST API returns all results at once (Promise.all), no streaming — so real-time X/Y counter isn't possible without API changes
+  - Use toast.warning() (not toast.success) for partial failure scenarios
+---
+
+## 2026-02-06 - US-004
+- Created `components/holdings/price-timestamp.tsx` — dedicated timestamp display with tooltip
+- Shows relative time ("just now", "2 min ago", etc.) that auto-updates every 30 seconds
+- Tooltip shows exact timestamp on hover via shadcn/ui Tooltip
+- Three visual states: fresh (Clock, muted), stale (AlertTriangle, text-warning), error (AlertTriangle, text-destructive + "(failed)")
+- Replaced inline timestamp logic in PriceCell; removed unused `formatTimeAgo`
+- Files changed: `components/holdings/price-timestamp.tsx` (new), `components/holdings/holdings-table.tsx` (modified)
+- **Learnings for future iterations:**
+  - Each PriceTimestamp wraps its own TooltipProvider for table cell isolation
+---
+
+## 2026-02-06 - US-005
+- Polished retry button in PriceCell: pill-shaped (rounded-full px-2 py-0.5) with RotateCw icon + "Retry" text
+- Default: bg-muted text-muted-foreground, hover: bg-accent/20 text-foreground
+- Retrying state: icon spins, text "Retrying...", button disabled
+- AnimatePresence wraps retry button for fade in/out entrance/exit animations
+- Files changed: `components/holdings/holdings-table.tsx` (modified)
+---
+
+## 2026-02-06 - US-006
+- Created `components/holdings/price-skeleton.tsx` with two variants: "price" (3-bar skeleton) and "value" (single-bar)
+- Replaced "Loading..." text in PriceCell with PriceSkeleton variant="price"
+- Replaced CurrencyDisplay isLoading in MarketValueCell and GainLossCell with PriceSkeleton variant="value"
+- All skeletons use bg-muted + animate-pulse (design tokens)
+- Files changed: `components/holdings/price-skeleton.tsx` (new), `components/holdings/holdings-table.tsx` (modified)
+---
+
+## 2026-02-06 - US-007
+- Stale prices: price text dimmed to text-muted-foreground, amber left border (border-l-2 border-warning/50)
+- Fresh prices: border-transparent (invisible), transition-all duration-200 for smooth stale↔fresh toggle
+- PriceTimestamp already handles amber warning styling (US-004)
+- Both fresh and stale states use border-l-2 + pl-2 to prevent layout shift on state change
+- Files changed: `components/holdings/holdings-table.tsx` (modified)
+---
+
+## 2026-02-06 - US-008
+- Three-state change indicator: positive (TrendingUp, text-positive), negative (TrendingDown, text-destructive), zero (Minus, text-muted-foreground)
+- AnimatePresence key based on direction ("up"/"down"/"zero") — crossfades (150ms) on direction change
+- Absolute change value shown in parentheses with text-muted-foreground
+- All colours already use design tokens (text-positive, text-destructive)
+- Files changed: `components/holdings/holdings-table.tsx` (modified)
+---
+
+## 2026-02-06 - US-009
+- Added `pricesRefreshing` prop threaded through HoldingsTable → Section → TableContent → PriceCell
+- PriceCell shows `animate-pulse` class when refreshing — subtle indicator without replacing content
+- Holdings page derives `pricesRefreshingState` from: mutation isPending + TanStack Query isFetching (but not initial isLoading)
+- Background auto-refresh uses same pulse treatment (no toast — existing behavior)
+- Files changed: `app/(dashboard)/holdings/page.tsx` (modified), `components/holdings/holdings-table.tsx` (modified)
+- **Learnings for future iterations:**
+  - TanStack Query `isFetching` is true during both initial load AND refetches; `isLoading` is only true for initial load
+  - Use `(isFetching && !isLoading)` to detect background refetches without triggering during initial skeleton load
+  - Existing `isRefreshing` variable in holdings page conflicts — use distinct name (`pricesRefreshingState`)
+---
+
+## 2026-02-06 - US-010
+- Replaced text-yellow-400 → text-warning in holdings-table.tsx (2 instances for snapshot staleness)
+- Replaced all amber-* hardcoded colours in stale-data-warning.tsx with design tokens:
+  - border-amber-500/30 → border-warning/30
+  - bg-amber-500/10 → bg-warning/10
+  - text-amber-500 → text-warning
+  - text-amber-400 → text-warning
+  - bg-amber-950/20 → bg-background
+  - bg-amber-950/30 → bg-muted
+- dashboard-header.tsx and holdings/page.tsx had no hardcoded colours
+- Files changed: `components/holdings/holdings-table.tsx`, `components/dashboard/stale-data-warning.tsx`
 ---
 
