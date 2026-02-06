@@ -58,7 +58,7 @@ export function CurrencyToggle({ className }: CurrencyToggleProps) {
             aria-label={`${option.label} (${option.value})`}
             onClick={() => setDisplayCurrency(option.value)}
             className={cn(
-              "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-body-sm font-medium transition-colors duration-150",
+              "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 min-h-[44px] sm:min-h-0 text-body-sm font-medium transition-colors duration-150",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               isActive
                 ? "text-foreground"

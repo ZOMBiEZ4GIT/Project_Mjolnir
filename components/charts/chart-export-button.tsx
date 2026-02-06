@@ -74,7 +74,7 @@ export function ChartExportButton({
       onClick={handleExport}
       disabled={isExporting}
       className={`
-        flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium
+        flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-md text-sm font-medium
         transition-colors bg-muted/50 hover:bg-muted
         text-muted-foreground hover:text-foreground disabled:opacity-50
         disabled:cursor-not-allowed

@@ -35,7 +35,7 @@ export function FilterTabs({ value, onChange }: FilterTabsProps) {
             role="tab"
             aria-selected={isActive}
             onClick={() => onChange(tab.value)}
-            className={`relative whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+            className={`relative whitespace-nowrap rounded-md px-3 py-1.5 min-h-[44px] sm:min-h-0 text-sm font-medium transition-colors duration-200 ease-in-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
               isActive
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground"

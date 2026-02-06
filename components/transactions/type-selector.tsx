@@ -59,7 +59,7 @@ export function TypeSelector({ value, onChange, disabled }: TypeSelectorProps) {
             aria-selected={isActive}
             disabled={disabled && !isActive}
             onClick={() => !disabled && onChange(type.value)}
-            className={`relative flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
+            className={`relative flex-1 rounded-md px-3 py-2 min-h-[44px] sm:min-h-0 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
               isActive
                 ? colours.active
                 : disabled

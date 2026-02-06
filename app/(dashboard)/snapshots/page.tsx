@@ -400,7 +400,7 @@ export default function SnapshotsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleEditClick(snapshot)}
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                        className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 text-muted-foreground hover:text-foreground hover:bg-muted"
                       >
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Edit</span>
@@ -409,7 +409,7 @@ export default function SnapshotsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDeleteClick(snapshot)}
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-muted"
+                        className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 text-muted-foreground hover:text-destructive hover:bg-muted"
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Delete</span>

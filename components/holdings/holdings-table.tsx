@@ -518,7 +518,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, pricesRe
             transition={{ duration: 0.15 }}
             onClick={(e) => { e.stopPropagation(); onRetry?.(); }}
             disabled={isRetrying}
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs bg-muted text-muted-foreground hover:bg-accent/20 hover:text-foreground transition-colors disabled:opacity-60 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 min-h-[44px] sm:min-h-0 text-xs bg-muted text-muted-foreground hover:bg-accent/20 hover:text-foreground transition-colors disabled:opacity-60 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             title="Retry price fetch"
           >
             <RotateCw className={`h-3 w-3 ${isRetrying ? "animate-spin" : ""}`} />
@@ -1175,7 +1175,7 @@ function HoldingsTableContent({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
+                    className="h-[44px] w-[44px] sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
                     onClick={(e) => { e.stopPropagation(); onEdit(holding); }}
                   >
                     <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -1184,7 +1184,7 @@ function HoldingsTableContent({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
+                    className="h-[44px] w-[44px] sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
                     onClick={(e) => { e.stopPropagation(); onDelete(holding); }}
                   >
                     <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -1517,7 +1517,7 @@ function HoldingsCurrencySection({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
+                        className="h-[44px] w-[44px] sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
                         onClick={() => onEdit(holding)}
                       >
                         <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -1526,7 +1526,7 @@ function HoldingsCurrencySection({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
+                        className="h-[44px] w-[44px] sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => onDelete(holding)}
                       >
                         <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />

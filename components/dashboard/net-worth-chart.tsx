@@ -75,7 +75,7 @@ function ChartViewToggle({ viewMode, onChange }: ChartViewToggleProps) {
         role="tab"
         aria-selected={viewMode === "networth"}
         onClick={() => onChange("networth")}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-md text-sm font-medium transition-colors ${
           viewMode === "networth"
             ? "bg-muted text-foreground"
             : "text-muted-foreground hover:text-foreground"
@@ -89,7 +89,7 @@ function ChartViewToggle({ viewMode, onChange }: ChartViewToggleProps) {
         role="tab"
         aria-selected={viewMode === "assetsvsdebt"}
         onClick={() => onChange("assetsvsdebt")}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+        className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] sm:min-h-0 rounded-md text-sm font-medium transition-colors ${
           viewMode === "assetsvsdebt"
             ? "bg-muted text-foreground"
             : "text-muted-foreground hover:text-foreground"
