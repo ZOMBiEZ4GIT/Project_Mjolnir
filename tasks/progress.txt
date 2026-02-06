@@ -160,3 +160,18 @@ Started: 2026-02-07
 
 ---
 
+## 2026-02-07 - US-001
+- Created `components/effects/animated-gradient.tsx` with `variant` prop ('auth' | 'error') and `className` prop
+- Auth variant uses purple-900/indigo-950/blue-950 gradient tints at 40% opacity
+- Error variant uses red-950/rose-950/red-900 gradient tints (ready for US-003)
+- Added `gradient-shift` keyframes and `animate-gradient-shift` (18s ease infinite loop) to tailwind.config.ts
+- Updated sign-in and sign-up pages with AnimatedGradient at z-0, content at z-10
+- Auth pages already used `bg-background` (not bg-gray-950) — no class replacement needed
+- `prefers-reduced-motion` handled by global CSS rule in globals.css (animation-duration: 0.01ms)
+- Files changed: components/effects/animated-gradient.tsx (new), tailwind.config.ts, app/(auth)/sign-in page, app/(auth)/sign-up page
+- **Learnings for future iterations:**
+  - AnimatedGradient uses `fixed inset-0` positioning — reusable as full-page background layer
+  - Error variant already defined — just use `variant="error"` for US-003 error page
+  - `pointer-events-none` and `aria-hidden="true"` on decorative background layers is important
+---
+
