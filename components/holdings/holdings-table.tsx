@@ -4,6 +4,8 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion, type Variants } from "framer-motion";
 import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown, RotateCw } from "lucide-react";
+import { PriceFlash } from "./price-flash";
+import { PriceNumberTicker } from "./price-number-ticker";
 import type { Holding } from "@/lib/db/schema";
 import type { HoldingTypeFilter } from "./filter-tabs";
 import {
@@ -185,17 +187,6 @@ function formatQuantity(value: number | null): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 4,
   });
-}
-
-/**
- * Format price with currency symbol
- */
-function formatPrice(price: number, currency: string): string {
-  const symbol = CURRENCY_SYMBOLS[currency] || currency;
-  return `${symbol}${price.toLocaleString("en-AU", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
 }
 
 /**
@@ -470,6 +461,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
 
   const { price, currency, changePercent, changeAbsolute, fetchedAt, isStale, error } = priceData;
   const displayCurrency = currency || holdingCurrency;
+  const currencyPrefix = CURRENCY_SYMBOLS[displayCurrency] || displayCurrency;
 
   // Format change display
   const hasChange = changePercent !== null && changeAbsolute !== null;
@@ -480,30 +472,41 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
 
   return (
     <div className="flex flex-col gap-0.5 items-end">
-      {/* Main price */}
-      <span className="text-foreground font-mono">
-        {formatPrice(price, displayCurrency)}
-      </span>
+      {/* Main price with flash + number ticker */}
+      <PriceFlash value={price}>
+        <PriceNumberTicker
+          value={price}
+          prefix={currencyPrefix}
+          className="text-foreground font-mono"
+        />
+      </PriceFlash>
 
-      {/* Change indicator */}
+      {/* Change indicator with crossfade */}
       {hasChange && changeInfo && (
-        <span
-          className={`text-xs flex items-center gap-0.5 ${
-            changeInfo.isPositive ? "text-positive" : "text-destructive"
-          }`}
-        >
-          {changeInfo.isPositive ? (
-            <TrendingUp className="h-3 w-3" />
-          ) : (
-            <TrendingDown className="h-3 w-3" />
-          )}
-          {changeInfo.text}
-          {changeAbsolute !== null && (
-            <span className="text-muted-foreground ml-1">
-              ({formatChangeAbsolute(changeAbsolute, displayCurrency)})
-            </span>
-          )}
-        </span>
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={`${changePercent}-${changeAbsolute}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className={`text-xs flex items-center gap-0.5 ${
+              changeInfo.isPositive ? "text-positive" : "text-destructive"
+            }`}
+          >
+            {changeInfo.isPositive ? (
+              <TrendingUp className="h-3 w-3" />
+            ) : (
+              <TrendingDown className="h-3 w-3" />
+            )}
+            {changeInfo.text}
+            {changeAbsolute !== null && (
+              <span className="text-muted-foreground ml-1">
+                ({formatChangeAbsolute(changeAbsolute, displayCurrency)})
+              </span>
+            )}
+          </motion.span>
+        </AnimatePresence>
       )}
 
       {/* Staleness/timestamp indicator with optional retry button */}
