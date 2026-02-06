@@ -196,20 +196,19 @@ function getCappedStaggerDelay(count: number): number {
 }
 
 /**
- * Get the color class for an action type
- * BUY/DIVIDEND: green
- * SELL: red
- * SPLIT: blue
+ * Get the color class for an action type badge
+ * BUY: green, SELL: red, DIVIDEND: purple/accent, SPLIT: blue
  */
 function getActionColorClass(action: TransactionWithHolding["action"]): string {
   switch (action) {
     case "BUY":
-    case "DIVIDEND":
       return "bg-positive/20 text-positive";
     case "SELL":
       return "bg-destructive/20 text-destructive";
+    case "DIVIDEND":
+      return "bg-accent/20 text-accent";
     case "SPLIT":
-      return "bg-blue-900 text-blue-300";
+      return "bg-blue-500/20 text-blue-400";
     default:
       return "bg-muted text-muted-foreground";
   }
@@ -644,7 +643,7 @@ export default function TransactionsPage() {
                         </TableCell>
                         <TableCell>
                           <span
-                            className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-xs font-medium ${getActionColorClass(
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getActionColorClass(
                               transaction.action
                             )}`}
                           >
