@@ -161,3 +161,13 @@ Started: 2026-02-06
   - Drop-in replacement pattern: export all parts with `Animated` prefix, consumers just change import path
 ---
 
+## 2026-02-06 - US-003
+- What was implemented: Created components/ui/animated-alert-dialog.tsx — animated wrapper for shadcn AlertDialog with Framer Motion scale+fade transitions
+- Files changed: components/ui/animated-alert-dialog.tsx
+- **Learnings for future iterations:**
+  - AlertDialog differs from Dialog: no close X button (requires explicit Action/Cancel), has Action and Cancel button components
+  - Same `asChild` + `motion.div` pattern works identically for AlertDialog content as for Dialog content
+  - AlertDialogHeader uses `space-y-2` (not `space-y-1.5` like Dialog) — kept consistent with original shadcn alert-dialog styling
+  - Import from `@/components/ui/animated-alert-dialog` — drop-in replacement for `@/components/ui/alert-dialog`
+---
+

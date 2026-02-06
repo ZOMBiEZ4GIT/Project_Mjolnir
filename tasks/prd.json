@@ -55,8 +55,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Same asChild + motion.div pattern as animated-dialog.tsx. Exports all AlertDialog parts with Animated prefix plus Action and Cancel buttons. No close X button (alert dialogs require explicit action)."
     },
     {
       "id": "US-004",
