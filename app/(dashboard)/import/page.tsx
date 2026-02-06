@@ -417,7 +417,7 @@ export default function ImportPage() {
 
       {/* Recent Imports Section */}
       <div className="mt-8">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Recent Imports</h2>
+        <h2 className="text-label uppercase text-muted-foreground mb-4">Recent Imports</h2>
         <RecentImports imports={recentImports} isLoading={recentImportsLoading} />
       </div>
     </div>
