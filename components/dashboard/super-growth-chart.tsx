@@ -17,6 +17,8 @@ import {
 import { ChartSkeleton, ChartError, ChartExportButton } from "@/components/charts";
 import { CHART_GRID, CHART_TEXT, CHART_AXIS, EMPLOYER, EMPLOYEE, RETURNS } from "@/lib/chart-palette";
 import { useCallback, useRef } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { fadeIn } from "@/lib/animations";
 
 interface MonthlyBreakdown {
   date: string;
@@ -230,6 +232,7 @@ export function SuperGrowthChart({
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
   const queryClient = useQueryClient();
   const chartRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
 
   const {
     data: breakdownData,
@@ -354,7 +357,10 @@ export function SuperGrowthChart({
     : "Superannuation Growth Breakdown";
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+    <motion.div
+      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      {...(reducedMotion ? {} : fadeIn)}
+    >
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-label uppercase text-muted-foreground">
           {title}
@@ -420,6 +426,6 @@ export function SuperGrowthChart({
           </AreaChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </motion.div>
   );
 }

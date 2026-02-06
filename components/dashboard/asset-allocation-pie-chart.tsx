@@ -16,6 +16,8 @@ import { ChartSkeleton, ChartError } from "@/components/charts";
 import { NumberTicker } from "@/components/dashboard/number-ticker";
 import { STOCK, ETF, CRYPTO, SUPER, CASH, CATEGORY_FALLBACK } from "@/lib/chart-palette";
 import { useCallback } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { fadeIn } from "@/lib/animations";
 
 interface HoldingValue {
   id: string;
@@ -187,6 +189,7 @@ export function AssetAllocationPieChart() {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading } = useCurrency();
   const queryClient = useQueryClient();
+  const reducedMotion = useReducedMotion();
 
   const {
     data: netWorthData,
@@ -266,7 +269,10 @@ export function AssetAllocationPieChart() {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+    <motion.div
+      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      {...(reducedMotion ? {} : fadeIn)}
+    >
       <h3 className="text-label uppercase text-muted-foreground mb-6">
         Asset Allocation
       </h3>
@@ -314,6 +320,6 @@ export function AssetAllocationPieChart() {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

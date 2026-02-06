@@ -7,7 +7,8 @@ import { formatCurrency } from "@/lib/utils/currency";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { LineChart as LineChartIcon, BarChart3 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { fadeIn } from "@/lib/animations";
 import { AssetsVsDebtChart } from "./assets-vs-debt-chart";
 import {
   ChartSkeleton,
@@ -120,6 +121,7 @@ export function NetWorthChart() {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const chartRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
 
   // Tooltip state for TradingView crosshair
   const [tooltipData, setTooltipData] = useState<TVCrosshairData | null>(null);
@@ -261,7 +263,10 @@ export function NetWorthChart() {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+    <motion.div
+      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      {...(reducedMotion ? {} : fadeIn)}
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h3 className="text-label uppercase text-muted-foreground">
           Net Worth History
@@ -282,44 +287,57 @@ export function NetWorthChart() {
         </div>
       </div>
 
-      <div ref={chartRef}>
-        {chartViewMode === "networth" ? (
-          <motion.div
-            className="relative h-[264px]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.2 }}
-          >
-            <TVChart
-              data={tvData}
-              height={264}
-              onCrosshairMove={handleCrosshairMove}
-            />
-            {/* Custom tooltip overlay */}
-            {tooltipData && (
-              <div
-                className="pointer-events-none absolute z-10 bg-card border border-border rounded-lg p-3 shadow-lg"
-                style={{
-                  left: Math.min(
-                    tooltipData.x + 12,
-                    (chartRef.current?.clientWidth ?? 400) - 180
-                  ),
-                  top: Math.max(tooltipData.y - 60, 0),
-                }}
-              >
-                <p className="text-muted-foreground text-sm mb-1">
-                  {formatTimeFull(tooltipData.time)}
-                </p>
-                <p className="text-foreground font-semibold text-lg">
-                  {formatCurrency(tooltipData.value, displayCurrency)}
-                </p>
-              </div>
-            )}
-          </motion.div>
-        ) : (
-          <AssetsVsDebtChart data={historyData.history} />
-        )}
+      <div ref={chartRef} className="h-[264px]">
+        <AnimatePresence mode="wait">
+          {chartViewMode === "networth" ? (
+            <motion.div
+              key="networth"
+              className="relative h-[264px]"
+              initial={reducedMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={reducedMotion ? undefined : { opacity: 0 }}
+              transition={reducedMotion ? { duration: 0 } : { duration: 0.2 }}
+            >
+              <TVChart
+                data={tvData}
+                height={264}
+                onCrosshairMove={handleCrosshairMove}
+              />
+              {/* Custom tooltip overlay */}
+              {tooltipData && (
+                <div
+                  className="pointer-events-none absolute z-10 bg-card border border-border rounded-lg p-3 shadow-lg"
+                  style={{
+                    left: Math.min(
+                      tooltipData.x + 12,
+                      (chartRef.current?.clientWidth ?? 400) - 180
+                    ),
+                    top: Math.max(tooltipData.y - 60, 0),
+                  }}
+                >
+                  <p className="text-muted-foreground text-sm mb-1">
+                    {formatTimeFull(tooltipData.time)}
+                  </p>
+                  <p className="text-foreground font-semibold text-lg">
+                    {formatCurrency(tooltipData.value, displayCurrency)}
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="assetsvsdebt"
+              className="h-[264px]"
+              initial={reducedMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={reducedMotion ? undefined : { opacity: 0 }}
+              transition={reducedMotion ? { duration: 0 } : { duration: 0.2 }}
+            >
+              <AssetsVsDebtChart data={historyData.history} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }

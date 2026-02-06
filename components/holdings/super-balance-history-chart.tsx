@@ -18,6 +18,8 @@ import {
 import { ChartSkeleton, ChartError, ChartExportButton } from "@/components/charts";
 import { CHART_GRID, CHART_TEXT, CHART_AXIS, EMPLOYER, EMPLOYEE, RETURNS, NET_WORTH } from "@/lib/chart-palette";
 import { useCallback, useRef } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { fadeIn } from "@/lib/animations";
 
 interface MonthlyBreakdown {
   date: string;
@@ -266,6 +268,7 @@ export function SuperBalanceHistoryChart({
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
   const queryClient = useQueryClient();
   const chartRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
 
   const {
     data: breakdownData,
@@ -390,7 +393,7 @@ export function SuperBalanceHistoryChart({
   };
 
   return (
-    <div>
+    <motion.div {...(reducedMotion ? {} : fadeIn)}>
       <div className="flex justify-end mb-4">
         <ChartExportButton
           chartRef={chartRef}
@@ -483,6 +486,6 @@ export function SuperBalanceHistoryChart({
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </motion.div>
   );
 }

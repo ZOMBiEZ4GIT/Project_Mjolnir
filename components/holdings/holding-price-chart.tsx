@@ -17,6 +17,8 @@ import {
 import { ChartSkeleton, ChartError, ChartExportButton } from "@/components/charts";
 import { CHART_GRID, CHART_TEXT, CHART_AXIS, STOCK, ACCENT, NET_WORTH } from "@/lib/chart-palette";
 import { useCallback, useRef } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { fadeIn } from "@/lib/animations";
 
 interface Transaction {
   id: string;
@@ -134,6 +136,7 @@ export function HoldingPriceChart({
   const { isLoading: currencyLoading } = useCurrency();
   const queryClient = useQueryClient();
   const chartRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
 
   const {
     data: transactions,
@@ -261,7 +264,7 @@ export function HoldingPriceChart({
   };
 
   return (
-    <div>
+    <motion.div {...(reducedMotion ? {} : fadeIn)}>
       <div className="flex justify-end mb-4">
         <ChartExportButton
           chartRef={chartRef}
@@ -339,6 +342,6 @@ export function HoldingPriceChart({
           </LineChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </motion.div>
   );
 }
