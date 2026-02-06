@@ -123,6 +123,8 @@
 - CURRENCY_SYMBOLS exported from lib/utils/currency.ts — use for displaying currency symbol separately from formatted number
 - CurrencyDisplay uses useSpring for animated number transitions; motionValue.jump() for instant, motionValue.set() for animated
 - Flash highlight pattern: bg-accent/15 with transitionDuration 0ms→400ms trick for instant-on, fade-off effect
+- CurrencyDisplay shows rich tooltip (conversion info + rate) only when showNative=true and currencies differ — no tooltip otherwise
+- Effective exchange rate: compute from amount/nativeAmount rather than passing rates as prop
 
 ---
 
@@ -166,4 +168,17 @@ Started: 2026-02-06
   - AnimatePresence mode="wait" with initial={false} prevents animation on first render but crossfades on symbol change
   - formatNumber() helper strips currency symbol (uses AUD with showSymbol:false) — the symbol is rendered separately for crossfade
   - isInitialMount ref prevents animation from 0 on first render — all subsequent value/currency changes animate
+---
+
+## 2026-02-06 - US-004
+- Enhanced native currency tooltip display with rich conversion info
+- Files changed: components/ui/currency-display.tsx
+- **Learnings for future iterations:**
+  - CurrencyDisplay now shows rich tooltip only when hasDifferentNativeCurrency is true — no tooltip when currencies are same or showNative is off
+  - Tooltip shows "Converted from [native amount] [native currency]" + "Rate: 1 [native] = X.XXXX [display]"
+  - Effective exchange rate computed from amount/nativeAmount — no need to pass rates as prop
+  - Tooltip styled with bg-card border border-border rounded-lg p-2 shadow-lg — matches design system elevated surface pattern
+  - Native currency parenthetical uses text-body-sm (design token) instead of text-xs (hardcoded)
+  - Removed FormatCurrencyOptions import — no longer needed after refactoring tooltip content
+  - valueSpan extracted as variable to avoid duplicating the animated display markup between tooltip and non-tooltip paths
 ---
