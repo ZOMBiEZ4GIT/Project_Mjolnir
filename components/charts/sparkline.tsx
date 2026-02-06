@@ -1,6 +1,7 @@
 "use client";
 
 import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { POSITIVE, NEGATIVE } from "@/lib/chart-palette";
 
 interface SparklineProps {
   data: number[];
@@ -19,7 +20,7 @@ export function Sparkline({
   if (!data || data.length < 2) return null;
 
   const trend = positive ?? data[data.length - 1] >= data[0];
-  const color = trend ? "#22c55e" : "#ef4444"; // green-500 / red-500
+  const color = trend ? POSITIVE : NEGATIVE;
 
   const chartData = data.map((value, index) => ({ index, value }));
 

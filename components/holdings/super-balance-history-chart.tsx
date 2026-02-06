@@ -16,6 +16,7 @@ import {
   Legend,
 } from "recharts";
 import { ChartSkeleton, ChartError, ChartExportButton } from "@/components/charts";
+import { CHART_GRID, CHART_TEXT, CHART_AXIS, EMPLOYER, EMPLOYEE, RETURNS, NET_WORTH } from "@/lib/chart-palette";
 import { useCallback, useRef } from "react";
 
 interface MonthlyBreakdown {
@@ -41,12 +42,11 @@ interface SuperBreakdownResponse {
   generatedAt: string;
 }
 
-// Colors for the chart
 const COLORS = {
-  employer: "#3B82F6", // blue-500
-  employee: "#10B981", // emerald-500 (green)
-  returns: "#8B5CF6", // purple-500
-  balance: "#FFFFFF", // white for balance line
+  employer: EMPLOYER,
+  employee: EMPLOYEE,
+  returns: RETURNS,
+  balance: NET_WORTH,
 };
 
 async function fetchSuperBreakdown(
@@ -405,24 +405,24 @@ export function SuperBalanceHistoryChart({
           >
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="#374151"
+              stroke={CHART_GRID}
               vertical={false}
             />
             <XAxis
               dataKey="displayMonth"
-              stroke="#9CA3AF"
-              tick={{ fill: "#9CA3AF", fontSize: 12 }}
-              tickLine={{ stroke: "#4B5563" }}
-              axisLine={{ stroke: "#4B5563" }}
+              stroke={CHART_TEXT}
+              tick={{ fill: CHART_TEXT, fontSize: 12 }}
+              tickLine={{ stroke: CHART_AXIS }}
+              axisLine={{ stroke: CHART_AXIS }}
             />
             {/* Left Y-axis for balance (line) */}
             <YAxis
               yAxisId="balance"
               orientation="left"
-              stroke="#9CA3AF"
-              tick={{ fill: "#9CA3AF", fontSize: 12 }}
-              tickLine={{ stroke: "#4B5563" }}
-              axisLine={{ stroke: "#4B5563" }}
+              stroke={CHART_TEXT}
+              tick={{ fill: CHART_TEXT, fontSize: 12 }}
+              tickLine={{ stroke: CHART_AXIS }}
+              axisLine={{ stroke: CHART_AXIS }}
               tickFormatter={formatCurrencyCompact}
               domain={[balanceMin, balanceMax]}
               width={70}
@@ -431,10 +431,10 @@ export function SuperBalanceHistoryChart({
             <YAxis
               yAxisId="contrib"
               orientation="right"
-              stroke="#9CA3AF"
-              tick={{ fill: "#9CA3AF", fontSize: 12 }}
-              tickLine={{ stroke: "#4B5563" }}
-              axisLine={{ stroke: "#4B5563" }}
+              stroke={CHART_TEXT}
+              tick={{ fill: CHART_TEXT, fontSize: 12 }}
+              tickLine={{ stroke: CHART_AXIS }}
+              axisLine={{ stroke: CHART_AXIS }}
               tickFormatter={formatCurrencyCompact}
               domain={[contribMin, contribMax]}
               width={60}
@@ -476,7 +476,7 @@ export function SuperBalanceHistoryChart({
               activeDot={{
                 r: 6,
                 fill: COLORS.balance,
-                stroke: "#374151",
+                stroke: CHART_GRID,
                 strokeWidth: 2,
               }}
             />

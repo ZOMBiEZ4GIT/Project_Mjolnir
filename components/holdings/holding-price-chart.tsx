@@ -15,6 +15,7 @@ import {
   Legend,
 } from "recharts";
 import { ChartSkeleton, ChartError, ChartExportButton } from "@/components/charts";
+import { CHART_GRID, CHART_TEXT, CHART_AXIS, STOCK, ACCENT, NET_WORTH } from "@/lib/chart-palette";
 import { useCallback, useRef } from "react";
 
 interface Transaction {
@@ -275,23 +276,23 @@ export function HoldingPriceChart({
           >
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="#374151"
+              stroke={CHART_GRID}
               vertical={false}
             />
             <XAxis
               dataKey="displayDate"
-              stroke="#9CA3AF"
-              tick={{ fill: "#9CA3AF", fontSize: 12 }}
-              tickLine={{ stroke: "#4B5563" }}
-              axisLine={{ stroke: "#4B5563" }}
+              stroke={CHART_TEXT}
+              tick={{ fill: CHART_TEXT, fontSize: 12 }}
+              tickLine={{ stroke: CHART_AXIS }}
+              axisLine={{ stroke: CHART_AXIS }}
             />
             <YAxis
               yAxisId="price"
               orientation="left"
-              stroke="#9CA3AF"
-              tick={{ fill: "#9CA3AF", fontSize: 12 }}
-              tickLine={{ stroke: "#4B5563" }}
-              axisLine={{ stroke: "#4B5563" }}
+              stroke={CHART_TEXT}
+              tick={{ fill: CHART_TEXT, fontSize: 12 }}
+              tickLine={{ stroke: CHART_AXIS }}
+              axisLine={{ stroke: CHART_AXIS }}
               tickFormatter={formatPriceCompact}
               domain={[priceMin, priceMax]}
               width={70}
@@ -299,10 +300,10 @@ export function HoldingPriceChart({
             <YAxis
               yAxisId="quantity"
               orientation="right"
-              stroke="#9CA3AF"
-              tick={{ fill: "#9CA3AF", fontSize: 12 }}
-              tickLine={{ stroke: "#4B5563" }}
-              axisLine={{ stroke: "#4B5563" }}
+              stroke={CHART_TEXT}
+              tick={{ fill: CHART_TEXT, fontSize: 12 }}
+              tickLine={{ stroke: CHART_AXIS }}
+              axisLine={{ stroke: CHART_AXIS }}
               tickFormatter={formatQuantityCompact}
               domain={[qtyMin, qtyMax]}
               width={50}
@@ -319,21 +320,21 @@ export function HoldingPriceChart({
               type="monotone"
               dataKey="price"
               name="Price"
-              stroke="#3B82F6"
+              stroke={STOCK}
               strokeWidth={2}
-              dot={{ fill: "#3B82F6", strokeWidth: 0, r: 4 }}
-              activeDot={{ r: 6, fill: "#3B82F6", stroke: "#fff", strokeWidth: 2 }}
+              dot={{ fill: STOCK, strokeWidth: 0, r: 4 }}
+              activeDot={{ r: 6, fill: STOCK, stroke: NET_WORTH, strokeWidth: 2 }}
             />
             <Line
               yAxisId="quantity"
               type="stepAfter"
               dataKey="quantity"
               name="Quantity"
-              stroke="#8B5CF6"
+              stroke={ACCENT}
               strokeWidth={2}
               strokeDasharray="5 5"
-              dot={{ fill: "#8B5CF6", strokeWidth: 0, r: 3 }}
-              activeDot={{ r: 5, fill: "#8B5CF6", stroke: "#fff", strokeWidth: 2 }}
+              dot={{ fill: ACCENT, strokeWidth: 0, r: 3 }}
+              activeDot={{ r: 5, fill: ACCENT, stroke: NET_WORTH, strokeWidth: 2 }}
             />
           </LineChart>
         </ResponsiveContainer>

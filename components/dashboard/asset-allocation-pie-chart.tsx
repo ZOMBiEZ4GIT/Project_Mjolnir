@@ -14,6 +14,7 @@ import {
 } from "recharts";
 import { ChartSkeleton, ChartError } from "@/components/charts";
 import { NumberTicker } from "@/components/dashboard/number-ticker";
+import { STOCK, ETF, CRYPTO, SUPER, CASH, CATEGORY_FALLBACK } from "@/lib/chart-palette";
 import { useCallback } from "react";
 
 interface HoldingValue {
@@ -72,28 +73,22 @@ function getAssetDisplayName(type: string): string {
 }
 
 /**
- * Returns the hex color for an asset type (for Recharts).
- * These correspond to the Tailwind color palette used in progress bars:
- * - blue-500: #3B82F6
- * - purple-500: #8B5CF6
- * - orange-500: #F97316
- * - emerald-500: #10B981
- * - cyan-500: #06B6D4
+ * Returns the hex color for an asset type (for Recharts SVG rendering).
  */
 function getAssetHexColor(type: string): string {
   switch (type) {
     case "stock":
-      return "#3B82F6"; // blue-500
+      return STOCK;
     case "etf":
-      return "#8B5CF6"; // purple-500
+      return ETF;
     case "crypto":
-      return "#F97316"; // orange-500
+      return CRYPTO;
     case "super":
-      return "#10B981"; // emerald-500
+      return SUPER;
     case "cash":
-      return "#06B6D4"; // cyan-500
+      return CASH;
     default:
-      return "#6B7280"; // gray-500
+      return CATEGORY_FALLBACK;
   }
 }
 

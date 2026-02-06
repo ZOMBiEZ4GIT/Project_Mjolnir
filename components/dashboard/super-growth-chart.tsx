@@ -15,6 +15,7 @@ import {
   Legend,
 } from "recharts";
 import { ChartSkeleton, ChartError, ChartExportButton } from "@/components/charts";
+import { CHART_GRID, CHART_TEXT, CHART_AXIS, EMPLOYER, EMPLOYEE, RETURNS } from "@/lib/chart-palette";
 import { useCallback, useRef } from "react";
 
 interface MonthlyBreakdown {
@@ -40,11 +41,10 @@ interface SuperBreakdownResponse {
   generatedAt: string;
 }
 
-// Colors for the stacked areas
 const COLORS = {
-  employer: "#3B82F6", // blue-500
-  employee: "#10B981", // emerald-500 (green)
-  returns: "#8B5CF6", // purple-500
+  employer: EMPLOYER,
+  employee: EMPLOYEE,
+  returns: RETURNS,
 };
 
 async function fetchSuperBreakdown(
@@ -111,7 +111,7 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
     data.cumulativeEmployer + data.cumulativeEmployee + data.cumulativeReturns;
 
   return (
-    <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
       <p className="text-muted-foreground text-sm mb-2">
         {formatMonthFull(data.date)}
       </p>
@@ -372,21 +372,21 @@ export function SuperGrowthChart({
           >
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke="#374151"
+              stroke={CHART_GRID}
               vertical={false}
             />
             <XAxis
               dataKey="displayMonth"
-              stroke="#9CA3AF"
-              tick={{ fill: "#9CA3AF", fontSize: 12 }}
-              tickLine={{ stroke: "#4B5563" }}
-              axisLine={{ stroke: "#4B5563" }}
+              stroke={CHART_TEXT}
+              tick={{ fill: CHART_TEXT, fontSize: 12 }}
+              tickLine={{ stroke: CHART_AXIS }}
+              axisLine={{ stroke: CHART_AXIS }}
             />
             <YAxis
-              stroke="#9CA3AF"
-              tick={{ fill: "#9CA3AF", fontSize: 12 }}
-              tickLine={{ stroke: "#4B5563" }}
-              axisLine={{ stroke: "#4B5563" }}
+              stroke={CHART_TEXT}
+              tick={{ fill: CHART_TEXT, fontSize: 12 }}
+              tickLine={{ stroke: CHART_AXIS }}
+              axisLine={{ stroke: CHART_AXIS }}
               tickFormatter={formatCurrencyCompact}
               domain={[0, yMax]}
               width={70}
