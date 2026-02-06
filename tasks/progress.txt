@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- useRovingTabIndex hook (hooks/use-roving-tabindex.ts): provides arrow key navigation + roving tabindex for tablist/radiogroup components — returns { containerRef, handleKeyDown, getTabIndex }
 - Radix UI primitives (Dialog, AlertDialog, Select, Switch, Accordion) handle ARIA automatically — no manual attributes needed
 - Touch targets: use `min-h-[44px] sm:min-h-0` pattern for mobile-only 44px touch targets; for table action buttons use `h-[44px] w-[44px] sm:h-8 sm:w-8`
 - Switch touch targets: use `before:` pseudo-element (`before:absolute before:-inset-3 before:content-[''] sm:before:hidden`) to expand tap area without changing visual size
@@ -310,5 +311,25 @@ Started: 2026-02-07
   - Switch components can't just increase height (would look wrong) — use `before:` pseudo-element padding trick instead
   - Mobile nav links in a Sheet drawer should always be 44px (no sm: breakpoint needed, they're always mobile)
   - SpeedDial is `hidden sm:block` so desktop-only, but still benefits from consistent touch targets
+---
+
+## 2026-02-07 - US-009
+- Created `hooks/use-roving-tabindex.ts` — shared hook for WAI-ARIA roving tabindex pattern
+- Hook handles ArrowLeft/Right/Up/Down, Home, End keys with wrapping, returns containerRef + handleKeyDown + getTabIndex
+- Applied roving tabindex to 6 components: FilterTabs, TypeSelector, TimeRangeSelector, CurrencyToggle, MonthSelector, ChartViewToggle
+- Each component: added ref to container, onKeyDown handler, tabIndex via getTabIndex (active=0, inactive=-1)
+- Also added focus-visible ring styles to MonthSelector buttons and ChartViewToggle buttons (were missing)
+- Verified: Escape closes all Radix dialogs (automatic), Enter submits forms in add-holding/add-transaction dialogs (form wrapper present)
+- Verified: Focus trapping and focus restoration handled automatically by Radix Dialog primitives
+- Verified: Tab order follows visual layout — no positive tabIndex values disrupting natural flow
+- Verified: Holdings table rows use tabIndex={0} + keyboard handler (Enter/Space) for keyboard accessibility (from US-006)
+- Files changed: 7 files (use-roving-tabindex.ts new, filter-tabs.tsx, type-selector.tsx, time-range-selector.tsx, currency-toggle.tsx, month-selector.tsx, net-worth-chart.tsx)
+- **Learnings for future iterations:**
+  - `useRovingTabIndex` hook is generic — works with any value type (string, enum). Pass items array + active value + onChange callback
+  - WAI-ARIA tablist pattern: only active tab gets tabIndex={0}, all others get tabIndex={-1} — user Tabs into the group once, then arrows between items
+  - For disabled components (e.g., TypeSelector when disabled), pass `undefined` for onKeyDown to disable arrow navigation
+  - Radix Dialog handles Escape, focus trap, and focus restoration automatically — no custom code needed
+  - Multi-step wizard modals (CheckInModal) don't need form wrappers per step — per-step submit buttons with onClick are acceptable
+  - MonthSelector was missing focus-visible styles — always add focus-visible ring to new interactive elements
 ---
 
