@@ -44,6 +44,8 @@
 - Mobile header (components/layout/mobile-nav.tsx) is fixed h-14 z-30 — content area needs pt-14 on mobile
 - Sheet drawer (shadcn/ui) handles focus trapping and Escape close via Radix Dialog primitive
 - Focus ring pattern: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring` matches shadcn/ui conventions
+- HoldingsTable hybrid grouping: `typeFilter="all"` shows collapsible grouped sections, specific type shows flat list via `HoldingsFlatSection`
+- Shared table rendering: `HoldingsTableContent` component handles row rendering for both grouped and flat views
 
 ---
 
@@ -51,5 +53,38 @@
 
 Started: 2026-02-06
 
+---
+
+## 2026-02-06 - US-001: Create animated type filter tabs
+- Created `components/holdings/filter-tabs.tsx` with All, Crypto, Stocks, ETFs, Super, Cash, Debt tabs
+- Active tab uses Framer Motion `layoutId="active-holding-filter"` for smooth sliding bg-accent/20 pill
+- Tab state stored in URL `?type=` search param via `router.replace()`
+- Updated holdings page to filter by type + currency (combined filtering)
+- Removed `GroupBySelector` import and usage from holdings page
+- Added `scrollbar-hide` utility class to globals.css for hidden-scrollbar mobile tabs
+- Currency filter + dormant toggle + native currency toggle positioned to the right with `ml-auto`
+- `HoldingsTable` now always receives `groupBy="type"` (currency grouping removed from page)
+- Files changed: `components/holdings/filter-tabs.tsx` (new), `app/(dashboard)/holdings/page.tsx`, `app/globals.css`
+- **Learnings for future iterations:**
+  - Zsh shell requires quoting paths with parentheses: `"app/(dashboard)/..."` for git commands
+  - The `scrollbar-hide` class is not built into Tailwind — must be added as a custom utility
+  - `router.replace()` is preferred over `router.push()` for filter changes to avoid polluting browser history
+---
+
+## 2026-02-06 - US-002: Implement hybrid grouping — groups on All, flat list on specific type
+- Refactored `HoldingsTable` to support two display modes: grouped (collapsible) and flat
+- Extracted table row rendering into shared `HoldingsTableContent` component to avoid duplication
+- Created `HoldingsFlatSection` for flat list view (no group header) when specific type filter is active
+- Added Framer Motion `AnimatePresence` + `motion.div` for collapse/expand animation (height: 0 → auto, 200ms ease-out)
+- Added `ChevronRight` icon that rotates 90° → 0° via `motion.span` on collapse
+- Group sections expanded by default (`useState(true)`)
+- Empty groups already hidden by existing null return logic
+- `HoldingsTable` accepts new `typeFilter` prop; page passes it through
+- Files changed: `components/holdings/holdings-table.tsx`, `app/(dashboard)/holdings/page.tsx`
+- **Learnings for future iterations:**
+  - Framer Motion `AnimatePresence` with `initial={false}` prevents animation on first render — useful for sections that start expanded
+  - Use `style={{ overflow: "hidden" }}` on motion container to prevent content from showing during height animation
+  - Extracting shared table content into a sub-component keeps grouped vs flat views DRY
+  - The `collapsible` prop pattern allows reuse of existing section components with optional collapse behavior
 ---
 
