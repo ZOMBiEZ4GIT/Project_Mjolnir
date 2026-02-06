@@ -1,0 +1,209 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/ux9-multi-currency-display",
+  "description": "UX-9: Multi-Currency Display — Polish the multi-currency experience with animated toggle pills, NumberTicker animations on currency switch, enhanced tooltips, FX rates polish, currency exposure animations, and design token treatment.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Create animated currency toggle pills for dashboard header",
+      "description": "As a user, I want a quick, visual currency switcher in the dashboard header so I can toggle between AUD, NZD, and USD with one click.",
+      "acceptanceCriteria": [
+        "Create components/ui/currency-toggle.tsx — horizontal pill toggle with options: AUD, NZD, USD",
+        "Active pill has a sliding background indicator using Framer Motion layoutId='currency-indicator'",
+        "Active pill: bg-accent/20 text-foreground with sliding pill background",
+        "Inactive pills: text-muted-foreground with hover:text-foreground",
+        "Each pill shows flag emoji + currency code: 🇦🇺 AUD, 🇳🇿 NZD, 🇺🇸 USD",
+        "Indicator slides smoothly between options (200ms, ease-in-out)",
+        "On selection: calls setDisplayCurrency() from useCurrency() context",
+        "Replace the existing CurrencySelector dropdown in components/dashboard/dashboard-header.tsx with this component",
+        "Respects prefers-reduced-motion — instant switch, no slide",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Polish settings page currency selector",
+      "description": "As a user, I want a polished currency dropdown on the settings page with flag icons and clear labels.",
+      "acceptanceCriteria": [
+        "Update CurrencySelector component (components/ui/currency-selector.tsx) for use on settings page",
+        "Each option shows: flag emoji + currency code + full name (e.g., '🇦🇺 AUD — Australian Dollar')",
+        "Selected value in the trigger shows: flag emoji + currency code (e.g., '🇦🇺 AUD')",
+        "Dropdown uses design tokens: bg-card, border-border, text-foreground",
+        "Selected item has accent highlight: bg-accent/10",
+        "Replace any hardcoded bg-gray-*, border-gray-*, text-gray-* with design tokens",
+        "Keep the compact prop — compact mode shows just the code, full mode shows the enhanced display",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Animate currency values on display currency change",
+      "description": "As a user, I want to see values animate when I switch currencies so the update feels responsive.",
+      "acceptanceCriteria": [
+        "Update CurrencyDisplay (components/ui/currency-display.tsx) to use NumberTicker for the amount",
+        "When displayCurrency changes: values animate using NumberTicker (morphing from old value to new, 400ms)",
+        "A brief flash highlights each updated value (bg-accent/15, 400ms) — neutral purple since it's neither gain nor loss",
+        "NumberTicker only activates on value changes, not on initial render (initial render shows value instantly)",
+        "Currency symbol prefix (A$, NZ$, US$) crossfades when it changes (150ms, AnimatePresence)",
+        "Performance: use lightweight spring approach (useSpring + useTransform), not per-digit animation",
+        "Respects prefers-reduced-motion — values update instantly, no flash or animation",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Enhance native currency tooltip display",
+      "description": "As a user, I want clear tooltips showing both the converted and native currency values so I understand the conversion.",
+      "acceptanceCriteria": [
+        "Update CurrencyDisplay to show tooltip when showNative is true and currencies differ",
+        "Tooltip content: 'Converted from [native amount] [native currency]' (e.g., 'Converted from US$1,234.56 USD')",
+        "Tooltip also shows the exchange rate used: 'Rate: 1 USD = 1.5320 AUD'",
+        "Tooltip styled with: bg-card border border-border rounded-lg p-2 shadow-lg",
+        "Native currency indicator in parentheses: text-muted-foreground text-body-sm",
+        "When showNativeCurrency is OFF: no parenthetical, no tooltip",
+        "When currencies are the same: no parenthetical, no tooltip (no conversion occurred)",
+        "Uses shadcn/ui Tooltip component",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Polish native currency toggle",
+      "description": "As a user, I want the native currency toggle to feel polished and clearly communicate what it does.",
+      "acceptanceCriteria": [
+        "Update NativeCurrencyToggle (components/ui/native-currency-toggle.tsx)",
+        "Switch uses design tokens: active track bg-accent, inactive track bg-muted",
+        "Label: 'Show native currencies' in text-body-sm text-muted-foreground",
+        "Optional description below: 'Display original currency values alongside converted amounts'",
+        "When toggled ON: all CurrencyDisplay with different native currencies show parenthetical values",
+        "Toggle change triggers brief flash on affected values (bg-accent/15, 400ms)",
+        "Replace any hardcoded colour classes with design tokens",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Polish FX rates display with design tokens",
+      "description": "As a user, I want the FX rates display to look polished and show me when rates were last updated.",
+      "acceptanceCriteria": [
+        "Update FxRatesDisplay (components/ui/fx-rates-display.tsx)",
+        "Compact mode: icon uses text-muted-foreground, tooltip shows rates with design tokens",
+        "Tooltip content: two rate rows ('1 USD = X.XXXX AUD', '1 NZD = X.XXXX AUD') + relative timestamp ('Updated 5 min ago')",
+        "Tooltip styled with: bg-card border border-border rounded-lg p-3 shadow-lg",
+        "Rate values: text-foreground, labels: text-muted-foreground",
+        "Relative timestamp: text-body-sm text-muted-foreground with Clock icon, auto-updates every 30 seconds",
+        "Stale rates indicator: if rates are stale (>TTL), icon changes to text-warning with 'Rates may be outdated' message",
+        "Replace all hardcoded text-gray-*, bg-gray-*, border-gray-* with design tokens",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Animate currency exposure progress bars",
+      "description": "As a user, I want the currency exposure section to animate smoothly so it feels premium.",
+      "acceptanceCriteria": [
+        "Update CurrencyExposure (components/dashboard/currency-exposure.tsx)",
+        "Progress bars animate from 0% width to target percentage on mount (400ms, ease-out)",
+        "Progress bar fill uses Framer Motion animate with width property",
+        "Rows stagger in on mount (50ms delay per row) using staggerItem preset",
+        "Row hover effect: bg-accent/5 background with 150ms transition",
+        "Progress bar colours: AUD=green (text-positive), NZD=blue (text-blue-400), USD=amber (text-warning)",
+        "Percentage labels animate with NumberTicker on currency change",
+        "Value amounts animate with NumberTicker on currency change",
+        "Entrance animation: fadeIn preset on the entire card",
+        "Respects prefers-reduced-motion",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Polish currency exposure card with design tokens",
+      "description": "As a developer, I want the currency exposure card using design system tokens throughout.",
+      "acceptanceCriteria": [
+        "Update CurrencyExposure card styling",
+        "Card container: bg-card border border-border rounded-2xl p-4 sm:p-6",
+        "Section title: text-label typography",
+        "Currency name: text-foreground text-body-sm font-medium",
+        "Holdings count: text-muted-foreground text-body-sm",
+        "Value: text-foreground",
+        "Percentage: text-muted-foreground text-body-sm",
+        "Progress bar track: bg-muted rounded-full",
+        "Replace all hardcoded bg-gray-*, text-gray-*, border-gray-* classes",
+        "Skeleton loading state uses bg-muted animate-pulse",
+        "Visual appearance preserved or improved",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Polish currency filter dropdown on holdings page",
+      "description": "As a developer, I want the holdings currency filter using design tokens.",
+      "acceptanceCriteria": [
+        "Update CurrencyFilter (components/holdings/currency-filter.tsx)",
+        "Dropdown trigger: bg-card border border-border text-foreground",
+        "Options: bg-card hover:bg-accent/10 text-foreground",
+        "Selected option: bg-accent/10 text-foreground",
+        "Add flag emojis to each option: '🇦🇺 AUD', '🇳🇿 NZD', '🇺🇸 USD', 'All Currencies'",
+        "Filter icon uses text-muted-foreground",
+        "Replace all hardcoded bg-gray-900, text-gray-*, border-gray-* with design tokens",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Replace hardcoded colours across all currency components",
+      "description": "As a developer, I want all currency-related components using design system tokens.",
+      "acceptanceCriteria": [
+        "Audit and update: currency-provider.tsx, currency-selector.tsx, currency-display.tsx, native-currency-toggle.tsx, fx-rates-display.tsx, currency-filter.tsx, currency-exposure.tsx, settings/page.tsx",
+        "Replace text-white → text-foreground",
+        "Replace text-gray-* → text-muted-foreground",
+        "Replace bg-gray-* → bg-card/bg-muted/bg-background",
+        "Replace border-gray-* → border-border",
+        "Replace text-green-* → text-positive",
+        "Replace text-amber-*/text-yellow-* → text-warning",
+        "Visual appearance preserved or improved",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}
