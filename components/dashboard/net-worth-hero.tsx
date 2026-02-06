@@ -1,11 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
-import { AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
+import { type Currency, type ExchangeRates } from "@/lib/utils/currency";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { NumberTicker } from "@/components/dashboard/number-ticker";
+import { ChangeBadge } from "@/components/dashboard/change-badge";
+import { StaleIndicator } from "@/components/dashboard/stale-indicator";
+import { slideUp } from "@/lib/animations";
 
 interface HoldingValue {
   id: string;
@@ -62,19 +66,12 @@ async function fetchHistory(months: number): Promise<HistoryResponse> {
   return response.json();
 }
 
-/**
- * Number of months of history to show in the sparkline.
- */
 const SPARKLINE_MONTHS = 6;
 
 interface SparklineDataPoint {
   netWorth: number;
 }
 
-/**
- * Mini sparkline component showing net worth trend.
- * Green if overall increase, red if decrease.
- */
 interface SparklineProps {
   data: SparklineDataPoint[];
 }
@@ -84,15 +81,14 @@ function Sparkline({ data }: SparklineProps) {
     return null;
   }
 
-  // Determine color based on overall trend (first vs last value)
   const firstValue = data[0].netWorth;
   const lastValue = data[data.length - 1].netWorth;
   const isPositive = lastValue >= firstValue;
   // Hex values required for Recharts SVG rendering (CSS variables not supported)
-  const strokeColor = isPositive ? "#22C55E" : "#EF4444"; // positive / destructive
+  const strokeColor = isPositive ? "#22C55E" : "#EF4444";
 
   return (
-    <div className="h-10 w-24">
+    <div className="h-12 w-28">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
           <Line
@@ -109,17 +105,6 @@ function Sparkline({ data }: SparklineProps) {
   );
 }
 
-/**
- * Formats a percentage with sign.
- */
-function formatPercentage(value: number): string {
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(1)}%`;
-}
-
-/**
- * Formats a relative timestamp (e.g., "2 minutes ago").
- */
 function formatTimeAgo(date: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -139,33 +124,21 @@ function formatTimeAgo(date: Date): string {
   }
 }
 
-/**
- * Loading skeleton for the hero card.
- */
 function HeroSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-gradient-to-br from-card to-background p-8">
+    <div className="rounded-2xl border border-accent/20 bg-gradient-to-br from-card via-card to-accent/5 p-6 sm:p-8 shadow-glow-md">
       <div className="animate-pulse">
-        <div className="h-4 w-20 bg-muted rounded mb-4" />
-        <div className="h-12 w-64 bg-muted rounded mb-4" />
-        <div className="h-5 w-40 bg-muted rounded mb-2" />
+        <div className="h-3 w-20 bg-muted rounded mb-4" />
+        <div className="h-14 w-72 bg-muted rounded mb-4" />
+        <div className="h-7 w-48 bg-muted rounded mb-2" />
         <div className="h-3 w-24 bg-muted rounded" />
       </div>
     </div>
   );
 }
 
-/**
- * Net Worth Hero Card
- *
- * Displays the user's total net worth prominently at the top of the dashboard.
- * Shows:
- * - Current net worth in the user's display currency (large, formatted)
- * - Change from last month (amount and percentage, colored green/red)
- * - "as of" timestamp
- * - Stale data warning icon if applicable
- */
 export function NetWorthHero() {
+  const shouldReduceMotion = useReducedMotion();
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
 
@@ -177,7 +150,7 @@ export function NetWorthHero() {
     queryKey: ["net-worth", displayCurrency],
     queryFn: () => fetchNetWorth(displayCurrency),
     enabled: isLoaded && isSignedIn && !currencyLoading,
-    refetchInterval: 60 * 1000, // Refetch every minute
+    refetchInterval: 60 * 1000,
   });
 
   const { data: historyData, isLoading: isLoadingHistory } = useQuery({
@@ -187,37 +160,30 @@ export function NetWorthHero() {
     refetchInterval: 60 * 1000,
   });
 
-  // Show skeleton while loading or not authenticated
   if (!isLoaded || !isSignedIn || isLoadingNetWorth || currencyLoading) {
     return <HeroSkeleton />;
   }
 
-  // Show error state
   if (netWorthError) {
     return (
-      <div className="rounded-lg border border-destructive bg-destructive/10 p-8">
+      <div className="rounded-2xl border border-destructive bg-destructive/10 p-8">
         <p className="text-destructive">Failed to load net worth data</p>
       </div>
     );
   }
 
-  // No data available
   if (!netWorthData) {
     return <HeroSkeleton />;
   }
 
   // Calculate change from last month
-  // Note: History is in AUD, so we convert to display currency for comparison
   let changeAmount = 0;
   let changePercent = 0;
   let hasHistoricalData = false;
 
   if (historyData && historyData.history.length >= 2 && !isLoadingHistory) {
-    // History is in chronological order, so last item is most recent month
-    // and second to last is the previous month
     const previousMonth = historyData.history[historyData.history.length - 2];
     if (previousMonth && previousMonth.netWorth !== 0) {
-      // Convert previous month's AUD value to display currency
       const previousNetWorthConverted = convert(previousMonth.netWorth, "AUD");
       changeAmount = netWorthData.netWorth - previousNetWorthConverted;
       changePercent =
@@ -226,35 +192,40 @@ export function NetWorthHero() {
     }
   }
 
-  const isPositiveChange = changeAmount >= 0;
   const calculatedAt = new Date(netWorthData.calculatedAt);
 
-  // Prepare sparkline data - convert history to display currency
   const sparklineData: SparklineDataPoint[] =
     historyData?.history.map((point) => ({
       netWorth: convert(point.netWorth, "AUD"),
     })) ?? [];
 
   return (
-    <div className="rounded-lg border border-border bg-gradient-to-br from-card to-background p-6 sm:p-8">
-      {/* Header with stale data warning */}
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-          Net Worth
-        </span>
-        {netWorthData.hasStaleData && (
-          <div className="flex items-center gap-1 text-yellow-500" title="Some holdings have stale data">
-            <AlertTriangle className="h-4 w-4" />
-            <span className="text-xs">Stale data</span>
-          </div>
-        )}
+    <motion.div
+      className="relative rounded-2xl border border-accent/20 bg-gradient-to-br from-card via-card to-accent/5 p-6 sm:p-8 shadow-glow-md"
+      initial={shouldReduceMotion ? false : slideUp.initial}
+      animate={slideUp.animate}
+      transition={shouldReduceMotion ? { duration: 0 } : slideUp.transition}
+    >
+      {/* Stale data warning — top-right corner */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
+        <StaleIndicator
+          isStale={netWorthData.hasStaleData}
+          lastUpdated={calculatedAt}
+        />
       </div>
 
+      {/* Label */}
+      <span className="text-label uppercase text-muted-foreground mb-3 block">
+        Net Worth
+      </span>
+
       {/* Net Worth Value with Sparkline */}
-      <div className="flex items-center gap-4 mb-4">
-        <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground">
-          {formatCurrency(netWorthData.netWorth, displayCurrency)}
-        </div>
+      <div className="flex items-center gap-4 sm:gap-6 mb-4">
+        <NumberTicker
+          value={netWorthData.netWorth}
+          currency={displayCurrency}
+          className="text-display-xl text-foreground"
+        />
         {!isLoadingHistory && (
           <div className="hidden sm:block">
             <Sparkline data={sparklineData} />
@@ -262,30 +233,29 @@ export function NetWorthHero() {
         )}
       </div>
 
+      {/* Sparkline below value on mobile */}
+      {!isLoadingHistory && sparklineData.length >= 2 && (
+        <div className="block sm:hidden mb-4">
+          <Sparkline data={sparklineData} />
+        </div>
+      )}
+
       {/* Change from last month */}
       {hasHistoricalData && (
-        <div className="flex flex-wrap items-center gap-2 mb-2">
-          {isPositiveChange ? (
-            <TrendingUp className="h-5 w-5 text-positive shrink-0" />
-          ) : (
-            <TrendingDown className="h-5 w-5 text-destructive shrink-0" />
-          )}
-          <span
-            className={`text-base sm:text-lg font-semibold ${
-              isPositiveChange ? "text-positive" : "text-destructive"
-            }`}
-          >
-            {isPositiveChange ? "+" : ""}
-            {formatCurrency(changeAmount, displayCurrency)} ({formatPercentage(changePercent)})
-          </span>
-          <span className="text-sm text-muted-foreground">from last month</span>
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <ChangeBadge
+            amount={changeAmount}
+            percentage={changePercent}
+            currency={displayCurrency}
+          />
+          <span className="text-body-sm text-muted-foreground">from last month</span>
         </div>
       )}
 
       {/* Timestamp */}
-      <div className="text-xs text-muted-foreground">
+      <div className="text-body-sm text-muted-foreground">
         as of {formatTimeAgo(calculatedAt)}
       </div>
-    </div>
+    </motion.div>
   );
 }
