@@ -53,6 +53,8 @@
 - Capped stagger: `Math.min(0.05, 0.5 / count)` ensures total stagger completes within 500ms regardless of row count
 - `useReducedMotion()` from framer-motion checks OS prefers-reduced-motion — skip animations entirely when true
 - `AnimatePresence mode="popLayout"` on HoldingsTable wraps content keyed by typeFilter — handles enter/exit on tab change
+- Holdings table rows are clickable (navigate to `/holdings/[id]`) — action buttons use `stopPropagation` to prevent row click
+- Row hover: `hover:bg-accent/5 hover:scale-[1.005] active:bg-accent/10` with `transition-[background-color,transform] duration-150`
 
 ---
 
@@ -126,5 +128,23 @@ Started: 2026-02-06
   - TypeScript narrows ternary types too broadly for Variants — use explicit `Variants` type annotation with `as const` on ease strings to avoid type errors
   - `motion.tbody` can be used directly as a stagger container for table row animations (avoids wrapping divs that break table semantics)
   - `AnimatePresence mode="popLayout"` handles mount/unmount transitions cleanly when keyed by filter state
+---
+
+## 2026-02-06 - US-005: Polish table row hover effects
+- Updated `MotionTableRow` in `HoldingsTableContent` with hover styles: `hover:bg-accent/5`, `hover:scale-[1.005]`, `active:bg-accent/10`, 150ms transition
+- Added `cursor-pointer` and `onClick` handler navigating to `/holdings/[id]` via `router.push()`
+- Set `transformOrigin: "center"` via inline style so scale transform doesn't shift rows
+- Added `stopPropagation` to Edit and Delete action buttons so they don't trigger row navigation
+- Added `stopPropagation` to retry price button in `PriceCell` for the same reason
+- Imported `useRouter` from `next/navigation` for programmatic navigation
+- `twMerge` in `cn()` correctly overrides `TableRow`'s base `hover:bg-muted/50` with `hover:bg-accent/5`
+- Uses CSS `transition-[background-color,transform]` instead of Framer Motion for hover — keeps hover effects lightweight and CSS-only
+- Files changed: `components/holdings/holdings-table.tsx`
+- **Learnings for future iterations:**
+  - `twMerge` handles Tailwind class deduplication — `hover:bg-accent/5` in className prop overrides `hover:bg-muted/50` from `TableRow` base
+  - Use CSS transform `scale()` for hover effects instead of padding/margin to avoid layout shift
+  - `transition-[background-color,transform]` is more performant than `transition-all` — only animate what changes
+  - `stopPropagation` on interactive children (buttons, links) prevents parent row click from firing
+  - `transformOrigin: "center"` keeps scale effect visually balanced on table rows
 ---
 
