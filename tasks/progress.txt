@@ -80,6 +80,8 @@
 - Accent glow prompt card: `border-accent/30 bg-card/50 shadow-glow-sm` for attention-grabbing cards
 - Directional step transitions: use variants with `custom` prop on AnimatePresence to pass direction to exiting components — enter slides from `100*d%`, exit slides to `-100*d%` (d=1 forward, d=-1 backward)
 - Step container needs `overflow-hidden` to clip sliding content during transitions
+- Accordion expand animation: `motion.div` with `height: 0` → `height: "auto"`, `overflow-hidden`, wrapped in `AnimatePresence initial={false}`
+- Check-in status API returns `latestContributions` for pre-populating super contribution fields
 
 ---
 
@@ -164,5 +166,20 @@ Started: 2026-02-06
   - Variants with function signatures `(d: number) => ({...})` are the cleanest way to handle dynamic custom values
   - `overflow-hidden` on the step container is essential — without it, sliding content overflows the modal
   - `reducedMotion` check returns empty `{}` from variants (not `false`) since variants expect objects
+---
+
+## 2026-02-06 - US-006
+- Added Framer Motion height animation to super contributions expand/collapse (200ms ease-out)
+- Wrapped contributions section in AnimatePresence + motion.div with height: 0 → "auto" animation
+- Updated check-in status API to return latest contributions for active super holdings
+- Added useEffect to pre-populate and auto-expand contributions section when previous values exist
+- Pre-population only applies to holdings user hasn't already modified (merge logic)
+- Dormant super already correctly excluded from contributions section (no changes needed)
+- Files changed: components/check-in/check-in-modal.tsx (updated), app/api/check-in/status/route.ts (updated)
+- **Learnings for future iterations:**
+  - Framer Motion `height: 0` → `height: "auto"` with `overflow-hidden` is the clean pattern for accordion/expand animations
+  - `AnimatePresence initial={false}` prevents animation on first mount — use when content should appear expanded immediately
+  - Pre-population via useEffect watching query data: merge with existing state to avoid overwriting user edits
+  - API returns `latestContributions` keyed by holdingId — only populated for active (non-dormant) super holdings with non-zero values
 ---
 
