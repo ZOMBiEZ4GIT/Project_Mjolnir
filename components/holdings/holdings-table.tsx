@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown, RotateCw, ChevronRight } from "lucide-react";
+import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown, RotateCw } from "lucide-react";
 import type { Holding } from "@/lib/db/schema";
 import type { HoldingTypeFilter } from "./filter-tabs";
 import {
@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { GroupHeader } from "./group-header";
 import { EditHoldingDialog } from "./edit-holding-dialog";
 import { DeleteHoldingDialog } from "./delete-holding-dialog";
 import { CurrencyDisplay } from "@/components/ui/currency-display";
@@ -289,6 +290,19 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
   const flatIsTradeable = flatType ? TRADEABLE_TYPES.includes(flatType as (typeof TRADEABLE_TYPES)[number]) : false;
   const flatIsSnapshot = flatType ? SNAPSHOT_TYPES.includes(flatType as (typeof SNAPSHOT_TYPES)[number]) : false;
 
+  // Calculate total portfolio value (absolute sum of assets, used for percentage calculation)
+  const portfolioTotal = useMemo(() => {
+    if (currencyLoading) return 0;
+    let total = 0;
+    for (const type of HOLDING_TYPE_ORDER) {
+      const typeHoldings = groupedByType.get(type);
+      if (!typeHoldings || typeHoldings.length === 0) continue;
+      const groupTotal = calculateGroupTotal(typeHoldings, prices, convert);
+      total += Math.abs(groupTotal);
+    }
+    return total;
+  }, [groupedByType, prices, convert, currencyLoading]);
+
   return (
     <>
       <div className="space-y-8">
@@ -319,6 +333,7 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
                   currencyLoading={currencyLoading}
                   showNativeCurrency={showNativeCurrency}
                   collapsible
+                  portfolioTotal={portfolioTotal}
                 />
               );
             })
@@ -406,6 +421,7 @@ interface HoldingsTypeSectionProps {
   currencyLoading?: boolean;
   showNativeCurrency?: boolean;
   collapsible?: boolean;
+  portfolioTotal?: number;
 }
 
 /**
@@ -758,33 +774,39 @@ function HoldingsTypeSection({
   currencyLoading,
   showNativeCurrency,
   collapsible = false,
+  portfolioTotal = 0,
 }: HoldingsTypeSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const label = HOLDING_TYPE_LABELS[type];
   const isTradeable = TRADEABLE_TYPES.includes(type as (typeof TRADEABLE_TYPES)[number]);
   const isSnapshotType = SNAPSHOT_TYPES.includes(type as (typeof SNAPSHOT_TYPES)[number]);
+  const isDebt = type === "debt";
+
+  // Calculate group total in display currency
+  const groupTotal = useMemo(
+    () => calculateGroupTotal(holdings, prices, convert),
+    [holdings, prices, convert]
+  );
+
+  // Calculate portfolio percentage (using absolute values)
+  const portfolioPercent = portfolioTotal > 0
+    ? (Math.abs(groupTotal) / portfolioTotal) * 100
+    : null;
 
   return (
     <section>
       {collapsible ? (
-        <button
-          type="button"
-          onClick={() => setIsExpanded((prev) => !prev)}
-          className="flex items-center gap-2 mb-3 group cursor-pointer"
-          aria-expanded={isExpanded}
-        >
-          <motion.span
-            animate={{ rotate: isExpanded ? 90 : 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="text-muted-foreground"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </motion.span>
-          <h2 className="text-lg font-semibold text-foreground">
-            {label}{" "}
-            <span className="text-muted-foreground font-normal">({holdings.length})</span>
-          </h2>
-        </button>
+        <GroupHeader
+          label={label}
+          count={holdings.length}
+          totalValue={groupTotal}
+          portfolioPercent={portfolioPercent}
+          displayCurrency={displayCurrency}
+          currencyLoading={currencyLoading}
+          isDebt={isDebt}
+          isExpanded={isExpanded}
+          onToggle={() => setIsExpanded((prev) => !prev)}
+        />
       ) : (
         <h2 className="text-lg font-semibold text-foreground mb-3">
           {label}{" "}
@@ -1123,6 +1145,41 @@ function calculateSectionSubtotal(
   }
 
   return subtotal;
+}
+
+/**
+ * Calculate the total value of holdings in display currency.
+ * Converts each holding's value from its native currency to display currency.
+ */
+function calculateGroupTotal(
+  holdings: HoldingWithData[],
+  prices: Map<string, PriceData> | undefined,
+  convert: (amount: number, fromCurrency: Currency) => number,
+): number {
+  let total = 0;
+
+  for (const holding of holdings) {
+    const isTradeable = TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number]);
+    const isSnapshotType = SNAPSHOT_TYPES.includes(holding.type as (typeof SNAPSHOT_TYPES)[number]);
+    const nativeCurrency = holding.currency as Currency;
+
+    if (isTradeable) {
+      const priceData = prices?.get(holding.id);
+      if (holding.quantity && priceData?.price) {
+        const nativeValue = holding.quantity * priceData.price;
+        total += convert(nativeValue, nativeCurrency);
+      }
+    } else if (isSnapshotType && holding.latestSnapshot) {
+      const balance = Number(holding.latestSnapshot.balance);
+      if (holding.type === "debt") {
+        total -= convert(balance, nativeCurrency);
+      } else {
+        total += convert(balance, nativeCurrency);
+      }
+    }
+  }
+
+  return total;
 }
 
 interface HoldingsCurrencySectionProps {
