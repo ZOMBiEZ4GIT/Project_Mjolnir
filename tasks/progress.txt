@@ -55,6 +55,7 @@
 - Stagger rows use `motion.tbody` as container with `variants` + `initial="hidden" animate="visible"` pattern
 - Capped stagger: `Math.min(0.05, 0.5 / count)` ensures total stagger completes within 500ms regardless of row count
 - `useReducedMotion()` from framer-motion checks OS prefers-reduced-motion — skip animations entirely when true
+- Dormant holdings sorted to bottom of each group via `useMemo` sort in `HoldingsTableContent` and `HoldingsCurrencySection`
 - `AnimatePresence mode="popLayout"` on HoldingsTable wraps content keyed by typeFilter — handles enter/exit on tab change
 - Holdings table rows are clickable (navigate to `/holdings/[id]`) — action buttons use `stopPropagation` to prevent row click
 - Row hover: `hover:bg-accent/5 hover:scale-[1.005] active:bg-accent/10` with `transition-[background-color,transform] duration-150`
@@ -170,5 +171,17 @@ Started: 2026-02-06
   - Framer Motion `AnimatePresence` with staggered `transition.delay` per index is cleaner than parent stagger variants for FAB actions (allows per-item control)
   - `hidden sm:block` on the FAB container hides it on mobile (below 640px sm breakpoint)
   - Shared components live in `components/shared/` directory
+---
+
+## 2026-02-06 - US-007: Improve dormant holdings visual treatment
+- Added `useMemo`-based sorting in `HoldingsTableContent` and `HoldingsCurrencySection` to push dormant holdings to the bottom of each group
+- Dormant rows already had `opacity-60` and correct badge styling (`bg-muted text-muted-foreground`)
+- Show dormant toggle already used `Switch` component with design tokens — no changes needed
+- API already excludes dormant holdings when `include_dormant` is not set
+- Files changed: `components/holdings/holdings-table.tsx`
+- **Learnings for future iterations:**
+  - Dormant sorting is applied in the rendering components (`HoldingsTableContent` and `HoldingsCurrencySection`), not in the grouping functions — keeps grouping pure and sorting as a UI concern
+  - `useMemo` with holdings dependency recalculates sort when holdings change (e.g., toggling show dormant)
+  - Both the type-grouped view and currency-grouped view have independent sorting — changes to one don't affect the other
 ---
 
