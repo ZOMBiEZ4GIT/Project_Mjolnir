@@ -20,9 +20,12 @@ import {
   Loader2,
   ArrowLeft,
   ArrowRight,
+  ArrowUpRight,
+  ArrowDownRight,
   Landmark,
   Wallet,
   CreditCard,
+  AlertTriangle,
 } from "lucide-react";
 import { CheckinStepper } from "@/components/check-in/checkin-stepper";
 import { MonthSelector } from "@/components/check-in/month-selector";
@@ -87,11 +90,17 @@ interface LatestContributions {
   };
 }
 
+// Previous balances keyed by holding ID
+interface PreviousBalances {
+  [holdingId: string]: string;
+}
+
 // Fetch holdings needing updates for a specific month
 async function fetchHoldingsForMonth(month: string): Promise<{
   holdings: HoldingToUpdate[];
   currentMonth: string;
   latestContributions: LatestContributions;
+  previousBalances: PreviousBalances;
 }> {
   const response = await fetch(`/api/check-in/status?month=${month}`);
   if (!response.ok) {
@@ -1013,30 +1022,92 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                             balance = getDebtHoldingData(holding.id).balance;
                           }
 
+                          const prevBalance = data?.previousBalances?.[holding.id];
+                          const newNum = parseFloat(balance);
+                          const prevNum = prevBalance ? parseFloat(prevBalance) : null;
+                          const hasPrevious = prevNum !== null && !isNaN(prevNum);
+                          const changeAmount = hasPrevious ? newNum - prevNum : null;
+
+                          // For debt: decrease is positive (green), increase is negative (red)
+                          const isDebt = type === "debt";
+                          const isPositiveChange = changeAmount !== null
+                            ? (isDebt ? changeAmount < 0 : changeAmount > 0)
+                            : false;
+                          const isNegativeChange = changeAmount !== null
+                            ? (isDebt ? changeAmount > 0 : changeAmount < 0)
+                            : false;
+
+                          // Large change warning: >50% change from previous
+                          const percentChange = hasPrevious && prevNum !== 0
+                            ? Math.abs((newNum - prevNum) / prevNum) * 100
+                            : 0;
+                          const isLargeChange = hasPrevious && percentChange > 50;
+
                           return (
                             <div
                               key={holding.id}
-                              className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+                              className={`rounded-lg border bg-card p-3 ${
+                                isLargeChange ? "border-yellow-500/40" : "border-border"
+                              }`}
                             >
-                              <div>
-                                <span className="text-sm font-medium text-foreground">
-                                  {holding.name}
-                                </span>
-                                {/* Show contributions if entered */}
-                                {type === "super" && (employerContrib || employeeContrib) && (
-                                  <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
-                                    {employerContrib && (
-                                      <span>Employer: {formatCurrency(employerContrib, holding.currency)}</span>
-                                    )}
-                                    {employeeContrib && (
-                                      <span>Employee: {formatCurrency(employeeContrib, holding.currency)}</span>
-                                    )}
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-sm font-medium text-foreground">
+                                    {holding.name}
+                                  </span>
+
+                                  {/* Previous balance */}
+                                  <div className="mt-1 text-xs text-muted-foreground">
+                                    {hasPrevious
+                                      ? `Previous: ${formatCurrency(prevBalance!, holding.currency)}`
+                                      : "First entry"}
                                   </div>
-                                )}
+
+                                  {/* Contributions for super */}
+                                  {type === "super" && (employerContrib || employeeContrib) && (
+                                    <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
+                                      {employerContrib && (
+                                        <span>Employer: {formatCurrency(employerContrib, holding.currency)}</span>
+                                      )}
+                                      {employeeContrib && (
+                                        <span>Employee: {formatCurrency(employeeContrib, holding.currency)}</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="text-right shrink-0">
+                                  {/* New balance */}
+                                  <span className="text-sm font-medium text-foreground">
+                                    {formatCurrency(balance, holding.currency)}
+                                  </span>
+
+                                  {/* Change amount with direction arrow */}
+                                  {changeAmount !== null && changeAmount !== 0 && (
+                                    <div className={`mt-1 flex items-center justify-end gap-1 text-xs ${
+                                      isPositiveChange ? "text-positive" : isNegativeChange ? "text-destructive" : "text-muted-foreground"
+                                    }`}>
+                                      {isPositiveChange ? (
+                                        <ArrowUpRight className="h-3 w-3" />
+                                      ) : isNegativeChange ? (
+                                        <ArrowDownRight className="h-3 w-3" />
+                                      ) : null}
+                                      <span>
+                                        {changeAmount > 0 ? "+" : ""}
+                                        {formatCurrency(String(changeAmount), holding.currency)}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <span className="text-sm font-medium text-foreground">
-                                {formatCurrency(balance, holding.currency)}
-                              </span>
+
+                              {/* Large change warning */}
+                              {isLargeChange && (
+                                <div className="mt-2 flex items-center gap-1.5 text-xs text-yellow-500">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  <span>Large change detected ({Math.round(percentChange)}%)</span>
+                                </div>
+                              )}
                             </div>
                           );
                         })}

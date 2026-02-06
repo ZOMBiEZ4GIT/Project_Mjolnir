@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { holdings, snapshots, contributions } from "@/lib/db/schema";
-import { eq, isNull, and, inArray, desc } from "drizzle-orm";
+import { eq, isNull, and, inArray, desc, lt } from "drizzle-orm";
 
 // Valid snapshot types (non-tradeable holdings)
 const snapshotTypes = ["super", "cash", "debt"] as const;
@@ -158,6 +158,35 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Get previous (most recent) snapshot balance for each holding
+  const allHoldingIds = holdingsMissingSnapshot.map((h) => h.id);
+  const previousBalances: Record<string, string> = {};
+
+  if (allHoldingIds.length > 0) {
+    const prevSnapshots = await db
+      .select({
+        holdingId: snapshots.holdingId,
+        balance: snapshots.balance,
+        date: snapshots.date,
+      })
+      .from(snapshots)
+      .where(
+        and(
+          isNull(snapshots.deletedAt),
+          inArray(snapshots.holdingId, allHoldingIds),
+          lt(snapshots.date, currentMonth)
+        )
+      )
+      .orderBy(desc(snapshots.date));
+
+    // Take the first (most recent) per holding
+    for (const s of prevSnapshots) {
+      if (!previousBalances[s.holdingId]) {
+        previousBalances[s.holdingId] = s.balance;
+      }
+    }
+  }
+
   return NextResponse.json({
     needsCheckIn: holdingsMissingSnapshot.length > 0,
     holdingsToUpdate: holdingsMissingSnapshot.length,
@@ -165,5 +194,6 @@ export async function GET(request: NextRequest) {
     currentMonth: formatMonthYear(currentMonth),
     holdings: holdingsMissingSnapshot,
     latestContributions,
+    previousBalances,
   });
 }
