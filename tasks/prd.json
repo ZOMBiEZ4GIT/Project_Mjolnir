@@ -169,8 +169,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Verification story — no code changes needed. DashboardHeader component renders correctly within AppShell layout with welcome message, refresh button, CurrencySelector, and FxRatesDisplay. All components use design tokens (text-foreground, text-muted-foreground, bg-muted, border-border, text-positive, etc.) with no hardcoded text-white or bg-gray-* classes. Non-dashboard pages (holdings, transactions, snapshots, import, export, settings) all render their own page headers correctly with design tokens. Build and lint pass."
     },
     {
       "id": "US-010",

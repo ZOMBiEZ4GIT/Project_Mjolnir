@@ -364,3 +364,20 @@ Started: 2026-02-06
   - fadeIn preset from lib/animations.ts has properly typed initial/animate/transition via `as const` — spread or use individual properties directly on motion elements for type safety
   - PageWrapper wraps page content (not the entire layout) — placed inside DashboardErrorBoundary to only animate the content area
 ---
+
+## 2026-02-06 - US-009
+- Verification story: confirmed all dashboard action controls work correctly after layout change from header-based nav to sidebar-based AppShell
+- DashboardHeader renders correctly within AppShell: welcome message, refresh button, CurrencySelector, FxRatesDisplay all present and functional
+- All components use design tokens exclusively — no hardcoded text-white or bg-gray-* classes found
+- CurrencySelector: uses bg-muted, text-muted-foreground, standard shadcn/ui Select
+- FxRatesDisplay: uses text-foreground, text-muted-foreground, text-positive, border-border, text-amber-400 (intentional semantic for stale state)
+- DashboardHeader: uses text-foreground for welcome text, standard Button for refresh
+- Non-dashboard pages verified: Holdings, Transactions, Snapshots, Import, Export, Settings — all render their own h1 headers with text-foreground
+- No code changes required — all acceptance criteria met
+- Build and lint pass cleanly
+- **Learnings for future iterations:**
+  - Verification stories may require no code changes — the value is in confirming nothing broke during layout refactoring
+  - DashboardHeader lives in dashboard-content.tsx (not the dashboard layout) — it's a page-level component, not a layout component
+  - amber-400 for stale data warnings is an intentional semantic color, not a design token violation
+  - All 6 non-dashboard page files already used design tokens from previous UX-1 design token migration
+---
