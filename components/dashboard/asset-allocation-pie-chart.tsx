@@ -258,8 +258,8 @@ export function AssetAllocationPieChart() {
   // Empty state
   if (pieData.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+        <h3 className="text-label uppercase text-muted-foreground mb-4">
           Asset Allocation
         </h3>
         <p className="text-muted-foreground text-center py-8">
@@ -270,8 +270,8 @@ export function AssetAllocationPieChart() {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
-      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-6">
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+      <h3 className="text-label uppercase text-muted-foreground mb-6">
         Asset Allocation
       </h3>
       <div className="h-64">

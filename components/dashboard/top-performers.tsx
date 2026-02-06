@@ -1,11 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatCurrency, type Currency } from "@/lib/utils/currency";
+import { type Currency } from "@/lib/utils/currency";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import Link from "next/link";
+import { ChangeBadge } from "@/components/dashboard/change-badge";
+import { fadeIn, staggerContainer, staggerItem } from "@/lib/animations";
 
 interface Performer {
   holdingId: string;
@@ -32,25 +35,13 @@ async function fetchPerformers(): Promise<PerformersResponse> {
   return response.json();
 }
 
-/**
- * Formats a percentage with sign.
- */
-function formatPercent(value: number): string {
-  const absValue = Math.abs(value);
-  return `${absValue.toFixed(2)}%`;
-}
-
-/**
- * Loading skeleton for the performers section.
- */
 function PerformersSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
       <div className="animate-pulse">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Gainers skeleton */}
           <div>
-            <div className="h-5 w-28 bg-muted rounded mb-4" />
+            <div className="h-4 w-28 bg-muted rounded mb-4" />
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex justify-between items-center">
@@ -66,9 +57,8 @@ function PerformersSkeleton() {
               ))}
             </div>
           </div>
-          {/* Losers skeleton */}
           <div>
-            <div className="h-5 w-24 bg-muted rounded mb-4" />
+            <div className="h-4 w-24 bg-muted rounded mb-4" />
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex justify-between items-center">
@@ -90,9 +80,6 @@ function PerformersSkeleton() {
   );
 }
 
-/**
- * Individual performer row component.
- */
 interface PerformerRowProps {
   performer: Performer;
   isGainer: boolean;
@@ -101,60 +88,43 @@ interface PerformerRowProps {
 }
 
 function PerformerRow({ performer, isGainer, currency, convert }: PerformerRowProps) {
-  const colorClass = isGainer ? "text-positive" : "text-destructive";
-  const sign = isGainer ? "+" : "-";
-
-  // Convert from AUD (API returns values in AUD) to display currency
   const gainLossConverted = convert(performer.gainLoss, "AUD");
 
   return (
-    <Link
-      href={`/holdings/${performer.holdingId}`}
-      className="flex justify-between items-center py-2 px-2 -mx-2 rounded hover:bg-muted/50 transition-colors"
-    >
-      <div className="flex-1 min-w-0">
-        <p className="text-foreground font-medium truncate">{performer.name}</p>
-        <p className="text-muted-foreground text-sm">{performer.symbol}</p>
-      </div>
-      <div className="text-right ml-4">
-        <p className={`font-semibold ${colorClass}`}>
-          {sign}
-          {formatCurrency(Math.abs(gainLossConverted), currency)}
-        </p>
-        <p className={`text-sm ${colorClass}`}>
-          {sign}
-          {formatPercent(performer.gainLossPercent)}
-        </p>
-      </div>
-    </Link>
+    <motion.div variants={staggerItem}>
+      <Link
+        href={`/holdings/${performer.holdingId}`}
+        className="flex justify-between items-center py-2 px-2 -mx-2 rounded-lg transition-[background-color] duration-150 hover:bg-accent/5 cursor-pointer"
+      >
+        <div className="flex-1 min-w-0">
+          <p className="text-foreground font-medium truncate">{performer.name}</p>
+          <p className="text-body-sm text-muted-foreground">{performer.symbol}</p>
+        </div>
+        <div className="ml-4">
+          <ChangeBadge
+            amount={isGainer ? Math.abs(gainLossConverted) : -Math.abs(gainLossConverted)}
+            percentage={isGainer ? Math.abs(performer.gainLossPercent) : -Math.abs(performer.gainLossPercent)}
+            currency={currency}
+            size="sm"
+          />
+        </div>
+      </Link>
+    </motion.div>
   );
 }
 
-/**
- * Empty state for when there are no performers to show.
- */
 function EmptyPerformerList({ type }: { type: "gainers" | "losers" }) {
   return (
     <div className="py-8 text-center">
-      <p className="text-muted-foreground text-sm">
+      <p className="text-body-sm text-muted-foreground">
         No {type === "gainers" ? "gains" : "losses"} to show
       </p>
     </div>
   );
 }
 
-/**
- * Top Performers Section
- *
- * Displays the top 5 gainers and top 5 losers among tradeable holdings.
- * Features:
- * - Split view: gainers on left, losers on right
- * - Each row shows name, symbol, gain/loss amount (in display currency), and percentage
- * - Gainers displayed in green, losers in red
- * - Click on any row navigates to holding detail page
- * - Empty state when no tradeable holdings exist
- */
 export function TopPerformers() {
+  const shouldReduceMotion = useReducedMotion();
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
 
@@ -166,24 +136,21 @@ export function TopPerformers() {
     queryKey: ["top-performers"],
     queryFn: fetchPerformers,
     enabled: isLoaded && isSignedIn,
-    refetchInterval: 60 * 1000, // Refetch every minute
+    refetchInterval: 60 * 1000,
   });
 
-  // Show skeleton while loading or not authenticated
   if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
     return <PerformersSkeleton />;
   }
 
-  // Show error state
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive bg-destructive/10 p-6">
+      <div className="rounded-2xl border border-destructive bg-destructive/10 p-6">
         <p className="text-destructive">Failed to load top performers</p>
       </div>
     );
   }
 
-  // No data available
   if (!performersData) {
     return <PerformersSkeleton />;
   }
@@ -191,18 +158,17 @@ export function TopPerformers() {
   const { gainers, losers } = performersData;
   const hasNoData = gainers.length === 0 && losers.length === 0;
 
-  // Empty state when no tradeable holdings with performance data
   if (hasNoData) {
     return (
-      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+        <h3 className="text-label uppercase text-muted-foreground mb-4">
           Top Performers
         </h3>
         <div className="py-8 text-center">
-          <p className="text-muted-foreground text-sm">
+          <p className="text-body-sm text-muted-foreground">
             No tradeable holdings with performance data yet.
           </p>
-          <p className="text-muted-foreground/60 text-sm mt-2">
+          <p className="text-body-sm text-muted-foreground/60 mt-2">
             Add stocks, ETFs, or crypto to see your top gainers and losers.
           </p>
         </div>
@@ -210,19 +176,31 @@ export function TopPerformers() {
     );
   }
 
+  const containerVariants = shouldReduceMotion ? undefined : staggerContainer;
+
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+    <motion.div
+      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      initial={shouldReduceMotion ? false : fadeIn.initial}
+      animate={fadeIn.animate}
+      transition={shouldReduceMotion ? { duration: 0 } : fadeIn.transition}
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Top Gainers */}
         <div>
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="h-5 w-5 text-positive" />
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            <h3 className="text-label uppercase text-muted-foreground">
               Top Gainers
             </h3>
           </div>
           {gainers.length > 0 ? (
-            <div className="space-y-1">
+            <motion.div
+              className="space-y-1"
+              variants={containerVariants}
+              initial={shouldReduceMotion ? undefined : "hidden"}
+              animate={shouldReduceMotion ? undefined : "visible"}
+            >
               {gainers.map((performer) => (
                 <PerformerRow
                   key={performer.holdingId}
@@ -232,7 +210,7 @@ export function TopPerformers() {
                   convert={convert}
                 />
               ))}
-            </div>
+            </motion.div>
           ) : (
             <EmptyPerformerList type="gainers" />
           )}
@@ -242,12 +220,17 @@ export function TopPerformers() {
         <div>
           <div className="flex items-center gap-2 mb-4">
             <TrendingDown className="h-5 w-5 text-destructive" />
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+            <h3 className="text-label uppercase text-muted-foreground">
               Top Losers
             </h3>
           </div>
           {losers.length > 0 ? (
-            <div className="space-y-1">
+            <motion.div
+              className="space-y-1"
+              variants={containerVariants}
+              initial={shouldReduceMotion ? undefined : "hidden"}
+              animate={shouldReduceMotion ? undefined : "visible"}
+            >
               {losers.map((performer) => (
                 <PerformerRow
                   key={performer.holdingId}
@@ -257,12 +240,12 @@ export function TopPerformers() {
                   convert={convert}
                 />
               ))}
-            </div>
+            </motion.div>
           ) : (
             <EmptyPerformerList type="losers" />
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

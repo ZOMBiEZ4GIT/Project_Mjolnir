@@ -20,8 +20,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented with useSpring + useMotionValue. Uses formatCurrency for display formatting. tabular-nums prevents layout shift. Respects prefers-reduced-motion."
     },
     {
       "id": "US-002",
@@ -39,8 +39,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Reusable badge with positive/negative/zero states. Uses design tokens (text-positive, text-destructive, bg-positive/10, bg-destructive/10). Two sizes: sm (compact) and md (standard)."
     },
     {
       "id": "US-003",
@@ -58,8 +58,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Icon variant with tooltip + badge variant with inline text. Uses amber-500 colour. Returns null when isStale is false."
     },
     {
       "id": "US-004",
@@ -80,8 +80,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Purple glow (shadow-glow-md), gradient bg (from-card via-card to-accent/5), NumberTicker, ChangeBadge, StaleIndicator. text-display-xl and text-label typography tokens. fadeIn+slideUp entrance animation. Mobile sparkline below value."
     },
     {
       "id": "US-005",
@@ -100,8 +100,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "NumberTicker for values, ChangeBadge for MoM change, stagger animation (100ms), hover shadow-card-hover, percentage-of-net-worth indicator, design tokens throughout."
     },
     {
       "id": "US-006",
@@ -121,8 +121,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Stagger rows (50ms), progress bars animate 0→target (400ms), fadeIn card entrance, hover bg-accent/5, donut centre NumberTicker, text-body-sm labels, text-label headers."
     },
     {
       "id": "US-007",
@@ -142,8 +142,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "ChangeBadge for gain/loss, stagger rows (50ms), fadeIn card entrance, hover bg-accent/5, text-label headers, text-body-sm labels, rounded-2xl bg-card."
     },
     {
       "id": "US-008",
@@ -159,8 +159,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Welcome heading uses text-heading-lg/text-display-md typography tokens. Refresh button already used design tokens via shadcn Button."
     },
     {
       "id": "US-009",
@@ -174,8 +174,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "All yellow-* classes replaced with amber-* equivalents: border-amber-500/30, bg-amber-500/10, text-amber-500/400."
     },
     {
       "id": "US-010",
@@ -189,8 +189,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Card uses rounded-2xl bg-card. text-label for headers, text-body-sm for labels."
     },
     {
       "id": "US-011",
@@ -205,8 +205,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Both files updated: rounded-2xl bg-card, text-label headers."
     },
     {
       "id": "US-012",
@@ -221,8 +221,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Card uses rounded-2xl bg-card, text-label headers. Chart hex colours kept (SVG requirement)."
     },
     {
       "id": "US-013",
@@ -240,8 +240,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "motion.div stagger container (80ms delay) wrapping all sections. Each section fadeIn+slideUp (opacity 0→1, y 16→0, 300ms). useReducedMotion check. space-y-6 layout."
     },
     {
       "id": "US-014",
@@ -259,8 +259,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 14,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Consistent gap-6 spacing throughout. All card-level elements use rounded-2xl. Container: px-4 py-4 mobile, sm:px-6 sm:py-6 desktop. Desktop: summary 2-col, allocation+currency 2-col, top performers full width with internal 2-col. Tablet: summary 2-col, rest stacked. Mobile: single column."
     }
   ]
 }

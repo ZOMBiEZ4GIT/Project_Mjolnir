@@ -98,7 +98,7 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-      <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+      <h1 className="text-heading-lg sm:text-display-md text-foreground">
         Welcome{userName ? `, ${userName}` : ""}
       </h1>
       <div className="flex items-center gap-2 sm:gap-3 flex-wrap">

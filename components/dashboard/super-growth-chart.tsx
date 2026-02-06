@@ -285,8 +285,8 @@ export function SuperGrowthChart({
   // Empty state - no super holdings
   if (holdings.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+        <h3 className="text-label uppercase text-muted-foreground mb-4">
           Superannuation Growth Breakdown
         </h3>
         <p className="text-muted-foreground text-center py-8">
@@ -299,8 +299,8 @@ export function SuperGrowthChart({
   // Empty state - no breakdown data yet
   if (breakdown.length === 0) {
     return (
-      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
+      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+        <h3 className="text-label uppercase text-muted-foreground mb-4">
           Superannuation Growth Breakdown
         </h3>
         <p className="text-muted-foreground text-center py-8">
@@ -354,9 +354,9 @@ export function SuperGrowthChart({
     : "Superannuation Growth Breakdown";
 
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+        <h3 className="text-label uppercase text-muted-foreground">
           {title}
         </h3>
         <ChartExportButton
