@@ -957,7 +957,16 @@ function HoldingsTableContent({
 }: HoldingsTableContentProps) {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
-  const staggerDelay = getCappedStaggerDelay(holdings.length);
+
+  // Sort holdings so dormant ones appear at the bottom of each section
+  const sortedHoldings = useMemo(() => {
+    return [...holdings].sort((a, b) => {
+      if (a.isDormant === b.isDormant) return 0;
+      return a.isDormant ? 1 : -1;
+    });
+  }, [holdings]);
+
+  const staggerDelay = getCappedStaggerDelay(sortedHoldings.length);
 
   const containerVariants = {
     hidden: {},
@@ -1010,7 +1019,7 @@ function HoldingsTableContent({
         initial="hidden"
         animate="visible"
       >
-        {holdings.map((holding) => {
+        {sortedHoldings.map((holding) => {
           const snapshot = holding.latestSnapshot;
           const isStale = snapshot ? isSnapshotStale(snapshot.date) : false;
 
@@ -1263,6 +1272,14 @@ function HoldingsCurrencySection({
 }: HoldingsCurrencySectionProps) {
   const label = CURRENCY_LABELS[sectionCurrency];
 
+  // Sort holdings so dormant ones appear at the bottom
+  const sortedHoldings = useMemo(() => {
+    return [...holdings].sort((a, b) => {
+      if (a.isDormant === b.isDormant) return 0;
+      return a.isDormant ? 1 : -1;
+    });
+  }, [holdings]);
+
   // Calculate subtotal in section's currency
   const subtotal = calculateSectionSubtotal(holdings, prices);
 
@@ -1323,7 +1340,7 @@ function HoldingsCurrencySection({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {holdings.map((holding) => {
+            {sortedHoldings.map((holding) => {
               const snapshot = holding.latestSnapshot;
               const isStale = snapshot ? isSnapshotStale(snapshot.date) : false;
               const isTradeable = TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number]);
