@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion, type Variants } from "framer-motion";
 import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown, RotateCw } from "lucide-react";
 import type { Holding } from "@/lib/db/schema";
 import type { HoldingTypeFilter } from "./filter-tabs";
@@ -278,6 +278,7 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
   const groupedByType = groupHoldingsByType(holdings);
   const groupedByCurrency = groupHoldingsByCurrency(holdings);
+  const shouldReduceMotion = useReducedMotion();
 
   // Get currency context for display currency conversion
   const { displayCurrency, convert, showNativeCurrency, isLoading: currencyLoading } = useCurrency();
@@ -305,71 +306,52 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
 
   return (
     <>
-      <div className="space-y-8">
-        {groupBy === "type" ? (
-          showGrouped ? (
-            // Group by holding type with collapsible sections
-            HOLDING_TYPE_ORDER.map((type) => {
-              const typeHoldings = groupedByType.get(type);
+      <AnimatePresence mode="popLayout">
+        <motion.div
+          key={typeFilter}
+          className="space-y-8"
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={shouldReduceMotion ? undefined : { opacity: 0 }}
+          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.1 }}
+        >
+          {groupBy === "type" ? (
+            showGrouped ? (
+              // Group by holding type with collapsible sections
+              HOLDING_TYPE_ORDER.map((type) => {
+                const typeHoldings = groupedByType.get(type);
 
-              // Skip empty sections
-              if (!typeHoldings || typeHoldings.length === 0) {
-                return null;
-              }
+                // Skip empty sections
+                if (!typeHoldings || typeHoldings.length === 0) {
+                  return null;
+                }
 
-              return (
-                <HoldingsTypeSection
-                  key={type}
-                  type={type}
-                  holdings={typeHoldings}
-                  prices={prices}
-                  pricesLoading={pricesLoading}
-                  onEdit={setEditingHolding}
-                  onDelete={setDeletingHolding}
-                  onRetryPrice={onRetryPrice}
-                  retryingPriceIds={retryingPriceIds}
-                  displayCurrency={displayCurrency}
-                  convert={convert}
-                  currencyLoading={currencyLoading}
-                  showNativeCurrency={showNativeCurrency}
-                  collapsible
-                  portfolioTotal={portfolioTotal}
-                />
-              );
-            })
-          ) : (
-            // Flat list — no group header when specific type is selected
-            <HoldingsFlatSection
-              holdings={holdings}
-              isTradeable={flatIsTradeable}
-              isSnapshotType={flatIsSnapshot}
-              prices={prices}
-              pricesLoading={pricesLoading}
-              onEdit={setEditingHolding}
-              onDelete={setDeletingHolding}
-              onRetryPrice={onRetryPrice}
-              retryingPriceIds={retryingPriceIds}
-              displayCurrency={displayCurrency}
-              convert={convert}
-              currencyLoading={currencyLoading}
-              showNativeCurrency={showNativeCurrency}
-            />
-          )
-        ) : (
-          // Group by currency
-          CURRENCY_ORDER.map((currency) => {
-            const currencyHoldings = groupedByCurrency.get(currency);
-
-            // Skip empty sections
-            if (!currencyHoldings || currencyHoldings.length === 0) {
-              return null;
-            }
-
-            return (
-              <HoldingsCurrencySection
-                key={currency}
-                sectionCurrency={currency}
-                holdings={currencyHoldings}
+                return (
+                  <HoldingsTypeSection
+                    key={type}
+                    type={type}
+                    holdings={typeHoldings}
+                    prices={prices}
+                    pricesLoading={pricesLoading}
+                    onEdit={setEditingHolding}
+                    onDelete={setDeletingHolding}
+                    onRetryPrice={onRetryPrice}
+                    retryingPriceIds={retryingPriceIds}
+                    displayCurrency={displayCurrency}
+                    convert={convert}
+                    currencyLoading={currencyLoading}
+                    showNativeCurrency={showNativeCurrency}
+                    collapsible
+                    portfolioTotal={portfolioTotal}
+                  />
+                );
+              })
+            ) : (
+              // Flat list — no group header when specific type is selected
+              <HoldingsFlatSection
+                holdings={holdings}
+                isTradeable={flatIsTradeable}
+                isSnapshotType={flatIsSnapshot}
                 prices={prices}
                 pricesLoading={pricesLoading}
                 onEdit={setEditingHolding}
@@ -381,10 +363,38 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
                 currencyLoading={currencyLoading}
                 showNativeCurrency={showNativeCurrency}
               />
-            );
-          })
-        )}
-      </div>
+            )
+          ) : (
+            // Group by currency
+            CURRENCY_ORDER.map((currency) => {
+              const currencyHoldings = groupedByCurrency.get(currency);
+
+              // Skip empty sections
+              if (!currencyHoldings || currencyHoldings.length === 0) {
+                return null;
+              }
+
+              return (
+                <HoldingsCurrencySection
+                  key={currency}
+                  sectionCurrency={currency}
+                  holdings={currencyHoldings}
+                  prices={prices}
+                  pricesLoading={pricesLoading}
+                  onEdit={setEditingHolding}
+                  onDelete={setDeletingHolding}
+                  onRetryPrice={onRetryPrice}
+                  retryingPriceIds={retryingPriceIds}
+                  displayCurrency={displayCurrency}
+                  convert={convert}
+                  currencyLoading={currencyLoading}
+                  showNativeCurrency={showNativeCurrency}
+                />
+              );
+            })
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       {editingHolding && (
         <EditHoldingDialog
@@ -905,6 +915,14 @@ function HoldingsFlatSection({
 /**
  * Shared table content — used by both grouped and flat views.
  */
+// Capped stagger delay: 50ms per row but total stagger completes within 500ms
+function getCappedStaggerDelay(count: number): number {
+  if (count <= 1) return 0;
+  return Math.min(0.05, 0.5 / count);
+}
+
+const MotionTableRow = motion.create(TableRow);
+
 interface HoldingsTableContentProps {
   holdings: HoldingWithData[];
   isTradeable: boolean;
@@ -936,6 +954,28 @@ function HoldingsTableContent({
   currencyLoading,
   showNativeCurrency,
 }: HoldingsTableContentProps) {
+  const shouldReduceMotion = useReducedMotion();
+  const staggerDelay = getCappedStaggerDelay(holdings.length);
+
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: shouldReduceMotion ? 0 : staggerDelay,
+      },
+    },
+  };
+
+  const rowVariants: Variants = shouldReduceMotion
+    ? {
+        hidden: { opacity: 1 },
+        visible: { opacity: 1, transition: { duration: 0 } },
+      }
+    : {
+        hidden: { opacity: 0, y: 10 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" as const } },
+      };
+
   return (
     <Table>
       <TableHeader>
@@ -962,14 +1002,20 @@ function HoldingsTableContent({
           <TableHead className="text-muted-foreground w-[80px] sm:w-[100px]">Actions</TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
+      <motion.tbody
+        className="[&_tr:last-child]:border-0"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
         {holdings.map((holding) => {
           const snapshot = holding.latestSnapshot;
           const isStale = snapshot ? isSnapshotStale(snapshot.date) : false;
 
           return (
-            <TableRow
+            <MotionTableRow
               key={holding.id}
+              variants={rowVariants}
               className={`border-border ${holding.isDormant ? "opacity-60" : ""}`}
             >
               <TableCell className="text-foreground font-medium sticky left-0 bg-background z-10">
@@ -1103,10 +1149,10 @@ function HoldingsTableContent({
                   </Button>
                 </div>
               </TableCell>
-            </TableRow>
+            </MotionTableRow>
           );
         })}
-      </TableBody>
+      </motion.tbody>
     </Table>
   );
 }
