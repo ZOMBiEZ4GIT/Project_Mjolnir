@@ -1,4 +1,6 @@
 ## Codebase Patterns
+- Badge contrast: use `bg-accent/10` and `bg-destructive/10` (not /20) for badge backgrounds with matching text-{color} to meet WCAG AA 4.5:1
+- Design token contrast: accent is 263 84% 70%, destructive is 0 84% 63% — both verified WCAG AA on background and card surfaces
 - useRovingTabIndex hook (hooks/use-roving-tabindex.ts): provides arrow key navigation + roving tabindex for tablist/radiogroup components — returns { containerRef, handleKeyDown, getTabIndex }
 - Radix UI primitives (Dialog, AlertDialog, Select, Switch, Accordion) handle ARIA automatically — no manual attributes needed
 - Touch targets: use `min-h-[44px] sm:min-h-0` pattern for mobile-only 44px touch targets; for table action buttons use `h-[44px] w-[44px] sm:h-8 sm:w-8`
@@ -331,5 +333,21 @@ Started: 2026-02-07
   - Radix Dialog handles Escape, focus trap, and focus restoration automatically — no custom code needed
   - Multi-step wizard modals (CheckInModal) don't need form wrappers per step — per-step submit buttons with onClick are acceptable
   - MonthSelector was missing focus-visible styles — always add focus-visible ring to new interactive elements
+---
+
+## 2026-02-07 - US-010
+- Verified all text/background colour contrast ratios against WCAG AA (4.5:1 threshold)
+- **Token adjustments:** `--accent/primary/ring` 66%→70% lightness, `--destructive/negative` 60%→63% lightness
+- Updated `--accent-glow` rgba(139,92,246)→rgba(164,114,243) and `--negative-glow` rgba(239,68,68)→rgba(240,81,81)
+- Badge backgrounds: `bg-accent/20`→`bg-accent/10` and `bg-destructive/20`→`bg-destructive/10` for badge contexts (text on tinted bg)
+- All 16 verified combinations pass: 12 text-on-solid + 4 badge text-on-tinted-bg
+- Documented all verified ratios in comment block in `app/globals.css`
+- Files changed: app/globals.css, app/(dashboard)/transactions/page.tsx, components/import/recent-imports.tsx
+- **Learnings for future iterations:**
+  - Token lightness bumps affect all usages — verify button contrast (white on solid bg) still passes large text threshold (3:1)
+  - Badge bg-{color}/20 + text-{color} is a contrast trap — the tinted bg eats into contrast. Use /10 for accent/destructive badges
+  - Positive (45% L) and warning (50% L) have high contrast on dark surfaces — no adjustment needed
+  - Chart hex colours in lib/chart-palette.ts are intentionally separate from CSS tokens — don't change them when adjusting design tokens
+  - Use Node.js script with WCAG relative luminance formula for accurate contrast calculation — don't eyeball it
 ---
 
