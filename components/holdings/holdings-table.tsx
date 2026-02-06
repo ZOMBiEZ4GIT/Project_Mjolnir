@@ -19,6 +19,7 @@ import { GroupHeader } from "./group-header";
 import { EditHoldingDialog } from "./edit-holding-dialog";
 import { DeleteHoldingDialog } from "./delete-holding-dialog";
 import { CurrencyDisplay } from "@/components/ui/currency-display";
+import { Sparkline } from "@/components/charts";
 import { useCurrency } from "@/components/providers/currency-provider";
 import type { Currency } from "@/lib/utils/currency";
 
@@ -95,6 +96,8 @@ interface HoldingsTableProps {
   retryingPriceIds?: Set<string>;
   groupBy?: GroupByValue;
   typeFilter?: HoldingTypeFilter;
+  sparklineData?: Map<string, number[]>;
+  sparklineLoading?: boolean;
 }
 
 function groupHoldingsByType(holdings: HoldingWithData[]): Map<Holding["type"], HoldingWithData[]> {
@@ -274,7 +277,7 @@ function formatGainLossPercent(percent: number): string {
   return `${sign}${percent.toFixed(2)}%`;
 }
 
-export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, retryingPriceIds, groupBy = "type", typeFilter = "all" }: HoldingsTableProps) {
+export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, retryingPriceIds, groupBy = "type", typeFilter = "all", sparklineData, sparklineLoading }: HoldingsTableProps) {
   const [editingHolding, setEditingHolding] = useState<HoldingWithData | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
   const groupedByType = groupHoldingsByType(holdings);
@@ -344,6 +347,8 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
                     showNativeCurrency={showNativeCurrency}
                     collapsible
                     portfolioTotal={portfolioTotal}
+                    sparklineData={sparklineData}
+                    sparklineLoading={sparklineLoading}
                   />
                 );
               })
@@ -363,6 +368,8 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
                 convert={convert}
                 currencyLoading={currencyLoading}
                 showNativeCurrency={showNativeCurrency}
+                sparklineData={sparklineData}
+                sparklineLoading={sparklineLoading}
               />
             )
           ) : (
@@ -433,6 +440,8 @@ interface HoldingsTypeSectionProps {
   showNativeCurrency?: boolean;
   collapsible?: boolean;
   portfolioTotal?: number;
+  sparklineData?: Map<string, number[]>;
+  sparklineLoading?: boolean;
 }
 
 /**
@@ -786,6 +795,8 @@ function HoldingsTypeSection({
   showNativeCurrency,
   collapsible = false,
   portfolioTotal = 0,
+  sparklineData,
+  sparklineLoading,
 }: HoldingsTypeSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const label = HOLDING_TYPE_LABELS[type];
@@ -848,6 +859,8 @@ function HoldingsTypeSection({
                 convert={convert}
                 currencyLoading={currencyLoading}
                 showNativeCurrency={showNativeCurrency}
+                sparklineData={sparklineData}
+                sparklineLoading={sparklineLoading}
               />
             </div>
           </motion.div>
@@ -875,6 +888,8 @@ interface HoldingsFlatSectionProps {
   convert: (amount: number, fromCurrency: Currency) => number;
   currencyLoading?: boolean;
   showNativeCurrency?: boolean;
+  sparklineData?: Map<string, number[]>;
+  sparklineLoading?: boolean;
 }
 
 function HoldingsFlatSection({
@@ -891,6 +906,8 @@ function HoldingsFlatSection({
   convert,
   currencyLoading,
   showNativeCurrency,
+  sparklineData,
+  sparklineLoading,
 }: HoldingsFlatSectionProps) {
   return (
     <div className="rounded-lg border border-border overflow-x-auto">
@@ -908,6 +925,8 @@ function HoldingsFlatSection({
         convert={convert}
         currencyLoading={currencyLoading}
         showNativeCurrency={showNativeCurrency}
+        sparklineData={sparklineData}
+        sparklineLoading={sparklineLoading}
       />
     </div>
   );
@@ -938,6 +957,8 @@ interface HoldingsTableContentProps {
   convert: (amount: number, fromCurrency: Currency) => number;
   currencyLoading?: boolean;
   showNativeCurrency?: boolean;
+  sparklineData?: Map<string, number[]>;
+  sparklineLoading?: boolean;
 }
 
 function HoldingsTableContent({
@@ -954,6 +975,8 @@ function HoldingsTableContent({
   convert,
   currencyLoading,
   showNativeCurrency,
+  sparklineData,
+  sparklineLoading,
 }: HoldingsTableContentProps) {
   const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
@@ -1003,6 +1026,7 @@ function HoldingsTableContent({
             <>
               <TableHead className="text-muted-foreground text-right hidden md:table-cell">Quantity</TableHead>
               <TableHead className="text-muted-foreground text-right hidden sm:table-cell">Price</TableHead>
+              <TableHead className="text-muted-foreground text-center hidden md:table-cell">Trend</TableHead>
               <TableHead className="text-muted-foreground text-right">Market Value</TableHead>
               <TableHead className="text-muted-foreground text-right hidden md:table-cell">Gain/Loss</TableHead>
               <TableHead className="text-muted-foreground text-right hidden lg:table-cell">Cost Basis</TableHead>
@@ -1079,6 +1103,15 @@ function HoldingsTableContent({
                       onRetry={onRetryPrice ? () => onRetryPrice(holding.id) : undefined}
                       isRetrying={retryingPriceIds?.has(holding.id)}
                     />
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <div className="flex justify-center">
+                      {sparklineLoading ? (
+                        <div className="w-[80px] h-[32px] bg-muted rounded animate-pulse" />
+                      ) : (
+                        <Sparkline data={sparklineData?.get(holding.id) ?? []} />
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <MarketValueCell

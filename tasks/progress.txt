@@ -104,6 +104,9 @@
 - Chart hex colours (#374151, #9CA3AF etc.) are required for SVG rendering — don't convert to CSS variables
 - Grid gap-6 for section spacing, gap-4 only for small internal layouts
 - All card-level elements use rounded-2xl; inner elements (tooltips, icons, row items) keep rounded-lg
+- Yahoo Finance `chart()` method: `yahooFinance.chart(symbol, { period1, period2, interval: "1d" })` returns `{ quotes: [{ close }] }`
+- CoinGecko market_chart: `/coins/{id}/market_chart?vs_currency=usd&days=30&interval=daily` returns `{ prices: [[timestamp, price]] }`
+- Sparkline data API: `GET /api/prices/sparkline` returns `{ holdingId, symbol, prices: number[] }[]` — staleTime 30min
 
 ---
 
@@ -173,5 +176,64 @@ Started: 2026-02-06
   - Framer Motion `layoutId` sliding indicator pattern: render `motion.span` with `layoutId` only on active item inside a button — identical to filter-tabs.tsx pattern
   - `useReducedMotion()` from framer-motion returns boolean — use to set transition duration to 0
   - When extracting components, watch for prop name changes — replace_all may not match different indentation levels
+---
+
+## 2026-02-06 - US-004
+- Added donut chart centre overlay with NumberTicker to `asset-allocation-pie-chart.tsx`
+  - Absolute positioned overlay with `pointer-events-none` over donut hole
+  - Shows "Total" label in `text-xs text-muted-foreground` and net worth via NumberTicker with compact formatting
+  - `marginBottom: 40` offsets the overlay upward to account for legend space below the chart
+- Extended `NumberTicker` component with optional `compact` prop
+  - Passes `{ compact }` to all `formatCurrency` calls (initial display, spring change handler, reduced motion)
+  - Added `compact` to spring change effect dependency array
+- Files changed: components/dashboard/asset-allocation-pie-chart.tsx, components/dashboard/number-ticker.tsx
+- **Learnings for future iterations:**
+  - Recharts `ResponsiveContainer` + `Legend` push the donut upward — centre overlay needs `marginBottom` to offset legend height
+  - NumberTicker compact prop enables `formatCurrency` compact notation ($1.2M, $500K) for space-constrained contexts
+  - Use `pointer-events-none` on chart overlays to preserve hover/click interactions on underlying chart elements
+---
+
+## 2026-02-06 - US-005
+- Created `components/charts/sparkline.tsx` — reusable sparkline mini-chart component
+  - Uses Recharts `LineChart` + `Line` with no axes, no grid, no dots — just the line
+  - Props: `data: number[]`, `width` (default 80), `height` (default 32), `positive` (optional override)
+  - Auto-detects trend from first vs last data point when `positive` not provided
+  - Positive trend: `#22c55e` (green-500), negative: `#ef4444` (red-500)
+  - `isAnimationActive={false}` for static render (performance in table rows)
+  - `type="monotone"` for smooth interpolation, 1.5px stroke width
+  - Handles edge cases: null/empty data → null, single point → null
+- Updated `components/charts/index.ts` barrel export
+- Files changed: components/charts/sparkline.tsx (new), components/charts/index.ts
+- **Learnings for future iterations:**
+  - Recharts LineChart works well for sparklines — just omit XAxis, YAxis, CartesianGrid, Tooltip, and dots
+  - `isAnimationActive={false}` prevents animation on mount — important for many sparklines in table rows
+  - `positive` prop allows external override of trend colour (useful when caller knows the context better than first-vs-last comparison)
+---
+
+## 2026-02-06 - US-006
+- Integrated sparklines into the holdings table for tradeable assets (stocks, ETFs, crypto)
+- Created `lib/services/sparkline-data.ts` — service for fetching 30-day historical prices
+  - Yahoo Finance `chart()` API for stocks/ETFs (interval: 1d, period: 30 days)
+  - CoinGecko `/coins/{id}/market_chart` for crypto (vs_currency: usd, days: 30, interval: daily)
+  - Graceful error handling: returns empty prices array on failure
+- Created `app/api/prices/sparkline/route.ts` — batch API endpoint
+  - Fetches all active tradeable holdings for the authenticated user
+  - Returns `{ holdingId, symbol, prices: number[] }` array
+- Updated `components/holdings/holdings-table.tsx`:
+  - Added `sparklineData` and `sparklineLoading` props threaded through all table views (grouped, flat, currency)
+  - Added "Trend" column header between Price and Market Value (hidden below md breakpoint)
+  - Renders `<Sparkline>` component for each tradeable holding with data from sparklineData map
+  - Loading state: `bg-muted rounded animate-pulse` skeleton (80x32px)
+  - Snapshot-based holdings show no sparkline (column not rendered for non-tradeable sections)
+- Updated `app/(dashboard)/holdings/page.tsx`:
+  - Added `fetchSparklineData()` function and TanStack Query with 30-minute stale time
+  - Passes `sparklineMap` and `sparklineLoading` to HoldingsTable
+- Files changed: lib/services/sparkline-data.ts (new), app/api/prices/sparkline/route.ts (new), components/holdings/holdings-table.tsx, app/(dashboard)/holdings/page.tsx
+- **Learnings for future iterations:**
+  - Yahoo Finance `chart()` method returns `{ quotes: [{ close, ... }] }` — use `result.quotes.map(q => q.close)` for price array
+  - CoinGecko market_chart returns `{ prices: [[timestamp, price], ...] }` — destructure as `[, price]`
+  - Use longer staleTime (30min) for sparkline data since historical prices don't change frequently
+  - Thread new props through all table view variants: HoldingsTypeSection, HoldingsFlatSection, HoldingsTableContent
+  - Sparkline column hidden below md breakpoint — desktop-only feature as specified
 ---
 
