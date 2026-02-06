@@ -184,3 +184,21 @@ Started: 2026-02-06
   - The previous code grouped BUY and DIVIDEND together as both "green" — they should be distinct (BUY=positive/green, DIVIDEND=accent/purple)
 ---
 
+## 2026-02-06 - US-008
+- Added success confirmation animations on transaction save/edit/delete
+- **Highlight animation:** `highlightedTransactionId` state tracks which row was just saved — Framer Motion animates `backgroundColor` from `accent/0.1` → transparent over 1s
+- **Deletion fade-out:** `deletingTransactionId` state tracks which row is being removed — animates with `opacity: 0, x: -20` over 300ms, then state clears after 400ms
+- Added `onTransactionSaved` callback prop to `AddTransactionDialog` and `EditTransactionDialog` — passes transaction ID back to parent
+- Added `onDeleted` callback prop to `DeleteTransactionDialog` — fires after successful deletion
+- Toast messages already use `toast.success()` from Sonner which shows checkmark icon by default
+- Delete toast changed from "Transaction deleted successfully" to "Transaction deleted" for brevity
+- Both highlight and deletion animations respect `prefers-reduced-motion` via `shouldReduceMotion` (durations set to 0)
+- Highlight auto-clears after 1.5s via `setTimeout` with `useRef` for cleanup on unmount
+- Files changed: `app/(dashboard)/transactions/page.tsx`, `components/transactions/add-transaction-dialog.tsx`, `components/transactions/edit-transaction-dialog.tsx`, `components/transactions/delete-transaction-dialog.tsx`
+- **Learnings for future iterations:**
+  - API POST `/api/transactions` returns the full created object with `.id` via Drizzle `.returning()` — safe to extract ID from response for callbacks
+  - For row-level Framer Motion animations that override stagger variants, set `animate` to an object (not a variant name) — this overrides the parent's variant-driven animation
+  - `isDeleting` rows should get `pointer-events-none` to prevent interaction during fade-out
+  - `useRef` for timer cleanup prevents stale closure issues and memory leaks on fast unmount/remount
+---
+
