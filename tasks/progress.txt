@@ -237,3 +237,14 @@ Started: 2026-02-07
   - Error row stagger: 30ms delay per row (errorStaggerContainer), slides in from left (x: -8 → 0)
 ---
 
+## 2026-02-07 - US-008
+- Added downloadable error report CSV to import results
+- Files changed: components/import/import-results.tsx
+- **Learnings for future iterations:**
+  - Client-side CSV generation: Blob + createObjectURL + click trick
+  - CSV escaping: wrap in double quotes, replace inner " with ""
+  - Reused success animation pattern from export page (scale pulse + text-positive + auto-reset)
+  - downloadState kept simple ("idle" | "success") — no "downloading" state needed for client-side CSV
+  - Filename pattern: import-errors-YYYY-MM-DD.csv using ISO date split
+---
+

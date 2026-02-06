@@ -145,8 +145,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "CSV download with suggestions, success animation reusing export pattern"
     },
     {
       "id": "US-009",
