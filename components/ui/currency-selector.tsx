@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { DollarSign } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { type Currency } from "@/lib/utils/currency";
@@ -21,10 +20,11 @@ const CURRENCY_OPTIONS: Array<{
   value: Currency;
   label: string;
   symbol: string;
+  flag: string;
 }> = [
-  { value: "AUD", label: "Australian Dollar", symbol: "$" },
-  { value: "NZD", label: "New Zealand Dollar", symbol: "NZ$" },
-  { value: "USD", label: "US Dollar", symbol: "US$" },
+  { value: "AUD", label: "Australian Dollar", symbol: "$", flag: "🇦🇺" },
+  { value: "NZD", label: "New Zealand Dollar", symbol: "NZ$", flag: "🇳🇿" },
+  { value: "USD", label: "US Dollar", symbol: "US$", flag: "🇺🇸" },
 ];
 
 /**
@@ -111,28 +111,31 @@ export function CurrencySelector({
     <Select value={displayCurrency} onValueChange={handleCurrencyChange}>
       <SelectTrigger
         className={cn(
-          "gap-1",
-          compact ? "w-auto min-w-[80px]" : "w-[180px]",
+          "gap-1.5 bg-card border-border text-foreground",
+          compact ? "w-auto min-w-[80px]" : "w-[220px]",
           className
         )}
         aria-label="Select display currency"
       >
-        <DollarSign className="h-4 w-4 opacity-50" />
         <SelectValue>
           {compact
             ? currentOption?.value
-            : `${currentOption?.symbol} ${currentOption?.value}`}
+            : `${currentOption?.flag} ${currentOption?.value}`}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="bg-card border-border">
         {CURRENCY_OPTIONS.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
+          <SelectItem
+            key={option.value}
+            value={option.value}
+            className="focus:bg-accent/10 focus:text-foreground"
+          >
             <span className="flex items-center gap-2">
-              <span className="font-mono w-8">{option.symbol}</span>
-              <span>{option.value}</span>
+              <span>{option.flag}</span>
+              <span className="font-medium">{option.value}</span>
               {!compact && (
-                <span className="text-muted-foreground text-xs ml-1">
-                  {option.label}
+                <span className="text-muted-foreground text-sm">
+                  — {option.label}
                 </span>
               )}
             </span>
