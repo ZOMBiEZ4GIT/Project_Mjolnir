@@ -97,6 +97,12 @@
   }
 }
 
+/*
+ * Global focus-visible utility.
+ * All interactive elements should use: focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background
+ * --ring token = --accent (purple) = 263 84% 66%
+ */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

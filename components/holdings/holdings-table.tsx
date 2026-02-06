@@ -518,7 +518,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, pricesRe
             transition={{ duration: 0.15 }}
             onClick={(e) => { e.stopPropagation(); onRetry?.(); }}
             disabled={isRetrying}
-            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs bg-muted text-muted-foreground hover:bg-accent/20 hover:text-foreground transition-colors disabled:opacity-60 disabled:pointer-events-none"
+            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs bg-muted text-muted-foreground hover:bg-accent/20 hover:text-foreground transition-colors disabled:opacity-60 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             title="Retry price fetch"
           >
             <RotateCw className={`h-3 w-3 ${isRetrying ? "animate-spin" : ""}`} />
@@ -1043,8 +1043,10 @@ function HoldingsTableContent({
             <MotionTableRow
               key={holding.id}
               variants={rowVariants}
-              className={`border-border cursor-pointer transition-[background-color,transform] duration-150 hover:bg-accent/5 hover:scale-[1.005] active:bg-accent/10 ${holding.isDormant ? "opacity-60" : ""}`}
+              className={`border-border cursor-pointer transition-[background-color,transform] duration-150 hover:bg-accent/5 hover:scale-[1.005] active:bg-accent/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset ${holding.isDormant ? "opacity-60" : ""}`}
+              tabIndex={0}
               onClick={() => router.push(`/holdings/${holding.id}`)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); router.push(`/holdings/${holding.id}`); } }}
               style={{ transformOrigin: "center" }}
             >
               <TableCell className="text-foreground font-medium sticky left-0 bg-background z-10">

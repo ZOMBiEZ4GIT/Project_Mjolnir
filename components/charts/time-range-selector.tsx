@@ -44,7 +44,7 @@ export function TimeRangeSelector({ value, onChange }: TimeRangeSelectorProps) {
             role="tab"
             aria-selected={isActive}
             onClick={() => onChange(option.value)}
-            className={`relative px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+            className={`relative px-3 py-1 text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
               isActive
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground"

@@ -32,7 +32,7 @@ export function GroupHeader({
     <button
       type="button"
       onClick={onToggle}
-      className="flex items-center justify-between w-full mb-3 group cursor-pointer"
+      className="flex items-center justify-between w-full mb-3 group cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       aria-expanded={isExpanded}
     >
       <div className="flex items-center gap-2">
