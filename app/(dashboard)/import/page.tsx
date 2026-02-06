@@ -272,8 +272,8 @@ export default function ImportPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-foreground mb-6">Import Data</h1>
-      <p className="text-muted-foreground mb-8">
+      <h1 className="text-heading-lg text-foreground mb-2">Import Data</h1>
+      <p className="text-body-sm text-muted-foreground mb-8">
         Import your historical data from CSV files. The import process is idempotent—re-running the same file won&apos;t create duplicates.
       </p>
 
