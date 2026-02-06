@@ -111,3 +111,17 @@ Started: 2026-02-06
   - Labels below circles with `self-start mt-4 mb-5` on connection line to align with circle centres
 ---
 
+## 2026-02-06 - US-003
+- Created MonthSelector component at components/check-in/month-selector.tsx
+- Two styled card options: Current Month and Previous Month with Calendar/CalendarClock icons
+- Selected state uses accent border/background (border-accent bg-accent/10)
+- Unselected state uses card/border tokens with hover transition
+- Helpful note below: "You can log on the 5th for the previous month"
+- Component is controlled: receives currentMonth, previousMonth, selectedMonth, onSelectMonth props
+- Files changed: components/check-in/month-selector.tsx (new)
+- **Learnings for future iterations:**
+  - MonthSelector uses same `formatMonthYear` helper as check-in-modal — could be extracted to shared util later
+  - Card selection pattern: `border-accent bg-accent/10` for selected, `border-border bg-card/50` for unselected
+  - Grid layout `grid-cols-1 sm:grid-cols-2` provides responsive card arrangement
+---
+
