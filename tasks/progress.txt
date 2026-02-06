@@ -72,6 +72,8 @@
 - TypeSelector (components/transactions/type-selector.tsx) uses layoutId="active-transaction-type" for animated tab indicator
 - react-hook-form + zod installed; shadcn/ui form.tsx component available in components/ui/form.tsx
 - z.coerce.number() with useForm requires casting resolver: `zodResolver(schema) as unknown as Resolver<FormValues>`
+- Zod v4 API difference: use `{ error: "..." }` for custom error messages on z.coerce.number(), not `{ required_error, invalid_type_error }` (Zod v3 API)
+- Zod v4 superRefine: use `code: "custom"` string literal instead of `z.ZodIssueCode.custom` enum
 - For numeric inputs with z.coerce: pass `field.value ?? ""` to prevent "undefined" showing
 - TransactionSummary cards use stagger animation with motion.div and variants pattern
 - Transaction table uses monthly grouping with sticky headers (sticky top-0 z-20 bg-background)
@@ -248,5 +250,17 @@ Started: 2026-02-06
   - Cast `formRef` to `React.RefObject<HTMLDivElement | null>` when attaching to a `<div>` wrapper (not a `<form>`) since useFormShake ref type is `HTMLDivElement | HTMLFormElement`
   - For wizard-style dialogs, useFormShake ref attaches to the step container (not the entire dialog) — this ensures shake only affects the step with validation errors
   - The check-in modal's dynamic field array pattern (useFieldArray + replace) is better suited to manual Input components than FormField wrappers — FormField requires a single field name and doesn't handle array indices cleanly
+---
+
+## 2026-02-06 - US-010
+- What was implemented: Refactored EditSnapshotModal to use AnimatedDialog, react-hook-form with FormProvider, zod validation schema, FormField/FormTextareaField components, useFormShake hook, and toast helpers
+- Files changed: components/snapshots/edit-snapshot-modal.tsx
+- **Learnings for future iterations:**
+  - Zod v4 uses `{ error: "..." }` for custom error messages on `z.coerce.number()` — not `{ required_error, invalid_type_error }` (those are Zod v3 API)
+  - Zod v4 `superRefine` uses `code: "custom"` string literal instead of `z.ZodIssueCode.custom` enum
+  - Edit modals with async data (contributions query): use `useEffect` watching query data to `form.setValue()` for specific fields, separate from the main `form.reset()` on dialog open
+  - `showContributions` toggle stays as React `useState` (not in form schema) since it's UI-only state controlling visibility, not form data
+  - FormField with `label="Balance (A$)"` pattern works well — shows currency in label instead of separate prefix span
+  - Balance field: `z.coerce.number()` handles string-to-number conversion automatically, eliminating manual `parseFloat` calls
 ---
 

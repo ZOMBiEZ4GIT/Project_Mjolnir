@@ -183,8 +183,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced Dialog with AnimatedDialog, manual useState form state with useForm+FormProvider, manual validation with zod schema using superRefine for conditional balance validation (debt allows negative). Uses FormField and FormTextareaField components, useFormShake for error shake on invalid submit. Contributions section preserved with collapsible toggle — contribution data pre-populated via useEffect on query data. Toast helpers (showSuccess/showError) replace direct toast calls. Zod v4 uses { error: '...' } instead of { required_error, invalid_type_error }."
     },
     {
       "id": "US-011",
