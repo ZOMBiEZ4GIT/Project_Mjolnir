@@ -201,3 +201,15 @@ Started: 2026-02-07
   - Full backup card distinguished with border-accent/30 and text-accent icon
 ---
 
+## 2026-02-07 - US-005
+- Added per-button download state tracking with success/error animations to export page
+- Files changed: app/(dashboard)/export/page.tsx
+- **Learnings for future iterations:**
+  - Map<ExportKey, ButtonState> tracks per-button states (idle/downloading/success/error)
+  - TypeScript narrowing gotcha: `state === "downloading" || ... state !== "downloading"` fails type check
+    because after first false comparison, TS narrows type to exclude "downloading" — restructure as separate boolean
+  - Success state auto-resets after 1.5s, error after 2s via setTimeout
+  - Scale pulse: `animate={{ scale: [1, 1.05, 1] }}` with duration 0.3 for subtle bounce
+  - `cn()` for conditional className merging: `state === "success" && "text-positive border-positive/30"`
+---
+
