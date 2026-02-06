@@ -46,6 +46,8 @@
 - Focus ring pattern: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring` matches shadcn/ui conventions
 - HoldingsTable hybrid grouping: `typeFilter="all"` shows collapsible grouped sections, specific type shows flat list via `HoldingsFlatSection`
 - Shared table rendering: `HoldingsTableContent` component handles row rendering for both grouped and flat views
+- GroupHeader (components/holdings/group-header.tsx) shows label, count, total value, portfolio % badge — receives calculated values as props
+- `calculateGroupTotal()` in holdings-table.tsx converts holdings to display currency — use for any group-level value aggregation
 
 ---
 
@@ -86,5 +88,22 @@ Started: 2026-02-06
   - Use `style={{ overflow: "hidden" }}` on motion container to prevent content from showing during height animation
   - Extracting shared table content into a sub-component keeps grouped vs flat views DRY
   - The `collapsible` prop pattern allows reuse of existing section components with optional collapse behavior
+---
+
+## 2026-02-06 - US-003: Add group summary stats
+- Created `components/holdings/group-header.tsx` with group name, count, total value (in display currency), and portfolio percentage badge
+- Added `calculateGroupTotal()` helper to `holdings-table.tsx` — converts each holding's value from native currency to display currency
+- `HoldingsTable` now computes `portfolioTotal` via `useMemo` across all type groups (absolute sum for percentage denominator)
+- Each `HoldingsTypeSection` computes its group total and derives `portfolioPercent` from the portfolio total
+- Debt groups show total with `text-destructive` colour via `isDebt` prop
+- Stats are right-aligned in the group header button via `justify-between`
+- Uses design tokens throughout: `text-muted-foreground`, `bg-muted`, `text-destructive`, `text-foreground`
+- `CurrencyDisplay` component handles loading states and currency formatting
+- Files changed: `components/holdings/group-header.tsx` (new), `components/holdings/holdings-table.tsx`
+- **Learnings for future iterations:**
+  - Portfolio percentage uses absolute values for both numerator and denominator to handle debt groups correctly
+  - The `calculateGroupTotal` function converts each holding individually to display currency before summing (handles mixed-currency groups)
+  - `useMemo` with `convert` in dependency array recalculates when display currency changes
+  - `GroupHeader` is a separate component to keep `HoldingsTypeSection` focused on table rendering
 ---
 
