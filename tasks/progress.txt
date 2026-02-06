@@ -48,6 +48,11 @@
 - Shared table rendering: `HoldingsTableContent` component handles row rendering for both grouped and flat views
 - GroupHeader (components/holdings/group-header.tsx) shows label, count, total value, portfolio % badge — receives calculated values as props
 - `calculateGroupTotal()` in holdings-table.tsx converts holdings to display currency — use for any group-level value aggregation
+- `motion.create(TableRow)` creates a motion-enhanced `MotionTableRow` for stagger animations on table rows
+- Stagger rows use `motion.tbody` as container with `variants` + `initial="hidden" animate="visible"` pattern
+- Capped stagger: `Math.min(0.05, 0.5 / count)` ensures total stagger completes within 500ms regardless of row count
+- `useReducedMotion()` from framer-motion checks OS prefers-reduced-motion — skip animations entirely when true
+- `AnimatePresence mode="popLayout"` on HoldingsTable wraps content keyed by typeFilter — handles enter/exit on tab change
 
 ---
 
@@ -105,5 +110,21 @@ Started: 2026-02-06
   - The `calculateGroupTotal` function converts each holding individually to display currency before summing (handles mixed-currency groups)
   - `useMemo` with `convert` in dependency array recalculates when display currency changes
   - `GroupHeader` is a separate component to keep `HoldingsTypeSection` focused on table rendering
+---
+
+## 2026-02-06 - US-004: Add stagger animation on holdings list
+- Added stagger animation to `HoldingsTableContent` rows using Framer Motion variants
+- Created `MotionTableRow` via `motion.create(TableRow)` for motion-enhanced table rows
+- Replaced `TableBody` with `motion.tbody` as stagger container using `variants` prop with `initial="hidden" animate="visible"`
+- Each row uses `rowVariants` with fade-in + slide-up (opacity 0→1, y 10→0) over 200ms ease-out
+- Wrapped `HoldingsTable` content in `AnimatePresence mode="popLayout"` keyed by `typeFilter` — handles filter tab changes with 100ms fade out/in
+- Implemented capped stagger delay: `Math.min(0.05, 0.5 / count)` ensures total stagger completes within 500ms
+- Added `useReducedMotion()` — when OS prefers-reduced-motion is on, all animations are disabled (duration: 0, no transforms)
+- Files changed: `components/holdings/holdings-table.tsx`
+- **Learnings for future iterations:**
+  - `motion.create(ComponentName)` is the v12 API for creating motion-enhanced custom components (replaces deprecated `motion(Component)`)
+  - TypeScript narrows ternary types too broadly for Variants — use explicit `Variants` type annotation with `as const` on ease strings to avoid type errors
+  - `motion.tbody` can be used directly as a stagger container for table row animations (avoids wrapping divs that break table semantics)
+  - `AnimatePresence mode="popLayout"` handles mount/unmount transitions cleanly when keyed by filter state
 ---
 
