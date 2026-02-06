@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion, type Variants } from "framer-motion";
 import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown, RotateCw } from "lucide-react";
 import type { Holding } from "@/lib/db/schema";
@@ -522,7 +523,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
         {showRetry && !isRetrying && (
           <button
             type="button"
-            onClick={onRetry}
+            onClick={(e) => { e.stopPropagation(); onRetry?.(); }}
             className="ml-1.5 p-0.5 rounded hover:bg-muted transition-colors"
             title="Retry price fetch"
           >
@@ -954,6 +955,7 @@ function HoldingsTableContent({
   currencyLoading,
   showNativeCurrency,
 }: HoldingsTableContentProps) {
+  const router = useRouter();
   const shouldReduceMotion = useReducedMotion();
   const staggerDelay = getCappedStaggerDelay(holdings.length);
 
@@ -1016,7 +1018,9 @@ function HoldingsTableContent({
             <MotionTableRow
               key={holding.id}
               variants={rowVariants}
-              className={`border-border ${holding.isDormant ? "opacity-60" : ""}`}
+              className={`border-border cursor-pointer transition-[background-color,transform] duration-150 hover:bg-accent/5 hover:scale-[1.005] active:bg-accent/10 ${holding.isDormant ? "opacity-60" : ""}`}
+              onClick={() => router.push(`/holdings/${holding.id}`)}
+              style={{ transformOrigin: "center" }}
             >
               <TableCell className="text-foreground font-medium sticky left-0 bg-background z-10">
                 {holding.name}
@@ -1133,7 +1137,7 @@ function HoldingsTableContent({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
-                    onClick={() => onEdit(holding)}
+                    onClick={(e) => { e.stopPropagation(); onEdit(holding); }}
                   >
                     <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     <span className="sr-only">Edit {holding.name}</span>
@@ -1142,7 +1146,7 @@ function HoldingsTableContent({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => onDelete(holding)}
+                    onClick={(e) => { e.stopPropagation(); onDelete(holding); }}
                   >
                     <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     <span className="sr-only">Delete {holding.name}</span>
