@@ -1,5 +1,7 @@
 ## Codebase Patterns
 - Radix UI primitives (Dialog, AlertDialog, Select, Switch, Accordion) handle ARIA automatically — no manual attributes needed
+- Touch targets: use `min-h-[44px] sm:min-h-0` pattern for mobile-only 44px touch targets; for table action buttons use `h-[44px] w-[44px] sm:h-8 sm:w-8`
+- Switch touch targets: use `before:` pseudo-element (`before:absolute before:-inset-3 before:content-[''] sm:before:hidden`) to expand tap area without changing visual size
 - Buttons with hidden text (`hidden sm:inline`) need `aria-label` for accessibility on mobile
 - Chart containers use `role="img" aria-label="..."` for screen reader accessibility
 - Exclusive-choice button groups use `role="radiogroup"` + `role="radio"` + `aria-checked` (not tablist)
@@ -288,5 +290,25 @@ Started: 2026-02-07
   - `role="radiogroup"` + `role="radio"` + `aria-checked` for exclusive-choice button groups (not tab-like)
   - `aria-current="step"` is the correct attribute for step indicators (not aria-selected)
   - GroupHeader's new optional `contentId` prop is backwards-compatible — callers that don't pass it get no `aria-controls`
+---
+
+## 2026-02-07 - US-008
+- Audited and fixed touch targets across 17 files for minimum 44×44px on mobile
+- **Base shadcn/ui components**: Added `min-h-[44px] sm:min-h-0` to Button (all 4 size variants), Input, SelectTrigger, SelectItem
+- **Switch**: Added invisible touch padding via `before:absolute before:-inset-3 before:content-[''] sm:before:hidden` — keeps visual size intact
+- **Dialog close buttons**: Added `flex h-6 w-6 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 items-center justify-center` to both Dialog and AnimatedDialog close buttons
+- **Tab-like selectors**: FilterTabs, TypeSelector, TimeRangeSelector, CurrencyToggle — all buttons now have `min-h-[44px] sm:min-h-0`
+- **Chart controls**: ChartViewToggle buttons and ChartExportButton — added `min-h-[44px] sm:min-h-0`
+- **SpeedDial action buttons**: Added `min-h-[44px]` (desktop-only component but ensures consistency)
+- **Mobile nav links**: Added `min-h-[44px]` (always mobile, no sm:min-h-0 needed)
+- **Table action buttons**: Holdings table `h-[44px] w-[44px] sm:h-8 sm:w-8`, Transactions `h-[44px] w-[44px] sm:h-8 sm:w-8`, Snapshots `min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0`
+- **Price retry button**: Added `min-h-[44px] sm:min-h-0`
+- Files changed: 17 files (button, input, select, switch, dialog, animated-dialog, filter-tabs, type-selector, time-range-selector, currency-toggle, net-worth-chart, chart-export-button, speed-dial, mobile-nav, holdings-table, transactions page, snapshots page)
+- **Learnings for future iterations:**
+  - `min-h-[44px] sm:min-h-0` is the standard responsive touch-target pattern — mobile gets 44px, desktop reverts to natural height
+  - For icon-only buttons with explicit `h-7 w-7`, use `h-[44px] w-[44px] sm:h-8 sm:w-8` since min-h gets overridden by explicit h-*
+  - Switch components can't just increase height (would look wrong) — use `before:` pseudo-element padding trick instead
+  - Mobile nav links in a Sheet drawer should always be 44px (no sm: breakpoint needed, they're always mobile)
+  - SpeedDial is `hidden sm:block` so desktop-only, but still benefits from consistent touch targets
 ---
 
