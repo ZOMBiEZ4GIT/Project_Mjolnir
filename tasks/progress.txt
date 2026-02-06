@@ -225,3 +225,17 @@ Started: 2026-02-07
   - scaleIn variant (0.8→1.0) is a nice entrance for large decorative text — distinct from fadeIn+slideUp
 ---
 
+## 2026-02-07 - US-005
+- Created `components/shared/skip-link.tsx` — visually hidden skip link that appears on focus
+- Added `id="main-content"` to `<main>` element in `components/layout/app-shell.tsx`
+- Added `<SkipLink />` to `app/layout.tsx` — renders before all other content in `<body>`
+- Skip link uses `-translate-y-full opacity-0` by default, `focus:translate-y-0 focus:opacity-100` when focused
+- Fixed position `top-4 left-4 z-[100]` ensures it appears above all content including sidebar
+- Uses `bg-accent text-accent-foreground` styling consistent with design tokens
+- Files changed: components/shared/skip-link.tsx (new), components/layout/app-shell.tsx, app/layout.tsx
+- **Learnings for future iterations:**
+  - `id="main-content"` is on the `<main>` element in AppShell, not the dashboard layout — skip link targets the actual content container
+  - SkipLink is in root layout (app/layout.tsx), so it works across both auth and dashboard pages
+  - CSS translate + opacity transition (not JS) for skip link visibility — simplest approach, no "use client" needed beyond the component itself
+---
+

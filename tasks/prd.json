@@ -101,7 +101,7 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
