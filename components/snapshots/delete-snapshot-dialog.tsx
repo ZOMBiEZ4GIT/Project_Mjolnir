@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { showSuccess, showError } from "@/lib/toast-helpers";
 import { Loader2 } from "lucide-react";
 import {
   AlertDialog,
@@ -76,11 +76,11 @@ export function DeleteSnapshotDialog({
       queryClient.invalidateQueries({ queryKey: ["check-in-holdings"] });
       queryClient.invalidateQueries({ queryKey: ["holdings"] });
 
-      toast.success("Snapshot deleted successfully");
+      showSuccess("Snapshot deleted successfully");
       onOpenChange(false);
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete snapshot");
+      showError(error.message || "Failed to delete snapshot");
     },
   });
 

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { showSuccess, showError } from "@/lib/toast-helpers";
 import {
   Dialog,
   DialogContent,
@@ -122,14 +122,14 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
     mutationFn: createHolding,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["holdings"] });
-      toast.success("Holding created successfully");
+      showSuccess("Holding created successfully");
       handleClose();
     },
     onError: (error: { errors?: FormErrors; error?: string }) => {
       if (error.errors) {
         setErrors(error.errors);
       } else {
-        toast.error(error.error || "Failed to create holding");
+        showError(error.error || "Failed to create holding");
       }
     },
   });

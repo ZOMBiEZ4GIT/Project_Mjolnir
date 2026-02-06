@@ -7,7 +7,7 @@ import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
-import { toast } from "sonner";
+import { showSuccess as toastSuccess, showError as toastError } from "@/lib/toast-helpers";
 import {
   Dialog,
   DialogContent,
@@ -560,7 +560,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
         // Trigger shake animation
         setShakeStep2(true);
         setTimeout(() => setShakeStep2(false), 500);
-        toast.error("Please fill in all required balances");
+        toastError("Please fill in all required balances");
 
         // Focus first empty balance input
         if (step2Ref.current) {
@@ -594,7 +594,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
 
       // Show success toast
       const count = result.snapshotsCreated;
-      toast.success(
+      toastSuccess(
         `Check-in complete! ${count} snapshot${count !== 1 ? "s" : ""} saved.`
       );
 
@@ -603,7 +603,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
       setShowSuccess(true);
     },
     onError: (err: Error) => {
-      toast.error(err.message || "Failed to save check-in");
+      toastError(err.message || "Failed to save check-in");
     },
   });
 
