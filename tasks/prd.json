@@ -238,8 +238,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Reusable ConfirmDialog component wraps AnimatedAlertDialog. Props: open, onOpenChange, title, description, confirmLabel, cancelLabel, variant (default|destructive), onConfirm, loading. Destructive variant styles confirm button with bg-destructive. Loading state shows Loader2 spinner and disables both buttons. Keyboard handled natively by Radix AlertDialog (Enter confirms, Escape cancels)."
     }
   ]
 }

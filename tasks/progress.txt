@@ -143,6 +143,7 @@
 - shadcn/ui Accordion requires `accordion-down`/`accordion-up` keyframes in tailwind.config.ts — add manually after `shadcn add accordion`
 - SettingsSection (components/settings/settings-section.tsx) wraps AccordionItem with icon+title+description trigger — use for settings-style pages
 - Global `prefers-reduced-motion: reduce` in globals.css disables all CSS animations/transitions (0.01ms duration)
+- ConfirmDialog (components/ui/confirm-dialog.tsx) is a ready-to-use confirmation dialog — wraps AnimatedAlertDialog with simple props API (title, description, variant, onConfirm, loading)
 
 ---
 
@@ -288,5 +289,15 @@ Started: 2026-02-06
   - Default shadcn AccordionItem has `border-b` and AccordionTrigger has `hover:underline` — override with `className` on SettingsSection
   - Global `prefers-reduced-motion: reduce` rule in globals.css sets all animation/transition durations to 0.01ms — covers accordion, shake, and all CSS animations
   - `data-[state=open]:shadow-card` on AccordionItem gives subtle elevation to expanded sections
+---
+
+## 2026-02-06 - US-013
+- What was implemented: Created components/ui/confirm-dialog.tsx — a reusable, ready-to-use confirmation dialog component wrapping AnimatedAlertDialog with a simple props API
+- Files changed: components/ui/confirm-dialog.tsx (new)
+- **Learnings for future iterations:**
+  - ConfirmDialog is a higher-level component than AnimatedAlertDialog — use it for simple confirm/cancel flows, use AnimatedAlertDialog directly for dialogs needing custom content (detail tables, warnings, etc.)
+  - Radix AlertDialog handles Enter-to-confirm and Escape-to-cancel natively — no custom keyboard handling needed
+  - `variant="destructive"` sets confirm button to `bg-destructive hover:bg-destructive/90 text-foreground` — matches existing delete dialog patterns
+  - Loading state shows Loader2 spinner inline with confirm label and disables both buttons — consistent with delete-snapshot-dialog pattern
 ---
 
