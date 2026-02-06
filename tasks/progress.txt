@@ -309,5 +309,31 @@ Started: 2026-02-06
   - TradingView hex constants remain in `tv-chart-wrapper.tsx` since they're specific to the Lightweight Charts API
   - `bg-gray-500` fallback in category indicator functions (asset-allocation.tsx, currency-exposure.tsx) is intentional — do not migrate
   - html2canvas `backgroundColor` requires raw hex (#18181b) — do not convert to palette constant
+  - Chart fadeIn pattern: `<motion.div {...(reducedMotion ? {} : fadeIn)}>` — spread fadeIn only when reduced motion is off
+  - AnimatePresence mode="wait" for view switching: wrap content with keyed motion.div children for crossfade between views
+---
+
+## 2026-02-06 - US-011
+- Added Framer Motion fadeIn entrance animations to all chart components
+- Added AnimatePresence crossfade for view-switching charts:
+  - `net-worth-chart.tsx`: networth ↔ assets vs debt views with `AnimatePresence mode="wait"` and keyed motion.div children
+  - `asset-allocation.tsx`: bars ↔ pie views with `AnimatePresence mode="wait"` and keyed motion.div children
+- Added fadeIn to non-switching chart components:
+  - `asset-allocation-pie-chart.tsx`: motion.div wrapper with fadeIn
+  - `currency-exposure.tsx`: motion.div wrapper with fadeIn
+  - `super-growth-chart.tsx`: motion.div wrapper with fadeIn
+  - `holding-price-chart.tsx`: motion.div wrapper with fadeIn
+  - `super-balance-history-chart.tsx`: motion.div wrapper with fadeIn
+- All animations respect `prefers-reduced-motion` via `useReducedMotion()` hook — animations skipped entirely when enabled
+- Fixed height containers prevent layout shift during animations:
+  - Net worth chart: `h-[264px]` on chartRef container
+  - All other charts already had `h-64` on chart content areas
+- Animation triggers only on data-loaded state — skeleton/loading states render without animation wrappers
+- Files changed: components/dashboard/net-worth-chart.tsx, components/dashboard/asset-allocation.tsx, components/dashboard/asset-allocation-pie-chart.tsx, components/dashboard/currency-exposure.tsx, components/dashboard/super-growth-chart.tsx, components/holdings/holding-price-chart.tsx, components/holdings/super-balance-history-chart.tsx
+- **Learnings for future iterations:**
+  - `AnimatePresence mode="wait"` waits for exit animation to complete before entering next child — use for view toggle transitions
+  - Key each child of AnimatePresence uniquely to trigger enter/exit — `key="networth"` vs `key="assetsvsdebt"`
+  - `{...(reducedMotion ? {} : fadeIn)}` pattern cleanly skips all animation props when reduced motion is preferred
+  - Dashboard sections already have stagger animation in `dashboard-content.tsx` — chart-level fadeIn adds a secondary layer after stagger completes
 ---
 
