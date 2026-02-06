@@ -13,6 +13,8 @@ import {
   AlertCircle,
   XCircle,
   ChevronDown,
+  Download,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -149,9 +151,41 @@ export function ImportResults({
 }: ImportResultsProps) {
   // Collapsed by default if > 5 errors, expanded if <= 5
   const [isErrorsExpanded, setIsErrorsExpanded] = React.useState(() => errors.length > 0 && errors.length <= 5);
+  const [downloadState, setDownloadState] = React.useState<"idle" | "success">("idle");
   const reducedMotion = useReducedMotion();
   const hasErrors = errors.length > 0;
   const isAllSuccess = imported > 0 && skipped === 0 && errors.length === 0;
+
+  const handleDownloadErrors = React.useCallback(() => {
+    // Build CSV content
+    const header = "row_number,error_message,suggestion,original_data";
+    const rows = errors.map((error) => {
+      const suggestion = error.suggestion ?? generateSuggestion(error.message) ?? "";
+      // Escape CSV fields
+      const escape = (val: string) => `"${val.replace(/"/g, '""')}"`;
+      return [error.row, escape(error.message), escape(suggestion), ""].join(",");
+    });
+    const csv = [header, ...rows].join("\n");
+
+    // Generate filename
+    const date = new Date().toISOString().split("T")[0];
+    const filename = `import-errors-${date}.csv`;
+
+    // Trigger download
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    // Show success state
+    setDownloadState("success");
+    setTimeout(() => setDownloadState("idle"), 1500);
+  }, [errors]);
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -281,6 +315,34 @@ export function ImportResults({
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Download Error Report button */}
+          <motion.div
+            className="mt-3"
+            animate={
+              downloadState === "success" && !reducedMotion
+                ? { scale: [1, 1.05, 1] }
+                : { scale: 1 }
+            }
+            transition={{ duration: 0.3 }}
+          >
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDownloadErrors}
+              className={cn(
+                "text-muted-foreground",
+                downloadState === "success" && "text-positive border-positive/30"
+              )}
+            >
+              {downloadState === "success" ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              {downloadState === "success" ? "Downloaded!" : "Download Error Report"}
+            </Button>
+          </motion.div>
         </div>
       )}
     </div>
