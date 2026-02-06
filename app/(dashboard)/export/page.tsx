@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { Button } from "@/components/ui/button";
-import { Download, Archive, Loader2, BarChart3, ArrowRightLeft, Camera } from "lucide-react";
+import { Download, Archive, Loader2, BarChart3, ArrowRightLeft, Camera, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { staggerItem } from "@/lib/animations";
@@ -17,28 +17,40 @@ interface ExportCounts {
   snapshots: number;
 }
 
-// Track which export is currently downloading
 type ExportKey = "holdings-csv" | "holdings-json" | "transactions-csv" | "transactions-json" | "snapshots-csv" | "snapshots-json" | "backup";
+type ButtonState = "idle" | "downloading" | "success" | "error";
 
 export default function ExportPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const [counts, setCounts] = useState<ExportCounts>({ holdings: 0, transactions: 0, snapshots: 0 });
   const [isLoadingCounts, setIsLoadingCounts] = useState(true);
-  const [downloadingKey, setDownloadingKey] = useState<ExportKey | null>(null);
+  const [buttonStates, setButtonStates] = useState<Map<ExportKey, ButtonState>>(new Map());
   const reducedMotion = useReducedMotion();
 
-  // Download file with loading state and toast notifications
-  async function handleDownload(url: string, key: ExportKey, successMessage: string) {
-    setDownloadingKey(key);
+  const getButtonState = useCallback((key: ExportKey): ButtonState => {
+    return (buttonStates.get(key) as ButtonState | undefined) ?? "idle";
+  }, [buttonStates]);
+
+  const setButtonState = useCallback((key: ExportKey, state: ButtonState) => {
+    setButtonStates(prev => {
+      const next = new Map(prev);
+      next.set(key, state);
+      return next;
+    });
+  }, []);
+
+  const isAnyDownloading = Array.from(buttonStates.values()).some(s => s === "downloading");
+
+  async function handleDownload(url: string, key: ExportKey, typeName: string, format: string) {
+    setButtonState(key, "downloading");
     try {
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error("Export failed");
       }
 
-      // Get filename from Content-Disposition header or generate default
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = "export";
+      let filename = `${typeName.toLowerCase()}-export.${format}`;
       if (contentDisposition) {
         const match = contentDisposition.match(/filename="([^"]+)"/);
         if (match) {
@@ -46,7 +58,6 @@ export default function ExportPage() {
         }
       }
 
-      // Create blob and trigger download
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -58,36 +69,34 @@ export default function ExportPage() {
       document.body.removeChild(link);
       URL.revokeObjectURL(objectUrl);
 
-      toast.success(successMessage);
+      toast.success(`Exported ${typeName} as ${format.toUpperCase()} — ${filename}`);
+      setButtonState(key, "success");
+      setTimeout(() => setButtonState(key, "idle"), 1500);
     } catch (error) {
       console.error("Export failed:", error);
-      toast.error("Export failed. Please try again.");
-    } finally {
-      setDownloadingKey(null);
+      toast.error(`Failed to export ${typeName}`);
+      setButtonState(key, "error");
+      setTimeout(() => setButtonState(key, "idle"), 2000);
     }
   }
 
-  // Fetch counts when user is signed in
   useEffect(() => {
     async function fetchCounts() {
       if (!isSignedIn) return;
 
       try {
-        // Fetch holdings count (include dormant for export)
         const holdingsRes = await fetch("/api/holdings?include_dormant=true");
         if (holdingsRes.ok) {
           const holdingsData = await holdingsRes.json();
           setCounts(prev => ({ ...prev, holdings: holdingsData.length }));
         }
 
-        // Fetch transactions count
         const transactionsRes = await fetch("/api/transactions");
         if (transactionsRes.ok) {
           const transactionsData = await transactionsRes.json();
           setCounts(prev => ({ ...prev, transactions: transactionsData.length }));
         }
 
-        // Fetch snapshots count
         const snapshotsRes = await fetch("/api/snapshots");
         if (snapshotsRes.ok) {
           const snapshotsData = await snapshotsRes.json();
@@ -105,7 +114,6 @@ export default function ExportPage() {
     }
   }, [isLoaded, isSignedIn]);
 
-  // Show loading while Clerk auth is loading
   if (!isLoaded) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -116,7 +124,6 @@ export default function ExportPage() {
     );
   }
 
-  // Show sign-in prompt if not authenticated
   if (!isSignedIn) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -147,9 +154,6 @@ export default function ExportPage() {
       jsonKey: "holdings-json" as ExportKey,
       csvUrl: "/api/export/holdings?format=csv",
       jsonUrl: "/api/export/holdings?format=json",
-      csvMessage: "Holdings exported as CSV",
-      jsonMessage: "Holdings exported as JSON",
-      isAccent: false,
     },
     {
       key: "transactions",
@@ -162,9 +166,6 @@ export default function ExportPage() {
       jsonKey: "transactions-json" as ExportKey,
       csvUrl: "/api/export/transactions?format=csv",
       jsonUrl: "/api/export/transactions?format=json",
-      csvMessage: "Transactions exported as CSV",
-      jsonMessage: "Transactions exported as JSON",
-      isAccent: false,
     },
     {
       key: "snapshots",
@@ -177,11 +178,51 @@ export default function ExportPage() {
       jsonKey: "snapshots-json" as ExportKey,
       csvUrl: "/api/export/snapshots?format=csv",
       jsonUrl: "/api/export/snapshots?format=json",
-      csvMessage: "Snapshots exported as CSV",
-      jsonMessage: "Snapshots exported as JSON",
-      isAccent: false,
     },
   ];
+
+  function renderExportButton(
+    key: ExportKey,
+    url: string,
+    typeName: string,
+    format: string,
+    disabled: boolean
+  ) {
+    const state = getButtonState(key);
+    const isDownloading = state === "downloading";
+    const isDisabled = disabled || isDownloading || isAnyDownloading;
+
+    return (
+      <motion.div
+        animate={
+          state === "success" && !reducedMotion
+            ? { scale: [1, 1.05, 1] }
+            : { scale: 1 }
+        }
+        transition={{ duration: 0.3 }}
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handleDownload(url, key, typeName, format)}
+          disabled={isDisabled}
+          className={cn(
+            state === "success" && "text-positive border-positive/30",
+            state === "error" && "text-destructive border-destructive/30"
+          )}
+        >
+          {state === "downloading" && <Loader2 className="h-4 w-4 animate-spin" />}
+          {state === "success" && <Check className="h-4 w-4" />}
+          {state === "error" && <X className="h-4 w-4" />}
+          {state === "idle" && <Download className="h-4 w-4" />}
+          {state === "downloading" && "Downloading..."}
+          {state === "success" && "Downloaded!"}
+          {state === "error" && "Failed"}
+          {state === "idle" && format.toUpperCase()}
+        </Button>
+      </motion.div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -198,15 +239,12 @@ export default function ExportPage() {
       >
         {exportCards.map((card) => {
           const Icon = card.icon;
+          const isCardDisabled = isLoadingCounts || card.count === 0;
           return (
             <motion.div
               key={card.key}
               variants={reducedMotion ? undefined : staggerItem}
-              className={cn(
-                "rounded-2xl border bg-card p-4 sm:p-6 transition-shadow duration-150",
-                "hover:shadow-card-hover",
-                card.isAccent ? "border-accent/30" : "border-border"
-              )}
+              className="rounded-2xl border border-border bg-card p-4 sm:p-6 transition-shadow duration-150 hover:shadow-card-hover"
             >
               <div className="flex items-start gap-3 mb-3">
                 <Icon className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
@@ -221,38 +259,14 @@ export default function ExportPage() {
                 )}
               </div>
               <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDownload(card.csvUrl, card.csvKey, card.csvMessage)}
-                  disabled={isLoadingCounts || card.count === 0 || downloadingKey !== null}
-                >
-                  {downloadingKey === card.csvKey ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                  {downloadingKey === card.csvKey ? "Exporting..." : "CSV"}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDownload(card.jsonUrl, card.jsonKey, card.jsonMessage)}
-                  disabled={isLoadingCounts || card.count === 0 || downloadingKey !== null}
-                >
-                  {downloadingKey === card.jsonKey ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                  {downloadingKey === card.jsonKey ? "Exporting..." : "JSON"}
-                </Button>
+                {renderExportButton(card.csvKey, card.csvUrl, card.title, "csv", isCardDisabled)}
+                {renderExportButton(card.jsonKey, card.jsonUrl, card.title, "json", isCardDisabled)}
               </div>
             </motion.div>
           );
         })}
 
-        {/* Full Backup Card — accent border */}
+        {/* Full Backup Card */}
         <motion.div
           variants={reducedMotion ? undefined : staggerItem}
           className="rounded-2xl border border-accent/30 bg-card p-4 sm:p-6 transition-shadow duration-150 hover:shadow-card-hover"
@@ -279,19 +293,13 @@ export default function ExportPage() {
               </span>
             </div>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleDownload("/api/export/backup", "backup", "Full backup downloaded successfully")}
-            disabled={isLoadingCounts || (counts.holdings === 0 && counts.transactions === 0 && counts.snapshots === 0) || downloadingKey !== null}
-          >
-            {downloadingKey === "backup" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Archive className="h-4 w-4" />
-            )}
-            {downloadingKey === "backup" ? "Exporting..." : "Download Backup"}
-          </Button>
+          {renderExportButton(
+            "backup",
+            "/api/export/backup",
+            "Full Backup",
+            "json",
+            isLoadingCounts || (counts.holdings === 0 && counts.transactions === 0 && counts.snapshots === 0)
+          )}
         </motion.div>
       </motion.div>
     </div>
