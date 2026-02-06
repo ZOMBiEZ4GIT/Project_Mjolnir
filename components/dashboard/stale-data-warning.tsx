@@ -202,10 +202,10 @@ export function StaleDataWarning() {
                     {getStaleReasonIcon(holding.reason)}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-200">
+                    <p className="text-sm font-medium text-foreground/80">
                       {holding.name}
                     </p>
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="capitalize">{holding.type}</span>
                       <span>•</span>
                       <span>{getStaleReasonText(holding.reason)}</span>
@@ -229,7 +229,7 @@ export function StaleDataWarning() {
                   )}
                   <Link
                     href={`/holdings/${holding.holdingId}`}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-gray-700/50 text-gray-300 hover:bg-gray-700 transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-muted/50 text-muted-foreground hover:bg-muted transition-colors"
                   >
                     <ExternalLink className="h-3 w-3" />
                     View

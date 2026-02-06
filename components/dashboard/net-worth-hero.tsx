@@ -88,7 +88,8 @@ function Sparkline({ data }: SparklineProps) {
   const firstValue = data[0].netWorth;
   const lastValue = data[data.length - 1].netWorth;
   const isPositive = lastValue >= firstValue;
-  const strokeColor = isPositive ? "#10B981" : "#EF4444"; // green-500 / red-500
+  // Hex values required for Recharts SVG rendering (CSS variables not supported)
+  const strokeColor = isPositive ? "#22C55E" : "#EF4444"; // positive / destructive
 
   return (
     <div className="h-10 w-24">
@@ -143,12 +144,12 @@ function formatTimeAgo(date: Date): string {
  */
 function HeroSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gradient-to-br from-gray-800 to-gray-900 p-8">
+    <div className="rounded-lg border border-border bg-gradient-to-br from-card to-background p-8">
       <div className="animate-pulse">
-        <div className="h-4 w-20 bg-gray-700 rounded mb-4" />
-        <div className="h-12 w-64 bg-gray-700 rounded mb-4" />
-        <div className="h-5 w-40 bg-gray-700 rounded mb-2" />
-        <div className="h-3 w-24 bg-gray-700 rounded" />
+        <div className="h-4 w-20 bg-muted rounded mb-4" />
+        <div className="h-12 w-64 bg-muted rounded mb-4" />
+        <div className="h-5 w-40 bg-muted rounded mb-2" />
+        <div className="h-3 w-24 bg-muted rounded" />
       </div>
     </div>
   );
@@ -194,8 +195,8 @@ export function NetWorthHero() {
   // Show error state
   if (netWorthError) {
     return (
-      <div className="rounded-lg border border-red-700 bg-red-900/20 p-8">
-        <p className="text-red-400">Failed to load net worth data</p>
+      <div className="rounded-lg border border-destructive bg-destructive/10 p-8">
+        <p className="text-destructive">Failed to load net worth data</p>
       </div>
     );
   }
@@ -235,10 +236,10 @@ export function NetWorthHero() {
     })) ?? [];
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gradient-to-br from-gray-800 to-gray-900 p-6 sm:p-8">
+    <div className="rounded-lg border border-border bg-gradient-to-br from-card to-background p-6 sm:p-8">
       {/* Header with stale data warning */}
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+        <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           Net Worth
         </span>
         {netWorthData.hasStaleData && (
@@ -251,7 +252,7 @@ export function NetWorthHero() {
 
       {/* Net Worth Value with Sparkline */}
       <div className="flex items-center gap-4 mb-4">
-        <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">
+        <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground">
           {formatCurrency(netWorthData.netWorth, displayCurrency)}
         </div>
         {!isLoadingHistory && (
@@ -265,24 +266,24 @@ export function NetWorthHero() {
       {hasHistoricalData && (
         <div className="flex flex-wrap items-center gap-2 mb-2">
           {isPositiveChange ? (
-            <TrendingUp className="h-5 w-5 text-green-500 shrink-0" />
+            <TrendingUp className="h-5 w-5 text-positive shrink-0" />
           ) : (
-            <TrendingDown className="h-5 w-5 text-red-500 shrink-0" />
+            <TrendingDown className="h-5 w-5 text-destructive shrink-0" />
           )}
           <span
             className={`text-base sm:text-lg font-semibold ${
-              isPositiveChange ? "text-green-500" : "text-red-500"
+              isPositiveChange ? "text-positive" : "text-destructive"
             }`}
           >
             {isPositiveChange ? "+" : ""}
             {formatCurrency(changeAmount, displayCurrency)} ({formatPercentage(changePercent)})
           </span>
-          <span className="text-sm text-gray-500">from last month</span>
+          <span className="text-sm text-muted-foreground">from last month</span>
         </div>
       )}
 
       {/* Timestamp */}
-      <div className="text-xs text-gray-500">
+      <div className="text-xs text-muted-foreground">
         as of {formatTimeAgo(calculatedAt)}
       </div>
     </div>

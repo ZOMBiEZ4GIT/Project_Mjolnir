@@ -74,11 +74,11 @@ function formatPercentage(value: number): string {
  */
 function CardSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
       <div className="animate-pulse">
-        <div className="h-4 w-20 bg-gray-700 rounded mb-3" />
-        <div className="h-8 w-40 bg-gray-700 rounded mb-3" />
-        <div className="h-4 w-32 bg-gray-700 rounded" />
+        <div className="h-4 w-20 bg-muted rounded mb-3" />
+        <div className="h-8 w-40 bg-muted rounded mb-3" />
+        <div className="h-4 w-32 bg-muted rounded" />
       </div>
     </div>
   );
@@ -116,17 +116,17 @@ function SummaryCard({
     accentColor === "green" ? isPositiveChange : !isPositiveChange;
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+        <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           {title}
         </span>
-        <div className={`text-${accentColor}-500`}>{icon}</div>
+        <div className={accentColor === "green" ? "text-positive" : "text-destructive"}>{icon}</div>
       </div>
 
       {/* Value */}
-      <div className="text-xl sm:text-2xl md:text-3xl font-bold text-white mb-2">
+      <div className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2">
         {formatCurrency(value, currency)}
       </div>
 
@@ -134,19 +134,19 @@ function SummaryCard({
       {hasChange && (
         <div className="flex flex-wrap items-center gap-1 sm:gap-2">
           {showPositiveIndicator ? (
-            <TrendingUp className="h-4 w-4 text-green-500 shrink-0" />
+            <TrendingUp className="h-4 w-4 text-positive shrink-0" />
           ) : (
-            <TrendingDown className="h-4 w-4 text-red-500 shrink-0" />
+            <TrendingDown className="h-4 w-4 text-destructive shrink-0" />
           )}
           <span
             className={`text-xs sm:text-sm font-medium ${
-              showPositiveIndicator ? "text-green-500" : "text-red-500"
+              showPositiveIndicator ? "text-positive" : "text-destructive"
             }`}
           >
             {changeAmount >= 0 ? "+" : ""}
             {formatCurrency(changeAmount, currency)} ({formatPercentage(changePercent)})
           </span>
-          <span className="text-xs text-gray-500">from last month</span>
+          <span className="text-xs text-muted-foreground">from last month</span>
         </div>
       )}
     </div>
@@ -197,8 +197,8 @@ export function SummaryCards() {
   // Show error state
   if (netWorthError) {
     return (
-      <div className="rounded-lg border border-red-700 bg-red-900/20 p-6">
-        <p className="text-red-400">Failed to load summary data</p>
+      <div className="rounded-lg border border-destructive bg-destructive/10 p-6">
+        <p className="text-destructive">Failed to load summary data</p>
       </div>
     );
   }

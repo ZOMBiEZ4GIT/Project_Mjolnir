@@ -449,10 +449,10 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
                     setFormData({ ...formData, date: e.target.value });
                     if (errors.date) setErrors({ ...errors, date: undefined });
                   }}
-                  className={errors.date ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  className={errors.date ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
                 {errors.date && (
-                  <p className="text-sm text-red-500">{errors.date}</p>
+                  <p className="text-sm text-destructive">{errors.date}</p>
                 )}
               </div>
 
@@ -470,10 +470,10 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
                     setFormData({ ...formData, quantity: e.target.value });
                     if (errors.quantity) setErrors({ ...errors, quantity: undefined });
                   }}
-                  className={errors.quantity ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  className={errors.quantity ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
                 {errors.quantity && (
-                  <p className="text-sm text-red-500">{errors.quantity}</p>
+                  <p className="text-sm text-destructive">{errors.quantity}</p>
                 )}
                 {/* Warning when selling all shares */}
                 {isSellingAll && !errors.quantity && (
@@ -483,7 +483,7 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
                 )}
                 {/* Warning when exceeding holdings - not an error yet */}
                 {exceedsHoldings && !errors.quantity && currentQuantity !== undefined && (
-                  <p className="text-sm text-red-500">
+                  <p className="text-sm text-destructive">
                     Exceeds current holdings ({currentQuantity.toLocaleString(undefined, { maximumFractionDigits: 8 })})
                   </p>
                 )}
@@ -503,10 +503,10 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
                     setFormData({ ...formData, unitPrice: e.target.value });
                     if (errors.unit_price) setErrors({ ...errors, unit_price: undefined });
                   }}
-                  className={errors.unit_price ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  className={errors.unit_price ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
                 {errors.unit_price && (
-                  <p className="text-sm text-red-500">{errors.unit_price}</p>
+                  <p className="text-sm text-destructive">{errors.unit_price}</p>
                 )}
               </div>
 
@@ -524,10 +524,10 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
                     setFormData({ ...formData, fees: e.target.value });
                     if (errors.fees) setErrors({ ...errors, fees: undefined });
                   }}
-                  className={errors.fees ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  className={errors.fees ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
                 {errors.fees && (
-                  <p className="text-sm text-red-500">{errors.fees}</p>
+                  <p className="text-sm text-destructive">{errors.fees}</p>
                 )}
               </div>
 
@@ -605,10 +605,10 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
                     setFormData({ ...formData, date: e.target.value });
                     if (errors.date) setErrors({ ...errors, date: undefined });
                   }}
-                  className={errors.date ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  className={errors.date ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
                 {errors.date && (
-                  <p className="text-sm text-red-500">{errors.date}</p>
+                  <p className="text-sm text-destructive">{errors.date}</p>
                 )}
               </div>
 
@@ -626,10 +626,10 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
                     setFormData({ ...formData, quantity: e.target.value });
                     if (errors.quantity) setErrors({ ...errors, quantity: undefined });
                   }}
-                  className={errors.quantity ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  className={errors.quantity ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
                 {errors.quantity && (
-                  <p className="text-sm text-red-500">{errors.quantity}</p>
+                  <p className="text-sm text-destructive">{errors.quantity}</p>
                 )}
                 <p className="text-xs text-muted-foreground">
                   Enter the number of shares you held when this dividend was paid
@@ -650,10 +650,10 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
                     setFormData({ ...formData, unitPrice: e.target.value });
                     if (errors.unit_price) setErrors({ ...errors, unit_price: undefined });
                   }}
-                  className={errors.unit_price ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  className={errors.unit_price ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
                 {errors.unit_price && (
-                  <p className="text-sm text-red-500">{errors.unit_price}</p>
+                  <p className="text-sm text-destructive">{errors.unit_price}</p>
                 )}
               </div>
 
@@ -675,7 +675,7 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
                     <span className="text-sm text-muted-foreground">
                       Total Dividend
                     </span>
-                    <span className="text-lg font-semibold font-mono text-green-500">
+                    <span className="text-lg font-semibold font-mono text-positive">
                       {selectedHolding?.currency} {calculatedTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -730,10 +730,10 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
                     setFormData({ ...formData, date: e.target.value });
                     if (errors.date) setErrors({ ...errors, date: undefined });
                   }}
-                  className={errors.date ? "border-red-500 focus-visible:ring-red-500" : ""}
+                  className={errors.date ? "border-destructive focus-visible:ring-destructive" : ""}
                 />
                 {errors.date && (
-                  <p className="text-sm text-red-500">{errors.date}</p>
+                  <p className="text-sm text-destructive">{errors.date}</p>
                 )}
               </div>
 
@@ -752,12 +752,12 @@ export function AddTransactionDialog({ children, defaultHoldingId }: AddTransact
                       setFormData({ ...formData, quantity: e.target.value });
                       if (errors.quantity) setErrors({ ...errors, quantity: undefined });
                     }}
-                    className={`w-24 ${errors.quantity ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                    className={`w-24 ${errors.quantity ? "border-destructive focus-visible:ring-destructive" : ""}`}
                   />
                   <span className="text-muted-foreground">: 1</span>
                 </div>
                 {errors.quantity && (
-                  <p className="text-sm text-red-500">{errors.quantity}</p>
+                  <p className="text-sm text-destructive">{errors.quantity}</p>
                 )}
                 <p className="text-xs text-muted-foreground">
                   {formData.quantity && parseFloat(formData.quantity) > 0 ? (

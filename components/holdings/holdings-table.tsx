@@ -392,13 +392,13 @@ interface PriceCellProps {
 function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry, isRetrying }: PriceCellProps) {
   // Loading state for initial price fetch
   if (pricesLoading) {
-    return <span className="text-gray-500 text-sm">Loading...</span>;
+    return <span className="text-muted-foreground text-sm">Loading...</span>;
   }
 
   // No price data available
   const priceData = prices?.get(holdingId);
   if (!priceData) {
-    return <span className="text-gray-500 text-sm">—</span>;
+    return <span className="text-muted-foreground text-sm">—</span>;
   }
 
   const { price, currency, changePercent, changeAbsolute, fetchedAt, isStale, error } = priceData;
@@ -414,7 +414,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
   return (
     <div className="flex flex-col gap-0.5 items-end">
       {/* Main price */}
-      <span className="text-white font-mono">
+      <span className="text-foreground font-mono">
         {formatPrice(price, displayCurrency)}
       </span>
 
@@ -422,7 +422,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
       {hasChange && changeInfo && (
         <span
           className={`text-xs flex items-center gap-0.5 ${
-            changeInfo.isPositive ? "text-green-400" : "text-red-400"
+            changeInfo.isPositive ? "text-positive" : "text-destructive"
           }`}
         >
           {changeInfo.isPositive ? (
@@ -432,7 +432,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
           )}
           {changeInfo.text}
           {changeAbsolute !== null && (
-            <span className="text-gray-400 ml-1">
+            <span className="text-muted-foreground ml-1">
               ({formatChangeAbsolute(changeAbsolute, displayCurrency)})
             </span>
           )}
@@ -442,7 +442,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
       {/* Staleness/timestamp indicator with optional retry button */}
       <span
         className={`text-xs flex items-center gap-0.5 ${
-          isStale || error ? "text-yellow-400" : "text-gray-500"
+          isStale || error ? "text-yellow-400" : "text-muted-foreground"
         }`}
       >
         {isRetrying ? (
@@ -466,7 +466,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
           <button
             type="button"
             onClick={onRetry}
-            className="ml-1.5 p-0.5 rounded hover:bg-gray-700 transition-colors"
+            className="ml-1.5 p-0.5 rounded hover:bg-muted transition-colors"
             title="Retry price fetch"
           >
             <RotateCw className="h-3 w-3" />
@@ -512,13 +512,13 @@ function MarketValueCell({
 
   // No quantity - cannot calculate market value
   if (quantity === null || quantity === 0) {
-    return <span className="text-gray-500 text-sm">—</span>;
+    return <span className="text-muted-foreground text-sm">—</span>;
   }
 
   // No price data available
   const priceData = prices?.get(holdingId);
   if (!priceData) {
-    return <span className="text-gray-500 text-sm">—</span>;
+    return <span className="text-muted-foreground text-sm">—</span>;
   }
 
   const { price, currency } = priceData;
@@ -526,7 +526,7 @@ function MarketValueCell({
   const nativeMarketValue = calculateMarketValue(quantity, price);
 
   if (nativeMarketValue === null) {
-    return <span className="text-gray-500 text-sm">—</span>;
+    return <span className="text-muted-foreground text-sm">—</span>;
   }
 
   // When showNativeCurrency is true, display in native currency (no conversion)
@@ -535,7 +535,7 @@ function MarketValueCell({
       <CurrencyDisplay
         amount={nativeMarketValue}
         currency={nativeCurrency}
-        className="text-white font-mono"
+        className="text-foreground font-mono"
       />
     );
   }
@@ -550,7 +550,7 @@ function MarketValueCell({
       showNative
       nativeCurrency={nativeCurrency}
       nativeAmount={nativeMarketValue}
-      className="text-white font-mono"
+      className="text-foreground font-mono"
     />
   );
 }
@@ -591,18 +591,18 @@ function GainLossCell({
 
   // No quantity - cannot calculate market value
   if (quantity === null || quantity === 0) {
-    return <span className="text-gray-500 text-sm">—</span>;
+    return <span className="text-muted-foreground text-sm">—</span>;
   }
 
   // No cost basis - cannot calculate gain/loss
   if (costBasis === null || costBasis === 0) {
-    return <span className="text-gray-500 text-sm">—</span>;
+    return <span className="text-muted-foreground text-sm">—</span>;
   }
 
   // No price data available
   const priceData = prices?.get(holdingId);
   if (!priceData) {
-    return <span className="text-gray-500 text-sm">—</span>;
+    return <span className="text-muted-foreground text-sm">—</span>;
   }
 
   const { price, currency } = priceData;
@@ -611,13 +611,13 @@ function GainLossCell({
   const nativeGainLoss = calculateGainLoss(marketValue, costBasis);
 
   if (!nativeGainLoss) {
-    return <span className="text-gray-500 text-sm">—</span>;
+    return <span className="text-muted-foreground text-sm">—</span>;
   }
 
   // When showNativeCurrency is true, display in native currency (no conversion)
   if (showNativeCurrency) {
     const isPositive = nativeGainLoss.amount >= 0;
-    const colorClass = isPositive ? "text-green-400" : "text-red-400";
+    const colorClass = isPositive ? "text-positive" : "text-destructive";
 
     return (
       <div className="flex flex-col gap-0.5 items-end">
@@ -636,7 +636,7 @@ function GainLossCell({
   // Convert gain/loss to display currency
   const displayGainLoss = convert(nativeGainLoss.amount, nativeCurrency);
   const isPositive = displayGainLoss >= 0;
-  const colorClass = isPositive ? "text-green-400" : "text-red-400";
+  const colorClass = isPositive ? "text-positive" : "text-destructive";
 
   return (
     <div className="flex flex-col gap-0.5 items-end">
@@ -684,7 +684,7 @@ function CostBasisCell({
 
   // No cost basis
   if (costBasis === null || costBasis === 0) {
-    return <span className="text-gray-500 text-sm">—</span>;
+    return <span className="text-muted-foreground text-sm">—</span>;
   }
 
   // When showNativeCurrency is true, display in native currency (no conversion)
@@ -693,7 +693,7 @@ function CostBasisCell({
       <CurrencyDisplay
         amount={costBasis}
         currency={holdingCurrency}
-        className="text-gray-300 font-mono"
+        className="text-muted-foreground font-mono"
       />
     );
   }
@@ -708,7 +708,7 @@ function CostBasisCell({
       showNative
       nativeCurrency={holdingCurrency}
       nativeAmount={costBasis}
-      className="text-gray-300 font-mono"
+      className="text-muted-foreground font-mono"
     />
   );
 }
@@ -733,34 +733,34 @@ function HoldingsTypeSection({
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-white mb-3">
+      <h2 className="text-lg font-semibold text-foreground mb-3">
         {label}{" "}
-        <span className="text-gray-400 font-normal">({holdings.length})</span>
+        <span className="text-muted-foreground font-normal">({holdings.length})</span>
       </h2>
-      <div className="rounded-lg border border-gray-800 overflow-x-auto">
+      <div className="rounded-lg border border-border overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="border-gray-800 hover:bg-transparent">
-              <TableHead className="text-gray-400 sticky left-0 bg-gray-950 z-10">Name</TableHead>
+            <TableRow className="border-border hover:bg-transparent">
+              <TableHead className="text-muted-foreground sticky left-0 bg-background z-10">Name</TableHead>
               {isTradeable && (
-                <TableHead className="text-gray-400 hidden sm:table-cell">Symbol</TableHead>
+                <TableHead className="text-muted-foreground hidden sm:table-cell">Symbol</TableHead>
               )}
               {isSnapshotType && (
-                <TableHead className="text-gray-400">Balance</TableHead>
+                <TableHead className="text-muted-foreground">Balance</TableHead>
               )}
-              <TableHead className="text-gray-400 hidden lg:table-cell">Currency</TableHead>
+              <TableHead className="text-muted-foreground hidden lg:table-cell">Currency</TableHead>
               {isTradeable && (
                 <>
-                  <TableHead className="text-gray-400 text-right hidden md:table-cell">Quantity</TableHead>
-                  <TableHead className="text-gray-400 text-right hidden sm:table-cell">Price</TableHead>
-                  <TableHead className="text-gray-400 text-right">Market Value</TableHead>
-                  <TableHead className="text-gray-400 text-right hidden md:table-cell">Gain/Loss</TableHead>
-                  <TableHead className="text-gray-400 text-right hidden lg:table-cell">Cost Basis</TableHead>
-                  <TableHead className="text-gray-400 text-right hidden lg:table-cell">Avg Cost</TableHead>
+                  <TableHead className="text-muted-foreground text-right hidden md:table-cell">Quantity</TableHead>
+                  <TableHead className="text-muted-foreground text-right hidden sm:table-cell">Price</TableHead>
+                  <TableHead className="text-muted-foreground text-right">Market Value</TableHead>
+                  <TableHead className="text-muted-foreground text-right hidden md:table-cell">Gain/Loss</TableHead>
+                  <TableHead className="text-muted-foreground text-right hidden lg:table-cell">Cost Basis</TableHead>
+                  <TableHead className="text-muted-foreground text-right hidden lg:table-cell">Avg Cost</TableHead>
                 </>
               )}
-              <TableHead className="text-gray-400 hidden sm:table-cell">Status</TableHead>
-              <TableHead className="text-gray-400 w-[80px] sm:w-[100px]">Actions</TableHead>
+              <TableHead className="text-muted-foreground hidden sm:table-cell">Status</TableHead>
+              <TableHead className="text-muted-foreground w-[80px] sm:w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -771,13 +771,13 @@ function HoldingsTypeSection({
               return (
                 <TableRow
                   key={holding.id}
-                  className={`border-gray-800 ${holding.isDormant ? "opacity-60" : ""}`}
+                  className={`border-border ${holding.isDormant ? "opacity-60" : ""}`}
                 >
-                  <TableCell className="text-white font-medium sticky left-0 bg-gray-950 z-10">
+                  <TableCell className="text-foreground font-medium sticky left-0 bg-background z-10">
                     {holding.name}
                   </TableCell>
                   {isTradeable && (
-                    <TableCell className="text-gray-300 hidden sm:table-cell">
+                    <TableCell className="text-muted-foreground hidden sm:table-cell">
                       {holding.symbol || "—"}
                     </TableCell>
                   )}
@@ -785,12 +785,12 @@ function HoldingsTypeSection({
                     <TableCell>
                       {snapshot ? (
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-white">
+                          <span className="text-foreground">
                             {formatBalance(snapshot.balance, snapshot.currency)}
                           </span>
                           <span
                             className={`text-xs flex items-center gap-1 ${
-                              isStale ? "text-yellow-400" : "text-gray-500"
+                              isStale ? "text-yellow-400" : "text-muted-foreground"
                             }`}
                           >
                             {isStale && (
@@ -800,16 +800,16 @@ function HoldingsTypeSection({
                           </span>
                         </div>
                       ) : (
-                        <span className="text-gray-500 text-sm">No data</span>
+                        <span className="text-muted-foreground text-sm">No data</span>
                       )}
                     </TableCell>
                   )}
-                  <TableCell className="text-gray-300 hidden lg:table-cell">
+                  <TableCell className="text-muted-foreground hidden lg:table-cell">
                     {holding.currency}
                   </TableCell>
                   {isTradeable && (
                     <>
-                      <TableCell className="text-gray-300 text-right font-mono hidden md:table-cell">
+                      <TableCell className="text-muted-foreground text-right font-mono hidden md:table-cell">
                         {formatQuantity(holding.quantity)}
                       </TableCell>
                       <TableCell className="text-right hidden sm:table-cell">
@@ -873,11 +873,11 @@ function HoldingsTypeSection({
                   )}
                   <TableCell className="hidden sm:table-cell">
                     {holding.isDormant ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
                         Dormant
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-900 text-green-300">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-positive/20 text-positive">
                         Active
                       </span>
                     )}
@@ -887,7 +887,7 @@ function HoldingsTypeSection({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-gray-400 hover:text-white"
+                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
                         onClick={() => onEdit(holding)}
                       >
                         <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -896,7 +896,7 @@ function HoldingsTypeSection({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-gray-400 hover:text-red-500"
+                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => onDelete(holding)}
                       >
                         <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -997,47 +997,47 @@ function HoldingsCurrencySection({
   return (
     <section>
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-semibold text-white">
+        <h2 className="text-lg font-semibold text-foreground">
           {label}{" "}
-          <span className="text-gray-400 font-normal">({holdings.length})</span>
+          <span className="text-muted-foreground font-normal">({holdings.length})</span>
         </h2>
         <div className="text-right">
-          <span className="text-gray-400 text-sm">Subtotal: </span>
+          <span className="text-muted-foreground text-sm">Subtotal: </span>
           {currencyLoading ? (
-            <span className="inline-block w-20 h-5 bg-gray-700 rounded animate-pulse" />
+            <span className="inline-block w-20 h-5 bg-muted rounded animate-pulse" />
           ) : (
             <CurrencyDisplay
               amount={subtotal}
               currency={sectionCurrency}
-              className="text-white font-semibold"
+              className="text-foreground font-semibold"
             />
           )}
         </div>
       </div>
-      <div className="rounded-lg border border-gray-800 overflow-x-auto">
+      <div className="rounded-lg border border-border overflow-x-auto">
         <Table>
           <TableHeader>
-            <TableRow className="border-gray-800 hover:bg-transparent">
-              <TableHead className="text-gray-400 sticky left-0 bg-gray-950 z-10">Name</TableHead>
-              <TableHead className="text-gray-400 hidden sm:table-cell">Type</TableHead>
+            <TableRow className="border-border hover:bg-transparent">
+              <TableHead className="text-muted-foreground sticky left-0 bg-background z-10">Name</TableHead>
+              <TableHead className="text-muted-foreground hidden sm:table-cell">Type</TableHead>
               {hasTradeableHoldings && (
-                <TableHead className="text-gray-400 hidden md:table-cell">Symbol</TableHead>
+                <TableHead className="text-muted-foreground hidden md:table-cell">Symbol</TableHead>
               )}
               {hasSnapshotHoldings && (
-                <TableHead className="text-gray-400">Balance</TableHead>
+                <TableHead className="text-muted-foreground">Balance</TableHead>
               )}
               {hasTradeableHoldings && (
                 <>
-                  <TableHead className="text-gray-400 text-right hidden md:table-cell">Quantity</TableHead>
-                  <TableHead className="text-gray-400 text-right hidden sm:table-cell">Price</TableHead>
-                  <TableHead className="text-gray-400 text-right">Market Value</TableHead>
-                  <TableHead className="text-gray-400 text-right hidden md:table-cell">Gain/Loss</TableHead>
-                  <TableHead className="text-gray-400 text-right hidden lg:table-cell">Cost Basis</TableHead>
-                  <TableHead className="text-gray-400 text-right hidden lg:table-cell">Avg Cost</TableHead>
+                  <TableHead className="text-muted-foreground text-right hidden md:table-cell">Quantity</TableHead>
+                  <TableHead className="text-muted-foreground text-right hidden sm:table-cell">Price</TableHead>
+                  <TableHead className="text-muted-foreground text-right">Market Value</TableHead>
+                  <TableHead className="text-muted-foreground text-right hidden md:table-cell">Gain/Loss</TableHead>
+                  <TableHead className="text-muted-foreground text-right hidden lg:table-cell">Cost Basis</TableHead>
+                  <TableHead className="text-muted-foreground text-right hidden lg:table-cell">Avg Cost</TableHead>
                 </>
               )}
-              <TableHead className="text-gray-400 hidden sm:table-cell">Status</TableHead>
-              <TableHead className="text-gray-400 w-[80px] sm:w-[100px]">Actions</TableHead>
+              <TableHead className="text-muted-foreground hidden sm:table-cell">Status</TableHead>
+              <TableHead className="text-muted-foreground w-[80px] sm:w-[100px]">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1050,16 +1050,16 @@ function HoldingsCurrencySection({
               return (
                 <TableRow
                   key={holding.id}
-                  className={`border-gray-800 ${holding.isDormant ? "opacity-60" : ""}`}
+                  className={`border-border ${holding.isDormant ? "opacity-60" : ""}`}
                 >
-                  <TableCell className="text-white font-medium sticky left-0 bg-gray-950 z-10">
+                  <TableCell className="text-foreground font-medium sticky left-0 bg-background z-10">
                     {holding.name}
                   </TableCell>
-                  <TableCell className="text-gray-300 hidden sm:table-cell">
+                  <TableCell className="text-muted-foreground hidden sm:table-cell">
                     {HOLDING_TYPE_LABELS[holding.type]}
                   </TableCell>
                   {hasTradeableHoldings && (
-                    <TableCell className="text-gray-300 hidden md:table-cell">
+                    <TableCell className="text-muted-foreground hidden md:table-cell">
                       {isTradeable ? (holding.symbol || "—") : "—"}
                     </TableCell>
                   )}
@@ -1067,12 +1067,12 @@ function HoldingsCurrencySection({
                     <TableCell>
                       {isSnapshotType && snapshot ? (
                         <div className="flex flex-col gap-0.5">
-                          <span className="text-white">
+                          <span className="text-foreground">
                             {formatBalance(snapshot.balance, snapshot.currency)}
                           </span>
                           <span
                             className={`text-xs flex items-center gap-1 ${
-                              isStale ? "text-yellow-400" : "text-gray-500"
+                              isStale ? "text-yellow-400" : "text-muted-foreground"
                             }`}
                           >
                             {isStale && (
@@ -1082,15 +1082,15 @@ function HoldingsCurrencySection({
                           </span>
                         </div>
                       ) : isSnapshotType ? (
-                        <span className="text-gray-500 text-sm">No data</span>
+                        <span className="text-muted-foreground text-sm">No data</span>
                       ) : (
-                        <span className="text-gray-500 text-sm">—</span>
+                        <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
                   )}
                   {hasTradeableHoldings && (
                     <>
-                      <TableCell className="text-gray-300 text-right font-mono hidden md:table-cell">
+                      <TableCell className="text-muted-foreground text-right font-mono hidden md:table-cell">
                         {isTradeable ? formatQuantity(holding.quantity) : "—"}
                       </TableCell>
                       <TableCell className="text-right hidden sm:table-cell">
@@ -1104,7 +1104,7 @@ function HoldingsCurrencySection({
                             isRetrying={retryingPriceIds?.has(holding.id)}
                           />
                         ) : (
-                          <span className="text-gray-500 text-sm">—</span>
+                          <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
@@ -1121,7 +1121,7 @@ function HoldingsCurrencySection({
                             showNativeCurrency={showNativeCurrency}
                           />
                         ) : (
-                          <span className="text-gray-500 text-sm">—</span>
+                          <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right hidden md:table-cell">
@@ -1139,7 +1139,7 @@ function HoldingsCurrencySection({
                             showNativeCurrency={showNativeCurrency}
                           />
                         ) : (
-                          <span className="text-gray-500 text-sm">—</span>
+                          <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right hidden lg:table-cell">
@@ -1153,7 +1153,7 @@ function HoldingsCurrencySection({
                             showNativeCurrency={showNativeCurrency}
                           />
                         ) : (
-                          <span className="text-gray-500 text-sm">—</span>
+                          <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </TableCell>
                       <TableCell className="text-right hidden lg:table-cell">
@@ -1167,18 +1167,18 @@ function HoldingsCurrencySection({
                             showNativeCurrency={showNativeCurrency}
                           />
                         ) : (
-                          <span className="text-gray-500 text-sm">—</span>
+                          <span className="text-muted-foreground text-sm">—</span>
                         )}
                       </TableCell>
                     </>
                   )}
                   <TableCell className="hidden sm:table-cell">
                     {holding.isDormant ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-700 text-gray-300">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
                         Dormant
                       </span>
                     ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-900 text-green-300">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-positive/20 text-positive">
                         Active
                       </span>
                     )}
@@ -1188,7 +1188,7 @@ function HoldingsCurrencySection({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-gray-400 hover:text-white"
+                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
                         onClick={() => onEdit(holding)}
                       >
                         <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -1197,7 +1197,7 @@ function HoldingsCurrencySection({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-gray-400 hover:text-red-500"
+                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
                         onClick={() => onDelete(holding)}
                       >
                         <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />

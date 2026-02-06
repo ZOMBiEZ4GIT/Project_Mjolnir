@@ -36,8 +36,8 @@ export function NativeCurrencyToggle({
   if (showLoadingState && isLoading) {
     return (
       <div className={`flex items-center gap-2 ${className ?? ""}`}>
-        <span className="h-5 w-9 rounded-full bg-gray-700 animate-pulse" />
-        <span className="h-4 w-32 rounded bg-gray-700 animate-pulse" />
+        <span className="h-5 w-9 rounded-full bg-muted animate-pulse" />
+        <span className="h-4 w-32 rounded bg-muted animate-pulse" />
       </div>
     );
   }
@@ -51,7 +51,7 @@ export function NativeCurrencyToggle({
       />
       <Label
         htmlFor="show-native-currency"
-        className="text-gray-300 cursor-pointer text-sm"
+        className="text-muted-foreground cursor-pointer text-sm"
       >
         Show native currencies
       </Label>

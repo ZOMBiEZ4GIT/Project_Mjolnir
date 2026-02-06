@@ -1,235 +1,193 @@
 {
   "project": "Mjolnir",
-  "branchName": "feature/w13-data-export",
-  "description": "Data export functionality allowing Roland to backup holdings, transactions, and snapshots as CSV or JSON files.",
+  "branchName": "ralph/ux1-design-system-foundation",
+  "description": "UX-1: Design System Foundation — Establish the visual foundation with Mjolnir colour tokens, typography scale, spacing constants, shadow/glow utilities, Framer Motion animation presets, and reduced motion support.",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Create holdings export utility",
-      "description": "As a developer, I need a utility to export holdings data.",
+      "title": "Configure Mjolnir colour palette in CSS variables",
+      "description": "As a developer, I want all Mjolnir colours defined as CSS variables so that shadcn/ui components and custom components both pull from the same source of truth.",
       "acceptanceCriteria": [
-        "Create lib/export/holdings-exporter.ts",
-        "Function exportHoldingsCSV(holdings) returns CSV string",
-        "Function exportHoldingsJSON(holdings) returns JSON string",
-        "CSV includes: name, symbol, type, currency, exchange, is_dormant, created_at",
-        "Typecheck passes",
-        "Lint passes"
+        "Update app/globals.css to replace default .dark CSS variable values with Mjolnir palette",
+        "Background: #09090b (zinc-950) as --background",
+        "Card surface: #18181b (zinc-900) as --card",
+        "Elevated surface: #27272a (zinc-800) used for hover states, borders",
+        "Primary/accent mapped to violet-500 (#8b5cf6)",
+        "Destructive mapped to red-500 (#ef4444)",
+        "Add new CSS variables: --positive (green-500 #22c55e), --negative (red-500 #ef4444), --accent-glow (rgba violet for box-shadows)",
+        "Remove the :root (light mode) block or make it identical to .dark — this app is dark-mode only",
+        "All existing shadcn/ui components continue to render correctly with new values",
+        "Typecheck passes (npm run build)"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Created lib/export/holdings-exporter.ts with exportHoldingsCSV and exportHoldingsJSON functions"
+      "notes": ""
     },
     {
       "id": "US-002",
-      "title": "Create transactions export utility",
-      "description": "As a developer, I need a utility to export transactions data.",
+      "title": "Extend Tailwind theme with Mjolnir tokens",
+      "description": "As a developer, I want Tailwind classes that map to the Mjolnir design tokens so I can use bg-background, text-positive, shadow-glow-md, etc. without raw hex values.",
       "acceptanceCriteria": [
-        "Create lib/export/transactions-exporter.ts",
-        "Function exportTransactionsCSV(transactions) returns CSV string",
-        "Function exportTransactionsJSON(transactions) returns JSON string",
-        "CSV includes: date, symbol, action, quantity, unit_price, fees, currency, notes",
-        "Typecheck passes",
-        "Lint passes"
+        "Update tailwind.config.ts to add semantic colour mappings: positive, positive-foreground, negative, negative-foreground — all referencing CSS variables",
+        "Add glow box-shadow utilities: shadow-glow-sm, shadow-glow-md, shadow-glow-lg, shadow-glow-positive, shadow-glow-negative",
+        "Add card shadow utilities: shadow-card, shadow-card-hover",
+        "No raw hex values in tailwind.config.ts — all reference CSS variables or rgba values",
+        "Typecheck passes (npm run build)"
       ],
       "priority": 2,
       "passes": true,
-      "notes": "Created lib/export/transactions-exporter.ts with exportTransactionsCSV and exportTransactionsJSON functions. Uses TransactionWithSymbol type to include holding symbol in exports."
+      "notes": ""
     },
     {
       "id": "US-003",
-      "title": "Create snapshots export utility",
-      "description": "As a developer, I need a utility to export snapshots data.",
+      "title": "Set up typography scale",
+      "description": "As a developer, I want a defined typography scale so all text across the app is consistent and hierarchical.",
       "acceptanceCriteria": [
-        "Create lib/export/snapshots-exporter.ts",
-        "Function exportSnapshotsCSV(snapshots) returns CSV string",
-        "Function exportSnapshotsJSON(snapshots) returns JSON string",
-        "CSV includes: date, holding_name, balance, currency",
-        "Includes contributions if available (employer_contrib, employee_contrib)",
-        "Typecheck passes",
-        "Lint passes"
+        "Add custom font sizes in tailwind.config.ts under theme.extend.fontSize",
+        "display-xl: 4rem/1, weight 700, tracking -0.02em (net worth hero number)",
+        "display-lg: 3rem/1.1, weight 700, tracking -0.02em",
+        "display-md: 2.25rem/1.2, weight 600, tracking -0.01em",
+        "heading-lg: 1.5rem/1.3, weight 600",
+        "heading-md: 1.25rem/1.4, weight 600",
+        "heading-sm: 1rem/1.5, weight 600",
+        "body-lg: 1rem/1.6, weight 400",
+        "body-md: 0.875rem/1.5, weight 400",
+        "body-sm: 0.75rem/1.5, weight 400",
+        "label: 0.75rem/1, weight 500, tracking 0.05em",
+        "Use Tailwind array syntax for fontSize: ['size', { lineHeight, fontWeight, letterSpacing }]",
+        "Verify Inter font is loaded (already in Next.js via next/font)",
+        "Typecheck passes (npm run build)"
       ],
       "priority": 3,
       "passes": true,
-      "notes": "Created lib/export/snapshots-exporter.ts with exportSnapshotsCSV and exportSnapshotsJSON functions. Uses SnapshotWithDetails interface extending Snapshot with holdingName and optional contribution fields."
+      "notes": ""
     },
     {
       "id": "US-004",
-      "title": "Create full backup export utility",
-      "description": "As a developer, I need a utility to export all data as one backup.",
+      "title": "Define spacing rhythm and layout constants",
+      "description": "As a developer, I want consistent spacing and layout constants so the app follows an 8pt grid system.",
       "acceptanceCriteria": [
-        "Create lib/export/backup-exporter.ts",
-        "Function exportFullBackupJSON returns combined JSON with holdings, transactions, snapshots",
-        "Includes metadata: export_date, version, user_id",
-        "Typecheck passes",
-        "Lint passes"
+        "Create lib/theme.ts exporting layout constants: sidebarWidth (240px), rightPanelWidth (320px), maxContentWidth (1400px), cardRadius (16px), buttonRadius (8px), inputRadius (8px)",
+        "Export spacing constants: xs (4px), sm (8px), md (16px), lg (24px), xl (32px), 2xl (48px)",
+        "Constants are typed and exported for use in both Tailwind classes and inline styles",
+        "Typecheck passes (npm run build)"
       ],
       "priority": 4,
       "passes": true,
-      "notes": "Created lib/export/backup-exporter.ts with exportFullBackupJSON function. Includes BackupMetadata (export_date, version, user_id), holdings, transactions, snapshots, and contributions arrays. Uses FullBackupInput interface for type safety."
+      "notes": ""
     },
     {
       "id": "US-005",
-      "title": "Create export API endpoint for holdings",
-      "description": "As a developer, I need an API to download holdings export.",
+      "title": "Install Framer Motion and create animation presets",
+      "description": "As a developer, I want reusable animation presets so animations are consistent and easy to apply across components.",
       "acceptanceCriteria": [
-        "Create app/api/export/holdings/route.ts",
-        "GET accepts format query param (csv or json)",
-        "Returns file with appropriate Content-Type header",
-        "Sets Content-Disposition for download",
-        "Requires Clerk authentication",
-        "Typecheck passes",
-        "Lint passes"
+        "Install framer-motion as a dependency",
+        "Create lib/animations.ts exporting presets: fadeIn (opacity 0→1, 0.2s), slideUp (opacity 0→1, y 20→0, 0.3s easeOut), scaleIn (opacity 0→1, scale 0.95→1, 0.2s), staggerContainer (staggerChildren 0.05s), staggerItem (opacity 0→1, y 10→0), numberSpring (stiffness 100, damping 15)",
+        "Each preset exports initial, animate, exit, and transition properties as needed",
+        "Presets are typed with Framer Motion types (Variants, Transition, etc.)",
+        "Presets are importable as plain objects, not React components, so they can be spread onto motion.div elements",
+        "Typecheck passes (npm run build)"
       ],
       "priority": 5,
       "passes": true,
-      "notes": "Created app/api/export/holdings/route.ts with GET endpoint accepting format=csv|json query param. Uses Clerk auth, Content-Type and Content-Disposition headers for file download."
+      "notes": ""
     },
     {
       "id": "US-006",
-      "title": "Create export API endpoint for transactions",
-      "description": "As a developer, I need an API to download transactions export.",
+      "title": "Create reduced motion hook",
+      "description": "As a user with motion sensitivity, I want animations disabled or reduced when I've enabled that preference in my OS.",
       "acceptanceCriteria": [
-        "Create app/api/export/transactions/route.ts",
-        "GET accepts format query param (csv or json)",
-        "Returns file with appropriate Content-Type header",
-        "Sets Content-Disposition for download",
-        "Requires Clerk authentication",
-        "Typecheck passes",
-        "Lint passes"
+        "Create hooks/use-reduced-motion.ts that re-exports Framer Motion's useReducedMotion",
+        "Create hooks/use-animation-config.ts that returns animation props conditionally: when prefers-reduced-motion is enabled returns initial: false, transition: { duration: 0 }; when disabled returns standard animation props",
+        "Hook accepts an optional animation preset parameter to customize which preset is used",
+        "Hook checks prefers-reduced-motion on every render (not just initial mount) to respond to OS setting changes",
+        "Typecheck passes (npm run build)"
       ],
       "priority": 6,
       "passes": true,
-      "notes": "Created app/api/export/transactions/route.ts with GET endpoint accepting format=csv|json query param. Joins transactions with holdings to get symbol. Uses Clerk auth, Content-Type and Content-Disposition headers for file download."
+      "notes": ""
     },
     {
       "id": "US-007",
-      "title": "Create export API endpoint for snapshots",
-      "description": "As a developer, I need an API to download snapshots export.",
+      "title": "Remove hardcoded colour values from root and dashboard layouts",
+      "description": "As a developer, I want layout files to use design tokens instead of hardcoded Tailwind colour classes.",
       "acceptanceCriteria": [
-        "Create app/api/export/snapshots/route.ts",
-        "GET accepts format query param (csv or json)",
-        "Returns file with appropriate Content-Type header",
-        "Sets Content-Disposition for download",
-        "Requires Clerk authentication",
-        "Typecheck passes",
-        "Lint passes"
+        "Update app/layout.tsx: replace bg-gray-950 with bg-background, replace text-white with text-foreground",
+        "Update app/(dashboard)/layout.tsx: replace all bg-gray-900, border-gray-800, text-gray-* etc. with semantic token classes (bg-card, border-border, text-muted-foreground, etc.)",
+        "Visual appearance remains unchanged (colours should map to the same or very similar values)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
       "passes": true,
-      "notes": "Created app/api/export/snapshots/route.ts with GET endpoint accepting format=csv|json query param. Joins snapshots with holdings to get holding name, and joins with contributions to include employer/employee contributions. Uses Clerk auth, Content-Type and Content-Disposition headers for file download."
+      "notes": ""
     },
     {
       "id": "US-008",
-      "title": "Create export API endpoint for full backup",
-      "description": "As a developer, I need an API to download full backup.",
+      "title": "Remove hardcoded colour values from dashboard components",
+      "description": "As a developer, I want dashboard components to use design tokens instead of hardcoded colour classes.",
       "acceptanceCriteria": [
-        "Create app/api/export/backup/route.ts",
-        "GET returns JSON backup file",
-        "Includes all holdings, transactions, snapshots, contributions",
-        "Sets Content-Disposition for download with timestamp",
-        "Requires Clerk authentication",
-        "Typecheck passes",
-        "Lint passes"
+        "Scan components/dashboard/ for hardcoded colour classes (gray-*, zinc-*, violet-*, text-white, etc.) and replace with design token equivalents (bg-card, border-border, text-muted-foreground, text-foreground, etc.)",
+        "Scan components/dashboard/nav.tsx and components/dashboard/mobile-nav.tsx for hardcoded colours and replace",
+        "Visual appearance remains unchanged",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
       "passes": true,
-      "notes": "Created app/api/export/backup/route.ts with GET endpoint returning JSON backup. Fetches all holdings, transactions (with symbol), snapshots (with details and contributions), and contributions (with holding name). Uses exportFullBackupJSON from backup-exporter. Filename includes timestamp: mjolnir-backup-YYYY-MM-DD.json"
+      "notes": ""
     },
     {
       "id": "US-009",
-      "title": "Create export page",
-      "description": "As Roland, I want a dedicated page to export my data.",
+      "title": "Remove hardcoded colour values from holdings and transaction components",
+      "description": "As a developer, I want holdings and transaction components to use design tokens.",
       "acceptanceCriteria": [
-        "Create app/(dashboard)/export/page.tsx",
-        "Add Export link to dashboard navigation",
-        "Page title: Export Data",
-        "Shows sections for each export type",
-        "Typecheck passes",
-        "Lint passes"
+        "Scan all files in components/holdings/ for hardcoded colour classes and replace with design token equivalents",
+        "Scan all files in components/transactions/ for hardcoded colour classes and replace with design token equivalents",
+        "Replace text-green-* with text-positive, text-red-* with text-destructive, bg-gray-* with bg-card or bg-muted, text-gray-* with text-muted-foreground, text-white with text-foreground, border-gray-* with border-border",
+        "Visual appearance remains unchanged",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
       "id": "US-010",
-      "title": "Add holdings export section to export page",
-      "description": "As Roland, I want to export my holdings.",
+      "title": "Remove hardcoded colour values from remaining components",
+      "description": "As a developer, I want all remaining components to use design tokens.",
       "acceptanceCriteria": [
-        "Section shows Holdings Export with description",
-        "Buttons for Download CSV and Download JSON",
-        "Shows count of holdings to export",
-        "Clicking button triggers file download",
-        "Typecheck passes",
-        "Lint passes"
+        "Scan components/check-in/, components/snapshots/, components/import/, components/charts/, components/settings/ for hardcoded colour classes and replace with design token equivalents",
+        "Scan app/(dashboard)/ page files for hardcoded colour classes and replace",
+        "Scan app/(auth)/ page files for hardcoded colour classes and replace bg-gray-950 with bg-background",
+        "No hardcoded colour classes remain outside of tailwind.config.ts and globals.css",
+        "Visual appearance remains unchanged",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
       "id": "US-011",
-      "title": "Add transactions export section to export page",
-      "description": "As Roland, I want to export my transactions.",
+      "title": "Create design system demo page",
+      "description": "As a developer, I want a demo page that showcases all design tokens so I can verify the system works and use it as a reference.",
       "acceptanceCriteria": [
-        "Section shows Transactions Export with description",
-        "Buttons for Download CSV and Download JSON",
-        "Shows count of transactions to export",
-        "Clicking button triggers file download",
-        "Typecheck passes",
-        "Lint passes"
+        "Create app/(dashboard)/design-system/page.tsx (protected route)",
+        "Displays colour palette: all background, accent, positive, negative, and text colours as swatches with labels",
+        "Displays typography scale: each size rendered with its name and specs",
+        "Displays shadow/glow effects: cards showing each shadow variant",
+        "Displays animation presets: buttons or cards that trigger each animation on click",
+        "Displays spacing: visual representation of the 8pt grid spacings",
+        "Page uses only design token classes (no hardcoded values)",
+        "Page is wrapped in a Framer Motion stagger container so elements animate in on load",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
-    },
-    {
-      "id": "US-012",
-      "title": "Add snapshots export section to export page",
-      "description": "As Roland, I want to export my snapshots.",
-      "acceptanceCriteria": [
-        "Section shows Snapshots Export with description",
-        "Buttons for Download CSV and Download JSON",
-        "Shows count of snapshots to export",
-        "Clicking button triggers file download",
-        "Typecheck passes",
-        "Lint passes"
-      ],
-      "priority": 12,
-      "passes": false,
-      "notes": ""
-    },
-    {
-      "id": "US-013",
-      "title": "Add full backup section to export page",
-      "description": "As Roland, I want to create a full backup of all my data.",
-      "acceptanceCriteria": [
-        "Section shows Full Backup with description",
-        "Single Download Backup button",
-        "Shows total counts (holdings, transactions, snapshots)",
-        "Clicking button triggers JSON backup download",
-        "Filename includes date: mjolnir-backup-YYYY-MM-DD.json",
-        "Typecheck passes",
-        "Lint passes"
-      ],
-      "priority": 13,
-      "passes": false,
-      "notes": ""
-    },
-    {
-      "id": "US-014",
-      "title": "Add export loading states",
-      "description": "As Roland, I want feedback while exports are generating.",
-      "acceptanceCriteria": [
-        "Show loading spinner on export buttons while downloading",
-        "Disable buttons during download",
-        "Show success toast when download completes",
-        "Show error toast if download fails",
-        "Typecheck passes",
-        "Lint passes"
-      ],
-      "priority": 14,
-      "passes": false,
+      "passes": true,
       "notes": ""
     }
   ]

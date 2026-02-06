@@ -89,20 +89,20 @@ function getCurrencyFlag(currency: Currency): string {
  */
 function ExposureSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
       <div className="animate-pulse">
-        <div className="h-5 w-40 bg-gray-700 rounded mb-6" />
+        <div className="h-5 w-40 bg-muted rounded mb-6" />
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 bg-gray-700 rounded" />
-                  <div className="h-4 w-32 bg-gray-700 rounded" />
+                  <div className="h-6 w-6 bg-muted rounded" />
+                  <div className="h-4 w-32 bg-muted rounded" />
                 </div>
-                <div className="h-4 w-20 bg-gray-700 rounded" />
+                <div className="h-4 w-20 bg-muted rounded" />
               </div>
-              <div className="h-2 w-full bg-gray-700 rounded" />
+              <div className="h-2 w-full bg-muted rounded" />
             </div>
           ))}
         </div>
@@ -140,26 +140,26 @@ function ExposureItem({
             </span>
           </div>
           <div>
-            <span className="font-medium text-white">
+            <span className="font-medium text-foreground">
               {currency}
             </span>
-            <span className="text-xs text-gray-500 ml-2">
+            <span className="text-xs text-muted-foreground ml-2">
               {getCurrencyDisplayName(currency)}
             </span>
-            <span className="text-xs text-gray-500 ml-2">
+            <span className="text-xs text-muted-foreground ml-2">
               ({count} holding{count !== 1 ? "s" : ""})
             </span>
           </div>
         </div>
         <div className="text-right">
-          <div className="font-medium text-white">
+          <div className="font-medium text-foreground">
             {formatCurrency(value, displayCurrency, { compact: true })}
           </div>
-          <div className="text-xs text-gray-400">{formatPercentage(percentage)}</div>
+          <div className="text-xs text-muted-foreground">{formatPercentage(percentage)}</div>
         </div>
       </div>
       {/* Progress bar */}
-      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+      <div className="h-2 bg-muted rounded-full overflow-hidden">
         <div
           className={`h-full ${getCurrencyColor(currency)} rounded-full transition-all duration-500`}
           style={{ width: `${Math.min(percentage, 100)}%` }}
@@ -205,8 +205,8 @@ export function CurrencyExposure() {
   // Show error state
   if (error) {
     return (
-      <div className="rounded-lg border border-red-700 bg-red-900/20 p-6">
-        <p className="text-red-400">Failed to load currency exposure</p>
+      <div className="rounded-lg border border-destructive bg-destructive/10 p-6">
+        <p className="text-destructive">Failed to load currency exposure</p>
       </div>
     );
   }
@@ -221,11 +221,11 @@ export function CurrencyExposure() {
   // Empty state
   if (exposure.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-4">
+      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
           Currency Exposure
         </h3>
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-muted-foreground text-center py-8">
           No assets to display. Add holdings to see your currency exposure.
         </p>
       </div>
@@ -233,8 +233,8 @@ export function CurrencyExposure() {
   }
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
-      <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-6">
+    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-6">
         Currency Exposure
       </h3>
       <div className="space-y-5">

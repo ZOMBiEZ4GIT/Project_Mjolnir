@@ -45,22 +45,22 @@ function formatPercent(value: number): string {
  */
 function PerformersSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
       <div className="animate-pulse">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Gainers skeleton */}
           <div>
-            <div className="h-5 w-28 bg-gray-700 rounded mb-4" />
+            <div className="h-5 w-28 bg-muted rounded mb-4" />
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex justify-between items-center">
                   <div className="flex-1">
-                    <div className="h-4 w-24 bg-gray-700 rounded mb-1" />
-                    <div className="h-3 w-16 bg-gray-700/70 rounded" />
+                    <div className="h-4 w-24 bg-muted rounded mb-1" />
+                    <div className="h-3 w-16 bg-muted/70 rounded" />
                   </div>
                   <div className="text-right">
-                    <div className="h-4 w-20 bg-gray-700 rounded mb-1" />
-                    <div className="h-3 w-14 bg-gray-700/70 rounded" />
+                    <div className="h-4 w-20 bg-muted rounded mb-1" />
+                    <div className="h-3 w-14 bg-muted/70 rounded" />
                   </div>
                 </div>
               ))}
@@ -68,17 +68,17 @@ function PerformersSkeleton() {
           </div>
           {/* Losers skeleton */}
           <div>
-            <div className="h-5 w-24 bg-gray-700 rounded mb-4" />
+            <div className="h-5 w-24 bg-muted rounded mb-4" />
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex justify-between items-center">
                   <div className="flex-1">
-                    <div className="h-4 w-24 bg-gray-700 rounded mb-1" />
-                    <div className="h-3 w-16 bg-gray-700/70 rounded" />
+                    <div className="h-4 w-24 bg-muted rounded mb-1" />
+                    <div className="h-3 w-16 bg-muted/70 rounded" />
                   </div>
                   <div className="text-right">
-                    <div className="h-4 w-20 bg-gray-700 rounded mb-1" />
-                    <div className="h-3 w-14 bg-gray-700/70 rounded" />
+                    <div className="h-4 w-20 bg-muted rounded mb-1" />
+                    <div className="h-3 w-14 bg-muted/70 rounded" />
                   </div>
                 </div>
               ))}
@@ -101,7 +101,7 @@ interface PerformerRowProps {
 }
 
 function PerformerRow({ performer, isGainer, currency, convert }: PerformerRowProps) {
-  const colorClass = isGainer ? "text-emerald-400" : "text-red-400";
+  const colorClass = isGainer ? "text-positive" : "text-destructive";
   const sign = isGainer ? "+" : "-";
 
   // Convert from AUD (API returns values in AUD) to display currency
@@ -110,11 +110,11 @@ function PerformerRow({ performer, isGainer, currency, convert }: PerformerRowPr
   return (
     <Link
       href={`/holdings/${performer.holdingId}`}
-      className="flex justify-between items-center py-2 px-2 -mx-2 rounded hover:bg-gray-700/50 transition-colors"
+      className="flex justify-between items-center py-2 px-2 -mx-2 rounded hover:bg-muted/50 transition-colors"
     >
       <div className="flex-1 min-w-0">
-        <p className="text-white font-medium truncate">{performer.name}</p>
-        <p className="text-gray-400 text-sm">{performer.symbol}</p>
+        <p className="text-foreground font-medium truncate">{performer.name}</p>
+        <p className="text-muted-foreground text-sm">{performer.symbol}</p>
       </div>
       <div className="text-right ml-4">
         <p className={`font-semibold ${colorClass}`}>
@@ -136,7 +136,7 @@ function PerformerRow({ performer, isGainer, currency, convert }: PerformerRowPr
 function EmptyPerformerList({ type }: { type: "gainers" | "losers" }) {
   return (
     <div className="py-8 text-center">
-      <p className="text-gray-500 text-sm">
+      <p className="text-muted-foreground text-sm">
         No {type === "gainers" ? "gains" : "losses"} to show
       </p>
     </div>
@@ -177,8 +177,8 @@ export function TopPerformers() {
   // Show error state
   if (error) {
     return (
-      <div className="rounded-lg border border-red-700 bg-red-900/20 p-6">
-        <p className="text-red-400">Failed to load top performers</p>
+      <div className="rounded-lg border border-destructive bg-destructive/10 p-6">
+        <p className="text-destructive">Failed to load top performers</p>
       </div>
     );
   }
@@ -194,15 +194,15 @@ export function TopPerformers() {
   // Empty state when no tradeable holdings with performance data
   if (hasNoData) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-4">
+      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
           Top Performers
         </h3>
         <div className="py-8 text-center">
-          <p className="text-gray-500">
+          <p className="text-muted-foreground text-sm">
             No tradeable holdings with performance data yet.
           </p>
-          <p className="text-gray-600 text-sm mt-2">
+          <p className="text-muted-foreground/60 text-sm mt-2">
             Add stocks, ETFs, or crypto to see your top gainers and losers.
           </p>
         </div>
@@ -211,13 +211,13 @@ export function TopPerformers() {
   }
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Top Gainers */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="h-5 w-5 text-emerald-400" />
-            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+            <TrendingUp className="h-5 w-5 text-positive" />
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
               Top Gainers
             </h3>
           </div>
@@ -241,8 +241,8 @@ export function TopPerformers() {
         {/* Top Losers */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <TrendingDown className="h-5 w-5 text-red-400" />
-            <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+            <TrendingDown className="h-5 w-5 text-destructive" />
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
               Top Losers
             </h3>
           </div>

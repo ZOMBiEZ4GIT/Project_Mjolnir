@@ -9,16 +9,16 @@ import { CurrencyDisplay } from "@/components/ui/currency-display";
 export default function TestCurrencyPage() {
   return (
     <div className="container mx-auto p-8 space-y-8">
-      <h1 className="text-3xl font-bold text-white mb-8">
+      <h1 className="text-3xl font-bold text-foreground mb-8">
         CurrencyDisplay Component Test
       </h1>
 
       {/* Basic usage */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-300">Basic Usage</h2>
+        <h2 className="text-xl font-semibold text-foreground">Basic Usage</h2>
         <div className="space-y-2 text-lg">
           <div className="flex items-center gap-4">
-            <span className="text-gray-400 w-32">AUD:</span>
+            <span className="text-muted-foreground w-32">AUD:</span>
             <CurrencyDisplay
               amount={1234.56}
               currency="AUD"
@@ -26,7 +26,7 @@ export default function TestCurrencyPage() {
             />
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-gray-400 w-32">NZD:</span>
+            <span className="text-muted-foreground w-32">NZD:</span>
             <CurrencyDisplay
               amount={1234.56}
               currency="NZD"
@@ -34,7 +34,7 @@ export default function TestCurrencyPage() {
             />
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-gray-400 w-32">USD:</span>
+            <span className="text-muted-foreground w-32">USD:</span>
             <CurrencyDisplay
               amount={1234.56}
               currency="USD"
@@ -46,12 +46,12 @@ export default function TestCurrencyPage() {
 
       {/* Native currency indicator */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-300">
+        <h2 className="text-xl font-semibold text-foreground">
           With Native Currency Indicator
         </h2>
         <div className="space-y-2 text-lg">
           <div className="flex items-center gap-4">
-            <span className="text-gray-400 w-32">Converted:</span>
+            <span className="text-muted-foreground w-32">Converted:</span>
             <CurrencyDisplay
               amount={1890.0}
               currency="AUD"
@@ -62,7 +62,7 @@ export default function TestCurrencyPage() {
             />
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-gray-400 w-32">Same currency:</span>
+            <span className="text-muted-foreground w-32">Same currency:</span>
             <CurrencyDisplay
               amount={1234.56}
               currency="AUD"
@@ -77,9 +77,9 @@ export default function TestCurrencyPage() {
 
       {/* Loading state */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-300">Loading State</h2>
+        <h2 className="text-xl font-semibold text-foreground">Loading State</h2>
         <div className="flex items-center gap-4">
-          <span className="text-gray-400 w-32">Loading:</span>
+          <span className="text-muted-foreground w-32">Loading:</span>
           <CurrencyDisplay
             amount={0}
             currency="AUD"
@@ -91,10 +91,10 @@ export default function TestCurrencyPage() {
 
       {/* Compact notation */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-300">Compact Notation</h2>
+        <h2 className="text-xl font-semibold text-foreground">Compact Notation</h2>
         <div className="space-y-2 text-lg">
           <div className="flex items-center gap-4">
-            <span className="text-gray-400 w-32">Thousands:</span>
+            <span className="text-muted-foreground w-32">Thousands:</span>
             <CurrencyDisplay
               amount={50000}
               currency="AUD"
@@ -103,7 +103,7 @@ export default function TestCurrencyPage() {
             />
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-gray-400 w-32">Millions:</span>
+            <span className="text-muted-foreground w-32">Millions:</span>
             <CurrencyDisplay
               amount={1234567}
               currency="AUD"
@@ -116,9 +116,9 @@ export default function TestCurrencyPage() {
 
       {/* Negative numbers */}
       <section className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-300">Negative Numbers</h2>
+        <h2 className="text-xl font-semibold text-foreground">Negative Numbers</h2>
         <div className="flex items-center gap-4">
-          <span className="text-gray-400 w-32">Negative:</span>
+          <span className="text-muted-foreground w-32">Negative:</span>
           <CurrencyDisplay
             amount={-1234.56}
             currency="AUD"
@@ -127,7 +127,7 @@ export default function TestCurrencyPage() {
         </div>
       </section>
 
-      <p className="text-sm text-gray-500 mt-8">
+      <p className="text-sm text-muted-foreground mt-8">
         Hover over any value to see the tooltip with full currency details.
       </p>
     </div>

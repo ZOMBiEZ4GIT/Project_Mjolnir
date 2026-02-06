@@ -111,8 +111,8 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
     data.cumulativeEmployer + data.cumulativeEmployee + data.cumulativeReturns;
 
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-lg">
-      <p className="text-gray-400 text-sm mb-2">
+    <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+      <p className="text-muted-foreground text-sm mb-2">
         {formatMonthFull(data.date)}
       </p>
       <div className="space-y-1">
@@ -121,8 +121,8 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
             className="w-3 h-3 rounded"
             style={{ backgroundColor: COLORS.employer }}
           />
-          <span className="text-gray-300 text-sm">Employer:</span>
-          <span className="text-white font-medium">
+          <span className="text-muted-foreground text-sm">Employer:</span>
+          <span className="text-foreground font-medium">
             {formatCurrency(data.cumulativeEmployer, currency)}
           </span>
         </div>
@@ -131,8 +131,8 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
             className="w-3 h-3 rounded"
             style={{ backgroundColor: COLORS.employee }}
           />
-          <span className="text-gray-300 text-sm">Employee:</span>
-          <span className="text-white font-medium">
+          <span className="text-muted-foreground text-sm">Employee:</span>
+          <span className="text-foreground font-medium">
             {formatCurrency(data.cumulativeEmployee, currency)}
           </span>
         </div>
@@ -141,16 +141,16 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
             className="w-3 h-3 rounded"
             style={{ backgroundColor: COLORS.returns }}
           />
-          <span className="text-gray-300 text-sm">Returns:</span>
-          <span className="text-white font-medium">
+          <span className="text-muted-foreground text-sm">Returns:</span>
+          <span className="text-foreground font-medium">
             {formatCurrency(data.cumulativeReturns, currency)}
           </span>
         </div>
       </div>
-      <div className="border-t border-gray-700 mt-2 pt-2">
-        <p className="text-gray-400 text-sm">
+      <div className="border-t border-border mt-2 pt-2">
+        <p className="text-muted-foreground text-sm">
           Total Growth:{" "}
-          <span className="text-white font-semibold">
+          <span className="text-foreground font-semibold">
             {formatCurrency(total, currency)}
           </span>
         </p>
@@ -189,7 +189,7 @@ function CustomLegend({ payload }: CustomLegendProps) {
             className="w-3 h-3 rounded"
             style={{ backgroundColor: entry.color }}
           />
-          <span className="text-gray-300 text-sm">
+          <span className="text-muted-foreground text-sm">
             {labels[entry.value] || entry.value}
           </span>
         </div>
@@ -285,11 +285,11 @@ export function SuperGrowthChart({
   // Empty state - no super holdings
   if (holdings.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-4">
+      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
           Superannuation Growth Breakdown
         </h3>
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-muted-foreground text-center py-8">
           No superannuation holdings found. Add a super fund to see growth breakdown.
         </p>
       </div>
@@ -299,11 +299,11 @@ export function SuperGrowthChart({
   // Empty state - no breakdown data yet
   if (breakdown.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide mb-4">
+      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-4">
           Superannuation Growth Breakdown
         </h3>
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-muted-foreground text-center py-8">
           No historical data available yet.
           <br />
           Data will appear after your first monthly check-in.
@@ -354,9 +354,9 @@ export function SuperGrowthChart({
     : "Superannuation Growth Breakdown";
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           {title}
         </h3>
         <ChartExportButton

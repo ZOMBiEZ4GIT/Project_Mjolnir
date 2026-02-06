@@ -178,7 +178,7 @@ export default function SnapshotsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-gray-400">Loading...</div>
+          <div className="text-muted-foreground">Loading...</div>
         </div>
       </div>
     );
@@ -189,8 +189,8 @@ export default function SnapshotsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <h2 className="text-xl text-white">Sign in to view your snapshots</h2>
-          <p className="text-gray-400">You need to be authenticated to access this page.</p>
+          <h2 className="text-xl text-foreground">Sign in to view your snapshots</h2>
+          <p className="text-muted-foreground">You need to be authenticated to access this page.</p>
         </div>
       </div>
     );
@@ -200,9 +200,9 @@ export default function SnapshotsPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-white mb-6">Snapshots</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-6">Snapshots</h1>
         <div className="flex items-center justify-center min-h-[30vh]">
-          <div className="text-gray-400">Loading snapshots...</div>
+          <div className="text-muted-foreground">Loading snapshots...</div>
         </div>
       </div>
     );
@@ -212,10 +212,10 @@ export default function SnapshotsPage() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-white mb-6">Snapshots</h1>
+        <h1 className="text-2xl font-bold text-foreground mb-6">Snapshots</h1>
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-2">
-          <p className="text-red-400">Failed to load snapshots</p>
-          <p className="text-gray-500 text-sm">{error.message}</p>
+          <p className="text-destructive">Failed to load snapshots</p>
+          <p className="text-muted-foreground text-sm">{error.message}</p>
         </div>
       </div>
     );
@@ -233,24 +233,24 @@ export default function SnapshotsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-white">Snapshots</h1>
+          <h1 className="text-2xl font-bold text-foreground">Snapshots</h1>
         </div>
         {hasFilters && (
           <div className="flex flex-wrap gap-4 mb-6">
             <div className="w-48">
               <Select value={holdingFilter || "all"} onValueChange={handleHoldingFilterChange}>
-                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                <SelectTrigger className="bg-card border-border text-foreground">
                   <SelectValue placeholder="All Holdings" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  <SelectItem value="all" className="text-white hover:bg-gray-700">
+                <SelectContent className="bg-card border-border">
+                  <SelectItem value="all" className="text-foreground hover:bg-muted">
                     All Holdings
                   </SelectItem>
                   {snapshotHoldings?.map((holding) => (
                     <SelectItem
                       key={holding.id}
                       value={holding.id}
-                      className="text-white hover:bg-gray-700"
+                      className="text-foreground hover:bg-muted"
                     >
                       {holding.name}
                     </SelectItem>
@@ -260,18 +260,18 @@ export default function SnapshotsPage() {
             </div>
             <div className="w-36">
               <Select value={typeFilter || "all"} onValueChange={handleTypeFilterChange}>
-                <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+                <SelectTrigger className="bg-card border-border text-foreground">
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  <SelectItem value="all" className="text-white hover:bg-gray-700">
+                <SelectContent className="bg-card border-border">
+                  <SelectItem value="all" className="text-foreground hover:bg-muted">
                     All Types
                   </SelectItem>
                   {snapshotTypes.map((type) => (
                     <SelectItem
                       key={type}
                       value={type}
-                      className="text-white hover:bg-gray-700"
+                      className="text-foreground hover:bg-muted"
                     >
                       {formatType(type)}
                     </SelectItem>
@@ -309,23 +309,23 @@ export default function SnapshotsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Snapshots</h1>
+        <h1 className="text-2xl font-bold text-foreground">Snapshots</h1>
       </div>
       <div className="flex flex-wrap gap-4 mb-6">
         <div className="w-48">
           <Select value={holdingFilter || "all"} onValueChange={handleHoldingFilterChange}>
-            <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+            <SelectTrigger className="bg-card border-border text-foreground">
               <SelectValue placeholder="All Holdings" />
             </SelectTrigger>
-            <SelectContent className="bg-gray-800 border-gray-700">
-              <SelectItem value="all" className="text-white hover:bg-gray-700">
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="all" className="text-foreground hover:bg-muted">
                 All Holdings
               </SelectItem>
               {snapshotHoldings?.map((holding) => (
                 <SelectItem
                   key={holding.id}
                   value={holding.id}
-                  className="text-white hover:bg-gray-700"
+                  className="text-foreground hover:bg-muted"
                 >
                   {holding.name}
                 </SelectItem>
@@ -335,18 +335,18 @@ export default function SnapshotsPage() {
         </div>
         <div className="w-36">
           <Select value={typeFilter || "all"} onValueChange={handleTypeFilterChange}>
-            <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
+            <SelectTrigger className="bg-card border-border text-foreground">
               <SelectValue placeholder="All Types" />
             </SelectTrigger>
-            <SelectContent className="bg-gray-800 border-gray-700">
-              <SelectItem value="all" className="text-white hover:bg-gray-700">
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="all" className="text-foreground hover:bg-muted">
                 All Types
               </SelectItem>
               {snapshotTypes.map((type) => (
                 <SelectItem
                   key={type}
                   value={type}
-                  className="text-white hover:bg-gray-700"
+                  className="text-foreground hover:bg-muted"
                 >
                   {formatType(type)}
                 </SelectItem>
@@ -355,16 +355,16 @@ export default function SnapshotsPage() {
           </Select>
         </div>
       </div>
-      <div className="rounded-md border border-gray-700">
+      <div className="rounded-md border border-border">
         <Table>
           <TableHeader>
-            <TableRow className="border-gray-700 hover:bg-gray-800/50">
-              <TableHead className="text-gray-300">Date</TableHead>
-              <TableHead className="text-gray-300">Holding</TableHead>
-              <TableHead className="text-gray-300">Type</TableHead>
-              <TableHead className="text-gray-300 text-right">Balance</TableHead>
-              <TableHead className="text-gray-300">Currency</TableHead>
-              <TableHead className="text-gray-300 text-right">Actions</TableHead>
+            <TableRow className="border-border hover:bg-card/50">
+              <TableHead className="text-muted-foreground">Date</TableHead>
+              <TableHead className="text-muted-foreground">Holding</TableHead>
+              <TableHead className="text-muted-foreground">Type</TableHead>
+              <TableHead className="text-muted-foreground text-right">Balance</TableHead>
+              <TableHead className="text-muted-foreground">Currency</TableHead>
+              <TableHead className="text-muted-foreground text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -375,15 +375,15 @@ export default function SnapshotsPage() {
               const showNativeIndicator = nativeCurrency !== displayCurrency;
 
               return (
-                <TableRow key={snapshot.id} className="border-gray-700 hover:bg-gray-800/50">
-                  <TableCell className="text-white">
+                <TableRow key={snapshot.id} className="border-border hover:bg-card/50">
+                  <TableCell className="text-foreground">
                     {formatMonthYear(snapshot.date)}
                   </TableCell>
-                  <TableCell className="text-white">{snapshot.holdingName}</TableCell>
-                  <TableCell className="text-gray-300">
+                  <TableCell className="text-foreground">{snapshot.holdingName}</TableCell>
+                  <TableCell className="text-muted-foreground">
                     {formatType(snapshot.holdingType)}
                   </TableCell>
-                  <TableCell className="text-white text-right font-mono">
+                  <TableCell className="text-foreground text-right font-mono">
                     <CurrencyDisplay
                       amount={convertedBalance}
                       currency={displayCurrency}
@@ -393,14 +393,14 @@ export default function SnapshotsPage() {
                       isLoading={currencyLoading}
                     />
                   </TableCell>
-                  <TableCell className="text-gray-300">{snapshot.currency}</TableCell>
+                  <TableCell className="text-muted-foreground">{snapshot.currency}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => handleEditClick(snapshot)}
-                        className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-700"
+                        className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                       >
                         <Pencil className="h-4 w-4" />
                         <span className="sr-only">Edit</span>
@@ -409,7 +409,7 @@ export default function SnapshotsPage() {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDeleteClick(snapshot)}
-                        className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-gray-700"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-muted"
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="sr-only">Delete</span>

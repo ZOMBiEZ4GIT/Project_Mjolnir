@@ -96,26 +96,26 @@ export function DeleteSnapshotDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="bg-gray-900 border-gray-700">
+      <AlertDialogContent className="bg-background border-border">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-white">Delete Snapshot</AlertDialogTitle>
-          <AlertDialogDescription className="text-gray-400">
+          <AlertDialogTitle className="text-foreground">Delete Snapshot</AlertDialogTitle>
+          <AlertDialogDescription className="text-muted-foreground">
             Are you sure you want to delete this snapshot? This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <div className="my-4 p-4 bg-gray-800 rounded-lg border border-gray-700 space-y-2">
+        <div className="my-4 p-4 bg-card rounded-lg border border-border space-y-2">
           <div className="flex justify-between">
-            <span className="text-gray-400">Holding:</span>
-            <span className="text-white font-medium">{snapshot.holdingName}</span>
+            <span className="text-muted-foreground">Holding:</span>
+            <span className="text-foreground font-medium">{snapshot.holdingName}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-400">Date:</span>
-            <span className="text-white">{formatMonthYear(snapshot.date)}</span>
+            <span className="text-muted-foreground">Date:</span>
+            <span className="text-foreground">{formatMonthYear(snapshot.date)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-400">Balance:</span>
-            <span className="text-white font-mono">
+            <span className="text-muted-foreground">Balance:</span>
+            <span className="text-foreground font-mono">
               {formatBalance(snapshot.balance, snapshot.currency)}
             </span>
           </div>
@@ -129,7 +129,7 @@ export function DeleteSnapshotDialog({
 
         <AlertDialogFooter>
           <AlertDialogCancel
-            className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+            className="bg-card border-border text-foreground hover:bg-muted"
             disabled={mutation.isPending}
           >
             Cancel
@@ -137,7 +137,7 @@ export function DeleteSnapshotDialog({
           <AlertDialogAction
             onClick={handleDelete}
             disabled={mutation.isPending}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            className="bg-destructive hover:bg-destructive/90 text-foreground"
           >
             {mutation.isPending ? (
               <>

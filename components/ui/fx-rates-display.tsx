@@ -68,7 +68,7 @@ function InlineSkeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "inline-flex h-7 w-48 items-center rounded bg-gray-700 animate-pulse",
+        "inline-flex h-7 w-48 items-center rounded bg-muted animate-pulse",
         className
       )}
       aria-label="Loading exchange rates"
@@ -83,7 +83,7 @@ function CompactSkeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "inline-flex h-8 w-8 items-center justify-center rounded bg-gray-700 animate-pulse",
+        "inline-flex h-8 w-8 items-center justify-center rounded bg-muted animate-pulse",
         className
       )}
       aria-label="Loading exchange rates"
@@ -134,7 +134,7 @@ export function FxRatesDisplay({
             <TooltipTrigger asChild>
               <button
                 className={cn(
-                  "inline-flex h-8 w-8 items-center justify-center rounded border border-gray-700 text-gray-500 hover:bg-gray-800 transition-colors",
+                  "inline-flex h-8 w-8 items-center justify-center rounded border border-border text-muted-foreground hover:bg-card transition-colors",
                   className
                 )}
                 aria-label="Exchange rates unavailable"
@@ -153,7 +153,7 @@ export function FxRatesDisplay({
     return (
       <div
         className={cn(
-          "inline-flex items-center gap-2 text-sm text-gray-500",
+          "inline-flex items-center gap-2 text-sm text-muted-foreground",
           className
         )}
       >
@@ -170,20 +170,20 @@ export function FxRatesDisplay({
   // Rate display content (shared between modes)
   const ratesContent = (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 text-sm font-medium text-white">
-        <TrendingUp className="h-4 w-4 text-green-500" />
+      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+        <TrendingUp className="h-4 w-4 text-positive" />
         Exchange Rates
       </div>
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-        <span className="text-gray-400">1 USD =</span>
-        <span className="font-mono text-white">{formatRate(usdRate)} AUD</span>
-        <span className="text-gray-400">1 NZD =</span>
-        <span className="font-mono text-white">{formatRate(nzdRate)} AUD</span>
+        <span className="text-muted-foreground">1 USD =</span>
+        <span className="font-mono text-foreground">{formatRate(usdRate)} AUD</span>
+        <span className="text-muted-foreground">1 NZD =</span>
+        <span className="font-mono text-foreground">{formatRate(nzdRate)} AUD</span>
       </div>
       <div
         className={cn(
           "text-xs flex items-center gap-1",
-          isStale ? "text-amber-400" : "text-gray-500"
+          isStale ? "text-amber-400" : "text-muted-foreground"
         )}
       >
         {isStale && <AlertTriangle className="h-3 w-3" />}
@@ -200,8 +200,8 @@ export function FxRatesDisplay({
           <TooltipTrigger asChild>
             <button
               className={cn(
-                "inline-flex h-8 w-8 items-center justify-center rounded border border-gray-700 hover:bg-gray-800 transition-colors",
-                isStale ? "text-amber-400" : "text-gray-400",
+                "inline-flex h-8 w-8 items-center justify-center rounded border border-border hover:bg-card transition-colors",
+                isStale ? "text-amber-400" : "text-muted-foreground",
                 className
               )}
               aria-label="View exchange rates"
@@ -221,7 +221,7 @@ export function FxRatesDisplay({
   return (
     <div
       className={cn(
-        "rounded-lg border border-gray-800 bg-gray-900/50 p-3",
+        "rounded-lg border border-border bg-background/50 p-3",
         className
       )}
     >

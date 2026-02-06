@@ -101,11 +101,11 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
 
   const data = payload[0];
   return (
-    <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 shadow-lg">
-      <p className="text-gray-400 text-sm mb-1">
+    <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+      <p className="text-muted-foreground text-sm mb-1">
         {formatMonthFull(data.payload.date)}
       </p>
-      <p className="text-white font-semibold text-lg">
+      <p className="text-foreground font-semibold text-lg">
         {formatCurrency(data.value, currency)}
       </p>
     </div>
@@ -122,7 +122,7 @@ interface TimeRangeSelectorProps {
 
 function TimeRangeSelector({ selectedRange, onRangeChange }: TimeRangeSelectorProps) {
   return (
-    <div className="flex items-center gap-1 bg-gray-700/50 rounded-lg p-1">
+    <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
       {TIME_RANGE_OPTIONS.map((option) => (
         <button
           key={option.value}
@@ -131,8 +131,8 @@ function TimeRangeSelector({ selectedRange, onRangeChange }: TimeRangeSelectorPr
             px-3 py-1 text-sm font-medium rounded-md transition-colors
             ${
               selectedRange === option.value
-                ? "bg-gray-600 text-white"
-                : "text-gray-400 hover:text-gray-200 hover:bg-gray-700/50"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
             }
           `}
         >
@@ -153,13 +153,13 @@ interface ChartViewToggleProps {
 
 function ChartViewToggle({ viewMode, onChange }: ChartViewToggleProps) {
   return (
-    <div className="flex items-center gap-1 bg-gray-700/50 rounded-lg p-1">
+    <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
       <button
         onClick={() => onChange("networth")}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
           viewMode === "networth"
-            ? "bg-gray-600 text-white"
-            : "text-gray-400 hover:text-white"
+            ? "bg-muted text-foreground"
+            : "text-muted-foreground hover:text-foreground"
         }`}
         title="Net Worth only"
       >
@@ -170,8 +170,8 @@ function ChartViewToggle({ viewMode, onChange }: ChartViewToggleProps) {
         onClick={() => onChange("assetsvsdebt")}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
           viewMode === "assetsvsdebt"
-            ? "bg-gray-600 text-white"
-            : "text-gray-400 hover:text-white"
+            ? "bg-muted text-foreground"
+            : "text-muted-foreground hover:text-foreground"
         }`}
         title="Assets vs Debt comparison"
       >
@@ -312,9 +312,9 @@ export function NetWorthChart() {
   // Empty state
   if (chartData.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             Net Worth History
           </h3>
           <div className="flex items-center gap-2 flex-wrap">
@@ -329,7 +329,7 @@ export function NetWorthChart() {
           </div>
         </div>
         <div className="h-64 flex items-center justify-center">
-          <p className="text-gray-500 text-center">
+          <p className="text-muted-foreground text-center">
             No historical data available yet.
             <br />
             Data will appear after your first month of tracking.
@@ -354,9 +354,9 @@ export function NetWorthChart() {
   };
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 sm:p-6">
+    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
           Net Worth History
         </h3>
         <div className="flex items-center gap-2 flex-wrap">

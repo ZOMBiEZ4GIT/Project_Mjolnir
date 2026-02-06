@@ -15,11 +15,11 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="bg-gray-900 border-b border-gray-800">
+      <header className="bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4 md:gap-8">
             <MobileNav />
-            <h1 className="text-2xl font-bold text-white">Mjolnir</h1>
+            <h1 className="text-2xl font-bold text-foreground">Mjolnir</h1>
             <div className="hidden md:block">
               <DashboardNav />
             </div>

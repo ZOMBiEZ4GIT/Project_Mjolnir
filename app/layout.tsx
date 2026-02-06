@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import { ClerkProvider } from "@/components/providers/clerk-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Mjölnir - Net Worth Tracker",
@@ -13,7 +16,7 @@ export const metadata: Metadata = {
 function AppContent({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body className="antialiased bg-gray-950 text-white min-h-screen">
+      <body className={`${inter.className} antialiased bg-background text-foreground min-h-screen`}>
         {children}
         <Toaster />
       </body>

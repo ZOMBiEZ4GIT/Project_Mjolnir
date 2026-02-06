@@ -47,24 +47,24 @@ export function RecentImports({
         {[1, 2, 3].map((i) => (
           <div
             key={i}
-            className="rounded-lg border border-gray-800 bg-gray-900/50 p-4"
+            className="rounded-lg border border-border bg-background/50 p-4"
           >
             <div className="flex items-start gap-3">
               {/* Status icon placeholder */}
-              <div className="h-5 w-5 rounded-full bg-gray-800 animate-pulse mt-0.5" />
+              <div className="h-5 w-5 rounded-full bg-card animate-pulse mt-0.5" />
               <div className="flex-1 space-y-2">
                 {/* Filename row: FileText icon + filename + type badge */}
                 <div className="flex items-center gap-2">
-                  <div className="h-4 w-4 rounded bg-gray-800 animate-pulse" />
-                  <div className="h-4 w-32 rounded bg-gray-800 animate-pulse" />
-                  <div className="h-5 w-20 rounded-full bg-gray-800 animate-pulse" />
+                  <div className="h-4 w-4 rounded bg-card animate-pulse" />
+                  <div className="h-4 w-32 rounded bg-card animate-pulse" />
+                  <div className="h-5 w-20 rounded-full bg-card animate-pulse" />
                 </div>
                 {/* Stats row: imported count + timestamp */}
                 <div className="flex items-center gap-4">
-                  <div className="h-3 w-20 rounded bg-gray-800 animate-pulse" />
+                  <div className="h-3 w-20 rounded bg-card animate-pulse" />
                   <div className="flex items-center gap-1">
-                    <div className="h-3 w-3 rounded bg-gray-800 animate-pulse" />
-                    <div className="h-3 w-24 rounded bg-gray-800 animate-pulse" />
+                    <div className="h-3 w-3 rounded bg-card animate-pulse" />
+                    <div className="h-3 w-24 rounded bg-card animate-pulse" />
                   </div>
                 </div>
               </div>
@@ -77,11 +77,11 @@ export function RecentImports({
 
   if (imports.length === 0) {
     return (
-      <div className={`rounded-lg border border-gray-800 bg-gray-900/50 p-8 ${className}`}>
+      <div className={`rounded-lg border border-border bg-background/50 p-8 ${className}`}>
         <div className="flex flex-col items-center justify-center text-center">
-          <Inbox className="h-12 w-12 text-gray-600 mb-3" />
-          <p className="text-gray-400">No imports yet</p>
-          <p className="text-sm text-gray-500 mt-1">
+          <Inbox className="h-12 w-12 text-muted-foreground mb-3" />
+          <p className="text-muted-foreground">No imports yet</p>
+          <p className="text-sm text-muted-foreground mt-1">
             Your import history will appear here
           </p>
         </div>
@@ -98,10 +98,10 @@ export function RecentImports({
         return (
           <div
             key={record.id}
-            className="rounded-lg border border-gray-800 bg-gray-900/50 overflow-hidden"
+            className="rounded-lg border border-border bg-background/50 overflow-hidden"
           >
             <div
-              className={`p-4 ${hasErrors ? "cursor-pointer hover:bg-gray-800/50" : ""}`}
+              className={`p-4 ${hasErrors ? "cursor-pointer hover:bg-card/50" : ""}`}
               onClick={() => hasErrors && toggleExpanded(record.id)}
             >
               <div className="flex items-start justify-between">
@@ -110,13 +110,13 @@ export function RecentImports({
                     {hasErrors ? (
                       <AlertCircle className="h-5 w-5 text-yellow-500" />
                     ) : (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      <CheckCircle2 className="h-5 w-5 text-positive" />
                     )}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-gray-500" />
-                      <span className="text-sm font-medium text-white truncate max-w-[200px]">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium text-foreground truncate max-w-[200px]">
                         {record.filename}
                       </span>
                       <span
@@ -129,8 +129,8 @@ export function RecentImports({
                         {record.type}
                       </span>
                     </div>
-                    <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
-                      <span className="text-emerald-400">
+                    <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                      <span className="text-positive">
                         {record.imported} imported
                       </span>
                       {record.skipped > 0 && (
@@ -149,7 +149,7 @@ export function RecentImports({
                 </div>
                 {hasErrors && (
                   <button
-                    className="text-gray-500 hover:text-gray-300 transition-colors"
+                    className="text-muted-foreground hover:text-muted-foreground transition-colors"
                     aria-label={isExpanded ? "Collapse errors" : "Expand errors"}
                   >
                     {isExpanded ? (
@@ -164,17 +164,17 @@ export function RecentImports({
 
             {/* Expanded error details */}
             {isExpanded && hasErrors && (
-              <div className="px-4 pb-4 border-t border-gray-800">
+              <div className="px-4 pb-4 border-t border-border">
                 <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
                   {record.errors.map((error, index) => (
                     <div
                       key={index}
                       className="flex items-start gap-2 text-sm"
                     >
-                      <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs whitespace-nowrap">
+                      <span className="bg-destructive/20 text-destructive px-2 py-0.5 rounded text-xs whitespace-nowrap">
                         Row {error.row}
                       </span>
-                      <span className="text-gray-400">{error.message}</span>
+                      <span className="text-muted-foreground">{error.message}</span>
                     </div>
                   ))}
                 </div>

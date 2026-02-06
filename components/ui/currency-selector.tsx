@@ -56,7 +56,7 @@ function CurrencySelectorSkeleton({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "inline-flex h-9 w-20 items-center justify-center rounded-md bg-gray-700 animate-pulse",
+        "inline-flex h-9 w-20 items-center justify-center rounded-md bg-muted animate-pulse",
         className
       )}
       aria-label="Loading currency selector"

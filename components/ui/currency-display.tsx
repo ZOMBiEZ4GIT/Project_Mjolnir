@@ -72,7 +72,7 @@ function CurrencyDisplaySkeleton({ className }: { className?: string }) {
   return (
     <span
       className={cn(
-        "inline-block h-5 w-20 bg-gray-700 rounded animate-pulse",
+        "inline-block h-5 w-20 bg-muted rounded animate-pulse",
         className
       )}
       aria-label="Loading currency value"
@@ -158,7 +158,7 @@ export function CurrencyDisplay({
             <span>{formattedAmount}</span>
             {hasDifferentNativeCurrency && (
               <span
-                className="text-xs text-gray-400 font-normal"
+                className="text-xs text-muted-foreground font-normal"
                 aria-label={`Native currency: ${nativeCurrency}`}
               >
                 ({nativeCurrency})

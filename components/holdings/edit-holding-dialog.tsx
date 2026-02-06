@@ -270,10 +270,10 @@ export function EditHoldingDialog({
                 setFormData({ ...formData, name: e.target.value });
                 if (errors.name) setErrors({ ...errors, name: undefined });
               }}
-              className={errors.name ? "border-red-500 focus-visible:ring-red-500" : ""}
+              className={errors.name ? "border-destructive focus-visible:ring-destructive" : ""}
             />
             {errors.name && (
-              <p className="text-sm text-red-500">{errors.name}</p>
+              <p className="text-sm text-destructive">{errors.name}</p>
             )}
           </div>
 
@@ -288,10 +288,10 @@ export function EditHoldingDialog({
                   setFormData({ ...formData, symbol: e.target.value });
                   if (errors.symbol) setErrors({ ...errors, symbol: undefined });
                 }}
-                className={errors.symbol ? "border-red-500 focus-visible:ring-red-500" : ""}
+                className={errors.symbol ? "border-destructive focus-visible:ring-destructive" : ""}
               />
               {errors.symbol && (
-                <p className="text-sm text-red-500">{errors.symbol}</p>
+                <p className="text-sm text-destructive">{errors.symbol}</p>
               )}
             </div>
           )}
@@ -309,7 +309,7 @@ export function EditHoldingDialog({
             >
               <SelectTrigger
                 id="edit-currency"
-                className={errors.currency ? "border-red-500 focus:ring-red-500" : ""}
+                className={errors.currency ? "border-destructive focus:ring-destructive" : ""}
               >
                 <SelectValue placeholder="Select currency" />
               </SelectTrigger>
@@ -322,7 +322,7 @@ export function EditHoldingDialog({
               </SelectContent>
             </Select>
             {errors.currency && (
-              <p className="text-sm text-red-500">{errors.currency}</p>
+              <p className="text-sm text-destructive">{errors.currency}</p>
             )}
           </div>
 
@@ -347,7 +347,7 @@ export function EditHoldingDialog({
               >
                 <SelectTrigger
                   id="edit-exchange"
-                  className={errors.exchange ? "border-red-500 focus:ring-red-500" : ""}
+                  className={errors.exchange ? "border-destructive focus:ring-destructive" : ""}
                 >
                   <SelectValue placeholder="Select exchange" />
                 </SelectTrigger>
@@ -360,7 +360,7 @@ export function EditHoldingDialog({
                 </SelectContent>
               </Select>
               {errors.exchange && (
-                <p className="text-sm text-red-500">{errors.exchange}</p>
+                <p className="text-sm text-destructive">{errors.exchange}</p>
               )}
             </div>
           )}
