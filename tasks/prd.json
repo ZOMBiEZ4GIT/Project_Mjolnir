@@ -92,8 +92,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created hooks/use-form-shake.ts — returns { formRef, triggerShake }. Uses animate-shake CSS class (Tailwind keyframes). Focuses first error field via aria-invalid/border-destructive/data-invalid selectors. Respects prefers-reduced-motion (skips shake, still focuses). Call triggerShake() in handleSubmit's onInvalid callback."
     },
     {
       "id": "US-006",

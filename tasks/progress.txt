@@ -133,6 +133,8 @@
 - Framer Motion centering: use `style={{ x: "-50%", y: "-50%" }}` not CSS translate classes (FM overwrites transform)
 - FormField/FormTextareaField/FormSelectField: convenience wrappers in components/ui/ — use Controller + useFormContext, require FormProvider parent
 - FormField uses motion.input with focusGlow for purple glow on focus; FormSelectField uses Radix Select (no motion wrapper)
+- useFormShake hook (hooks/use-form-shake.ts): returns { formRef, triggerShake } — attach ref to form container, call triggerShake() in handleSubmit onInvalid callback
+- animate-shake CSS class defined in tailwind.config.ts — use for CSS-based shake animations (500ms ease-in-out)
 
 ---
 
@@ -184,5 +186,18 @@ Started: 2026-02-06
   - `field.value ?? ""` prevents "undefined" showing in inputs when form values are initially undefined
   - Export as named re-export: `export { Component as FormField }` to get clean import names
   - These wrapper components require `<FormProvider>` (or `<Form>`) wrapping the form — they use `useFormContext()` internally
+---
+
+## 2026-02-06 - US-005
+- What was implemented: Created hooks/use-form-shake.ts — reusable hook for error shake animation on form submit with auto-focus to first error field
+- Files changed: hooks/use-form-shake.ts
+- **Learnings for future iterations:**
+  - useFormShake returns `{ formRef, triggerShake }` — attach formRef to the form/div container, call triggerShake() in handleSubmit's onInvalid callback
+  - Uses Tailwind's `animate-shake` class (already in tailwind.config.ts) instead of Framer Motion errorShake — simpler for CSS-class-based approach
+  - animationend event listener auto-removes the class after animation completes — no setTimeout needed
+  - Focus logic uses `requestAnimationFrame` to let React render error states before querying DOM for error selectors
+  - Selects first error via `[aria-invalid="true"], .border-destructive, [data-invalid]` — covers RHF native, shadcn/ui, and custom patterns
+  - Respects prefers-reduced-motion: skips shake animation but still focuses first error field
+  - check-in-modal.tsx already has a manual shake implementation (useState + setTimeout) — can be refactored to use this hook in US-009
 ---
 
