@@ -1,19 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useForm, FormProvider, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  AnimatedDialog,
+  AnimatedDialogContent,
+  AnimatedDialogHeader,
+  AnimatedDialogTitle,
+  AnimatedDialogDescription,
+  AnimatedDialogFooter,
+} from "@/components/ui/animated-dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { FormField } from "@/components/ui/form-field";
+import { FormTextareaField } from "@/components/ui/form-textarea-field";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import { useFormShake } from "@/hooks/use-form-shake";
+import { showSuccess, showError } from "@/lib/toast-helpers";
 
 // Currency symbols for display
 const currencySymbols: Record<string, string> = {
@@ -52,6 +57,35 @@ interface Contribution {
   notes: string | null;
   holdingName: string;
 }
+
+// Zod schema — balance required, notes optional, contributions optional non-negative
+const editSnapshotSchema = z.object({
+  balance: z.coerce.number({ error: "Balance is required" }),
+  notes: z.string().optional().default(""),
+  employerContrib: z.coerce
+    .number()
+    .min(0, "Must be a non-negative number")
+    .optional()
+    .default(0),
+  employeeContrib: z.coerce
+    .number()
+    .min(0, "Must be a non-negative number")
+    .optional()
+    .default(0),
+  // Hidden field to conditionally validate balance sign
+  _holdingType: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // Non-debt holdings must have non-negative balance
+  if (data._holdingType !== "debt" && data.balance < 0) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Balance must be non-negative",
+      path: ["balance"],
+    });
+  }
+});
+
+type FormValues = z.infer<typeof editSnapshotSchema>;
 
 interface EditSnapshotModalProps {
   snapshot: SnapshotWithHolding | null;
@@ -138,20 +172,19 @@ export function EditSnapshotModal({
   onOpenChange,
 }: EditSnapshotModalProps) {
   const queryClient = useQueryClient();
-
-  // Form state
-  const [balance, setBalance] = useState("");
-  const [notes, setNotes] = useState("");
+  const { formRef, triggerShake } = useFormShake();
   const [showContributions, setShowContributions] = useState(false);
-  const [employerContrib, setEmployerContrib] = useState("");
-  const [employeeContrib, setEmployeeContrib] = useState("");
 
-  // Form errors
-  const [errors, setErrors] = useState<{
-    balance?: string;
-    employerContrib?: string;
-    employeeContrib?: string;
-  }>({});
+  const form = useForm<FormValues>({
+    resolver: zodResolver(editSnapshotSchema) as unknown as Resolver<FormValues>,
+    defaultValues: {
+      balance: 0,
+      notes: "",
+      employerContrib: 0,
+      employeeContrib: 0,
+      _holdingType: "",
+    },
+  });
 
   // Fetch contribution if this is a super holding
   const { data: contribution, isLoading: isLoadingContribution } = useQuery({
@@ -160,26 +193,31 @@ export function EditSnapshotModal({
     enabled: open && snapshot?.holdingType === "super",
   });
 
-  // Initialize form state when snapshot or contribution changes
+  // Initialize form state when snapshot changes or dialog opens
   useEffect(() => {
-    if (snapshot) {
-      setBalance(snapshot.balance);
-      setNotes(snapshot.notes || "");
-      setErrors({});
+    if (snapshot && open) {
+      form.reset({
+        balance: parseFloat(snapshot.balance) || 0,
+        notes: snapshot.notes || "",
+        employerContrib: 0,
+        employeeContrib: 0,
+        _holdingType: snapshot.holdingType,
+      });
     }
-  }, [snapshot]);
+  }, [snapshot, open, form]);
 
+  // Populate contribution data when loaded
   useEffect(() => {
     if (contribution) {
-      setEmployerContrib(contribution.employerContrib || "");
-      setEmployeeContrib(contribution.employeeContrib || "");
+      form.setValue("employerContrib", parseFloat(contribution.employerContrib) || 0);
+      form.setValue("employeeContrib", parseFloat(contribution.employeeContrib) || 0);
       setShowContributions(true);
     } else {
-      setEmployerContrib("");
-      setEmployeeContrib("");
+      form.setValue("employerContrib", 0);
+      form.setValue("employeeContrib", 0);
       setShowContributions(false);
     }
-  }, [contribution]);
+  }, [contribution, form]);
 
   // Snapshot update mutation
   const updateSnapshotMutation = useMutation({
@@ -203,68 +241,34 @@ export function EditSnapshotModal({
     }) => createContribution(data),
   });
 
-  const handleSave = async () => {
+  const onValid = async (data: FormValues) => {
     if (!snapshot) return;
-
-    // Validate form
-    const newErrors: typeof errors = {};
-
-    // Validate balance
-    const balanceNum = parseFloat(balance);
-    if (!balance || isNaN(balanceNum)) {
-      newErrors.balance = "Balance is required";
-    } else if (balanceNum < 0 && snapshot.holdingType !== "debt") {
-      newErrors.balance = "Balance must be non-negative";
-    }
-
-    // Validate contributions if shown
-    if (showContributions) {
-      if (employerContrib) {
-        const empNum = parseFloat(employerContrib);
-        if (isNaN(empNum) || empNum < 0) {
-          newErrors.employerContrib = "Must be a non-negative number";
-        }
-      }
-      if (employeeContrib) {
-        const eeNum = parseFloat(employeeContrib);
-        if (isNaN(eeNum) || eeNum < 0) {
-          newErrors.employeeContrib = "Must be a non-negative number";
-        }
-      }
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
 
     try {
       // Update snapshot
       await updateSnapshotMutation.mutateAsync({
-        balance,
-        notes: notes || undefined,
+        balance: String(data.balance),
+        notes: data.notes || undefined,
       });
 
       // Handle contributions for super holdings
       if (snapshot.holdingType === "super" && showContributions) {
-        const hasContribValues =
-          (employerContrib && employerContrib !== "0") ||
-          (employeeContrib && employeeContrib !== "0");
+        const employer = data.employerContrib ?? 0;
+        const employee = data.employeeContrib ?? 0;
+        const hasContribValues = employer > 0 || employee > 0;
 
         if (hasContribValues) {
           if (contribution) {
-            // Update existing contribution
             await updateContributionMutation.mutateAsync({
-              employer_contribution: employerContrib || "0",
-              employee_contribution: employeeContrib || "0",
+              employer_contribution: String(employer),
+              employee_contribution: String(employee),
             });
           } else {
-            // Create new contribution
             await createContributionMutation.mutateAsync({
               holding_id: snapshot.holdingId,
               date: snapshot.date,
-              employer_contribution: employerContrib || "0",
-              employee_contribution: employeeContrib || "0",
+              employer_contribution: String(employer),
+              employee_contribution: String(employee),
             });
           }
         }
@@ -276,14 +280,18 @@ export function EditSnapshotModal({
       queryClient.invalidateQueries({ queryKey: ["contributions"] });
       queryClient.invalidateQueries({ queryKey: ["holdings"] });
 
-      toast.success("Snapshot updated successfully");
+      showSuccess("Snapshot updated successfully");
       onOpenChange(false);
     } catch (error) {
-      toast.error(
+      showError(
         error instanceof Error ? error.message : "Failed to save changes"
       );
     }
   };
+
+  const handleSubmit = form.handleSubmit(onValid, () => {
+    triggerShake();
+  });
 
   const isPending =
     updateSnapshotMutation.isPending ||
@@ -295,198 +303,139 @@ export function EditSnapshotModal({
   const currencySymbol = currencySymbols[snapshot.currency] || snapshot.currency;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md border-border bg-background">
-        <DialogHeader>
-          <DialogTitle className="text-foreground">Edit Snapshot</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
+    <AnimatedDialog open={open} onOpenChange={onOpenChange}>
+      <AnimatedDialogContent className="max-w-md">
+        <AnimatedDialogHeader>
+          <AnimatedDialogTitle>Edit Snapshot</AnimatedDialogTitle>
+          <AnimatedDialogDescription>
             Update the balance and notes for this snapshot
-          </DialogDescription>
-        </DialogHeader>
+          </AnimatedDialogDescription>
+        </AnimatedDialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Read-only holding and date info */}
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Holding</span>
-              <span className="text-foreground font-medium">
-                {snapshot.holdingName}
-              </span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Date</span>
-              <span className="text-foreground">{formatMonthYear(snapshot.date)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Type</span>
-              <span className="text-muted-foreground capitalize">
-                {snapshot.holdingType}
-              </span>
-            </div>
-          </div>
-
-          <div className="border-t border-border pt-4">
-            {/* Balance input */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">
-                Balance
-              </label>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">{currencySymbol}</span>
-                <Input
-                  type="number"
-                  value={balance}
-                  onChange={(e) => {
-                    setBalance(e.target.value);
-                    if (errors.balance) setErrors({ ...errors, balance: undefined });
-                  }}
-                  className={`bg-card border-border text-foreground text-right ${
-                    errors.balance ? "border-destructive focus-visible:ring-destructive" : ""
-                  }`}
-                  step="0.01"
-                  min="0"
-                />
+        <FormProvider {...form}>
+          <form onSubmit={handleSubmit}>
+            <div
+              ref={formRef as React.RefObject<HTMLDivElement | null>}
+              className="space-y-4 py-4"
+            >
+              {/* Read-only holding and date info */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Holding</span>
+                  <span className="text-foreground font-medium">
+                    {snapshot.holdingName}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Date</span>
+                  <span className="text-foreground">{formatMonthYear(snapshot.date)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Type</span>
+                  <span className="text-muted-foreground capitalize">
+                    {snapshot.holdingType}
+                  </span>
+                </div>
               </div>
-              {errors.balance && (
-                <p className="text-sm text-destructive">{errors.balance}</p>
-              )}
-            </div>
 
-            {/* Notes input */}
-            <div className="space-y-2 mt-4">
-              <label className="text-sm font-medium text-muted-foreground">Notes</label>
-              <Textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="bg-card border-border text-foreground resize-none"
-                rows={2}
-                placeholder="Optional notes..."
-              />
-            </div>
+              <div className="border-t border-border pt-4">
+                {/* Balance input */}
+                <FormField<FormValues>
+                  name="balance"
+                  label={`Balance (${currencySymbol})`}
+                  type="number"
+                  placeholder="0.00"
+                />
 
-            {/* Contributions section for super holdings */}
-            {snapshot.holdingType === "super" && (
-              <div className="mt-4 pt-4 border-t border-border">
-                {isLoadingContribution ? (
-                  <div className="text-sm text-muted-foreground">
-                    Loading contributions...
-                  </div>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setShowContributions(!showContributions)}
-                      className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
-                    >
-                      {showContributions ? (
-                        <ChevronDown className="w-4 h-4" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4" />
-                      )}
-                      {contribution
-                        ? showContributions
-                          ? "Hide Contributions"
-                          : "Edit Contributions"
-                        : showContributions
-                          ? "Hide Contributions"
-                          : "Add Contributions"}
-                    </button>
+                {/* Notes input */}
+                <FormTextareaField<FormValues>
+                  name="notes"
+                  label="Notes"
+                  placeholder="Optional notes..."
+                  rows={2}
+                  className="mt-4"
+                />
 
-                    {showContributions && (
-                      <div className="mt-3 pl-4 space-y-3 border-l-2 border-border">
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <label className="text-sm text-muted-foreground">
-                              Employer Contribution
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-muted-foreground">
-                                {currencySymbol}
-                              </span>
-                              <Input
-                                type="number"
-                                placeholder="0.00"
-                                value={employerContrib}
-                                onChange={(e) => {
-                                  setEmployerContrib(e.target.value);
-                                  if (errors.employerContrib) setErrors({ ...errors, employerContrib: undefined });
-                                }}
-                                className={`w-28 bg-card border-border text-foreground text-right ${
-                                  errors.employerContrib ? "border-destructive focus-visible:ring-destructive" : ""
-                                }`}
-                                step="0.01"
-                                min="0"
-                              />
-                            </div>
-                          </div>
-                          {errors.employerContrib && (
-                            <p className="text-xs text-destructive text-right">{errors.employerContrib}</p>
-                          )}
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <label className="text-sm text-muted-foreground">
-                              Employee Contribution
-                            </label>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm text-muted-foreground">
-                                {currencySymbol}
-                              </span>
-                              <Input
-                                type="number"
-                                placeholder="0.00"
-                                value={employeeContrib}
-                                onChange={(e) => {
-                                  setEmployeeContrib(e.target.value);
-                                  if (errors.employeeContrib) setErrors({ ...errors, employeeContrib: undefined });
-                                }}
-                                className={`w-28 bg-card border-border text-foreground text-right ${
-                                  errors.employeeContrib ? "border-destructive focus-visible:ring-destructive" : ""
-                                }`}
-                                step="0.01"
-                                min="0"
-                              />
-                            </div>
-                          </div>
-                          {errors.employeeContrib && (
-                            <p className="text-xs text-destructive text-right">{errors.employeeContrib}</p>
-                          )}
-                        </div>
+                {/* Contributions section for super holdings */}
+                {snapshot.holdingType === "super" && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    {isLoadingContribution ? (
+                      <div className="text-sm text-muted-foreground">
+                        Loading contributions...
                       </div>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setShowContributions(!showContributions)}
+                          className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
+                        >
+                          {showContributions ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
+                          )}
+                          {contribution
+                            ? showContributions
+                              ? "Hide Contributions"
+                              : "Edit Contributions"
+                            : showContributions
+                              ? "Hide Contributions"
+                              : "Add Contributions"}
+                        </button>
+
+                        {showContributions && (
+                          <div className="mt-3 pl-4 space-y-3 border-l-2 border-border">
+                            <FormField<FormValues>
+                              name="employerContrib"
+                              label={`Employer Contribution (${currencySymbol})`}
+                              type="number"
+                              placeholder="0.00"
+                            />
+                            <FormField<FormValues>
+                              name="employeeContrib"
+                              label={`Employee Contribution (${currencySymbol})`}
+                              type="number"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        )}
+                      </>
                     )}
-                  </>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* Footer with Cancel and Save buttons */}
-        <div className="flex justify-end gap-3 pt-4 border-t border-border">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="border-border text-muted-foreground hover:bg-muted"
-            disabled={isPending}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isPending || !balance}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
-          >
-            {isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "Save"
-            )}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+            {/* Footer with Cancel and Save buttons */}
+            <AnimatedDialogFooter className="pt-4 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="border-border text-muted-foreground hover:bg-muted"
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            </AnimatedDialogFooter>
+          </form>
+        </FormProvider>
+      </AnimatedDialogContent>
+    </AnimatedDialog>
   );
 }
