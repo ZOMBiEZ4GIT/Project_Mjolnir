@@ -26,6 +26,7 @@ import {
   Wallet,
   CreditCard,
   AlertTriangle,
+  Check,
 } from "lucide-react";
 import { CheckinStepper } from "@/components/check-in/checkin-stepper";
 import { MonthSelector } from "@/components/check-in/month-selector";
@@ -418,6 +419,13 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
   const [shakeStep2, setShakeStep2] = useState(false);
   const step2Ref = useRef<HTMLDivElement>(null);
 
+  // Success state after save
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [saveResult, setSaveResult] = useState<{
+    snapshotsCreated: number;
+    contributionsCreated: number;
+  } | null>(null);
+
   // Month selector: current or previous month
   const currentMonth = getFirstOfMonth(new Date());
   const previousMonth = getFirstOfPreviousMonth();
@@ -517,6 +525,11 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
   // Reset state when modal opens/closes
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
+      // Invalidate net-worth queries on close (covers both success and cancel)
+      if (showSuccess) {
+        queryClient.invalidateQueries({ queryKey: ["net-worth"] });
+        queryClient.invalidateQueries({ queryKey: ["net-worth-history"] });
+      }
       // Reset on close
       setCurrentStep(0);
       setDirection(1);
@@ -527,6 +540,8 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
       setDebtHoldingsData({});
       setValidationErrors({});
       setShakeStep2(false);
+      setShowSuccess(false);
+      setSaveResult(null);
     }
     onOpenChange(newOpen);
   };
@@ -703,8 +718,9 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
         `Check-in complete! ${count} snapshot${count !== 1 ? "s" : ""} saved.`
       );
 
-      // Close modal
-      handleOpenChange(false);
+      // Show success summary instead of closing
+      setSaveResult(result);
+      setShowSuccess(true);
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to save check-in");
@@ -788,13 +804,15 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
         <DialogHeader>
           <DialogTitle className="text-foreground">Monthly Check-in</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            {stepDescriptions[currentStep]}
+            {showSuccess
+              ? "Your balances have been saved successfully"
+              : stepDescriptions[currentStep]}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Stepper */}
+        {/* Stepper - show all complete when success */}
         <div className="py-2">
-          <CheckinStepper currentStep={currentStep} />
+          <CheckinStepper currentStep={showSuccess ? 3 : currentStep} />
         </div>
 
         {/* Step Content */}
@@ -974,10 +992,10 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
               </motion.div>
             )}
 
-            {/* Step 3: Review & Save */}
+            {/* Step 3: Review & Save / Success Summary */}
             {currentStep === 2 && (
               <motion.div
-                key="step-2"
+                key={showSuccess ? "step-2-success" : "step-2"}
                 custom={direction}
                 variants={stepVariants}
                 initial="enter"
@@ -986,135 +1004,259 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                 transition={stepTransition}
                 className="space-y-6"
               >
-                <div className="rounded-lg border border-border bg-card/50 p-4">
-                  <p className="text-sm text-muted-foreground">
-                    Saving snapshots for <span className="text-foreground font-medium">{formatMonthYear(selectedMonth)}</span>
-                  </p>
-                </div>
-
-                {/* Review entries grouped by type */}
-                {typeOrder.map((type) => {
-                  const holdings = groupedHoldings[type];
-                  if (!holdings || holdings.length === 0) return null;
-
-                  const Icon = typeIcons[type];
-
-                  return (
-                    <div key={type} className="space-y-2">
-                      <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
-                        {typeLabels[type] || type}
+                {showSuccess && saveResult ? (
+                  /* Success Summary */
+                  <div className="space-y-6">
+                    {/* Checkmark animation */}
+                    <div className="flex flex-col items-center py-4">
+                      <motion.div
+                        initial={reducedMotion ? false : { scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+                        className="flex items-center justify-center w-16 h-16 rounded-full bg-positive/20 mb-4"
+                      >
+                        <motion.div
+                          initial={reducedMotion ? false : { scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 15, delay: 0.3 }}
+                        >
+                          <Check className="h-8 w-8 text-positive" />
+                        </motion.div>
+                      </motion.div>
+                      <h3 className="text-lg font-semibold text-foreground">
+                        Check-in Complete!
                       </h3>
-                      <div className="space-y-1.5">
-                        {holdings.map((holding) => {
-                          let balance = "";
-                          let employerContrib = "";
-                          let employeeContrib = "";
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {saveResult.snapshotsCreated} snapshot{saveResult.snapshotsCreated !== 1 ? "s" : ""} saved for {formatMonthYear(selectedMonth)}
+                      </p>
+                    </div>
 
-                          if (type === "super") {
-                            const d = getSuperHoldingData(holding.id);
-                            balance = d.balance;
-                            employerContrib = d.employerContrib;
-                            employeeContrib = d.employeeContrib;
-                          } else if (type === "cash") {
-                            balance = getCashHoldingData(holding.id).balance;
-                          } else if (type === "debt") {
-                            balance = getDebtHoldingData(holding.id).balance;
-                          }
+                    {/* Brief list of what was saved */}
+                    <div className="space-y-1.5">
+                      {(data?.holdings || []).map((holding) => {
+                        let balance = "";
+                        if (holding.type === "super") {
+                          balance = getSuperHoldingData(holding.id).balance;
+                        } else if (holding.type === "cash") {
+                          balance = getCashHoldingData(holding.id).balance;
+                        } else if (holding.type === "debt") {
+                          balance = getDebtHoldingData(holding.id).balance;
+                        }
 
-                          const prevBalance = data?.previousBalances?.[holding.id];
-                          const newNum = parseFloat(balance);
-                          const prevNum = prevBalance ? parseFloat(prevBalance) : null;
-                          const hasPrevious = prevNum !== null && !isNaN(prevNum);
-                          const changeAmount = hasPrevious ? newNum - prevNum : null;
+                        const Icon = typeIcons[holding.type];
 
-                          // For debt: decrease is positive (green), increase is negative (red)
-                          const isDebt = type === "debt";
-                          const isPositiveChange = changeAmount !== null
-                            ? (isDebt ? changeAmount < 0 : changeAmount > 0)
-                            : false;
-                          const isNegativeChange = changeAmount !== null
-                            ? (isDebt ? changeAmount > 0 : changeAmount < 0)
-                            : false;
+                        return (
+                          <div
+                            key={holding.id}
+                            className="flex items-center justify-between rounded-lg border border-border bg-card/50 px-3 py-2"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              {Icon && <Icon className="h-4 w-4 text-muted-foreground shrink-0" />}
+                              <span className="text-sm text-foreground truncate">
+                                {holding.name}
+                              </span>
+                            </div>
+                            <span className="text-sm font-medium text-foreground shrink-0 ml-3">
+                              {formatCurrency(balance, holding.currency)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
 
-                          // Large change warning: >50% change from previous
-                          const percentChange = hasPrevious && prevNum !== 0
-                            ? Math.abs((newNum - prevNum) / prevNum) * 100
-                            : 0;
-                          const isLargeChange = hasPrevious && percentChange > 50;
+                    {/* Net worth change indicator */}
+                    {(() => {
+                      // Calculate total change across all holdings (approximate, same-currency only)
+                      let totalChange = 0;
+                      let hasAnyChange = false;
 
-                          return (
-                            <div
-                              key={holding.id}
-                              className={`rounded-lg border bg-card p-3 ${
-                                isLargeChange ? "border-yellow-500/40" : "border-border"
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1 min-w-0">
-                                  <span className="text-sm font-medium text-foreground">
-                                    {holding.name}
-                                  </span>
+                      for (const holding of data?.holdings || []) {
+                        const prevBalance = data?.previousBalances?.[holding.id];
+                        if (!prevBalance) continue;
 
-                                  {/* Previous balance */}
-                                  <div className="mt-1 text-xs text-muted-foreground">
-                                    {hasPrevious
-                                      ? `Previous: ${formatCurrency(prevBalance!, holding.currency)}`
-                                      : "First entry"}
+                        let balance = "";
+                        if (holding.type === "super") {
+                          balance = getSuperHoldingData(holding.id).balance;
+                        } else if (holding.type === "cash") {
+                          balance = getCashHoldingData(holding.id).balance;
+                        } else if (holding.type === "debt") {
+                          balance = getDebtHoldingData(holding.id).balance;
+                        }
+
+                        const newNum = parseFloat(balance);
+                        const prevNum = parseFloat(prevBalance);
+                        if (isNaN(newNum) || isNaN(prevNum)) continue;
+
+                        // For debt, a decrease improves net worth
+                        const change = holding.type === "debt"
+                          ? -(newNum - prevNum)
+                          : newNum - prevNum;
+                        totalChange += change;
+                        hasAnyChange = true;
+                      }
+
+                      if (!hasAnyChange || totalChange === 0) return null;
+
+                      const isPositive = totalChange > 0;
+
+                      return (
+                        <div className={`rounded-lg border p-3 text-center ${
+                          isPositive
+                            ? "border-positive/30 bg-positive/5"
+                            : "border-destructive/30 bg-destructive/5"
+                        }`}>
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Estimated net worth change
+                          </p>
+                          <p className={`text-sm font-medium ${
+                            isPositive ? "text-positive" : "text-destructive"
+                          }`}>
+                            {isPositive ? (
+                              <ArrowUpRight className="inline h-4 w-4 mr-1" />
+                            ) : (
+                              <ArrowDownRight className="inline h-4 w-4 mr-1" />
+                            )}
+                            {isPositive ? "+" : ""}
+                            {formatCurrency(String(totalChange), "AUD")}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  /* Review entries */
+                  <>
+                    <div className="rounded-lg border border-border bg-card/50 p-4">
+                      <p className="text-sm text-muted-foreground">
+                        Saving snapshots for <span className="text-foreground font-medium">{formatMonthYear(selectedMonth)}</span>
+                      </p>
+                    </div>
+
+                    {/* Review entries grouped by type */}
+                    {typeOrder.map((type) => {
+                      const holdings = groupedHoldings[type];
+                      if (!holdings || holdings.length === 0) return null;
+
+                      const Icon = typeIcons[type];
+
+                      return (
+                        <div key={type} className="space-y-2">
+                          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                            {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                            {typeLabels[type] || type}
+                          </h3>
+                          <div className="space-y-1.5">
+                            {holdings.map((holding) => {
+                              let balance = "";
+                              let employerContrib = "";
+                              let employeeContrib = "";
+
+                              if (type === "super") {
+                                const d = getSuperHoldingData(holding.id);
+                                balance = d.balance;
+                                employerContrib = d.employerContrib;
+                                employeeContrib = d.employeeContrib;
+                              } else if (type === "cash") {
+                                balance = getCashHoldingData(holding.id).balance;
+                              } else if (type === "debt") {
+                                balance = getDebtHoldingData(holding.id).balance;
+                              }
+
+                              const prevBalance = data?.previousBalances?.[holding.id];
+                              const newNum = parseFloat(balance);
+                              const prevNum = prevBalance ? parseFloat(prevBalance) : null;
+                              const hasPrevious = prevNum !== null && !isNaN(prevNum);
+                              const changeAmount = hasPrevious ? newNum - prevNum : null;
+
+                              // For debt: decrease is positive (green), increase is negative (red)
+                              const isDebt = type === "debt";
+                              const isPositiveChange = changeAmount !== null
+                                ? (isDebt ? changeAmount < 0 : changeAmount > 0)
+                                : false;
+                              const isNegativeChange = changeAmount !== null
+                                ? (isDebt ? changeAmount > 0 : changeAmount < 0)
+                                : false;
+
+                              // Large change warning: >50% change from previous
+                              const percentChange = hasPrevious && prevNum !== 0
+                                ? Math.abs((newNum - prevNum) / prevNum) * 100
+                                : 0;
+                              const isLargeChange = hasPrevious && percentChange > 50;
+
+                              return (
+                                <div
+                                  key={holding.id}
+                                  className={`rounded-lg border bg-card p-3 ${
+                                    isLargeChange ? "border-yellow-500/40" : "border-border"
+                                  }`}
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-sm font-medium text-foreground">
+                                        {holding.name}
+                                      </span>
+
+                                      {/* Previous balance */}
+                                      <div className="mt-1 text-xs text-muted-foreground">
+                                        {hasPrevious
+                                          ? `Previous: ${formatCurrency(prevBalance!, holding.currency)}`
+                                          : "First entry"}
+                                      </div>
+
+                                      {/* Contributions for super */}
+                                      {type === "super" && (employerContrib || employeeContrib) && (
+                                        <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
+                                          {employerContrib && (
+                                            <span>Employer: {formatCurrency(employerContrib, holding.currency)}</span>
+                                          )}
+                                          {employeeContrib && (
+                                            <span>Employee: {formatCurrency(employeeContrib, holding.currency)}</span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="text-right shrink-0">
+                                      {/* New balance */}
+                                      <span className="text-sm font-medium text-foreground">
+                                        {formatCurrency(balance, holding.currency)}
+                                      </span>
+
+                                      {/* Change amount with direction arrow */}
+                                      {changeAmount !== null && changeAmount !== 0 && (
+                                        <div className={`mt-1 flex items-center justify-end gap-1 text-xs ${
+                                          isPositiveChange ? "text-positive" : isNegativeChange ? "text-destructive" : "text-muted-foreground"
+                                        }`}>
+                                          {isPositiveChange ? (
+                                            <ArrowUpRight className="h-3 w-3" />
+                                          ) : isNegativeChange ? (
+                                            <ArrowDownRight className="h-3 w-3" />
+                                          ) : null}
+                                          <span>
+                                            {changeAmount > 0 ? "+" : ""}
+                                            {formatCurrency(String(changeAmount), holding.currency)}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
 
-                                  {/* Contributions for super */}
-                                  {type === "super" && (employerContrib || employeeContrib) && (
-                                    <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
-                                      {employerContrib && (
-                                        <span>Employer: {formatCurrency(employerContrib, holding.currency)}</span>
-                                      )}
-                                      {employeeContrib && (
-                                        <span>Employee: {formatCurrency(employeeContrib, holding.currency)}</span>
-                                      )}
+                                  {/* Large change warning */}
+                                  {isLargeChange && (
+                                    <div className="mt-2 flex items-center gap-1.5 text-xs text-yellow-500">
+                                      <AlertTriangle className="h-3 w-3" />
+                                      <span>Large change detected ({Math.round(percentChange)}%)</span>
                                     </div>
                                   )}
                                 </div>
-
-                                <div className="text-right shrink-0">
-                                  {/* New balance */}
-                                  <span className="text-sm font-medium text-foreground">
-                                    {formatCurrency(balance, holding.currency)}
-                                  </span>
-
-                                  {/* Change amount with direction arrow */}
-                                  {changeAmount !== null && changeAmount !== 0 && (
-                                    <div className={`mt-1 flex items-center justify-end gap-1 text-xs ${
-                                      isPositiveChange ? "text-positive" : isNegativeChange ? "text-destructive" : "text-muted-foreground"
-                                    }`}>
-                                      {isPositiveChange ? (
-                                        <ArrowUpRight className="h-3 w-3" />
-                                      ) : isNegativeChange ? (
-                                        <ArrowDownRight className="h-3 w-3" />
-                                      ) : null}
-                                      <span>
-                                        {changeAmount > 0 ? "+" : ""}
-                                        {formatCurrency(String(changeAmount), holding.currency)}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Large change warning */}
-                              {isLargeChange && (
-                                <div className="mt-2 flex items-center gap-1.5 text-xs text-yellow-500">
-                                  <AlertTriangle className="h-3 w-3" />
-                                  <span>Large change detected ({Math.round(percentChange)}%)</span>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -1122,65 +1264,80 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
 
         {/* Footer Navigation */}
         <div className="flex justify-between gap-3 pt-4 mt-4 border-t border-border">
-          <div>
-            {currentStep > 0 && (
+          {showSuccess ? (
+            /* Success state: Done button only */
+            <div className="flex w-full justify-end">
               <Button
-                variant="outline"
-                onClick={goToPreviousStep}
-                className="border-border text-foreground hover:bg-muted"
-                disabled={saveMutation.isPending}
-              >
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back
-              </Button>
-            )}
-          </div>
-          <div className="flex gap-3">
-            {currentStep === 0 && (
-              <Button
-                variant="outline"
                 onClick={() => handleOpenChange(false)}
-                className="border-border text-foreground hover:bg-muted"
-              >
-                Cancel
-              </Button>
-            )}
-            {currentStep === 0 && (
-              <Button
-                onClick={goToNextStep}
-                disabled={isLoading || !!error || totalHoldings === 0}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            )}
-            {currentStep === 1 && (
-              <Button
-                onClick={goToNextStep}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
-                Continue
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            )}
-            {currentStep === 2 && (
-              <Button
-                onClick={handleSaveAll}
-                disabled={saveMutation.isPending}
                 className="bg-accent hover:bg-accent/90 text-accent-foreground"
               >
-                {saveMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save All"
-                )}
+                Done
               </Button>
-            )}
-          </div>
+            </div>
+          ) : (
+            /* Normal navigation */
+            <>
+              <div>
+                {currentStep > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={goToPreviousStep}
+                    className="border-border text-foreground hover:bg-muted"
+                    disabled={saveMutation.isPending}
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
+                )}
+              </div>
+              <div className="flex gap-3">
+                {currentStep === 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleOpenChange(false)}
+                    className="border-border text-foreground hover:bg-muted"
+                  >
+                    Cancel
+                  </Button>
+                )}
+                {currentStep === 0 && (
+                  <Button
+                    onClick={goToNextStep}
+                    disabled={isLoading || !!error || totalHoldings === 0}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    Continue
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+                {currentStep === 1 && (
+                  <Button
+                    onClick={goToNextStep}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    Continue
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+                {currentStep === 2 && (
+                  <Button
+                    onClick={handleSaveAll}
+                    disabled={saveMutation.isPending}
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                  >
+                    {saveMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save All"
+                    )}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
