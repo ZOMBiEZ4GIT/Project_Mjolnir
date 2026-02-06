@@ -44,6 +44,9 @@
 - Mobile header (components/layout/mobile-nav.tsx) is fixed h-14 z-30 — content area needs pt-14 on mobile
 - Sheet drawer (shadcn/ui) handles focus trapping and Escape close via Radix Dialog primitive
 - Focus ring pattern: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring` matches shadcn/ui conventions
+- Shared UI components (e.g. SpeedDial) live in `components/shared/` directory
+- To open AddHoldingDialog/AddTransactionDialog programmatically: pass a hidden `<button ref={ref} />` as children, then call `ref.current?.click()`
+- CheckInModal uses controlled `open`/`onOpenChange` props — can be opened from any external trigger
 - HoldingsTable hybrid grouping: `typeFilter="all"` shows collapsible grouped sections, specific type shows flat list via `HoldingsFlatSection`
 - Shared table rendering: `HoldingsTableContent` component handles row rendering for both grouped and flat views
 - GroupHeader (components/holdings/group-header.tsx) shows label, count, total value, portfolio % badge — receives calculated values as props
@@ -146,5 +149,26 @@ Started: 2026-02-06
   - `transition-[background-color,transform]` is more performant than `transition-all` — only animate what changes
   - `stopPropagation` on interactive children (buttons, links) prevents parent row click from firing
   - `transformOrigin: "center"` keeps scale effect visually balanced on table rows
+---
+
+## 2026-02-06 - US-006: Create speed-dial floating action button
+- Created `components/shared/speed-dial.tsx` — FAB component with expand/collapse animation
+- FAB positioned fixed bottom-right (`bottom-6 right-6`), hidden below sm breakpoint (`hidden sm:block`)
+- Default state: round `bg-accent` button with Plus icon, `shadow-lg`, `hover:shadow-glow-sm`
+- Expands upward with 3 action buttons: Add Holding, Add Transaction, Monthly Check-in
+- Each action button has text label + icon in a pill shape (`bg-card border-border`)
+- Expand animation: actions stagger in with 50ms delay, main button rotates 45° (+ becomes ×)
+- Backdrop overlay (`bg-black/20`) appears when expanded, clicking it collapses
+- Respects `useReducedMotion()` — disables all animations when OS prefers-reduced-motion
+- Integrated into holdings page via hidden dialog trigger refs for AddHoldingDialog and AddTransactionDialog
+- CheckInModal uses controlled `open`/`onOpenChange` state from the page
+- `speedDialActions` defined with `useMemo` to avoid unnecessary re-renders
+- Files changed: `components/shared/speed-dial.tsx` (new), `app/(dashboard)/holdings/page.tsx`
+- **Learnings for future iterations:**
+  - `AddHoldingDialog` and `AddTransactionDialog` use uncontrolled `DialogTrigger` pattern — to open programmatically, use a hidden button ref inside the trigger children
+  - `CheckInModal` uses controlled `open`/`onOpenChange` props — easier to integrate with external triggers
+  - Framer Motion `AnimatePresence` with staggered `transition.delay` per index is cleaner than parent stagger variants for FAB actions (allows per-item control)
+  - `hidden sm:block` on the FAB container hides it on mobile (below 640px sm breakpoint)
+  - Shared components live in `components/shared/` directory
 ---
 
