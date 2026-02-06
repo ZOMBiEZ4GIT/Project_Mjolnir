@@ -178,3 +178,15 @@ Started: 2026-02-07
   - Indeterminate mode still uses the asymptotic approach to 90% for perceived progress
 ---
 
+## 2026-02-07 - US-003
+- Created ImportPreview component and integrated preview step into import page
+- Files changed: components/import/import-preview.tsx (new), app/(dashboard)/import/page.tsx
+- **Learnings for future iterations:**
+  - CSV parsing is simple split-by-comma — no quoted field handling needed for this app's use case
+  - Preview replaces the old direct "Import [Type]" button — file select now always shows preview first
+  - Validation functions accept `_rows` param (unused for now) — extensible for row-level validation later
+  - Warning banner uses border-warning/30 + bg-warning/10 pattern (consistent with design system)
+  - Preview slide uses x:30→0 (right-to-left) for forward navigation feel
+  - `motion.tbody` with `variants` pattern works well for table row stagger animations
+---
+
