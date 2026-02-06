@@ -153,3 +153,21 @@ Started: 2026-02-06
   - `getMonthKey()` using `dateString.slice(0, 7)` is simpler and safer than date parsing for YYYY-MM-DD strings
 ---
 
+## 2026-02-06 - US-006
+- Added stagger animation and row hover effects to transaction table rows
+- Created `MotionTableRow` via `motion.create(TableRow)` — same pattern as holdings table
+- Replaced `<TableBody>` with `<motion.tbody>` using container/row variants for stagger animation
+- Wrapped tbody in `AnimatePresence mode="wait"` keyed by filter state (`filterKey`) for exit/enter on filter change
+- Row hover: `hover:bg-accent/5` with `transition-[background-color] duration-150`
+- Capped stagger delay: `Math.min(0.05, 0.5 / count)` — 50ms per row, total animation within 500ms
+- Exit animation: fade out (100ms) when filters change, new rows stagger in
+- Respects `prefers-reduced-motion`: `useReducedMotion()` → sets duration: 0 and skips y-transform variants
+- Removed unused `TableBody` import since motion.tbody replaced it
+- Files changed: `app/(dashboard)/transactions/page.tsx`
+- **Learnings for future iterations:**
+  - When replacing `<TableBody>` with `<motion.tbody>`, remember to remove unused `TableBody` import or lint will fail
+  - `AnimatePresence mode="wait"` ensures exit completes before enter — use for filter-change transitions
+  - `filterKey` pattern (concatenating all filter values) gives a single key for AnimatePresence to detect filter changes
+  - Month headers (sticky `<TableRow>`) don't need animation variants — only data rows use `MotionTableRow`
+---
+
