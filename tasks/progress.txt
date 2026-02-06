@@ -206,3 +206,16 @@ Started: 2026-02-06
   - The `bg-card` token was already correct in the original component (not `bg-gray-800` as mentioned in AC) — the component was already using design tokens
 ---
 
+## 2026-02-06 - US-009: Replace hardcoded colours across holdings components
+- Audited all files in `components/holdings/`, `app/(dashboard)/holdings/page.tsx`, and `app/(dashboard)/holdings/[id]/page.tsx`
+- Found that previous iterations (US-001 through US-008) had already migrated most hardcoded colours to design tokens
+- Only remaining hardcoded colour: dormant badge in `[id]/page.tsx` used `bg-yellow-900 text-yellow-300` — replaced with `bg-muted text-muted-foreground` to match the dormant badge pattern in `holdings-table.tsx`
+- All `yellow-*` colours for staleness/warning indicators were confirmed as intentional and left unchanged (per codebase patterns)
+- All `text-white → text-foreground`, `text-gray-* → text-muted-foreground`, `bg-gray-* → bg-muted/bg-card`, `border-gray-* → border-border`, `text-green-* → text-positive`, `text-red-* → text-destructive` replacements had already been done in prior stories
+- Files changed: `app/(dashboard)/holdings/[id]/page.tsx`
+- **Learnings for future iterations:**
+  - When a design token audit story comes late in a sequence, most work may already be done by earlier stories — run the audit first to scope actual changes
+  - The dormant badge pattern is `bg-muted text-muted-foreground` (not yellow) — consistent across both the table and detail pages now
+  - Yellow-* colours are reserved for warning/staleness indicators and are intentionally NOT part of design token migration
+---
+
