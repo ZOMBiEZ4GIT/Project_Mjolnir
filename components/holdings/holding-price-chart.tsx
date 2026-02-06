@@ -91,7 +91,7 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
 
   const data = payload[0].payload;
   return (
-    <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
       <p className="text-muted-foreground text-sm mb-2">{formatDateFull(data.date)}</p>
       <div className="space-y-1">
         <p className="text-foreground font-medium">

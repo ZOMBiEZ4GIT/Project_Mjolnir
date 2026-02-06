@@ -70,7 +70,7 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
 
   const data = payload[0].payload;
   return (
-    <div className="bg-background border border-border rounded-lg p-3 shadow-lg min-w-[180px]">
+    <div className="bg-card border border-border rounded-lg p-3 shadow-lg min-w-[180px]">
       <p className="text-muted-foreground text-sm mb-2">
         {formatMonthFull(data.date)}
       </p>

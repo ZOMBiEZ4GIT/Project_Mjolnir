@@ -124,7 +124,7 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
 
   const data = payload[0].payload;
   return (
-    <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
       <p className="text-foreground font-medium mb-1">{data.name}</p>
       <p className="text-muted-foreground text-sm">
         {formatCurrency(data.value, currency)}

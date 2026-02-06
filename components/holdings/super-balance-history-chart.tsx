@@ -114,7 +114,7 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
     data.employerContrib + data.employeeContrib + data.investmentReturns;
 
   return (
-    <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
       <p className="text-muted-foreground text-sm mb-2">
         {formatMonthFull(data.date)}
       </p>
