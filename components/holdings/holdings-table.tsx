@@ -7,6 +7,7 @@ import { Pencil, Trash2, AlertTriangle, TrendingUp, TrendingDown, RotateCw } fro
 import { PriceFlash } from "./price-flash";
 import { PriceNumberTicker } from "./price-number-ticker";
 import { PriceTimestamp } from "./price-timestamp";
+import { PriceSkeleton } from "./price-skeleton";
 import type { Holding } from "@/lib/db/schema";
 import type { HoldingTypeFilter } from "./filter-tabs";
 import {
@@ -426,9 +427,9 @@ interface PriceCellProps {
 }
 
 function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry, isRetrying }: PriceCellProps) {
-  // Loading state for initial price fetch
+  // Loading state — shaped skeleton
   if (pricesLoading) {
-    return <span className="text-muted-foreground text-sm">Loading...</span>;
+    return <PriceSkeleton variant="price" />;
   }
 
   // No price data available
@@ -540,9 +541,9 @@ function MarketValueCell({
   currencyLoading,
   showNativeCurrency,
 }: MarketValueCellProps) {
-  // Loading state
+  // Loading state — shaped skeleton
   if (pricesLoading || currencyLoading) {
-    return <CurrencyDisplay amount={0} currency={displayCurrency} isLoading />;
+    return <PriceSkeleton variant="value" />;
   }
 
   // No quantity - cannot calculate market value
@@ -619,9 +620,9 @@ function GainLossCell({
   currencyLoading,
   showNativeCurrency,
 }: GainLossCellProps) {
-  // Loading state
+  // Loading state — shaped skeleton
   if (pricesLoading || currencyLoading) {
-    return <CurrencyDisplay amount={0} currency={displayCurrency} isLoading />;
+    return <PriceSkeleton variant="value" />;
   }
 
   // No quantity - cannot calculate market value
