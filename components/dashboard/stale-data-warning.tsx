@@ -161,7 +161,7 @@ export function StaleDataWarning() {
   const staleCount = data.staleHoldings.length;
 
   return (
-    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 overflow-hidden">
+    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 overflow-hidden">
       {/* Header - always visible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}

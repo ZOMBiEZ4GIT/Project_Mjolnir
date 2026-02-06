@@ -179,7 +179,7 @@ export function SummaryCards() {
 
   if (!isLoaded || !isSignedIn || isLoadingNetWorth || currencyLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <CardSkeleton />
         <CardSkeleton />
       </div>
@@ -196,7 +196,7 @@ export function SummaryCards() {
 
   if (!netWorthData) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <CardSkeleton />
         <CardSkeleton />
       </div>
@@ -225,7 +225,7 @@ export function SummaryCards() {
 
   return (
     <motion.div
-      className="grid grid-cols-1 md:grid-cols-2 gap-4"
+      className="grid grid-cols-1 md:grid-cols-2 gap-6"
       variants={containerVariants}
       initial={shouldReduceMotion ? undefined : "hidden"}
       animate={shouldReduceMotion ? undefined : "visible"}
