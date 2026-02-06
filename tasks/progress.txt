@@ -11,7 +11,7 @@
 - Inter font loaded via next/font/google in app/layout.tsx (applied via inter.className on body)
 - Framer Motion components require "use client" directive
 - Toast notifications use Sonner - import toast from sonner
-- Dashboard navigation uses components/dashboard/nav.tsx with usePathname for active state
+- Dashboard navigation uses components/layout/sidebar.tsx and components/layout/mobile-nav.tsx — old components/dashboard/nav.tsx and mobile-nav.tsx have been deleted
 - Tailwind has semantic tokens: text-positive/bg-positive (green), text-negative/bg-negative (red), shadow-glow-sm/md/lg, shadow-glow-positive, shadow-glow-negative, shadow-card, shadow-card-hover
 - Layout & spacing constants live in lib/theme.ts (sidebarWidth, cardRadius, spacing xs→2xl) — use instead of magic numbers
 - Animation presets live in lib/animations.ts — import and spread onto motion.div elements (e.g. `<motion.div {...fadeIn}>`)
@@ -393,4 +393,17 @@ Started: 2026-02-06
   - Command menu previously had its own nav items array that was out of sync with lib/navigation.ts (missing Export)
   - After this change, lib/navigation.ts is the single source of truth — sidebar, mobile nav, and command menu all import from there
   - The NavItem type from lib/navigation.ts has the same shape needed by command menu (href, label, icon, description)
+---
+
+## 2026-02-06 - US-011
+- Deleted components/dashboard/nav.tsx (replaced by components/layout/sidebar.tsx)
+- Deleted components/dashboard/mobile-nav.tsx (replaced by components/layout/mobile-nav.tsx)
+- Verified no source code imports reference the deleted files (grep confirmed only archive docs mention them)
+- Updated Codebase Patterns section to reference new layout component paths
+- Build and lint pass cleanly after deletion
+- Files deleted: components/dashboard/nav.tsx, components/dashboard/mobile-nav.tsx
+- Files changed: tasks/progress.txt (Codebase Patterns updated)
+- **Learnings for future iterations:**
+  - components/dashboard/ directory still contains other active components (dashboard-header, dashboard-content, net-worth-hero, etc.) — only nav.tsx and mobile-nav.tsx were deprecated
+  - Always update Codebase Patterns when removing referenced files to avoid misleading future iterations
 ---

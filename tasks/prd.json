@@ -199,8 +199,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Deleted components/dashboard/nav.tsx and components/dashboard/mobile-nav.tsx. Verified no source code imports reference deleted files (only archive progress.txt and PRD docs). Updated Codebase Patterns in progress.txt to reference new layout components. Build and lint pass."
     },
     {
       "id": "US-012",
