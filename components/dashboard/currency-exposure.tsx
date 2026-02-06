@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
-import { motion, useReducedMotion } from "framer-motion";
-import { fadeIn } from "@/lib/animations";
+import { type Currency, type ExchangeRates } from "@/lib/utils/currency";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { fadeIn, staggerItem } from "@/lib/animations";
+import { NumberTicker } from "@/components/dashboard/number-ticker";
 
 interface CurrencyExposureItem {
   currency: Currency;
@@ -55,18 +57,34 @@ function getCurrencyDisplayName(currency: Currency): string {
 }
 
 /**
- * Returns the color class for a currency.
+ * Returns the bg color class for a currency progress bar fill.
  */
-function getCurrencyColor(currency: Currency): string {
+function getCurrencyBarColor(currency: Currency): string {
   switch (currency) {
     case "AUD":
-      return "bg-green-500";
+      return "bg-positive";
     case "NZD":
-      return "bg-blue-500";
+      return "bg-blue-400";
     case "USD":
       return "bg-amber-500";
     default:
       return "bg-gray-500";
+  }
+}
+
+/**
+ * Returns the bg color class for a currency icon badge (20% opacity variant).
+ */
+function getCurrencyBadgeColor(currency: Currency): string {
+  switch (currency) {
+    case "AUD":
+      return "bg-positive/20";
+    case "NZD":
+      return "bg-blue-400/20";
+    case "USD":
+      return "bg-amber-500/20";
+    default:
+      return "bg-gray-500/20";
   }
 }
 
@@ -113,6 +131,65 @@ function ExposureSkeleton() {
   );
 }
 
+/**
+ * Animated percentage label that uses useSpring for smooth transitions.
+ */
+function AnimatedPercentage({
+  value,
+  reducedMotion,
+}: {
+  value: number;
+  reducedMotion: boolean | null;
+}) {
+  const displayRef = useRef<HTMLSpanElement>(null);
+  const prevValueRef = useRef(value);
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    if (!displayRef.current) return;
+
+    if (reducedMotion || isInitialMount.current) {
+      displayRef.current.textContent = formatPercentage(value);
+      isInitialMount.current = false;
+      prevValueRef.current = value;
+      return;
+    }
+
+    // Animate from previous value to new value
+    const from = prevValueRef.current;
+    const to = value;
+    const duration = 400;
+    const start = performance.now();
+
+    function animate(now: number) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = from + (to - from) * eased;
+      if (displayRef.current) {
+        displayRef.current.textContent = formatPercentage(current);
+      }
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    }
+
+    requestAnimationFrame(animate);
+    prevValueRef.current = value;
+  }, [value, reducedMotion]);
+
+  return (
+    <span
+      ref={displayRef}
+      className="tabular-nums"
+      style={{ fontVariantNumeric: "tabular-nums" }}
+    >
+      {formatPercentage(value)}
+    </span>
+  );
+}
+
 interface ExposureItemProps {
   currency: Currency;
   value: number;
@@ -120,10 +197,12 @@ interface ExposureItemProps {
   percentage: number;
   count: number;
   displayCurrency: Currency;
+  reducedMotion: boolean | null;
+  index: number;
 }
 
 /**
- * Individual currency exposure row.
+ * Individual currency exposure row with animated progress bar.
  */
 function ExposureItem({
   currency,
@@ -131,12 +210,17 @@ function ExposureItem({
   percentage,
   count,
   displayCurrency,
+  reducedMotion,
+  index,
 }: ExposureItemProps) {
   return (
-    <div className="space-y-2">
+    <motion.div
+      className="space-y-2 rounded-lg px-2 py-1.5 -mx-2 transition-colors duration-150 hover:bg-accent/5"
+      variants={reducedMotion ? undefined : staggerItem}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${getCurrencyColor(currency)} bg-opacity-20`}>
+          <div className={`p-2 rounded-lg ${getCurrencyBadgeColor(currency)}`}>
             <span className="text-lg" role="img" aria-label={`${currency} flag`}>
               {getCurrencyFlag(currency)}
             </span>
@@ -155,21 +239,41 @@ function ExposureItem({
         </div>
         <div className="text-right">
           <div className="font-medium text-foreground">
-            {formatCurrency(value, displayCurrency, { compact: true })}
+            <NumberTicker value={value} currency={displayCurrency} compact />
           </div>
-          <div className="text-body-sm text-muted-foreground">{formatPercentage(percentage)}</div>
+          <div className="text-body-sm text-muted-foreground">
+            <AnimatedPercentage value={percentage} reducedMotion={reducedMotion} />
+          </div>
         </div>
       </div>
-      {/* Progress bar */}
+      {/* Animated progress bar */}
       <div className="h-2 bg-muted rounded-full overflow-hidden">
-        <div
-          className={`h-full ${getCurrencyColor(currency)} rounded-full transition-all duration-500`}
-          style={{ width: `${Math.min(percentage, 100)}%` }}
+        <motion.div
+          className={`h-full ${getCurrencyBarColor(currency)} rounded-full`}
+          initial={reducedMotion ? { width: `${Math.min(percentage, 100)}%` } : { width: "0%" }}
+          animate={{ width: `${Math.min(percentage, 100)}%` }}
+          transition={
+            reducedMotion
+              ? { duration: 0 }
+              : { duration: 0.4, ease: "easeOut", delay: index * 0.05 }
+          }
         />
       </div>
-    </div>
+    </motion.div>
   );
 }
+
+/**
+ * Stagger container variant with 50ms delay per row.
+ */
+const exposureStaggerContainer: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+};
 
 /**
  * Currency Exposure Component
@@ -243,8 +347,13 @@ export function CurrencyExposure() {
       <h3 className="text-label uppercase text-muted-foreground mb-6">
         Currency Exposure
       </h3>
-      <div className="space-y-5">
-        {exposure.map((item) => (
+      <motion.div
+        className="space-y-5"
+        variants={reducedMotion ? undefined : exposureStaggerContainer}
+        initial={reducedMotion ? undefined : "hidden"}
+        animate={reducedMotion ? undefined : "visible"}
+      >
+        {exposure.map((item, index) => (
           <ExposureItem
             key={item.currency}
             currency={item.currency}
@@ -253,9 +362,11 @@ export function CurrencyExposure() {
             percentage={item.percentage}
             count={item.count}
             displayCurrency={displayCurrency}
+            reducedMotion={reducedMotion}
+            index={index}
           />
         ))}
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
