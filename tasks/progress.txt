@@ -71,3 +71,50 @@ Started: 2026-02-06
 
 ---
 
+## 2026-02-06 - US-001
+- Created `components/transactions/type-selector.tsx` — animated tab bar with BUY/SELL/DIVIDEND/SPLIT options
+- Sliding background indicator using Framer Motion `layoutId="active-transaction-type"`
+- Colour-coded: BUY=positive/green, SELL=destructive/red, DIVIDEND=accent/purple, SPLIT=blue-400/blue-500
+- Controlled component with `value`, `onChange`, `disabled` props
+- Disabled mode: shows active type but prevents interaction, reduces opacity on inactive tabs
+- Follows same pattern as `filter-tabs.tsx` (layoutId sliding indicator)
+- Files changed: `components/transactions/type-selector.tsx` (new)
+- **Learnings for future iterations:**
+  - TypeSelector exports `TransactionType` type — import from `type-selector.tsx` instead of `add-transaction-dialog.tsx`
+  - Uses `bg-muted p-1` container with `rounded-lg` for the pill-bar look
+  - layoutId must be unique per AnimatePresence scope — used `"active-transaction-type"` to avoid conflicts with other layoutIds
+---
+
+## 2026-02-06 - US-002
+- Refactored `add-transaction-dialog.tsx` from manual useState to react-hook-form + zod
+- Installed react-hook-form, zod, @hookform/resolvers; added shadcn/ui form component
+- Created unified `formSchema` with z.coerce.number() fields; per-action validation in onSubmit
+- Replaced RadioGroup with TypeSelector from US-001
+- Preserved two-step flow: Step 1 (holding + type) → Step 2 (details via react-hook-form)
+- SELL validation checks available quantity and prevents overselling
+- Real-time calculated totals using form.watch()
+- Files changed: `components/transactions/add-transaction-dialog.tsx`, `components/ui/form.tsx` (new), `package.json`
+- **Learnings for future iterations:**
+  - z.coerce.number() has input type `unknown` — causes TS mismatch with useForm<FormValues>. Fix: cast resolver as `zodResolver(schema) as unknown as Resolver<FormValues>`
+  - Import `Resolver` type from `react-hook-form` for the cast
+  - For numeric inputs with z.coerce, pass `field.value ?? ""` to prevent "undefined" showing; use `e.target.value === "" ? "" : e.target.value` for onChange to allow clearing
+  - Unified schema approach (single schema + onSubmit validation) is simpler than discriminated union schemas with refine
+---
+
+## 2026-02-06 - US-003
+- Refactored `edit-transaction-dialog.tsx` from manual useState/errors to react-hook-form + zod
+- Uses same `formSchema` and `FormValues` type as add dialog for consistency
+- `useForm` pre-populated with transaction data via `form.reset()` in useEffect when dialog opens
+- Replaced manual Label+Input+error with FormField/FormControl/FormMessage components
+- Added TypeSelector in disabled mode (shows action type visually but prevents interaction)
+- SELL validation accounts for the transaction being edited: `availableForSell = currentQuantity + originalSellQty`
+- Holding name, currency, and action type displayed as read-only info above the form
+- Real-time calculated totals using `form.watch()`
+- Uses toast for error feedback (simplified from inline server errors)
+- Files changed: `components/transactions/edit-transaction-dialog.tsx`
+- **Learnings for future iterations:**
+  - Edit dialogs need `form.reset()` in useEffect keyed on `[open, transaction, form]` to sync form with new transaction data
+  - For edit dialogs, simplified `onError` to just toast (no inline server errors) since form validation catches most issues client-side
+  - TypeSelector `disabled` prop + empty `onChange={() => {}}` provides clean read-only display of transaction type
+---
+
