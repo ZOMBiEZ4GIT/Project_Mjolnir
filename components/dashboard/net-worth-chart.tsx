@@ -14,8 +14,11 @@ import {
   ChartError,
   ChartExportButton,
   TVChart,
+  TimeRangeSelector,
+  TIME_RANGE_OPTIONS,
   type TVDataPoint,
   type TVCrosshairData,
+  type TimeRange,
 } from "@/components/charts";
 import type { Time } from "lightweight-charts";
 
@@ -32,21 +35,9 @@ interface HistoryResponse {
 }
 
 /**
- * Time range options for the chart.
- */
-type TimeRange = "3m" | "6m" | "1y" | "all";
-
-/**
  * Chart view modes.
  */
 type ChartViewMode = "networth" | "assetsvsdebt";
-
-const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; months: number }[] = [
-  { value: "3m", label: "3M", months: 3 },
-  { value: "6m", label: "6M", months: 6 },
-  { value: "1y", label: "1Y", months: 12 },
-  { value: "all", label: "All", months: 60 }, // 5 years max
-];
 
 const DEFAULT_TIME_RANGE: TimeRange = "1y";
 const CHART_VIEW_STORAGE_KEY = "net-worth-chart-view";
@@ -66,37 +57,6 @@ function formatTimeFull(time: Time): string {
   const str = String(time);
   const date = new Date(str);
   return date.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
-}
-
-/**
- * Time range selector component for the chart.
- */
-interface TimeRangeSelectorProps {
-  selectedRange: TimeRange;
-  onRangeChange: (range: TimeRange) => void;
-}
-
-function TimeRangeSelector({ selectedRange, onRangeChange }: TimeRangeSelectorProps) {
-  return (
-    <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-      {TIME_RANGE_OPTIONS.map((option) => (
-        <button
-          key={option.value}
-          onClick={() => onRangeChange(option.value)}
-          className={`
-            px-3 py-1 text-sm font-medium rounded-md transition-colors
-            ${
-              selectedRange === option.value
-                ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            }
-          `}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
 }
 
 /**
@@ -284,8 +244,8 @@ export function NetWorthChart() {
               onChange={handleChartViewChange}
             />
             <TimeRangeSelector
-              selectedRange={selectedRange}
-              onRangeChange={handleRangeChange}
+              value={selectedRange}
+              onChange={handleRangeChange}
             />
           </div>
         </div>
@@ -316,8 +276,8 @@ export function NetWorthChart() {
             onChange={handleChartViewChange}
           />
           <TimeRangeSelector
-            selectedRange={selectedRange}
-            onRangeChange={handleRangeChange}
+            value={selectedRange}
+            onChange={handleRangeChange}
           />
         </div>
       </div>
