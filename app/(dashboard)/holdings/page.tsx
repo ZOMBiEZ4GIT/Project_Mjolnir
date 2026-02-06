@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
-import { RefreshCw, Briefcase, Filter, Wallet, ArrowRightLeft, Camera } from "lucide-react";
+import { RefreshCw, Briefcase, Filter, Wallet, ArrowRightLeft, Camera, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { HoldingsTable, type HoldingWithData, type PriceData } from "@/components/holdings/holdings-table";
@@ -177,6 +177,17 @@ export default function HoldingsPage() {
     queryFn: () => fetchHoldings(showDormant),
     enabled: isLoaded && isSignedIn,
   });
+
+  // Check if dormant holdings exist (only when main list is empty and dormant toggle is off)
+  const {
+    data: allHoldings,
+  } = useQuery({
+    queryKey: ["holdings", { showDormant: true }],
+    queryFn: () => fetchHoldings(true),
+    enabled: isLoaded && isSignedIn && !showDormant && !isLoading && !!holdings && holdings.length === 0,
+  });
+
+  const hasDormantHoldings = !showDormant && holdings?.length === 0 && (allHoldings?.length ?? 0) > 0;
 
   // Fetch prices for tradeable holdings
   const {
@@ -367,29 +378,56 @@ export default function HoldingsPage() {
     );
   }
 
-  // Show empty state (no holdings at all)
+  // Show empty state (no holdings at all, or all dormant with toggle off)
   if (!holdings || holdings.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-foreground">Holdings</h1>
         </div>
-        <EmptyState
-          icon={Briefcase}
-          title="No holdings yet"
-          description="Add your first holding to start tracking your net worth. You can add stocks, ETFs, crypto, superannuation, cash, and debt."
-          action={
-            <AddHoldingDialog>
-              <Button size="lg">Add your first holding</Button>
-            </AddHoldingDialog>
-          }
-        />
+        {hasDormantHoldings ? (
+          <EmptyState
+            icon={EyeOff}
+            title="All holdings are dormant"
+            description="Your holdings are currently hidden because they are marked as dormant. Toggle the switch below to view them."
+            action={
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="show-dormant-empty"
+                  checked={showDormant}
+                  onCheckedChange={handleShowDormantChange}
+                />
+                <Label htmlFor="show-dormant-empty" className="text-muted-foreground cursor-pointer text-sm">
+                  Show dormant holdings
+                </Label>
+              </div>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={Briefcase}
+            title="No holdings yet"
+            description="Add your first holding to start tracking your net worth. You can add stocks, ETFs, crypto, superannuation, cash, and debt."
+            action={
+              <AddHoldingDialog>
+                <Button size="lg">Add your first holding</Button>
+              </AddHoldingDialog>
+            }
+          />
+        )}
       </div>
     );
   }
 
   // Show filtered empty state (has holdings but none match filter)
   if (filteredHoldings.length === 0) {
+    const typeLabels: Record<string, string> = {
+      stock: "stock", etf: "ETF", crypto: "crypto",
+      super: "super", cash: "cash", debt: "debt",
+    };
+    const typeLabel = typeFilter !== "all" ? typeLabels[typeFilter] ?? typeFilter : null;
+    const emptyTitle = typeLabel ? `No ${typeLabel} holdings` : "No matching holdings";
+
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
@@ -430,19 +468,8 @@ export default function HoldingsPage() {
         </div>
         <EmptyState
           icon={Filter}
-          title="No matching holdings"
+          title={emptyTitle}
           description="Try a different filter to see your holdings."
-          action={
-            <Button
-              variant="outline"
-              onClick={() => {
-                handleCurrencyFilterChange("all");
-                handleTypeFilterChange("all");
-              }}
-            >
-              Clear filters
-            </Button>
-          }
         />
       </div>
     );
