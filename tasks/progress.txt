@@ -136,3 +136,20 @@ Started: 2026-02-06
   - Card container pattern: `border border-border bg-card/50 p-4 rounded-lg` for consistent card look
 ---
 
+## 2026-02-06 - US-005
+- Grouped transactions by month with sticky headers in the transactions page
+- Added helper functions: `getMonthKey()` (extracts YYYY-MM), `formatMonthLabel()` (formats as "February 2026"), `TransactionGroup` interface
+- Added `transactionGroups` useMemo that groups transactions by month key, sorted reverse chronologically
+- Replaced flat `transactions.map()` with `transactionGroups.map()` rendering `Fragment` per group
+- Month headers: full-width `TableRow` with `colSpan={8}`, sticky `top-0 z-20 bg-background`, `border-b border-border`
+- Month header displays: month/year name (left, `text-sm font-semibold`), transaction count (right, `text-xs text-muted-foreground`)
+- Grouping recalculates automatically when filters change since `transactionGroups` depends on `transactions` query data
+- Empty months naturally excluded — only months with transactions appear
+- Files changed: `app/(dashboard)/transactions/page.tsx`
+- **Learnings for future iterations:**
+  - Use `Fragment` (not `<>`) when mapping groups that need keys — shorthand fragments can't accept key props
+  - `colSpan={8}` must match actual column count in the table for sticky headers to span full width
+  - Sticky headers in tables: use `sticky top-0 z-20 bg-background` on the TableCell (not TableRow) to ensure proper stacking context
+  - `getMonthKey()` using `dateString.slice(0, 7)` is simpler and safer than date parsing for YYYY-MM-DD strings
+---
+
