@@ -1,0 +1,245 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/ux10-forms-modal-polish",
+  "description": "UX-10: Forms & Modal Polish — Establish consistent form and modal interactions with react-hook-form + zod validation, animated dialog wrappers, extended animation presets, standardised toasts, settings accordion sections, and refactored delete confirmation dialogs.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Extend animation presets with modal, form, and page-specific transitions",
+      "description": "As a developer, I want a complete set of animation presets so all interactive elements have consistent, reusable motion.",
+      "acceptanceCriteria": [
+        "Add to lib/animations.ts: modalScale (scale 0.95→1 + opacity 0→1, 200ms), modalExit (scale 1→0.95 + opacity 1→0, 150ms)",
+        "Add sheetSlide (x -100%→0 + opacity 0→1, 300ms), sheetSlideRight (x 100%→0)",
+        "Add errorShake keyframes x [0, -8, 8, -4, 4, 0], 400ms",
+        "Add focusGlow boxShadow transition to 0 0 0 2px rgba(139,92,246,0.4), 150ms",
+        "Add accordionExpand (height 0→auto + opacity 0→1, 200ms), accordionCollapse (height auto→0 + opacity 1→0, 150ms)",
+        "Add checkmark (pathLength 0→1 + scale 0→1, spring physics)",
+        "All presets respect prefers-reduced-motion (duration 0 when enabled)",
+        "Presets exported as typed objects compatible with Framer Motion variants or spread props",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "All presets added to lib/animations.ts. reducedMotionOverride export provided for runtime reduced-motion handling."
+    },
+    {
+      "id": "US-002",
+      "title": "Create animated dialog wrapper",
+      "description": "As a user, I want modals to open and close with smooth animations so the app feels premium.",
+      "acceptanceCriteria": [
+        "Create components/ui/animated-dialog.tsx that wraps shadcn/ui Dialog",
+        "Dialog content scales from 0.95→1.0 + fades in on open (using modalScale preset)",
+        "Dialog content scales to 0.95 + fades out on close (using modalExit preset)",
+        "Backdrop uses blur + dark overlay (bg-black/80 backdrop-blur-sm)",
+        "Component accepts all props that shadcn/ui Dialog accepts (drop-in replacement)",
+        "Exports: AnimatedDialog, AnimatedDialogContent, AnimatedDialogHeader, AnimatedDialogFooter, AnimatedDialogTitle, AnimatedDialogDescription",
+        "Respects prefers-reduced-motion — instant show/hide, no animation",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Uses DialogPrimitive.Content asChild with motion.div to avoid onDrag type conflict between Radix and Framer Motion. style={{ x: '-50%', y: '-50%' }} for Framer Motion centering instead of CSS translate."
+    },
+    {
+      "id": "US-003",
+      "title": "Create animated alert dialog wrapper",
+      "description": "As a user, I want confirmation dialogs to have the same polished animations as regular dialogs.",
+      "acceptanceCriteria": [
+        "Create components/ui/animated-alert-dialog.tsx that wraps shadcn/ui AlertDialog",
+        "Same scale + fade animation as animated dialog",
+        "Same backdrop treatment (blur + dark overlay)",
+        "Drop-in replacement — exports all the same parts as alert-dialog.tsx with Animated prefix",
+        "Exports: AnimatedAlertDialog, AnimatedAlertDialogContent, AnimatedAlertDialogHeader, AnimatedAlertDialogFooter, AnimatedAlertDialogTitle, AnimatedAlertDialogDescription, AnimatedAlertDialogAction, AnimatedAlertDialogCancel",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Same asChild + motion.div pattern as animated-dialog.tsx. Exports all AlertDialog parts with Animated prefix plus Action and Cancel buttons. No close X button (alert dialogs require explicit action)."
+    },
+    {
+      "id": "US-004",
+      "title": "Install react-hook-form and zod, create form field component",
+      "description": "As a developer, I want a standardised form validation approach with inline error display so forms are consistent and maintainable.",
+      "acceptanceCriteria": [
+        "Install react-hook-form, @hookform/resolvers, and zod as dependencies",
+        "Create components/ui/form-field.tsx — wrapper component connecting shadcn/ui input to react-hook-form",
+        "Accepts name, label, description (optional), placeholder, and type props",
+        "Displays label above input, inline error message below when validation fails (text-sm text-destructive)",
+        "Input border turns red on error (border-destructive)",
+        "Input shows subtle purple glow on focus using focusGlow animation preset",
+        "Create components/ui/form-textarea-field.tsx — same pattern for textarea",
+        "Create components/ui/form-select-field.tsx — same pattern for select dropdowns",
+        "All field components use Controller from react-hook-form",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "react-hook-form, @hookform/resolvers, zod already installed. Created FormField (input), FormTextareaField, FormSelectField — all use Controller with focusGlow animation, border-destructive on error, text-sm text-destructive error messages. Select field uses Radix Select (no motion wrapper needed). Import from @/components/ui/form-field, form-textarea-field, form-select-field."
+    },
+    {
+      "id": "US-005",
+      "title": "Add error shake animation to form submit",
+      "description": "As a user, I want visual feedback when I submit a form with errors so I notice what needs fixing.",
+      "acceptanceCriteria": [
+        "Create a useFormShake hook or utility that triggers errorShake animation on a form container",
+        "When form is submitted with validation errors, form container shakes briefly (400ms)",
+        "After shake, focus moves to the first field with an error",
+        "Shake animation only triggers on submit attempt, not on individual field blur",
+        "Respects prefers-reduced-motion — skips shake, still moves focus to first error",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Created hooks/use-form-shake.ts — returns { formRef, triggerShake }. Uses animate-shake CSS class (Tailwind keyframes). Focuses first error field via aria-invalid/border-destructive/data-invalid selectors. Respects prefers-reduced-motion (skips shake, still focuses). Call triggerShake() in handleSubmit's onInvalid callback."
+    },
+    {
+      "id": "US-006",
+      "title": "Standardise toast notifications",
+      "description": "As a user, I want consistent success and error feedback so I always know whether my action completed.",
+      "acceptanceCriteria": [
+        "Update components/ui/sonner.tsx to configure toast defaults: success auto-dismiss 3s with checkmark, error persists until dismissed with X icon and optional Retry button, info auto-dismiss 4s",
+        "Create lib/toast-helpers.ts with showSuccess(message, description?), showError(message, options?), showInfo(message)",
+        "showError adds retry button if onRetry provided in options",
+        "Migrate at least 3 existing toast calls to use new helpers (e.g., add-holding-dialog, delete-snapshot-dialog, check-in-modal)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Created lib/toast-helpers.ts with showSuccess (3s auto-dismiss), showError (persists, optional onRetry action button), showInfo (4s auto-dismiss). Updated sonner.tsx with 4s default duration. Migrated add-holding-dialog, delete-snapshot-dialog, and check-in-modal to use new helpers. check-in-modal uses aliased imports (toastSuccess/toastError) to avoid shadowing local showSuccess state."
+    },
+    {
+      "id": "US-007",
+      "title": "Refactor AddHoldingDialog to use animated dialog + react-hook-form + zod",
+      "description": "As a developer, I want the Add Holding dialog refactored to use the new form and dialog patterns so it serves as the reference implementation.",
+      "acceptanceCriteria": [
+        "Update components/holdings/add-holding-dialog.tsx: replace Dialog with AnimatedDialog",
+        "Replace manual useState form state with useForm from react-hook-form",
+        "Create zod schema for two-step validation (step 1: type required; step 2: name, symbol, currency, exchange conditionally required)",
+        "Replace inline error display with FormField components",
+        "Add error shake on submit with validation errors",
+        "Use toast helpers for success/error feedback",
+        "All existing functionality preserved (two-step wizard, type selection, conditional fields)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Replaced Dialog with AnimatedDialog, manual useState form state with useForm+FormProvider, manual validation with zod schema using superRefine for conditional validation (symbol required for tradeable, exchange required for stock/etf, symbol format for ASX/NZX). Uses FormField and FormSelectField components, useFormShake for error shake on invalid submit. Server errors mapped to form fields via form.setError(). Resolver cast required: zodResolver(schema) as unknown as Resolver<FormValues>."
+    },
+    {
+      "id": "US-008",
+      "title": "Refactor EditHoldingDialog to use animated dialog + react-hook-form + zod",
+      "description": "As a developer, I want the Edit Holding dialog migrated to the new patterns for consistency.",
+      "acceptanceCriteria": [
+        "Update components/holdings/edit-holding-dialog.tsx: replace Dialog with AnimatedDialog",
+        "Replace manual form state with useForm, pre-populated with existing holding data",
+        "Create zod schema matching edit form requirements",
+        "Replace inline error display with FormField components",
+        "Use toast helpers for success/error/info feedback",
+        "'No changes to save' info toast still works when form is unchanged",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Replaced Dialog with AnimatedDialog, manual useState form state with useForm+FormProvider, manual validation with zod schema using superRefine for conditional validation (same schema pattern as AddHoldingDialog). Uses FormField and FormSelectField components, useFormShake for error shake on invalid submit. Server errors mapped to form fields via form.setError(). form.reset() in useEffect pre-populates from holding data on open. 'No changes to save' info toast preserved via showInfo helper. Dormant checkbox uses form.watch/form.setValue."
+    },
+    {
+      "id": "US-009",
+      "title": "Refactor CheckInModal to use animated dialog + react-hook-form",
+      "description": "As a developer, I want the monthly check-in modal migrated to the new patterns.",
+      "acceptanceCriteria": [
+        "Update components/check-in/check-in-modal.tsx: replace Dialog with AnimatedDialog",
+        "Replace manual form state with useForm for check-in data (balances, contributions)",
+        "Create zod schema: all active holding balances required (number, > 0), contribution fields optional (number, >= 0)",
+        "Replace inline error display with FormField components",
+        "Add error shake on submit with missing balances",
+        "Use toast helpers for success/error feedback",
+        "Multi-step flow still works (month selection → data entry → confirmation)",
+        "Dynamic field rendering for variable number of holdings still works",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Replaced Dialog with AnimatedDialog (animated-dialog.tsx). Replaced manual shake (useState+setTimeout) with useFormShake hook — triggerShake() handles CSS animate-shake class and auto-focuses first error field. Removed shakeStep2 state, step2Ref replaced with formRef from useFormShake (cast to RefObject<HTMLDivElement | null>). react-hook-form + zod schema were already in place from prior iteration. Toast helpers already migrated (aliased toastSuccess/toastError). Multi-step wizard and dynamic field array unchanged."
+    },
+    {
+      "id": "US-010",
+      "title": "Refactor EditSnapshotModal to use animated dialog + react-hook-form",
+      "description": "As a developer, I want the edit snapshot modal migrated to the new patterns.",
+      "acceptanceCriteria": [
+        "Update components/snapshots/edit-snapshot-modal.tsx: replace Dialog with AnimatedDialog",
+        "Replace manual form state with useForm",
+        "Create zod schema: balance required (number), notes optional (string), contribution fields optional (number, >= 0)",
+        "Replace inline error display with FormField components",
+        "Use toast helpers for feedback",
+        "Collapsible contributions section for super holdings still works",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Replaced Dialog with AnimatedDialog, manual useState form state with useForm+FormProvider, manual validation with zod schema using superRefine for conditional balance validation (debt allows negative). Uses FormField and FormTextareaField components, useFormShake for error shake on invalid submit. Contributions section preserved with collapsible toggle — contribution data pre-populated via useEffect on query data. Toast helpers (showSuccess/showError) replace direct toast calls. Zod v4 uses { error: '...' } instead of { required_error, invalid_type_error }."
+    },
+    {
+      "id": "US-011",
+      "title": "Migrate delete confirmation dialogs to animated alert dialog",
+      "description": "As a user, I want delete confirmations to have the same polished animation as other modals.",
+      "acceptanceCriteria": [
+        "Update components/snapshots/delete-snapshot-dialog.tsx: replace AlertDialog imports with AnimatedAlertDialog equivalents",
+        "Use toast helpers for success/error feedback",
+        "Update components/transactions/delete-transaction-dialog.tsx: same migration to AnimatedAlertDialog",
+        "Use toast helpers for success/error feedback",
+        "Both dialogs animate in/out smoothly",
+        "Both dialogs still show their detail information (holding name, amounts, warnings)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": "Replaced AlertDialog imports with AnimatedAlertDialog equivalents in both delete-snapshot-dialog.tsx and delete-transaction-dialog.tsx. Migrated delete-transaction-dialog.tsx from raw toast.success/toast.error to showSuccess/showError helpers. delete-snapshot-dialog.tsx already had toast helpers from US-006. All existing detail information (holding name, amounts, warnings) preserved unchanged."
+    },
+    {
+      "id": "US-012",
+      "title": "Refactor settings page with accordion sections",
+      "description": "As a user, I want settings organised into collapsible sections so I can focus on one area at a time.",
+      "acceptanceCriteria": [
+        "Install shadcn/ui Accordion component if not already present",
+        "Create components/settings/settings-section.tsx — accordion item wrapper with icon + title in trigger, description below, Framer Motion height animation using accordionExpand/accordionCollapse presets, chevron rotation on expand",
+        "Refactor app/(dashboard)/settings/page.tsx to use accordion layout with sections: Currency Preferences (expanded by default), Email Reminders, Keyboard Shortcuts, About (new section)",
+        "Multiple sections can be open simultaneously (type='multiple' on Accordion)",
+        "All sections use design system tokens (no hardcoded colours)",
+        "Smooth height transition on expand/collapse, nested content fades in after expand",
+        "Respects prefers-reduced-motion",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": "Installed shadcn/ui Accordion (Radix AccordionPrimitive). Created SettingsSection wrapper component with icon+title+description trigger and animated content. Refactored settings page to use Accordion type='multiple' with defaultValue=['currency']. Four sections: Currency Preferences, Email Reminders, Keyboard Shortcuts, About (new). Added accordion-down/accordion-up keyframes to tailwind.config.ts. Updated SettingsSkeleton to match accordion layout. Added global prefers-reduced-motion rule to globals.css for instant show/hide."
+    },
+    {
+      "id": "US-013",
+      "title": "Create confirmation dialog component",
+      "description": "As a developer, I want a reusable confirmation dialog component so future destructive actions can easily show a consistent confirmation prompt.",
+      "acceptanceCriteria": [
+        "Create components/ui/confirm-dialog.tsx — ready-to-use component (not just primitives)",
+        "Props: open, onOpenChange, title, description, confirmLabel (default 'Confirm'), cancelLabel (default 'Cancel'), variant ('default' | 'destructive'), onConfirm, loading (boolean)",
+        "Uses AnimatedAlertDialog under the hood",
+        "Destructive variant: confirm button uses variant='destructive' styling",
+        "Loading state: confirm button shows spinner, both buttons disabled",
+        "Keyboard: Enter confirms, Escape cancels",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": "Reusable ConfirmDialog component wraps AnimatedAlertDialog. Props: open, onOpenChange, title, description, confirmLabel, cancelLabel, variant (default|destructive), onConfirm, loading. Destructive variant styles confirm button with bg-destructive. Loading state shows Loader2 spinner and disables both buttons. Keyboard handled natively by Radix AlertDialog (Enter confirms, Escape cancels)."
+    }
+  ]
+}
