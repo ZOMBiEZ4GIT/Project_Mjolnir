@@ -107,6 +107,8 @@
 - Yahoo Finance `chart()` method: `yahooFinance.chart(symbol, { period1, period2, interval: "1d" })` returns `{ quotes: [{ close }] }`
 - CoinGecko market_chart: `/coins/{id}/market_chart?vs_currency=usd&days=30&interval=daily` returns `{ prices: [[timestamp, price]] }`
 - Sparkline data API: `GET /api/prices/sparkline` returns `{ holdingId, symbol, prices: number[] }[]` — staleTime 30min
+- SVG elements (non-Recharts) can use `stroke="currentColor"` with Tailwind `text-*` classes — avoids hardcoded hex
+- ChartSkeleton uses ChartCard wrapper when `withContainer=true` — consistent with all chart sections
 
 ---
 
@@ -235,5 +237,36 @@ Started: 2026-02-06
   - Use longer staleTime (30min) for sparkline data since historical prices don't change frequently
   - Thread new props through all table view variants: HoldingsTypeSection, HoldingsFlatSection, HoldingsTableContent
   - Sparkline column hidden below md breakpoint — desktop-only feature as specified
+  - ChartCard (components/charts/chart-card.tsx) wraps chart sections with consistent card styling, title, and fadeIn animation — use instead of manual `rounded-2xl border border-border bg-card p-4 sm:p-6` wrappers
+---
+
+## 2026-02-06 - US-007
+- Created `components/charts/chart-card.tsx` — reusable chart wrapper component
+  - Props: `title` (string), `actions` (ReactNode slot for header buttons/toggles), `children`, `className`
+  - Card container: `bg-card border border-border rounded-2xl p-4 sm:p-6` (matches existing chart card pattern)
+  - Header: title in `text-label uppercase text-muted-foreground` (left), actions slot (right) — responsive flex layout
+  - Entrance animation: `fadeIn` preset from `lib/animations.ts` on mount
+  - Respects `prefers-reduced-motion` via `useReducedMotion()` — skips animation when enabled
+- Updated `components/charts/index.ts` barrel export
+- Files changed: components/charts/chart-card.tsx (new), components/charts/index.ts
+- **Learnings for future iterations:**
+  - ChartCard extracts the repeated `rounded-2xl border border-border bg-card p-4 sm:p-6` + title + actions pattern used across net-worth-chart, asset-allocation, etc.
+  - Use ChartCard for new chart sections; existing charts can be refactored to use it incrementally
+  - `useReducedMotion()` returns boolean — spread `fadeIn` only when false to skip animation entirely
+---
+
+## 2026-02-06 - US-008
+- Updated `components/charts/chart-skeleton.tsx` — replaced hardcoded colours with design tokens
+  - Replaced `withContainer` manual card wrapper (`rounded-lg border border-border bg-card/50 p-6`) with `ChartCard` component
+  - When `withContainer` is true and title is provided, ChartCard renders the title — skeleton title div only shows in non-container mode
+  - Line skeleton: replaced hardcoded `stroke="#3f3f46"` with `stroke="currentColor"` + `text-border` class on parent div
+  - Pie skeleton: enhanced from plain circle to donut ring shape (`border-[16px] border-border`) to better match actual donut chart
+  - Bar skeleton: already used `bg-muted` — no changes needed
+  - Already used `animate-pulse` shimmer — no changes needed
+- Files changed: components/charts/chart-skeleton.tsx
+- **Learnings for future iterations:**
+  - SVG `stroke` can use `currentColor` to inherit from Tailwind text colour classes — avoids hardcoded hex values
+  - ChartCard wraps content with consistent `rounded-2xl border border-border bg-card p-4 sm:p-6` + title + fadeIn animation
+  - When using ChartCard as container, avoid duplicating title rendering inside the skeleton content
 ---
 
