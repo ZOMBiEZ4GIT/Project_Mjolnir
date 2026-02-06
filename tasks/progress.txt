@@ -190,3 +190,14 @@ Started: 2026-02-07
   - `motion.tbody` with `variants` pattern works well for table row stagger animations
 ---
 
+## 2026-02-07 - US-004
+- Polished export page with stagger animations and custom card layout
+- Files changed: app/(dashboard)/export/page.tsx
+- **Learnings for future iterations:**
+  - Replaced Card/CardContent/CardHeader with plain motion.div + custom rounded-2xl styling for more control
+  - Custom staggerContainerCustom with 80ms delay (different from default staggerContainer 50ms)
+  - Export card data-driven: array of card config objects mapped to JSX — cleaner than duplicated markup
+  - Count badges as pills: `rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground`
+  - Full backup card distinguished with border-accent/30 and text-accent icon
+---
+
