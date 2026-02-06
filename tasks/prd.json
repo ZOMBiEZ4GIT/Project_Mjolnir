@@ -187,8 +187,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Audit confirmed all 5 target files already use design tokens — no hardcoded colours found."
     }
   ]
 }

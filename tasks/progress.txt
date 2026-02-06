@@ -251,3 +251,15 @@ Started: 2026-02-06
   - `form.formState.errors.holdings?.[idx]?.balance?.message` is the path to field array item errors
 ---
 
+## 2026-02-06 - US-010
+- Audited all 5 target files for hardcoded colour classes: check-in-modal.tsx, checkin-prompt.tsx, snapshots/page.tsx, edit-snapshot-modal.tsx, delete-snapshot-dialog.tsx
+- Searched for: text-white, text-gray-*, bg-gray-*, border-gray-*, text-green-*, text-red-*, bg-green-*, bg-red-*, border-green-*, border-red-*
+- Result: ZERO hardcoded colours found — all files already use design tokens (text-foreground, text-muted-foreground, bg-card, bg-muted, border-border, text-positive, text-destructive, etc.)
+- Previous UX epic iterations (UX-1 through UX-4) already migrated these files to design tokens
+- Build and lint pass clean
+- Files changed: none (audit only — prd.json and progress.txt updated)
+- **Learnings for future iterations:**
+  - Design token migration was already completed by earlier UX epics — future audits may find the same
+  - The codebase patterns section documents which hardcoded colours are intentionally kept (yellow-*, blue-* for warnings/info, bg-gray-500 for category indicators, hex in email templates and html2canvas)
+---
+
