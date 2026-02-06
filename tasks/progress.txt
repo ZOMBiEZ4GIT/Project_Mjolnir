@@ -118,3 +118,21 @@ Started: 2026-02-06
   - TypeSelector `disabled` prop + empty `onChange={() => {}}` provides clean read-only display of transaction type
 ---
 
+## 2026-02-06 - US-004
+- Created `components/transactions/transaction-summary.tsx` — 4 summary cards (Total Bought, Total Sold, Dividends Received, Net Cash Flow)
+- Cards use staggerContainer/staggerItem animation presets from lib/animations.ts
+- Grid responsive: 1 col mobile, 2 cols md, 4 cols lg+
+- Each card shows label, formatted dollar amount (via CurrencyDisplay), and transaction count
+- Colour-coded: Bought=text-positive, Sold=text-destructive, Dividends=text-accent, Net=dynamic based on sign
+- Uses design tokens: bg-card/50, border-border
+- Respects prefers-reduced-motion via useReducedMotion()
+- Updated transactions page to compute per-action counts in aggregatedTotals useMemo
+- Removed TableFooter (aggregated totals now shown in summary cards above table)
+- Summary cards respect current filter state (holding, action, currency) since they consume the same aggregatedTotals derived from filtered transactions
+- Files changed: `components/transactions/transaction-summary.tsx` (new), `app/(dashboard)/transactions/page.tsx`
+- **Learnings for future iterations:**
+  - AggregatedTotals interface extended with `buyCount`, `sellCount`, `dividendCount`, `totalCount`, `displayCurrencyCode` for summary card consumption
+  - `displayCurrencyCode` precomputed in useMemo: uses display currency if mixed, otherwise the common native currency — avoids currency logic in child components
+  - Card container pattern: `border border-border bg-card/50 p-4 rounded-lg` for consistent card look
+---
+
