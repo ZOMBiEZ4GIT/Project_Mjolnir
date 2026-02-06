@@ -449,14 +449,23 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
   // Show retry button for errors or if currently retrying
   const showRetry = (error || isRetrying) && onRetry;
 
+  // Stale visual treatment: dimmed text + amber left border
+  const priceTextClass = isStale
+    ? "text-muted-foreground font-mono"
+    : "text-foreground font-mono";
+
   return (
-    <div className="flex flex-col gap-0.5 items-end">
+    <div
+      className={`flex flex-col gap-0.5 items-end transition-all duration-200 ${
+        isStale ? "border-l-2 border-warning/50 pl-2" : "border-l-2 border-transparent pl-2"
+      }`}
+    >
       {/* Main price with flash + number ticker */}
       <PriceFlash value={price}>
         <PriceNumberTicker
           value={price}
           prefix={currencyPrefix}
-          className="text-foreground font-mono"
+          className={priceTextClass}
         />
       </PriceFlash>
 
