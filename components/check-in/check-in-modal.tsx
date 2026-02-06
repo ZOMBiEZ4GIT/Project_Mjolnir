@@ -9,12 +9,12 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { showSuccess as toastSuccess, showError as toastError } from "@/lib/toast-helpers";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+  AnimatedDialog,
+  AnimatedDialogContent,
+  AnimatedDialogHeader,
+  AnimatedDialogTitle,
+  AnimatedDialogDescription,
+} from "@/components/ui/animated-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { CheckinStepper } from "@/components/check-in/checkin-stepper";
 import { MonthSelector } from "@/components/check-in/month-selector";
+import { useFormShake } from "@/hooks/use-form-shake";
 
 // Holding data from check-in status API
 interface HoldingToUpdate {
@@ -364,9 +365,8 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
   const [direction, setDirection] = useState(1);
   const reducedMotion = useReducedMotion();
 
-  // Error shake state for validation
-  const [shakeStep2, setShakeStep2] = useState(false);
-  const step2Ref = useRef<HTMLDivElement>(null);
+  // Error shake via reusable hook
+  const { formRef: step2Ref, triggerShake } = useFormShake();
 
   // Success state after save
   const [showSuccess, setShowSuccess] = useState(false);
@@ -525,7 +525,6 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
       setDirection(1);
       form.reset({ month: currentMonth, holdings: [] });
       setShowContributions({});
-      setShakeStep2(false);
       setShowSuccess(false);
       setSaveResult(null);
       lastSyncedRef.current = "";
@@ -557,18 +556,8 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     if (currentStep === 1) {
       const isValid = await validateStep2();
       if (!isValid) {
-        // Trigger shake animation
-        setShakeStep2(true);
-        setTimeout(() => setShakeStep2(false), 500);
+        triggerShake();
         toastError("Please fill in all required balances");
-
-        // Focus first empty balance input
-        if (step2Ref.current) {
-          const firstErrorInput = step2Ref.current.querySelector(
-            ".border-destructive input"
-          ) as HTMLInputElement | null;
-          firstErrorInput?.focus();
-        }
         return;
       }
     }
@@ -664,16 +653,16 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
   ];
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto border-border bg-background">
-        <DialogHeader>
-          <DialogTitle className="text-foreground">Monthly Check-in</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
+    <AnimatedDialog open={open} onOpenChange={handleOpenChange}>
+      <AnimatedDialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto border-border bg-background">
+        <AnimatedDialogHeader>
+          <AnimatedDialogTitle className="text-foreground">Monthly Check-in</AnimatedDialogTitle>
+          <AnimatedDialogDescription className="text-muted-foreground">
             {showSuccess
               ? "Your balances have been saved successfully"
               : stepDescriptions[currentStep]}
-          </DialogDescription>
-        </DialogHeader>
+          </AnimatedDialogDescription>
+        </AnimatedDialogHeader>
 
         {/* Stepper - show all complete when success */}
         <div className="py-2">
@@ -763,8 +752,8 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
                 transition={stepTransition}
               >
                 <div
-                  ref={step2Ref}
-                  className={`space-y-6 ${shakeStep2 ? "animate-shake" : ""}`}
+                  ref={step2Ref as React.RefObject<HTMLDivElement | null>}
+                  className="space-y-6"
                 >
                   {/* Progress Indicator */}
                   {totalHoldings > 0 && (
@@ -1169,7 +1158,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
             </>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </AnimatedDialogContent>
+    </AnimatedDialog>
   );
 }

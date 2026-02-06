@@ -165,8 +165,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced Dialog with AnimatedDialog (animated-dialog.tsx). Replaced manual shake (useState+setTimeout) with useFormShake hook — triggerShake() handles CSS animate-shake class and auto-focuses first error field. Removed shakeStep2 state, step2Ref replaced with formRef from useFormShake (cast to RefObject<HTMLDivElement | null>). react-hook-form + zod schema were already in place from prior iteration. Toast helpers already migrated (aliased toastSuccess/toastError). Multi-step wizard and dynamic field array unchanged."
     },
     {
       "id": "US-010",

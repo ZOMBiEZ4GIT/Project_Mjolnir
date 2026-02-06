@@ -239,3 +239,14 @@ Started: 2026-02-06
   - Checkbox with react-hook-form: use `form.watch("field")` for `checked` and `form.setValue("field", value)` for `onCheckedChange` — no Controller needed for simple boolean
 ---
 
+## 2026-02-06 - US-009
+- What was implemented: Refactored CheckInModal to use AnimatedDialog (replacing plain Dialog) and useFormShake hook (replacing manual shake state)
+- Files changed: components/check-in/check-in-modal.tsx
+- **Learnings for future iterations:**
+  - CheckInModal already had react-hook-form + zod + useFieldArray + toast helpers from prior iterations — only Dialog→AnimatedDialog and manual shake→useFormShake needed changing
+  - useFormShake hook replaces three pieces of manual state: useState for shake boolean, setTimeout for auto-clear, and manual querySelector for focus — cleaner and consistent with other dialogs
+  - Cast `formRef` to `React.RefObject<HTMLDivElement | null>` when attaching to a `<div>` wrapper (not a `<form>`) since useFormShake ref type is `HTMLDivElement | HTMLFormElement`
+  - For wizard-style dialogs, useFormShake ref attaches to the step container (not the entire dialog) — this ensures shake only affects the step with validation errors
+  - The check-in modal's dynamic field array pattern (useFieldArray + replace) is better suited to manual Input components than FormField wrappers — FormField requires a single field name and doesn't handle array indices cleanly
+---
+
