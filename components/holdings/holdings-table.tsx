@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { motion, AnimatePresence, useReducedMotion, type Variants } from "framer-motion";
 import { Pencil, Trash2, AlertTriangle, Clock, TrendingUp, TrendingDown, RotateCw } from "lucide-react";
 import type { Holding } from "@/lib/db/schema";
+import type { HoldingTypeFilter } from "./filter-tabs";
 import {
   Table,
   TableBody,
@@ -12,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { GroupHeader } from "./group-header";
 import { EditHoldingDialog } from "./edit-holding-dialog";
 import { DeleteHoldingDialog } from "./delete-holding-dialog";
 import { CurrencyDisplay } from "@/components/ui/currency-display";
@@ -90,6 +94,7 @@ interface HoldingsTableProps {
   onRetryPrice?: (holdingId: string) => void;
   retryingPriceIds?: Set<string>;
   groupBy?: GroupByValue;
+  typeFilter?: HoldingTypeFilter;
 }
 
 function groupHoldingsByType(holdings: HoldingWithData[]): Map<Holding["type"], HoldingWithData[]> {
@@ -269,34 +274,85 @@ function formatGainLossPercent(percent: number): string {
   return `${sign}${percent.toFixed(2)}%`;
 }
 
-export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, retryingPriceIds, groupBy = "type" }: HoldingsTableProps) {
+export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, retryingPriceIds, groupBy = "type", typeFilter = "all" }: HoldingsTableProps) {
   const [editingHolding, setEditingHolding] = useState<HoldingWithData | null>(null);
   const [deletingHolding, setDeletingHolding] = useState<HoldingWithData | null>(null);
   const groupedByType = groupHoldingsByType(holdings);
   const groupedByCurrency = groupHoldingsByCurrency(holdings);
+  const shouldReduceMotion = useReducedMotion();
 
   // Get currency context for display currency conversion
   const { displayCurrency, convert, showNativeCurrency, isLoading: currencyLoading } = useCurrency();
 
+  // Determine if we should show grouped view (All tab) or flat view (specific type tab)
+  const showGrouped = typeFilter === "all";
+
+  // For flat view, determine the holding type to decide which columns to show
+  const flatType = typeFilter !== "all" ? typeFilter : undefined;
+  const flatIsTradeable = flatType ? TRADEABLE_TYPES.includes(flatType as (typeof TRADEABLE_TYPES)[number]) : false;
+  const flatIsSnapshot = flatType ? SNAPSHOT_TYPES.includes(flatType as (typeof SNAPSHOT_TYPES)[number]) : false;
+
+  // Calculate total portfolio value (absolute sum of assets, used for percentage calculation)
+  const portfolioTotal = useMemo(() => {
+    if (currencyLoading) return 0;
+    let total = 0;
+    for (const type of HOLDING_TYPE_ORDER) {
+      const typeHoldings = groupedByType.get(type);
+      if (!typeHoldings || typeHoldings.length === 0) continue;
+      const groupTotal = calculateGroupTotal(typeHoldings, prices, convert);
+      total += Math.abs(groupTotal);
+    }
+    return total;
+  }, [groupedByType, prices, convert, currencyLoading]);
 
   return (
     <>
-      <div className="space-y-8">
-        {groupBy === "type" ? (
-          // Group by holding type
-          HOLDING_TYPE_ORDER.map((type) => {
-            const typeHoldings = groupedByType.get(type);
+      <AnimatePresence mode="popLayout">
+        <motion.div
+          key={typeFilter}
+          className="space-y-8"
+          initial={shouldReduceMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={shouldReduceMotion ? undefined : { opacity: 0 }}
+          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.1 }}
+        >
+          {groupBy === "type" ? (
+            showGrouped ? (
+              // Group by holding type with collapsible sections
+              HOLDING_TYPE_ORDER.map((type) => {
+                const typeHoldings = groupedByType.get(type);
 
-            // Skip empty sections
-            if (!typeHoldings || typeHoldings.length === 0) {
-              return null;
-            }
+                // Skip empty sections
+                if (!typeHoldings || typeHoldings.length === 0) {
+                  return null;
+                }
 
-            return (
-              <HoldingsTypeSection
-                key={type}
-                type={type}
-                holdings={typeHoldings}
+                return (
+                  <HoldingsTypeSection
+                    key={type}
+                    type={type}
+                    holdings={typeHoldings}
+                    prices={prices}
+                    pricesLoading={pricesLoading}
+                    onEdit={setEditingHolding}
+                    onDelete={setDeletingHolding}
+                    onRetryPrice={onRetryPrice}
+                    retryingPriceIds={retryingPriceIds}
+                    displayCurrency={displayCurrency}
+                    convert={convert}
+                    currencyLoading={currencyLoading}
+                    showNativeCurrency={showNativeCurrency}
+                    collapsible
+                    portfolioTotal={portfolioTotal}
+                  />
+                );
+              })
+            ) : (
+              // Flat list — no group header when specific type is selected
+              <HoldingsFlatSection
+                holdings={holdings}
+                isTradeable={flatIsTradeable}
+                isSnapshotType={flatIsSnapshot}
                 prices={prices}
                 pricesLoading={pricesLoading}
                 onEdit={setEditingHolding}
@@ -308,38 +364,38 @@ export function HoldingsTable({ holdings, prices, pricesLoading, onRetryPrice, r
                 currencyLoading={currencyLoading}
                 showNativeCurrency={showNativeCurrency}
               />
-            );
-          })
-        ) : (
-          // Group by currency
-          CURRENCY_ORDER.map((currency) => {
-            const currencyHoldings = groupedByCurrency.get(currency);
+            )
+          ) : (
+            // Group by currency
+            CURRENCY_ORDER.map((currency) => {
+              const currencyHoldings = groupedByCurrency.get(currency);
 
-            // Skip empty sections
-            if (!currencyHoldings || currencyHoldings.length === 0) {
-              return null;
-            }
+              // Skip empty sections
+              if (!currencyHoldings || currencyHoldings.length === 0) {
+                return null;
+              }
 
-            return (
-              <HoldingsCurrencySection
-                key={currency}
-                sectionCurrency={currency}
-                holdings={currencyHoldings}
-                prices={prices}
-                pricesLoading={pricesLoading}
-                onEdit={setEditingHolding}
-                onDelete={setDeletingHolding}
-                onRetryPrice={onRetryPrice}
-                retryingPriceIds={retryingPriceIds}
-                displayCurrency={displayCurrency}
-                convert={convert}
-                currencyLoading={currencyLoading}
-                showNativeCurrency={showNativeCurrency}
-              />
-            );
-          })
-        )}
-      </div>
+              return (
+                <HoldingsCurrencySection
+                  key={currency}
+                  sectionCurrency={currency}
+                  holdings={currencyHoldings}
+                  prices={prices}
+                  pricesLoading={pricesLoading}
+                  onEdit={setEditingHolding}
+                  onDelete={setDeletingHolding}
+                  onRetryPrice={onRetryPrice}
+                  retryingPriceIds={retryingPriceIds}
+                  displayCurrency={displayCurrency}
+                  convert={convert}
+                  currencyLoading={currencyLoading}
+                  showNativeCurrency={showNativeCurrency}
+                />
+              );
+            })
+          )}
+        </motion.div>
+      </AnimatePresence>
 
       {editingHolding && (
         <EditHoldingDialog
@@ -375,6 +431,8 @@ interface HoldingsTypeSectionProps {
   convert: (amount: number, fromCurrency: Currency) => number;
   currencyLoading?: boolean;
   showNativeCurrency?: boolean;
+  collapsible?: boolean;
+  portfolioTotal?: number;
 }
 
 /**
@@ -465,7 +523,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, onRetry,
         {showRetry && !isRetrying && (
           <button
             type="button"
-            onClick={onRetry}
+            onClick={(e) => { e.stopPropagation(); onRetry?.(); }}
             className="ml-1.5 p-0.5 rounded hover:bg-muted transition-colors"
             title="Retry price fetch"
           >
@@ -726,191 +784,389 @@ function HoldingsTypeSection({
   convert,
   currencyLoading,
   showNativeCurrency,
+  collapsible = false,
+  portfolioTotal = 0,
 }: HoldingsTypeSectionProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
   const label = HOLDING_TYPE_LABELS[type];
   const isTradeable = TRADEABLE_TYPES.includes(type as (typeof TRADEABLE_TYPES)[number]);
   const isSnapshotType = SNAPSHOT_TYPES.includes(type as (typeof SNAPSHOT_TYPES)[number]);
+  const isDebt = type === "debt";
+
+  // Calculate group total in display currency
+  const groupTotal = useMemo(
+    () => calculateGroupTotal(holdings, prices, convert),
+    [holdings, prices, convert]
+  );
+
+  // Calculate portfolio percentage (using absolute values)
+  const portfolioPercent = portfolioTotal > 0
+    ? (Math.abs(groupTotal) / portfolioTotal) * 100
+    : null;
 
   return (
     <section>
-      <h2 className="text-lg font-semibold text-foreground mb-3">
-        {label}{" "}
-        <span className="text-muted-foreground font-normal">({holdings.length})</span>
-      </h2>
-      <div className="rounded-lg border border-border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-muted-foreground sticky left-0 bg-background z-10">Name</TableHead>
+      {collapsible ? (
+        <GroupHeader
+          label={label}
+          count={holdings.length}
+          totalValue={groupTotal}
+          portfolioPercent={portfolioPercent}
+          displayCurrency={displayCurrency}
+          currencyLoading={currencyLoading}
+          isDebt={isDebt}
+          isExpanded={isExpanded}
+          onToggle={() => setIsExpanded((prev) => !prev)}
+        />
+      ) : (
+        <h2 className="text-lg font-semibold text-foreground mb-3">
+          {label}{" "}
+          <span className="text-muted-foreground font-normal">({holdings.length})</span>
+        </h2>
+      )}
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            style={{ overflow: "hidden" }}
+          >
+            <div className="rounded-lg border border-border overflow-x-auto">
+              <HoldingsTableContent
+                holdings={holdings}
+                isTradeable={isTradeable}
+                isSnapshotType={isSnapshotType}
+                prices={prices}
+                pricesLoading={pricesLoading}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onRetryPrice={onRetryPrice}
+                retryingPriceIds={retryingPriceIds}
+                displayCurrency={displayCurrency}
+                convert={convert}
+                currencyLoading={currencyLoading}
+                showNativeCurrency={showNativeCurrency}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </section>
+  );
+}
+
+/**
+ * Flat section — renders holdings in a table without a group header.
+ * Used when a specific type filter is active.
+ */
+interface HoldingsFlatSectionProps {
+  holdings: HoldingWithData[];
+  isTradeable: boolean;
+  isSnapshotType: boolean;
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
+  onEdit: (holding: HoldingWithData) => void;
+  onDelete: (holding: HoldingWithData) => void;
+  onRetryPrice?: (holdingId: string) => void;
+  retryingPriceIds?: Set<string>;
+  displayCurrency: Currency;
+  convert: (amount: number, fromCurrency: Currency) => number;
+  currencyLoading?: boolean;
+  showNativeCurrency?: boolean;
+}
+
+function HoldingsFlatSection({
+  holdings,
+  isTradeable,
+  isSnapshotType,
+  prices,
+  pricesLoading,
+  onEdit,
+  onDelete,
+  onRetryPrice,
+  retryingPriceIds,
+  displayCurrency,
+  convert,
+  currencyLoading,
+  showNativeCurrency,
+}: HoldingsFlatSectionProps) {
+  return (
+    <div className="rounded-lg border border-border overflow-x-auto">
+      <HoldingsTableContent
+        holdings={holdings}
+        isTradeable={isTradeable}
+        isSnapshotType={isSnapshotType}
+        prices={prices}
+        pricesLoading={pricesLoading}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onRetryPrice={onRetryPrice}
+        retryingPriceIds={retryingPriceIds}
+        displayCurrency={displayCurrency}
+        convert={convert}
+        currencyLoading={currencyLoading}
+        showNativeCurrency={showNativeCurrency}
+      />
+    </div>
+  );
+}
+
+/**
+ * Shared table content — used by both grouped and flat views.
+ */
+// Capped stagger delay: 50ms per row but total stagger completes within 500ms
+function getCappedStaggerDelay(count: number): number {
+  if (count <= 1) return 0;
+  return Math.min(0.05, 0.5 / count);
+}
+
+const MotionTableRow = motion.create(TableRow);
+
+interface HoldingsTableContentProps {
+  holdings: HoldingWithData[];
+  isTradeable: boolean;
+  isSnapshotType: boolean;
+  prices?: Map<string, PriceData>;
+  pricesLoading?: boolean;
+  onEdit: (holding: HoldingWithData) => void;
+  onDelete: (holding: HoldingWithData) => void;
+  onRetryPrice?: (holdingId: string) => void;
+  retryingPriceIds?: Set<string>;
+  displayCurrency: Currency;
+  convert: (amount: number, fromCurrency: Currency) => number;
+  currencyLoading?: boolean;
+  showNativeCurrency?: boolean;
+}
+
+function HoldingsTableContent({
+  holdings,
+  isTradeable,
+  isSnapshotType,
+  prices,
+  pricesLoading,
+  onEdit,
+  onDelete,
+  onRetryPrice,
+  retryingPriceIds,
+  displayCurrency,
+  convert,
+  currencyLoading,
+  showNativeCurrency,
+}: HoldingsTableContentProps) {
+  const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
+
+  // Sort holdings so dormant ones appear at the bottom of each section
+  const sortedHoldings = useMemo(() => {
+    return [...holdings].sort((a, b) => {
+      if (a.isDormant === b.isDormant) return 0;
+      return a.isDormant ? 1 : -1;
+    });
+  }, [holdings]);
+
+  const staggerDelay = getCappedStaggerDelay(sortedHoldings.length);
+
+  const containerVariants = {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: shouldReduceMotion ? 0 : staggerDelay,
+      },
+    },
+  };
+
+  const rowVariants: Variants = shouldReduceMotion
+    ? {
+        hidden: { opacity: 1 },
+        visible: { opacity: 1, transition: { duration: 0 } },
+      }
+    : {
+        hidden: { opacity: 0, y: 10 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" as const } },
+      };
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="border-border hover:bg-transparent">
+          <TableHead className="text-muted-foreground sticky left-0 bg-background z-10">Name</TableHead>
+          {isTradeable && (
+            <TableHead className="text-muted-foreground hidden sm:table-cell">Symbol</TableHead>
+          )}
+          {isSnapshotType && (
+            <TableHead className="text-muted-foreground">Balance</TableHead>
+          )}
+          <TableHead className="text-muted-foreground hidden lg:table-cell">Currency</TableHead>
+          {isTradeable && (
+            <>
+              <TableHead className="text-muted-foreground text-right hidden md:table-cell">Quantity</TableHead>
+              <TableHead className="text-muted-foreground text-right hidden sm:table-cell">Price</TableHead>
+              <TableHead className="text-muted-foreground text-right">Market Value</TableHead>
+              <TableHead className="text-muted-foreground text-right hidden md:table-cell">Gain/Loss</TableHead>
+              <TableHead className="text-muted-foreground text-right hidden lg:table-cell">Cost Basis</TableHead>
+              <TableHead className="text-muted-foreground text-right hidden lg:table-cell">Avg Cost</TableHead>
+            </>
+          )}
+          <TableHead className="text-muted-foreground hidden sm:table-cell">Status</TableHead>
+          <TableHead className="text-muted-foreground w-[80px] sm:w-[100px]">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <motion.tbody
+        className="[&_tr:last-child]:border-0"
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        {sortedHoldings.map((holding) => {
+          const snapshot = holding.latestSnapshot;
+          const isStale = snapshot ? isSnapshotStale(snapshot.date) : false;
+
+          return (
+            <MotionTableRow
+              key={holding.id}
+              variants={rowVariants}
+              className={`border-border cursor-pointer transition-[background-color,transform] duration-150 hover:bg-accent/5 hover:scale-[1.005] active:bg-accent/10 ${holding.isDormant ? "opacity-60" : ""}`}
+              onClick={() => router.push(`/holdings/${holding.id}`)}
+              style={{ transformOrigin: "center" }}
+            >
+              <TableCell className="text-foreground font-medium sticky left-0 bg-background z-10">
+                {holding.name}
+              </TableCell>
               {isTradeable && (
-                <TableHead className="text-muted-foreground hidden sm:table-cell">Symbol</TableHead>
+                <TableCell className="text-muted-foreground hidden sm:table-cell">
+                  {holding.symbol || "—"}
+                </TableCell>
               )}
               {isSnapshotType && (
-                <TableHead className="text-muted-foreground">Balance</TableHead>
+                <TableCell>
+                  {snapshot ? (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-foreground">
+                        {formatBalance(snapshot.balance, snapshot.currency)}
+                      </span>
+                      <span
+                        className={`text-xs flex items-center gap-1 ${
+                          isStale ? "text-yellow-400" : "text-muted-foreground"
+                        }`}
+                      >
+                        {isStale && (
+                          <AlertTriangle className="h-3 w-3" />
+                        )}
+                        as of {formatSnapshotDate(snapshot.date)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">No data</span>
+                  )}
+                </TableCell>
               )}
-              <TableHead className="text-muted-foreground hidden lg:table-cell">Currency</TableHead>
+              <TableCell className="text-muted-foreground hidden lg:table-cell">
+                {holding.currency}
+              </TableCell>
               {isTradeable && (
                 <>
-                  <TableHead className="text-muted-foreground text-right hidden md:table-cell">Quantity</TableHead>
-                  <TableHead className="text-muted-foreground text-right hidden sm:table-cell">Price</TableHead>
-                  <TableHead className="text-muted-foreground text-right">Market Value</TableHead>
-                  <TableHead className="text-muted-foreground text-right hidden md:table-cell">Gain/Loss</TableHead>
-                  <TableHead className="text-muted-foreground text-right hidden lg:table-cell">Cost Basis</TableHead>
-                  <TableHead className="text-muted-foreground text-right hidden lg:table-cell">Avg Cost</TableHead>
+                  <TableCell className="text-muted-foreground text-right font-mono hidden md:table-cell">
+                    {formatQuantity(holding.quantity)}
+                  </TableCell>
+                  <TableCell className="text-right hidden sm:table-cell">
+                    <PriceCell
+                      holdingId={holding.id}
+                      holdingCurrency={holding.currency}
+                      prices={prices}
+                      pricesLoading={pricesLoading}
+                      onRetry={onRetryPrice ? () => onRetryPrice(holding.id) : undefined}
+                      isRetrying={retryingPriceIds?.has(holding.id)}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <MarketValueCell
+                      quantity={holding.quantity}
+                      holdingId={holding.id}
+                      holdingCurrency={holding.currency}
+                      prices={prices}
+                      pricesLoading={pricesLoading}
+                      displayCurrency={displayCurrency}
+                      convert={convert}
+                      currencyLoading={currencyLoading}
+                      showNativeCurrency={showNativeCurrency}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right hidden md:table-cell">
+                    <GainLossCell
+                      quantity={holding.quantity}
+                      costBasis={holding.costBasis}
+                      holdingId={holding.id}
+                      holdingCurrency={holding.currency}
+                      prices={prices}
+                      pricesLoading={pricesLoading}
+                      displayCurrency={displayCurrency}
+                      convert={convert}
+                      currencyLoading={currencyLoading}
+                      showNativeCurrency={showNativeCurrency}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right hidden lg:table-cell">
+                    <CostBasisCell
+                      costBasis={holding.costBasis}
+                      holdingCurrency={holding.currency as Currency}
+                      displayCurrency={displayCurrency}
+                      convert={convert}
+                      currencyLoading={currencyLoading}
+                      showNativeCurrency={showNativeCurrency}
+                    />
+                  </TableCell>
+                  <TableCell className="text-right hidden lg:table-cell">
+                    <CostBasisCell
+                      costBasis={holding.avgCost}
+                      holdingCurrency={holding.currency as Currency}
+                      displayCurrency={displayCurrency}
+                      convert={convert}
+                      currencyLoading={currencyLoading}
+                      showNativeCurrency={showNativeCurrency}
+                    />
+                  </TableCell>
                 </>
               )}
-              <TableHead className="text-muted-foreground hidden sm:table-cell">Status</TableHead>
-              <TableHead className="text-muted-foreground w-[80px] sm:w-[100px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {holdings.map((holding) => {
-              const snapshot = holding.latestSnapshot;
-              const isStale = snapshot ? isSnapshotStale(snapshot.date) : false;
-
-              return (
-                <TableRow
-                  key={holding.id}
-                  className={`border-border ${holding.isDormant ? "opacity-60" : ""}`}
-                >
-                  <TableCell className="text-foreground font-medium sticky left-0 bg-background z-10">
-                    {holding.name}
-                  </TableCell>
-                  {isTradeable && (
-                    <TableCell className="text-muted-foreground hidden sm:table-cell">
-                      {holding.symbol || "—"}
-                    </TableCell>
-                  )}
-                  {isSnapshotType && (
-                    <TableCell>
-                      {snapshot ? (
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-foreground">
-                            {formatBalance(snapshot.balance, snapshot.currency)}
-                          </span>
-                          <span
-                            className={`text-xs flex items-center gap-1 ${
-                              isStale ? "text-yellow-400" : "text-muted-foreground"
-                            }`}
-                          >
-                            {isStale && (
-                              <AlertTriangle className="h-3 w-3" />
-                            )}
-                            as of {formatSnapshotDate(snapshot.date)}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">No data</span>
-                      )}
-                    </TableCell>
-                  )}
-                  <TableCell className="text-muted-foreground hidden lg:table-cell">
-                    {holding.currency}
-                  </TableCell>
-                  {isTradeable && (
-                    <>
-                      <TableCell className="text-muted-foreground text-right font-mono hidden md:table-cell">
-                        {formatQuantity(holding.quantity)}
-                      </TableCell>
-                      <TableCell className="text-right hidden sm:table-cell">
-                        <PriceCell
-                          holdingId={holding.id}
-                          holdingCurrency={holding.currency}
-                          prices={prices}
-                          pricesLoading={pricesLoading}
-                          onRetry={onRetryPrice ? () => onRetryPrice(holding.id) : undefined}
-                          isRetrying={retryingPriceIds?.has(holding.id)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <MarketValueCell
-                          quantity={holding.quantity}
-                          holdingId={holding.id}
-                          holdingCurrency={holding.currency}
-                          prices={prices}
-                          pricesLoading={pricesLoading}
-                          displayCurrency={displayCurrency}
-                          convert={convert}
-                          currencyLoading={currencyLoading}
-                          showNativeCurrency={showNativeCurrency}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right hidden md:table-cell">
-                        <GainLossCell
-                          quantity={holding.quantity}
-                          costBasis={holding.costBasis}
-                          holdingId={holding.id}
-                          holdingCurrency={holding.currency}
-                          prices={prices}
-                          pricesLoading={pricesLoading}
-                          displayCurrency={displayCurrency}
-                          convert={convert}
-                          currencyLoading={currencyLoading}
-                          showNativeCurrency={showNativeCurrency}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right hidden lg:table-cell">
-                        <CostBasisCell
-                          costBasis={holding.costBasis}
-                          holdingCurrency={holding.currency as Currency}
-                          displayCurrency={displayCurrency}
-                          convert={convert}
-                          currencyLoading={currencyLoading}
-                          showNativeCurrency={showNativeCurrency}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right hidden lg:table-cell">
-                        <CostBasisCell
-                          costBasis={holding.avgCost}
-                          holdingCurrency={holding.currency as Currency}
-                          displayCurrency={displayCurrency}
-                          convert={convert}
-                          currencyLoading={currencyLoading}
-                          showNativeCurrency={showNativeCurrency}
-                        />
-                      </TableCell>
-                    </>
-                  )}
-                  <TableCell className="hidden sm:table-cell">
-                    {holding.isDormant ? (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
-                        Dormant
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-positive/20 text-positive">
-                        Active
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-0.5 sm:gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => onEdit(holding)}
-                      >
-                        <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        <span className="sr-only">Edit {holding.name}</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => onDelete(holding)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                        <span className="sr-only">Delete {holding.name}</span>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-    </section>
+              <TableCell className="hidden sm:table-cell">
+                {holding.isDormant ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
+                    Dormant
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-positive/20 text-positive">
+                    Active
+                  </span>
+                )}
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-0.5 sm:gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground"
+                    onClick={(e) => { e.stopPropagation(); onEdit(holding); }}
+                  >
+                    <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="sr-only">Edit {holding.name}</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
+                    onClick={(e) => { e.stopPropagation(); onDelete(holding); }}
+                  >
+                    <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="sr-only">Delete {holding.name}</span>
+                  </Button>
+                </div>
+              </TableCell>
+            </MotionTableRow>
+          );
+        })}
+      </motion.tbody>
+    </Table>
   );
 }
 
@@ -950,6 +1206,41 @@ function calculateSectionSubtotal(
   return subtotal;
 }
 
+/**
+ * Calculate the total value of holdings in display currency.
+ * Converts each holding's value from its native currency to display currency.
+ */
+function calculateGroupTotal(
+  holdings: HoldingWithData[],
+  prices: Map<string, PriceData> | undefined,
+  convert: (amount: number, fromCurrency: Currency) => number,
+): number {
+  let total = 0;
+
+  for (const holding of holdings) {
+    const isTradeable = TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number]);
+    const isSnapshotType = SNAPSHOT_TYPES.includes(holding.type as (typeof SNAPSHOT_TYPES)[number]);
+    const nativeCurrency = holding.currency as Currency;
+
+    if (isTradeable) {
+      const priceData = prices?.get(holding.id);
+      if (holding.quantity && priceData?.price) {
+        const nativeValue = holding.quantity * priceData.price;
+        total += convert(nativeValue, nativeCurrency);
+      }
+    } else if (isSnapshotType && holding.latestSnapshot) {
+      const balance = Number(holding.latestSnapshot.balance);
+      if (holding.type === "debt") {
+        total -= convert(balance, nativeCurrency);
+      } else {
+        total += convert(balance, nativeCurrency);
+      }
+    }
+  }
+
+  return total;
+}
+
 interface HoldingsCurrencySectionProps {
   sectionCurrency: Currency;
   holdings: HoldingWithData[];
@@ -980,6 +1271,14 @@ function HoldingsCurrencySection({
   showNativeCurrency,
 }: HoldingsCurrencySectionProps) {
   const label = CURRENCY_LABELS[sectionCurrency];
+
+  // Sort holdings so dormant ones appear at the bottom
+  const sortedHoldings = useMemo(() => {
+    return [...holdings].sort((a, b) => {
+      if (a.isDormant === b.isDormant) return 0;
+      return a.isDormant ? 1 : -1;
+    });
+  }, [holdings]);
 
   // Calculate subtotal in section's currency
   const subtotal = calculateSectionSubtotal(holdings, prices);
@@ -1041,7 +1340,7 @@ function HoldingsCurrencySection({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {holdings.map((holding) => {
+            {sortedHoldings.map((holding) => {
               const snapshot = holding.latestSnapshot;
               const isStale = snapshot ? isSnapshotStale(snapshot.date) : false;
               const isTradeable = TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number]);

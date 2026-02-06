@@ -3,18 +3,21 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
-import { RefreshCw, Briefcase, Filter } from "lucide-react";
+import { RefreshCw, Briefcase, Filter, Wallet, ArrowRightLeft, Camera, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
-import { HoldingsTable, type HoldingWithData, type PriceData, type GroupByValue } from "@/components/holdings/holdings-table";
+import { HoldingsTable, type HoldingWithData, type PriceData } from "@/components/holdings/holdings-table";
 import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
 import { CurrencyFilter, type CurrencyFilterValue } from "@/components/holdings/currency-filter";
-import { GroupBySelector } from "@/components/holdings/group-by-selector";
+import { FilterTabs, type HoldingTypeFilter } from "@/components/holdings/filter-tabs";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { NativeCurrencyToggle } from "@/components/ui/native-currency-toggle";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SpeedDial, type SpeedDialAction } from "@/components/shared/speed-dial";
+import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
+import { CheckInModal } from "@/components/check-in/check-in-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -130,10 +133,10 @@ export default function HoldingsPage() {
   const currencyFilter: CurrencyFilterValue = currencyFilterParam && ["all", "AUD", "NZD", "USD"].includes(currencyFilterParam)
     ? currencyFilterParam
     : "all";
-  const groupByParam = searchParams.get("group_by") as GroupByValue | null;
-  const groupBy: GroupByValue = groupByParam && ["type", "currency"].includes(groupByParam)
-    ? groupByParam
-    : "type";
+  const typeFilterParam = searchParams.get("type") as HoldingTypeFilter | null;
+  const typeFilter: HoldingTypeFilter = typeFilterParam && ["all", "stock", "etf", "crypto", "super", "cash", "debt"].includes(typeFilterParam)
+    ? typeFilterParam
+    : "all";
 
   const handleShowDormantChange = (checked: boolean) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -155,14 +158,14 @@ export default function HoldingsPage() {
     router.push(`/holdings${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
-  const handleGroupByChange = (value: GroupByValue) => {
+  const handleTypeFilterChange = (value: HoldingTypeFilter) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (value === "type") {
-      params.delete("group_by");
+    if (value === "all") {
+      params.delete("type");
     } else {
-      params.set("group_by", value);
+      params.set("type", value);
     }
-    router.push(`/holdings${params.toString() ? `?${params.toString()}` : ""}`);
+    router.replace(`/holdings${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
   const {
@@ -174,6 +177,17 @@ export default function HoldingsPage() {
     queryFn: () => fetchHoldings(showDormant),
     enabled: isLoaded && isSignedIn,
   });
+
+  // Check if dormant holdings exist (only when main list is empty and dormant toggle is off)
+  const {
+    data: allHoldings,
+  } = useQuery({
+    queryKey: ["holdings", { showDormant: true }],
+    queryFn: () => fetchHoldings(true),
+    enabled: isLoaded && isSignedIn && !showDormant && !isLoading && !!holdings && holdings.length === 0,
+  });
+
+  const hasDormantHoldings = !showDormant && holdings?.length === 0 && (allHoldings?.length ?? 0) > 0;
 
   // Fetch prices for tradeable holdings
   const {
@@ -226,6 +240,32 @@ export default function HoldingsPage() {
     // Silent error handling - no toast for background refresh failures
   });
 
+  // Speed-dial FAB: refs for hidden dialog triggers + check-in modal state
+  const addHoldingRef = useRef<HTMLButtonElement>(null);
+  const addTransactionRef = useRef<HTMLButtonElement>(null);
+  const [checkInOpen, setCheckInOpen] = useState(false);
+
+  const speedDialActions = useMemo<SpeedDialAction[]>(() => [
+    {
+      id: "add-holding",
+      label: "Add Holding",
+      icon: <Wallet className="h-4 w-4" />,
+      onClick: () => addHoldingRef.current?.click(),
+    },
+    {
+      id: "add-transaction",
+      label: "Add Transaction",
+      icon: <ArrowRightLeft className="h-4 w-4" />,
+      onClick: () => addTransactionRef.current?.click(),
+    },
+    {
+      id: "monthly-check-in",
+      label: "Monthly Check-in",
+      icon: <Camera className="h-4 w-4" />,
+      onClick: () => setCheckInOpen(true),
+    },
+  ], []);
+
   // Track which holdings are currently being retried
   const [retryingPriceIds, setRetryingPriceIds] = useState<Set<string>>(new Set());
 
@@ -277,12 +317,18 @@ export default function HoldingsPage() {
     }
   }, [priceMap, pricesLoading, backgroundRefreshMutation]);
 
-  // Filter holdings by currency
+  // Filter holdings by currency and type
   const filteredHoldings = useMemo(() => {
     if (!holdings) return [];
-    if (currencyFilter === "all") return holdings;
-    return holdings.filter((holding) => holding.currency === currencyFilter);
-  }, [holdings, currencyFilter]);
+    let result = holdings;
+    if (currencyFilter !== "all") {
+      result = result.filter((holding) => holding.currency === currencyFilter);
+    }
+    if (typeFilter !== "all") {
+      result = result.filter((holding) => holding.type === typeFilter);
+    }
+    return result;
+  }, [holdings, currencyFilter, typeFilter]);
 
   // Show loading while Clerk auth is loading
   if (!isLoaded) {
@@ -332,29 +378,56 @@ export default function HoldingsPage() {
     );
   }
 
-  // Show empty state (no holdings at all)
+  // Show empty state (no holdings at all, or all dormant with toggle off)
   if (!holdings || holdings.length === 0) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-foreground">Holdings</h1>
         </div>
-        <EmptyState
-          icon={Briefcase}
-          title="No holdings yet"
-          description="Add your first holding to start tracking your net worth. You can add stocks, ETFs, crypto, superannuation, cash, and debt."
-          action={
-            <AddHoldingDialog>
-              <Button size="lg">Add your first holding</Button>
-            </AddHoldingDialog>
-          }
-        />
+        {hasDormantHoldings ? (
+          <EmptyState
+            icon={EyeOff}
+            title="All holdings are dormant"
+            description="Your holdings are currently hidden because they are marked as dormant. Toggle the switch below to view them."
+            action={
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="show-dormant-empty"
+                  checked={showDormant}
+                  onCheckedChange={handleShowDormantChange}
+                />
+                <Label htmlFor="show-dormant-empty" className="text-muted-foreground cursor-pointer text-sm">
+                  Show dormant holdings
+                </Label>
+              </div>
+            }
+          />
+        ) : (
+          <EmptyState
+            icon={Briefcase}
+            title="No holdings yet"
+            description="Add your first holding to start tracking your net worth. You can add stocks, ETFs, crypto, superannuation, cash, and debt."
+            action={
+              <AddHoldingDialog>
+                <Button size="lg">Add your first holding</Button>
+              </AddHoldingDialog>
+            }
+          />
+        )}
       </div>
     );
   }
 
   // Show filtered empty state (has holdings but none match filter)
   if (filteredHoldings.length === 0) {
+    const typeLabels: Record<string, string> = {
+      stock: "stock", etf: "ETF", crypto: "crypto",
+      super: "super", cash: "cash", debt: "debt",
+    };
+    const typeLabel = typeFilter !== "all" ? typeLabels[typeFilter] ?? typeFilter : null;
+    const emptyTitle = typeLabel ? `No ${typeLabel} holdings` : "No matching holdings";
+
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
@@ -377,32 +450,26 @@ export default function HoldingsPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-4 mb-4">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="show-dormant-filtered"
-              checked={showDormant}
-              onCheckedChange={handleShowDormantChange}
-            />
-            <Label htmlFor="show-dormant-filtered" className="text-muted-foreground cursor-pointer text-sm">
-              Show dormant holdings
-            </Label>
+          <FilterTabs value={typeFilter} onChange={handleTypeFilterChange} />
+          <div className="ml-auto flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="show-dormant-filtered"
+                checked={showDormant}
+                onCheckedChange={handleShowDormantChange}
+              />
+              <Label htmlFor="show-dormant-filtered" className="text-muted-foreground cursor-pointer text-sm">
+                Show dormant holdings
+              </Label>
+            </div>
+            <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
+            <NativeCurrencyToggle />
           </div>
-          <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
-          <GroupBySelector value={groupBy} onChange={handleGroupByChange} />
-          <NativeCurrencyToggle />
         </div>
         <EmptyState
           icon={Filter}
-          title={`No ${currencyFilter} holdings found`}
-          description="Try selecting a different currency filter or 'All Currencies' to see your holdings."
-          action={
-            <Button
-              variant="outline"
-              onClick={() => handleCurrencyFilterChange("all")}
-            >
-              Show all currencies
-            </Button>
-          }
+          title={emptyTitle}
+          description="Try a different filter to see your holdings."
         />
       </div>
     );
@@ -442,20 +509,22 @@ export default function HoldingsPage() {
           </AddHoldingDialog>
         </div>
       </div>
-      <div className="flex items-center gap-4 mb-4">
-        <div className="flex items-center gap-2">
-          <Switch
-            id="show-dormant"
-            checked={showDormant}
-            onCheckedChange={handleShowDormantChange}
-          />
-          <Label htmlFor="show-dormant" className="text-muted-foreground cursor-pointer text-sm">
-            Show dormant holdings
-          </Label>
+      <div className="flex flex-wrap items-center gap-4 mb-4">
+        <FilterTabs value={typeFilter} onChange={handleTypeFilterChange} />
+        <div className="ml-auto flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-dormant"
+              checked={showDormant}
+              onCheckedChange={handleShowDormantChange}
+            />
+            <Label htmlFor="show-dormant" className="text-muted-foreground cursor-pointer text-sm">
+              Show dormant holdings
+            </Label>
+          </div>
+          <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
+          <NativeCurrencyToggle />
         </div>
-        <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
-        <GroupBySelector value={groupBy} onChange={handleGroupByChange} />
-        <NativeCurrencyToggle />
       </div>
       <HoldingsTable
         holdings={filteredHoldings}
@@ -463,8 +532,19 @@ export default function HoldingsPage() {
         pricesLoading={pricesLoading}
         onRetryPrice={handleRetryPrice}
         retryingPriceIds={retryingPriceIds}
-        groupBy={groupBy}
+        groupBy="type"
+        typeFilter={typeFilter}
       />
+
+      {/* Speed-dial FAB with hidden dialog triggers */}
+      <AddHoldingDialog>
+        <button ref={addHoldingRef} className="hidden" aria-hidden="true" />
+      </AddHoldingDialog>
+      <AddTransactionDialog>
+        <button ref={addTransactionRef} className="hidden" aria-hidden="true" />
+      </AddTransactionDialog>
+      <CheckInModal open={checkInOpen} onOpenChange={setCheckInOpen} />
+      <SpeedDial actions={speedDialActions} />
     </div>
   );
 }

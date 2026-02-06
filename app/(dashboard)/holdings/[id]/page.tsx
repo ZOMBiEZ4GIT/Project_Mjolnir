@@ -297,7 +297,7 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
               {HOLDING_TYPE_LABELS[holding.type] || holding.type}
             </span>
             {holding.isDormant && (
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-yellow-900 text-yellow-300">
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
                 Dormant
               </span>
             )}
