@@ -1,3 +1,4 @@
+export { ChartCard } from "./chart-card";
 export { ChartSkeleton } from "./chart-skeleton";
 export { ChartError } from "./chart-error";
 export { ChartExportButton } from "./chart-export-button";
