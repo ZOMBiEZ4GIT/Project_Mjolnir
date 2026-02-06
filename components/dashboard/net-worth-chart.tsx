@@ -70,27 +70,31 @@ interface ChartViewToggleProps {
 
 function ChartViewToggle({ viewMode, onChange }: ChartViewToggleProps) {
   return (
-    <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+    <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1" role="tablist" aria-label="Chart view">
       <button
+        role="tab"
+        aria-selected={viewMode === "networth"}
         onClick={() => onChange("networth")}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
           viewMode === "networth"
             ? "bg-muted text-foreground"
             : "text-muted-foreground hover:text-foreground"
         }`}
-        title="Net Worth only"
+        aria-label="Net Worth only"
       >
         <LineChartIcon className="h-4 w-4" />
         <span className="hidden sm:inline">Net Worth</span>
       </button>
       <button
+        role="tab"
+        aria-selected={viewMode === "assetsvsdebt"}
         onClick={() => onChange("assetsvsdebt")}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
           viewMode === "assetsvsdebt"
             ? "bg-muted text-foreground"
             : "text-muted-foreground hover:text-foreground"
         }`}
-        title="Assets vs Debt comparison"
+        aria-label="Assets vs Debt comparison"
       >
         <BarChart3 className="h-4 w-4" />
         <span className="hidden sm:inline">Assets vs Debt</span>
@@ -287,7 +291,7 @@ export function NetWorthChart() {
         </div>
       </div>
 
-      <div ref={chartRef} className="h-[264px]">
+      <div ref={chartRef} className="h-[264px]" role="img" aria-label="Net worth history chart">
         <AnimatePresence mode="wait">
           {chartViewMode === "networth" ? (
             <motion.div

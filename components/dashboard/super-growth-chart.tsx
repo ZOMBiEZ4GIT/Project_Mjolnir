@@ -370,7 +370,7 @@ export function SuperGrowthChart({
           filename="super-growth-breakdown"
         />
       </div>
-      <div ref={chartRef} className="h-64">
+      <div ref={chartRef} className="h-64" role="img" aria-label="Superannuation growth breakdown chart showing employer contributions, employee contributions, and investment returns">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}

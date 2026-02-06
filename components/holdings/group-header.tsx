@@ -15,6 +15,8 @@ interface GroupHeaderProps {
   isDebt?: boolean;
   isExpanded: boolean;
   onToggle: () => void;
+  /** ID of the controlled content region for aria-controls */
+  contentId?: string;
 }
 
 export function GroupHeader({
@@ -27,6 +29,7 @@ export function GroupHeader({
   isDebt = false,
   isExpanded,
   onToggle,
+  contentId,
 }: GroupHeaderProps) {
   return (
     <button
@@ -34,6 +37,7 @@ export function GroupHeader({
       onClick={onToggle}
       className="flex items-center justify-between w-full mb-3 group cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       aria-expanded={isExpanded}
+      aria-controls={contentId}
     >
       <div className="flex items-center gap-2">
         <motion.span

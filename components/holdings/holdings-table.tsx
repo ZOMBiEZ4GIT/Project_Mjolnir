@@ -814,6 +814,7 @@ function HoldingsTypeSection({
           isDebt={isDebt}
           isExpanded={isExpanded}
           onToggle={() => setIsExpanded((prev) => !prev)}
+          contentId={`holdings-group-${type}`}
         />
       ) : (
         <h2 className="text-lg font-semibold text-foreground mb-3">
@@ -829,6 +830,7 @@ function HoldingsTypeSection({
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
             style={{ overflow: "hidden" }}
+            id={`holdings-group-${type}`}
           >
             <div className="rounded-lg border border-border overflow-x-auto">
               <HoldingsTableContent

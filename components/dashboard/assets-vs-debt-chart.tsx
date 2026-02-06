@@ -169,7 +169,7 @@ export function AssetsVsDebtChart({ data, isLoading }: AssetsVsDebtChartProps) {
   };
 
   return (
-    <div className="h-64">
+    <div className="h-64" role="img" aria-label="Assets vs debt comparison chart">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={chartData}

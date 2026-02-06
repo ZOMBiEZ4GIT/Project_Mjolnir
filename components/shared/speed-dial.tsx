@@ -97,6 +97,8 @@ export function SpeedDial({ actions }: SpeedDialProps) {
         onClick={toggle}
         animate={{ rotate: isOpen ? 45 : 0 }}
         transition={{ duration }}
+        aria-label={isOpen ? "Close quick actions" : "Open quick actions"}
+        aria-expanded={isOpen}
       >
         <Plus className="h-6 w-6" />
       </motion.button>

@@ -89,7 +89,7 @@ function Sparkline({ data }: SparklineProps) {
   const strokeColor = isPositive ? POSITIVE : NEGATIVE;
 
   return (
-    <div className="h-12 w-28">
+    <div className="h-12 w-28" role="img" aria-label={`Net worth trend: ${isPositive ? "up" : "down"}`}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
           <Line

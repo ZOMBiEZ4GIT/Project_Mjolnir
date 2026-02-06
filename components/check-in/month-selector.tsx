@@ -37,7 +37,7 @@ export function MonthSelector({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label="Select month">
         {options.map((option) => {
           const isSelected = selectedMonth === option.value;
           const Icon = option.icon;
@@ -46,6 +46,8 @@ export function MonthSelector({
             <button
               key={option.value}
               type="button"
+              role="radio"
+              aria-checked={isSelected}
               onClick={() => onSelectMonth(option.value)}
               className={`
                 flex items-center gap-3 rounded-lg border p-4 text-left

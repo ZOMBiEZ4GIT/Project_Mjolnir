@@ -71,6 +71,8 @@ export default function Error({
               <button
                 onClick={() => setDetailsOpen(!detailsOpen)}
                 className="flex items-center gap-1.5 mx-auto text-body-sm text-muted-foreground hover:text-foreground transition-colors"
+                aria-expanded={detailsOpen}
+                aria-controls="error-details"
               >
                 <ChevronDown
                   className={`h-4 w-4 transition-transform duration-200 ${
@@ -80,7 +82,7 @@ export default function Error({
                 Error details
               </button>
               {detailsOpen && (
-                <div className="mt-3 bg-muted rounded-lg p-4 font-mono text-body-sm text-muted-foreground text-left break-all max-h-40 overflow-auto">
+                <div id="error-details" className="mt-3 bg-muted rounded-lg p-4 font-mono text-body-sm text-muted-foreground text-left break-all max-h-40 overflow-auto">
                   {error.message}
                 </div>
               )}

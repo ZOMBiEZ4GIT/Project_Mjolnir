@@ -81,6 +81,7 @@ export function ChartExportButton({
         ${className ?? ""}
       `}
       title="Download chart as PNG"
+      aria-label="Download chart as PNG"
     >
       {isExporting ? (
         <Loader2 className="h-4 w-4 animate-spin" />

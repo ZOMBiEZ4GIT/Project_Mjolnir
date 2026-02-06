@@ -111,6 +111,7 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
           variant="outline"
           size="sm"
           className="gap-2"
+          aria-label={isRefreshing ? "Refreshing prices" : "Refresh prices"}
         >
           <RefreshCw
             className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}

@@ -247,7 +247,14 @@ function ExposureItem({
         </div>
       </div>
       {/* Animated progress bar */}
-      <div className="h-2 bg-muted rounded-full overflow-hidden">
+      <div
+        className="h-2 bg-muted rounded-full overflow-hidden"
+        role="progressbar"
+        aria-valuenow={Math.round(percentage)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${currency} exposure: ${percentage.toFixed(1)}%`}
+      >
         <motion.div
           className={`h-full ${getCurrencyBarColor(currency)} rounded-full`}
           initial={reducedMotion ? { width: `${Math.min(percentage, 100)}%` } : { width: "0%" }}

@@ -188,5 +188,5 @@ export function TVChartWrapper({
 
   const style: CSSProperties = { height };
 
-  return <div ref={containerRef} className={className} style={style} />;
+  return <div ref={containerRef} className={className} style={style} role="img" aria-label="Interactive price chart" />;
 }
