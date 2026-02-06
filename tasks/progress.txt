@@ -133,7 +133,7 @@
 - Framer Motion centering: use `style={{ x: "-50%", y: "-50%" }}` not CSS translate classes (FM overwrites transform)
 - FormField/FormTextareaField/FormSelectField: convenience wrappers in components/ui/ — use Controller + useFormContext, require FormProvider parent
 - FormField uses motion.input with focusGlow for purple glow on focus; FormSelectField uses Radix Select (no motion wrapper)
-- useFormShake hook (hooks/use-form-shake.ts): returns { formRef, triggerShake } — attach ref to form container, call triggerShake() in handleSubmit onInvalid callback
+- useFormShake hook (hooks/use-form-shake.ts): returns { formRef, triggerShake } — attach ref to form container, call triggerShake() in handleSubmit onInvalid callback; cast formRef to `React.RefObject<HTMLDivElement | null>` when attaching to a `<div>`
 - animate-shake CSS class defined in tailwind.config.ts — use for CSS-based shake animations (500ms ease-in-out)
 - Toast helpers: import { showSuccess, showError, showInfo } from "@/lib/toast-helpers" — success auto-dismiss 3s, error persists until dismissed, info 4s
 - showError accepts optional { onRetry } to render a Retry action button; use for retryable operations
@@ -213,5 +213,18 @@ Started: 2026-02-06
   - showError accepts optional `onRetry` callback which renders a Retry action button on the toast
   - Sonner toast.success/toast.error/toast.info already render appropriate icons (checkmark, X, info) — no custom icon config needed
   - Import from `@/lib/toast-helpers` — use `showSuccess`, `showError`, `showInfo` instead of raw `toast.*` calls
+---
+
+## 2026-02-06 - US-007
+- What was implemented: Refactored AddHoldingDialog to use AnimatedDialog, react-hook-form with FormProvider, zod validation schema, FormField/FormSelectField components, and useFormShake hook
+- Files changed: components/holdings/add-holding-dialog.tsx
+- **Learnings for future iterations:**
+  - Zod `superRefine` is the right approach for conditional validation driven by a hidden `_type` field — avoids discriminated union complexity for wizard-style forms
+  - `zodResolver(schema) as unknown as Resolver<FormValues>` cast is required when schema has `.optional().default("")` fields (RHF infers different types than zod output)
+  - `useFormShake` ref type is `HTMLDivElement | HTMLFormElement` — when attaching to a plain `<div>`, cast to `React.RefObject<HTMLDivElement | null>`
+  - Server validation errors from the API can be mapped to form fields via `form.setError(fieldName, { message })` in mutation onError
+  - Step 1 (type selection) stays outside FormProvider since it doesn't use react-hook-form; step 2 wraps in `<FormProvider>` + `<form onSubmit>`
+  - Back button needs `type="button"` to prevent form submission
+  - `form.clearErrors()` on handleBack is cleaner than resetting errors manually
 ---
 

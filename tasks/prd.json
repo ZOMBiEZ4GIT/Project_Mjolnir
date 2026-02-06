@@ -127,8 +127,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced Dialog with AnimatedDialog, manual useState form state with useForm+FormProvider, manual validation with zod schema using superRefine for conditional validation (symbol required for tradeable, exchange required for stock/etf, symbol format for ASX/NZX). Uses FormField and FormSelectField components, useFormShake for error shake on invalid submit. Server errors mapped to form fields via form.setError(). Resolver cast required: zodResolver(schema) as unknown as Resolver<FormValues>."
     },
     {
       "id": "US-008",
