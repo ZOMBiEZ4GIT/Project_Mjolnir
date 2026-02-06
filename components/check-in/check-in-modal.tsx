@@ -1,7 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { useForm, useFieldArray, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { toast } from "sonner";
 import {
@@ -11,16 +15,24 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUpRight,
+  ArrowDownRight,
+  Landmark,
+  Wallet,
+  CreditCard,
+  AlertTriangle,
+  Check,
+} from "lucide-react";
+import { CheckinStepper } from "@/components/check-in/checkin-stepper";
+import { MonthSelector } from "@/components/check-in/month-selector";
 
 // Holding data from check-in status API
 interface HoldingToUpdate {
@@ -29,19 +41,6 @@ interface HoldingToUpdate {
   type: string;
   currency: string;
   isDormant: boolean;
-}
-
-// Data structure for super holding entry with optional contributions
-export interface SuperHoldingData {
-  balance: string;
-  employerContrib: string;
-  employeeContrib: string;
-  showContributions: boolean;
-}
-
-// Data structure for simple balance holdings (cash, debt)
-export interface BalanceHoldingData {
-  balance: string;
 }
 
 // Currency symbols for display
@@ -74,10 +73,25 @@ function formatMonthYear(dateStr: string): string {
   return date.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
 }
 
+// Latest contributions data from API
+interface LatestContributions {
+  [holdingId: string]: {
+    employerContrib: string;
+    employeeContrib: string;
+  };
+}
+
+// Previous balances keyed by holding ID
+interface PreviousBalances {
+  [holdingId: string]: string;
+}
+
 // Fetch holdings needing updates for a specific month
 async function fetchHoldingsForMonth(month: string): Promise<{
   holdings: HoldingToUpdate[];
   currentMonth: string;
+  latestContributions: LatestContributions;
+  previousBalances: PreviousBalances;
 }> {
   const response = await fetch(`/api/check-in/status?month=${month}`);
   if (!response.ok) {
@@ -91,6 +105,13 @@ const typeLabels: Record<string, string> = {
   super: "Superannuation",
   cash: "Cash",
   debt: "Debt",
+};
+
+// Type icons for display
+const typeIcons: Record<string, typeof Landmark> = {
+  super: Landmark,
+  cash: Wallet,
+  debt: CreditCard,
 };
 
 // Type order for grouping
@@ -124,141 +145,57 @@ async function saveCheckIn(body: CheckInSaveBody): Promise<{
   return response.json();
 }
 
-// Props for SuperHoldingEntry component
-interface SuperHoldingEntryProps {
+// ---------------------------------------------------------------------------
+// Zod schema for check-in form
+// ---------------------------------------------------------------------------
+
+const holdingEntrySchema = z.object({
+  holdingId: z.string().min(1),
+  type: z.string(),
+  balance: z.string().min(1, "Balance is required"),
+  employerContrib: z.string().optional().default(""),
+  employeeContrib: z.string().optional().default(""),
+});
+
+const checkInFormSchema = z.object({
+  month: z.string().min(1, "Month is required"),
+  holdings: z.array(holdingEntrySchema),
+});
+
+type CheckInFormValues = z.infer<typeof checkInFormSchema>;
+
+// ---------------------------------------------------------------------------
+// Sub-components for holding entries
+// ---------------------------------------------------------------------------
+
+interface HoldingEntryProps {
   holding: HoldingToUpdate;
-  data: SuperHoldingData;
-  onDataChange: (holdingId: string, data: SuperHoldingData) => void;
+  index: number;
+  balance: string;
+  employerContrib: string;
+  employeeContrib: string;
+  showContributions: boolean;
+  onBalanceChange: (value: string) => void;
+  onEmployerContribChange: (value: string) => void;
+  onEmployeeContribChange: (value: string) => void;
+  onToggleContributions: () => void;
   error?: string;
 }
 
-// Props for cash holding entry component
-interface CashHoldingEntryProps {
-  holding: HoldingToUpdate;
-  data: BalanceHoldingData;
-  onDataChange: (holdingId: string, data: BalanceHoldingData) => void;
-  error?: string;
-}
-
-// Cash holding entry component with balance input
-function CashHoldingEntry({
-  holding,
-  data,
-  onDataChange,
-  error,
-}: CashHoldingEntryProps) {
-  const currencySymbol = currencySymbols[holding.currency] || holding.currency;
-
-  const handleBalanceChange = (value: string) => {
-    onDataChange(holding.id, { balance: value });
-  };
-
-  return (
-    <div className={`p-3 rounded-lg bg-card border ${error ? "border-destructive" : "border-border"}`}>
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-foreground font-medium">{holding.name}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-              {holding.currency}
-            </span>
-          </div>
-          {error && <p className="text-xs text-destructive mt-1">{error}</p>}
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{currencySymbol}</span>
-          <Input
-            type="number"
-            placeholder="Balance"
-            value={data.balance}
-            onChange={(e) => handleBalanceChange(e.target.value)}
-            className={`w-32 bg-background text-foreground text-right ${error ? "border-destructive" : "border-border"}`}
-            step="0.01"
-            min="0"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Props for debt holding entry component
-interface DebtHoldingEntryProps {
-  holding: HoldingToUpdate;
-  data: BalanceHoldingData;
-  onDataChange: (holdingId: string, data: BalanceHoldingData) => void;
-  error?: string;
-}
-
-// Debt holding entry component with balance input (displayed and stored as positive)
-function DebtHoldingEntry({
-  holding,
-  data,
-  onDataChange,
-  error,
-}: DebtHoldingEntryProps) {
-  const currencySymbol = currencySymbols[holding.currency] || holding.currency;
-
-  const handleBalanceChange = (value: string) => {
-    onDataChange(holding.id, { balance: value });
-  };
-
-  return (
-    <div className={`p-3 rounded-lg bg-card border ${error ? "border-destructive" : "border-border"}`}>
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <span className="text-foreground font-medium">{holding.name}</span>
-            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-              {holding.currency}
-            </span>
-          </div>
-          {error && <p className="text-xs text-destructive mt-1">{error}</p>}
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{currencySymbol}</span>
-          <Input
-            type="number"
-            placeholder="Balance"
-            value={data.balance}
-            onChange={(e) => handleBalanceChange(e.target.value)}
-            className={`w-32 bg-background text-foreground text-right ${error ? "border-destructive" : "border-border"}`}
-            step="0.01"
-            min="0"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Super holding entry component with balance input and optional contributions
 function SuperHoldingEntry({
   holding,
-  data,
-  onDataChange,
+  balance,
+  employerContrib,
+  employeeContrib,
+  showContributions,
+  onBalanceChange,
+  onEmployerContribChange,
+  onEmployeeContribChange,
+  onToggleContributions,
   error,
-}: SuperHoldingEntryProps) {
+}: HoldingEntryProps) {
   const currencySymbol = currencySymbols[holding.currency] || holding.currency;
-
-  const handleBalanceChange = (value: string) => {
-    onDataChange(holding.id, { ...data, balance: value });
-  };
-
-  const handleEmployerContribChange = (value: string) => {
-    onDataChange(holding.id, { ...data, employerContrib: value });
-  };
-
-  const handleEmployeeContribChange = (value: string) => {
-    onDataChange(holding.id, { ...data, employeeContrib: value });
-  };
-
-  const toggleContributions = () => {
-    onDataChange(holding.id, {
-      ...data,
-      showContributions: !data.showContributions,
-    });
-  };
+  const reducedMotion = useReducedMotion();
 
   return (
     <div className={`p-3 rounded-lg bg-card border ${error ? "border-destructive" : "border-border"} space-y-3`}>
@@ -283,8 +220,8 @@ function SuperHoldingEntry({
           <Input
             type="number"
             placeholder="Balance"
-            value={data.balance}
-            onChange={(e) => handleBalanceChange(e.target.value)}
+            value={balance}
+            onChange={(e) => onBalanceChange(e.target.value)}
             className={`w-32 bg-background text-foreground text-right ${error ? "border-destructive" : "border-border"}`}
             step="0.01"
             min="0"
@@ -297,104 +234,228 @@ function SuperHoldingEntry({
         <>
           <button
             type="button"
-            onClick={toggleContributions}
+            onClick={onToggleContributions}
             className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
           >
-            {data.showContributions ? (
+            {showContributions ? (
               <ChevronDown className="w-4 h-4" />
             ) : (
               <ChevronRight className="w-4 h-4" />
             )}
-            {data.showContributions
+            {showContributions
               ? "Hide Contributions"
               : "Add Contributions"}
           </button>
 
-          {data.showContributions && (
-            <div className="pl-4 space-y-3 border-l-2 border-border">
-              <div className="flex items-center justify-between">
-                <label className="text-sm text-muted-foreground">
-                  Employer Contribution
-                </label>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">{currencySymbol}</span>
-                  <Input
-                    type="number"
-                    placeholder="0.00"
-                    value={data.employerContrib}
-                    onChange={(e) => handleEmployerContribChange(e.target.value)}
-                    className="w-28 bg-background border-border text-foreground text-right"
-                    step="0.01"
-                    min="0"
-                  />
+          <AnimatePresence initial={false}>
+            {showContributions && (
+              <motion.div
+                key="contributions"
+                initial={reducedMotion ? false : { height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={reducedMotion ? undefined : { height: 0, opacity: 0 }}
+                transition={reducedMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
+                className="overflow-hidden"
+              >
+                <div className="pl-4 space-y-3 border-l-2 border-border">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm text-muted-foreground">
+                      Employer Contribution
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">{currencySymbol}</span>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        value={employerContrib}
+                        onChange={(e) => onEmployerContribChange(e.target.value)}
+                        className="w-28 bg-background border-border text-foreground text-right"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm text-muted-foreground">
+                      Employee Contribution
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted-foreground">{currencySymbol}</span>
+                      <Input
+                        type="number"
+                        placeholder="0.00"
+                        value={employeeContrib}
+                        onChange={(e) => onEmployeeContribChange(e.target.value)}
+                        className="w-28 bg-background border-border text-foreground text-right"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <label className="text-sm text-muted-foreground">
-                  Employee Contribution
-                </label>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">{currencySymbol}</span>
-                  <Input
-                    type="number"
-                    placeholder="0.00"
-                    value={data.employeeContrib}
-                    onChange={(e) => handleEmployeeContribChange(e.target.value)}
-                    className="w-28 bg-background border-border text-foreground text-right"
-                    step="0.01"
-                    min="0"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </>
       )}
     </div>
   );
 }
 
+interface BalanceEntryProps {
+  holding: HoldingToUpdate;
+  balance: string;
+  onBalanceChange: (value: string) => void;
+  error?: string;
+}
+
+function BalanceHoldingEntry({
+  holding,
+  balance,
+  onBalanceChange,
+  error,
+}: BalanceEntryProps) {
+  const currencySymbol = currencySymbols[holding.currency] || holding.currency;
+
+  return (
+    <div className={`p-3 rounded-lg bg-card border ${error ? "border-destructive" : "border-border"}`}>
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-foreground font-medium">{holding.name}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+              {holding.currency}
+            </span>
+          </div>
+          {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">{currencySymbol}</span>
+          <Input
+            type="number"
+            placeholder="Balance"
+            value={balance}
+            onChange={(e) => onBalanceChange(e.target.value)}
+            className={`w-32 bg-background text-foreground text-right ${error ? "border-destructive" : "border-border"}`}
+            step="0.01"
+            min="0"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Format currency amount for review display
+function formatCurrency(amount: string, currency: string): string {
+  const symbol = currencySymbols[currency] || currency;
+  const num = parseFloat(amount);
+  if (isNaN(num)) return `${symbol}0.00`;
+  return `${symbol}${num.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const queryClient = useQueryClient();
+
+  // Wizard step: 0 = Select Month, 1 = Update Holdings, 2 = Review & Save
+  const [currentStep, setCurrentStep] = useState(0);
+  // Direction: 1 = forward (slide left), -1 = backward (slide right)
+  const [direction, setDirection] = useState(1);
+  const reducedMotion = useReducedMotion();
+
+  // Error shake state for validation
+  const [shakeStep2, setShakeStep2] = useState(false);
+  const step2Ref = useRef<HTMLDivElement>(null);
+
+  // Success state after save
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [saveResult, setSaveResult] = useState<{
+    snapshotsCreated: number;
+    contributionsCreated: number;
+  } | null>(null);
 
   // Month selector: current or previous month
   const currentMonth = getFirstOfMonth(new Date());
   const previousMonth = getFirstOfPreviousMonth();
 
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+  // UI-only state: which super holdings show contributions section
+  const [showContributions, setShowContributions] = useState<Record<string, boolean>>({});
 
-  // Track which holdings have been "updated" (filled in) in this session
-  const [updatedHoldingIds, setUpdatedHoldingIds] = useState<Set<string>>(
-    new Set()
-  );
+  // ---------------------------------------------------------------------------
+  // react-hook-form setup
+  // ---------------------------------------------------------------------------
+  const form = useForm<CheckInFormValues>({
+    resolver: zodResolver(checkInFormSchema) as unknown as Resolver<CheckInFormValues>,
+    defaultValues: {
+      month: currentMonth,
+      holdings: [],
+    },
+  });
 
-  // Validation errors for inline display
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const { fields, replace } = useFieldArray({
+    control: form.control,
+    name: "holdings",
+  });
 
-  // State for super holdings data
-  const [superHoldingsData, setSuperHoldingsData] = useState<
-    Record<string, SuperHoldingData>
-  >({});
-
-  // State for cash holdings data
-  const [cashHoldingsData, setCashHoldingsData] = useState<
-    Record<string, BalanceHoldingData>
-  >({});
-
-  // State for debt holdings data
-  const [debtHoldingsData, setDebtHoldingsData] = useState<
-    Record<string, BalanceHoldingData>
-  >({});
+  const watchedMonth = form.watch("month");
+  const watchedHoldings = form.watch("holdings");
 
   // Fetch holdings needing updates for selected month
   const { data, isLoading, error } = useQuery({
-    queryKey: ["check-in-holdings", selectedMonth],
-    queryFn: () => fetchHoldingsForMonth(selectedMonth),
+    queryKey: ["check-in-holdings", watchedMonth],
+    queryFn: () => fetchHoldingsForMonth(watchedMonth),
     enabled: isLoaded && isSignedIn && open,
   });
 
-  // Group holdings by type
+  // Track whether we've synced form fields for current API data
+  const lastSyncedRef = useRef<string>("");
+
+  // Sync field array with API holdings data + pre-populate contributions
+  useEffect(() => {
+    if (!data?.holdings) return;
+
+    // Build a stable key from holdings IDs + month to detect changes
+    const syncKey = `${watchedMonth}:${data.holdings.map((h) => h.id).join(",")}`;
+    if (lastSyncedRef.current === syncKey) return;
+    lastSyncedRef.current = syncKey;
+
+    const contribs = data.latestContributions || {};
+    const newShowContribs: Record<string, boolean> = {};
+
+    const holdingEntries: CheckInFormValues["holdings"] = data.holdings.map(
+      (holding) => {
+        let employerContrib = "";
+        let employeeContrib = "";
+
+        if (holding.type === "super" && !holding.isDormant) {
+          const prev = contribs[holding.id];
+          if (prev) {
+            const employer = parseFloat(prev.employerContrib);
+            const employee = parseFloat(prev.employeeContrib);
+            if (employer > 0 || employee > 0) {
+              employerContrib = prev.employerContrib;
+              employeeContrib = prev.employeeContrib;
+              newShowContribs[holding.id] = true;
+            }
+          }
+        }
+
+        return {
+          holdingId: holding.id,
+          type: holding.type,
+          balance: "",
+          employerContrib,
+          employeeContrib,
+        };
+      }
+    );
+
+    replace(holdingEntries);
+    setShowContributions(newShowContribs);
+  }, [data?.holdings, data?.latestContributions, watchedMonth, replace]);
+
+  // Group holdings by type (from API data, not form fields)
   const groupedHoldings = useMemo(() => {
     if (!data?.holdings) return {};
 
@@ -410,121 +471,114 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     return groups;
   }, [data?.holdings]);
 
-  // Calculate progress
+  // Map holdingId → field index for quick lookup
+  const holdingIndexMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (let i = 0; i < fields.length; i++) {
+      map[fields[i].holdingId] = i;
+    }
+    return map;
+  }, [fields]);
+
+  // Calculate progress: count holdings with non-empty balance
   const totalHoldings = data?.holdings?.length ?? 0;
-  const updatedCount = updatedHoldingIds.size;
+  const updatedCount = useMemo(() => {
+    return watchedHoldings.filter(
+      (h) => h.balance && h.balance.trim() !== ""
+    ).length;
+  }, [watchedHoldings]);
+
+  // Get form data for a specific holding
+  const getHoldingData = useCallback(
+    (holdingId: string) => {
+      const idx = holdingIndexMap[holdingId];
+      if (idx === undefined) {
+        return { balance: "", employerContrib: "", employeeContrib: "" };
+      }
+      const h = watchedHoldings[idx];
+      return {
+        balance: h?.balance ?? "",
+        employerContrib: h?.employerContrib ?? "",
+        employeeContrib: h?.employeeContrib ?? "",
+      };
+    },
+    [holdingIndexMap, watchedHoldings]
+  );
+
+  // Handle month change (from MonthSelector on Step 1)
+  const handleMonthChange = (month: string) => {
+    form.setValue("month", month);
+    // Reset sync key so holdings get re-populated for new month
+    lastSyncedRef.current = "";
+  };
 
   // Reset state when modal opens/closes
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
+      // Invalidate net-worth queries on close (covers both success and cancel)
+      if (showSuccess) {
+        queryClient.invalidateQueries({ queryKey: ["net-worth"] });
+        queryClient.invalidateQueries({ queryKey: ["net-worth-history"] });
+      }
       // Reset on close
-      setUpdatedHoldingIds(new Set());
-      setSelectedMonth(currentMonth);
-      setSuperHoldingsData({});
-      setCashHoldingsData({});
-      setDebtHoldingsData({});
-      setValidationErrors({});
+      setCurrentStep(0);
+      setDirection(1);
+      form.reset({ month: currentMonth, holdings: [] });
+      setShowContributions({});
+      setShakeStep2(false);
+      setShowSuccess(false);
+      setSaveResult(null);
+      lastSyncedRef.current = "";
     }
     onOpenChange(newOpen);
   };
 
-  // Handler for updating super holding data
-  const handleSuperHoldingDataChange = (
-    holdingId: string,
-    newData: SuperHoldingData
-  ) => {
-    setSuperHoldingsData((prev) => ({
+  // Toggle contributions visibility for a super holding
+  const toggleContributions = (holdingId: string) => {
+    setShowContributions((prev) => ({
       ...prev,
-      [holdingId]: newData,
+      [holdingId]: !prev[holdingId],
     }));
-
-    // Mark as updated if balance is entered
-    if (newData.balance && newData.balance.trim() !== "") {
-      setUpdatedHoldingIds((prev) => new Set([...prev, holdingId]));
-    } else {
-      setUpdatedHoldingIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(holdingId);
-        return newSet;
-      });
-    }
   };
 
-  // Get or initialize super holding data
-  const getSuperHoldingData = (holdingId: string): SuperHoldingData => {
-    return (
-      superHoldingsData[holdingId] || {
-        balance: "",
-        employerContrib: "",
-        employeeContrib: "",
-        showContributions: false,
-      }
+  // Validate all balance fields on Step 2 Continue
+  const validateStep2 = async (): Promise<boolean> => {
+    // Trigger validation on all holding balance fields
+    const results = await Promise.all(
+      fields.map((_, idx) =>
+        form.trigger(`holdings.${idx}.balance`)
+      )
     );
+    return results.every(Boolean);
   };
 
-  // Handler for updating cash holding data
-  const handleCashHoldingDataChange = (
-    holdingId: string,
-    newData: BalanceHoldingData
-  ) => {
-    setCashHoldingsData((prev) => ({
-      ...prev,
-      [holdingId]: newData,
-    }));
+  // Step navigation
+  const goToNextStep = async () => {
+    if (currentStep === 1) {
+      const isValid = await validateStep2();
+      if (!isValid) {
+        // Trigger shake animation
+        setShakeStep2(true);
+        setTimeout(() => setShakeStep2(false), 500);
+        toast.error("Please fill in all required balances");
 
-    // Mark as updated if balance is entered
-    if (newData.balance && newData.balance.trim() !== "") {
-      setUpdatedHoldingIds((prev) => new Set([...prev, holdingId]));
-    } else {
-      setUpdatedHoldingIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(holdingId);
-        return newSet;
-      });
+        // Focus first empty balance input
+        if (step2Ref.current) {
+          const firstErrorInput = step2Ref.current.querySelector(
+            ".border-destructive input"
+          ) as HTMLInputElement | null;
+          firstErrorInput?.focus();
+        }
+        return;
+      }
     }
+    setDirection(1);
+    setCurrentStep((prev) => Math.min(prev + 1, 2));
   };
 
-  // Get or initialize cash holding data
-  const getCashHoldingData = (holdingId: string): BalanceHoldingData => {
-    return cashHoldingsData[holdingId] || { balance: "" };
-  };
-
-  // Handler for updating debt holding data
-  const handleDebtHoldingDataChange = (
-    holdingId: string,
-    newData: BalanceHoldingData
-  ) => {
-    setDebtHoldingsData((prev) => ({
-      ...prev,
-      [holdingId]: newData,
-    }));
-
-    // Mark as updated if balance is entered
-    if (newData.balance && newData.balance.trim() !== "") {
-      setUpdatedHoldingIds((prev) => new Set([...prev, holdingId]));
-    } else {
-      setUpdatedHoldingIds((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(holdingId);
-        return newSet;
-      });
-    }
-  };
-
-  // Get or initialize debt holding data
-  const getDebtHoldingData = (holdingId: string): BalanceHoldingData => {
-    return debtHoldingsData[holdingId] || { balance: "" };
-  };
-
-  // Handle month change
-  const handleMonthChange = (month: string) => {
-    setSelectedMonth(month);
-    // Reset updated holdings and data when month changes
-    setUpdatedHoldingIds(new Set());
-    setSuperHoldingsData({});
-    setCashHoldingsData({});
-    setDebtHoldingsData({});
-    setValidationErrors({});
+  const goToPreviousStep = () => {
+    setDirection(-1);
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
   // Save mutation
@@ -544,94 +598,70 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
         `Check-in complete! ${count} snapshot${count !== 1 ? "s" : ""} saved.`
       );
 
-      // Close modal
-      handleOpenChange(false);
+      // Show success summary instead of closing
+      setSaveResult(result);
+      setShowSuccess(true);
     },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to save check-in");
+    onError: (err: Error) => {
+      toast.error(err.message || "Failed to save check-in");
     },
   });
 
-  // Validate all entries and save
+  // Build save body from form values and execute
   const handleSaveAll = () => {
-    const errors: Record<string, string> = {};
-
-    // Validate all holdings have balances
-    for (const holding of data?.holdings || []) {
-      if (holding.type === "super") {
-        const entryData = getSuperHoldingData(holding.id);
-        if (!entryData.balance || entryData.balance.trim() === "") {
-          errors[holding.id] = "Balance is required";
-        }
-      } else if (holding.type === "cash") {
-        const entryData = getCashHoldingData(holding.id);
-        if (!entryData.balance || entryData.balance.trim() === "") {
-          errors[holding.id] = "Balance is required";
-        }
-      } else if (holding.type === "debt") {
-        const entryData = getDebtHoldingData(holding.id);
-        if (!entryData.balance || entryData.balance.trim() === "") {
-          errors[holding.id] = "Balance is required";
-        }
-      }
-    }
-
-    setValidationErrors(errors);
-
-    if (Object.keys(errors).length > 0) {
-      toast.error("Please fill in all required balances");
-      return;
-    }
-
-    // Build the save request body
+    const formValues = form.getValues();
     const body: CheckInSaveBody = {
-      month: selectedMonth,
+      month: formValues.month,
     };
 
-    // Collect super entries
-    const superEntries = (data?.holdings || [])
+    const superEntries = formValues.holdings
       .filter((h) => h.type === "super")
-      .map((h) => {
-        const entryData = getSuperHoldingData(h.id);
-        return {
-          holdingId: h.id,
-          balance: entryData.balance,
-          employerContrib: entryData.employerContrib || undefined,
-          employeeContrib: entryData.employeeContrib || undefined,
-        };
-      });
+      .map((h) => ({
+        holdingId: h.holdingId,
+        balance: h.balance,
+        employerContrib: h.employerContrib || undefined,
+        employeeContrib: h.employeeContrib || undefined,
+      }));
+    if (superEntries.length > 0) body.super = superEntries;
 
-    if (superEntries.length > 0) {
-      body.super = superEntries;
-    }
-
-    // Collect cash entries
-    const cashEntries = (data?.holdings || [])
+    const cashEntries = formValues.holdings
       .filter((h) => h.type === "cash")
       .map((h) => ({
-        holdingId: h.id,
-        balance: getCashHoldingData(h.id).balance,
+        holdingId: h.holdingId,
+        balance: h.balance,
       }));
+    if (cashEntries.length > 0) body.cash = cashEntries;
 
-    if (cashEntries.length > 0) {
-      body.cash = cashEntries;
-    }
-
-    // Collect debt entries
-    const debtEntries = (data?.holdings || [])
+    const debtEntries = formValues.holdings
       .filter((h) => h.type === "debt")
       .map((h) => ({
-        holdingId: h.id,
-        balance: getDebtHoldingData(h.id).balance,
+        holdingId: h.holdingId,
+        balance: h.balance,
       }));
+    if (debtEntries.length > 0) body.debt = debtEntries;
 
-    if (debtEntries.length > 0) {
-      body.debt = debtEntries;
-    }
-
-    // Execute the mutation
     saveMutation.mutate(body);
   };
+
+  // Directional slide variants for step transitions
+  const stepVariants = {
+    enter: (d: number) =>
+      reducedMotion ? {} : { x: `${100 * d}%`, opacity: 0 },
+    center: { x: 0, opacity: 1 },
+    exit: (d: number) =>
+      reducedMotion ? {} : { x: `${-100 * d}%`, opacity: 0 },
+  };
+
+  const stepTransition = reducedMotion
+    ? { duration: 0 }
+    : { duration: 0.25, ease: "easeInOut" as const };
+
+  // Step descriptions for the header
+  const stepDescriptions = [
+    "Choose which month to log balances for",
+    "Enter current balances for your holdings",
+    "Review your entries before saving",
+  ];
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -639,150 +669,504 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
         <DialogHeader>
           <DialogTitle className="text-foreground">Monthly Check-in</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Update your balances for the selected month
+            {showSuccess
+              ? "Your balances have been saved successfully"
+              : stepDescriptions[currentStep]}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Month Selector */}
-        <div className="flex items-center gap-4 py-4">
-          <label className="text-sm font-medium text-muted-foreground">Month:</label>
-          <Select value={selectedMonth} onValueChange={handleMonthChange}>
-            <SelectTrigger className="w-[200px] bg-card border-border text-foreground">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border">
-              <SelectItem value={currentMonth} className="text-foreground">
-                {formatMonthYear(currentMonth)} (Current)
-              </SelectItem>
-              <SelectItem value={previousMonth} className="text-foreground">
-                {formatMonthYear(previousMonth)}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Stepper - show all complete when success */}
+        <div className="py-2">
+          <CheckinStepper currentStep={showSuccess ? 3 : currentStep} />
         </div>
 
-        {/* Progress Indicator */}
-        {totalHoldings > 0 && (
-          <div className="text-sm text-muted-foreground mb-4">
-            {updatedCount} of {totalHoldings} holding
-            {totalHoldings !== 1 ? "s" : ""} updated
-          </div>
-        )}
+        {/* Step Content */}
+        <div className="min-h-[200px] overflow-hidden">
+          <AnimatePresence mode="wait" custom={direction}>
+            {/* Step 1: Select Month */}
+            {currentStep === 0 && (
+              <motion.div
+                key="step-0"
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={stepTransition}
+                className="space-y-6"
+              >
+                <MonthSelector
+                  currentMonth={currentMonth}
+                  previousMonth={previousMonth}
+                  selectedMonth={watchedMonth}
+                  onSelectMonth={handleMonthChange}
+                />
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="py-8 text-center text-muted-foreground">
-            Loading holdings...
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="py-8 text-center text-destructive">
-            Failed to load holdings. Please try again.
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && !error && totalHoldings === 0 && (
-          <div className="py-8 text-center text-muted-foreground">
-            All holdings are up to date for {formatMonthYear(selectedMonth)}!
-          </div>
-        )}
-
-        {/* Holdings List Grouped by Type */}
-        {!isLoading && !error && totalHoldings > 0 && (
-          <div className="space-y-6">
-            {typeOrder.map((type) => {
-              const holdings = groupedHoldings[type];
-              if (!holdings || holdings.length === 0) return null;
-
-              return (
-                <div key={type} className="space-y-3">
-                  <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
-                    {typeLabels[type] || type}
-                  </h3>
-                  {/* Debt section explanatory text */}
-                  {type === "debt" && (
-                    <p className="text-sm text-muted-foreground">
-                      Enter as positive number (e.g., 5000 for $5,000 owed)
-                    </p>
-                  )}
-                  <div className="space-y-2">
-                    {holdings.map((holding) => {
-                      // Render SuperHoldingEntry for super type
-                      if (type === "super") {
-                        return (
-                          <SuperHoldingEntry
-                            key={holding.id}
-                            holding={holding}
-                            data={getSuperHoldingData(holding.id)}
-                            onDataChange={handleSuperHoldingDataChange}
-                            error={validationErrors[holding.id]}
-                          />
-                        );
-                      }
-
-                      // Render CashHoldingEntry for cash type
-                      if (type === "cash") {
-                        return (
-                          <CashHoldingEntry
-                            key={holding.id}
-                            holding={holding}
-                            data={getCashHoldingData(holding.id)}
-                            onDataChange={handleCashHoldingDataChange}
-                            error={validationErrors[holding.id]}
-                          />
-                        );
-                      }
-
-                      // Render DebtHoldingEntry for debt type
-                      if (type === "debt") {
-                        return (
-                          <DebtHoldingEntry
-                            key={holding.id}
-                            holding={holding}
-                            data={getDebtHoldingData(holding.id)}
-                            onDataChange={handleDebtHoldingDataChange}
-                            error={validationErrors[holding.id]}
-                          />
-                        );
-                      }
-
-                      return null;
-                    })}
+                {/* Holdings info */}
+                {isLoading && (
+                  <div className="py-4 text-center text-muted-foreground">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                    Loading holdings...
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                )}
 
-        {/* Footer with Skip and Save All Buttons */}
-        <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-border">
-          <Button
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            className="border-border text-foreground hover:bg-muted"
-            disabled={saveMutation.isPending}
-          >
-            Skip
-          </Button>
-          {totalHoldings > 0 && (
-            <Button
-              onClick={handleSaveAll}
-              disabled={saveMutation.isPending || updatedCount === 0}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              {saveMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save All"
-              )}
-            </Button>
+                {error && (
+                  <div className="py-4 text-center text-destructive">
+                    Failed to load holdings. Please try again.
+                  </div>
+                )}
+
+                {!isLoading && !error && totalHoldings === 0 && (
+                  <div className="rounded-lg border border-border bg-card/50 p-4 text-center">
+                    <p className="text-muted-foreground">
+                      All holdings are up to date for {formatMonthYear(watchedMonth)}!
+                    </p>
+                  </div>
+                )}
+
+                {!isLoading && !error && totalHoldings > 0 && (
+                  <div className="rounded-lg border border-border bg-card/50 p-4">
+                    <p className="text-sm text-muted-foreground">
+                      <span className="text-foreground font-medium">{totalHoldings} holding{totalHoldings !== 1 ? "s" : ""}</span>
+                      {" "}need updating for {formatMonthYear(watchedMonth)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {typeOrder.map((type) => {
+                        const count = groupedHoldings[type]?.length ?? 0;
+                        if (count === 0) return null;
+                        const Icon = typeIcons[type];
+                        return (
+                          <span
+                            key={type}
+                            className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground"
+                          >
+                            {Icon && <Icon className="h-3 w-3" />}
+                            {count} {typeLabels[type] || type}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Step 2: Update Holdings */}
+            {currentStep === 1 && (
+              <motion.div
+                key="step-1"
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={stepTransition}
+              >
+                <div
+                  ref={step2Ref}
+                  className={`space-y-6 ${shakeStep2 ? "animate-shake" : ""}`}
+                >
+                  {/* Progress Indicator */}
+                  {totalHoldings > 0 && (
+                    <div className="text-sm text-muted-foreground">
+                      {updatedCount} of {totalHoldings} holding
+                      {totalHoldings !== 1 ? "s" : ""} updated
+                    </div>
+                  )}
+
+                  {/* Loading State */}
+                  {isLoading && (
+                    <div className="py-8 text-center text-muted-foreground">
+                      <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                      Loading holdings...
+                    </div>
+                  )}
+
+                  {/* Error State */}
+                  {error && (
+                    <div className="py-8 text-center text-destructive">
+                      Failed to load holdings. Please try again.
+                    </div>
+                  )}
+
+                  {/* Holdings List Grouped by Type */}
+                  {!isLoading && !error && totalHoldings > 0 && (
+                    <div className="space-y-6">
+                      {typeOrder.map((type) => {
+                        const holdings = groupedHoldings[type];
+                        if (!holdings || holdings.length === 0) return null;
+
+                        return (
+                          <div key={type} className="space-y-3">
+                            <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
+                              {typeLabels[type] || type}
+                            </h3>
+                            {/* Debt section explanatory text */}
+                            {type === "debt" && (
+                              <p className="text-sm text-muted-foreground">
+                                Enter as positive number (e.g., 5000 for $5,000 owed)
+                              </p>
+                            )}
+                            <div className="space-y-2">
+                              {holdings.map((holding) => {
+                                const fieldIdx = holdingIndexMap[holding.id];
+                                if (fieldIdx === undefined) return null;
+
+                                const fieldErrors = form.formState.errors.holdings?.[fieldIdx]?.balance?.message;
+
+                                if (type === "super") {
+                                  return (
+                                    <SuperHoldingEntry
+                                      key={holding.id}
+                                      holding={holding}
+                                      index={fieldIdx}
+                                      balance={watchedHoldings[fieldIdx]?.balance ?? ""}
+                                      employerContrib={watchedHoldings[fieldIdx]?.employerContrib ?? ""}
+                                      employeeContrib={watchedHoldings[fieldIdx]?.employeeContrib ?? ""}
+                                      showContributions={!!showContributions[holding.id]}
+                                      onBalanceChange={(val) => form.setValue(`holdings.${fieldIdx}.balance`, val, { shouldValidate: form.formState.isSubmitted })}
+                                      onEmployerContribChange={(val) => form.setValue(`holdings.${fieldIdx}.employerContrib`, val)}
+                                      onEmployeeContribChange={(val) => form.setValue(`holdings.${fieldIdx}.employeeContrib`, val)}
+                                      onToggleContributions={() => toggleContributions(holding.id)}
+                                      error={fieldErrors}
+                                    />
+                                  );
+                                }
+
+                                return (
+                                  <BalanceHoldingEntry
+                                    key={holding.id}
+                                    holding={holding}
+                                    balance={watchedHoldings[fieldIdx]?.balance ?? ""}
+                                    onBalanceChange={(val) => form.setValue(`holdings.${fieldIdx}.balance`, val, { shouldValidate: form.formState.isSubmitted })}
+                                    error={fieldErrors}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 3: Review & Save / Success Summary */}
+            {currentStep === 2 && (
+              <motion.div
+                key={showSuccess ? "step-2-success" : "step-2"}
+                custom={direction}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={stepTransition}
+                className="space-y-6"
+              >
+                {showSuccess && saveResult ? (
+                  /* Success Summary */
+                  <div className="space-y-6">
+                    {/* Checkmark animation */}
+                    <div className="flex flex-col items-center py-4">
+                      <motion.div
+                        initial={reducedMotion ? false : { scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 15, delay: 0.1 }}
+                        className="flex items-center justify-center w-16 h-16 rounded-full bg-positive/20 mb-4"
+                      >
+                        <motion.div
+                          initial={reducedMotion ? false : { scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 200, damping: 15, delay: 0.3 }}
+                        >
+                          <Check className="h-8 w-8 text-positive" />
+                        </motion.div>
+                      </motion.div>
+                      <h3 className="text-lg font-semibold text-foreground">
+                        Check-in Complete!
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {saveResult.snapshotsCreated} snapshot{saveResult.snapshotsCreated !== 1 ? "s" : ""} saved for {formatMonthYear(watchedMonth)}
+                      </p>
+                    </div>
+
+                    {/* Brief list of what was saved */}
+                    <div className="space-y-1.5">
+                      {(data?.holdings || []).map((holding) => {
+                        const { balance } = getHoldingData(holding.id);
+                        const Icon = typeIcons[holding.type];
+
+                        return (
+                          <div
+                            key={holding.id}
+                            className="flex items-center justify-between rounded-lg border border-border bg-card/50 px-3 py-2"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              {Icon && <Icon className="h-4 w-4 text-muted-foreground shrink-0" />}
+                              <span className="text-sm text-foreground truncate">
+                                {holding.name}
+                              </span>
+                            </div>
+                            <span className="text-sm font-medium text-foreground shrink-0 ml-3">
+                              {formatCurrency(balance, holding.currency)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Net worth change indicator */}
+                    {(() => {
+                      let totalChange = 0;
+                      let hasAnyChange = false;
+
+                      for (const holding of data?.holdings || []) {
+                        const prevBalance = data?.previousBalances?.[holding.id];
+                        if (!prevBalance) continue;
+
+                        const { balance } = getHoldingData(holding.id);
+                        const newNum = parseFloat(balance);
+                        const prevNum = parseFloat(prevBalance);
+                        if (isNaN(newNum) || isNaN(prevNum)) continue;
+
+                        const change = holding.type === "debt"
+                          ? -(newNum - prevNum)
+                          : newNum - prevNum;
+                        totalChange += change;
+                        hasAnyChange = true;
+                      }
+
+                      if (!hasAnyChange || totalChange === 0) return null;
+
+                      const isPositive = totalChange > 0;
+
+                      return (
+                        <div className={`rounded-lg border p-3 text-center ${
+                          isPositive
+                            ? "border-positive/30 bg-positive/5"
+                            : "border-destructive/30 bg-destructive/5"
+                        }`}>
+                          <p className="text-xs text-muted-foreground mb-1">
+                            Estimated net worth change
+                          </p>
+                          <p className={`text-sm font-medium ${
+                            isPositive ? "text-positive" : "text-destructive"
+                          }`}>
+                            {isPositive ? (
+                              <ArrowUpRight className="inline h-4 w-4 mr-1" />
+                            ) : (
+                              <ArrowDownRight className="inline h-4 w-4 mr-1" />
+                            )}
+                            {isPositive ? "+" : ""}
+                            {formatCurrency(String(totalChange), "AUD")}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  /* Review entries */
+                  <>
+                    <div className="rounded-lg border border-border bg-card/50 p-4">
+                      <p className="text-sm text-muted-foreground">
+                        Saving snapshots for <span className="text-foreground font-medium">{formatMonthYear(watchedMonth)}</span>
+                      </p>
+                    </div>
+
+                    {/* Review entries grouped by type */}
+                    {typeOrder.map((type) => {
+                      const holdings = groupedHoldings[type];
+                      if (!holdings || holdings.length === 0) return null;
+
+                      const Icon = typeIcons[type];
+
+                      return (
+                        <div key={type} className="space-y-2">
+                          <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                            {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                            {typeLabels[type] || type}
+                          </h3>
+                          <div className="space-y-1.5">
+                            {holdings.map((holding) => {
+                              const { balance, employerContrib, employeeContrib } = getHoldingData(holding.id);
+
+                              const prevBalance = data?.previousBalances?.[holding.id];
+                              const newNum = parseFloat(balance);
+                              const prevNum = prevBalance ? parseFloat(prevBalance) : null;
+                              const hasPrevious = prevNum !== null && !isNaN(prevNum);
+                              const changeAmount = hasPrevious ? newNum - prevNum : null;
+
+                              // For debt: decrease is positive (green), increase is negative (red)
+                              const isDebt = type === "debt";
+                              const isPositiveChange = changeAmount !== null
+                                ? (isDebt ? changeAmount < 0 : changeAmount > 0)
+                                : false;
+                              const isNegativeChange = changeAmount !== null
+                                ? (isDebt ? changeAmount > 0 : changeAmount < 0)
+                                : false;
+
+                              // Large change warning: >50% change from previous
+                              const percentChange = hasPrevious && prevNum !== 0
+                                ? Math.abs((newNum - prevNum) / prevNum) * 100
+                                : 0;
+                              const isLargeChange = hasPrevious && percentChange > 50;
+
+                              return (
+                                <div
+                                  key={holding.id}
+                                  className={`rounded-lg border bg-card p-3 ${
+                                    isLargeChange ? "border-yellow-500/40" : "border-border"
+                                  }`}
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                      <span className="text-sm font-medium text-foreground">
+                                        {holding.name}
+                                      </span>
+
+                                      {/* Previous balance */}
+                                      <div className="mt-1 text-xs text-muted-foreground">
+                                        {hasPrevious
+                                          ? `Previous: ${formatCurrency(prevBalance!, holding.currency)}`
+                                          : "First entry"}
+                                      </div>
+
+                                      {/* Contributions for super */}
+                                      {type === "super" && (employerContrib || employeeContrib) && (
+                                        <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
+                                          {employerContrib && (
+                                            <span>Employer: {formatCurrency(employerContrib, holding.currency)}</span>
+                                          )}
+                                          {employeeContrib && (
+                                            <span>Employee: {formatCurrency(employeeContrib, holding.currency)}</span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    <div className="text-right shrink-0">
+                                      {/* New balance */}
+                                      <span className="text-sm font-medium text-foreground">
+                                        {formatCurrency(balance, holding.currency)}
+                                      </span>
+
+                                      {/* Change amount with direction arrow */}
+                                      {changeAmount !== null && changeAmount !== 0 && (
+                                        <div className={`mt-1 flex items-center justify-end gap-1 text-xs ${
+                                          isPositiveChange ? "text-positive" : isNegativeChange ? "text-destructive" : "text-muted-foreground"
+                                        }`}>
+                                          {isPositiveChange ? (
+                                            <ArrowUpRight className="h-3 w-3" />
+                                          ) : isNegativeChange ? (
+                                            <ArrowDownRight className="h-3 w-3" />
+                                          ) : null}
+                                          <span>
+                                            {changeAmount > 0 ? "+" : ""}
+                                            {formatCurrency(String(changeAmount), holding.currency)}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {/* Large change warning */}
+                                  {isLargeChange && (
+                                    <div className="mt-2 flex items-center gap-1.5 text-xs text-yellow-500">
+                                      <AlertTriangle className="h-3 w-3" />
+                                      <span>Large change detected ({Math.round(percentChange)}%)</span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Footer Navigation */}
+        <div className="flex justify-between gap-3 pt-4 mt-4 border-t border-border">
+          {showSuccess ? (
+            /* Success state: Done button only */
+            <div className="flex w-full justify-end">
+              <Button
+                onClick={() => handleOpenChange(false)}
+                className="bg-accent hover:bg-accent/90 text-accent-foreground"
+              >
+                Done
+              </Button>
+            </div>
+          ) : (
+            /* Normal navigation */
+            <>
+              <div>
+                {currentStep > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={goToPreviousStep}
+                    className="border-border text-foreground hover:bg-muted"
+                    disabled={saveMutation.isPending}
+                  >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back
+                  </Button>
+                )}
+              </div>
+              <div className="flex gap-3">
+                {currentStep === 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleOpenChange(false)}
+                    className="border-border text-foreground hover:bg-muted"
+                  >
+                    Cancel
+                  </Button>
+                )}
+                {currentStep === 0 && (
+                  <Button
+                    onClick={goToNextStep}
+                    disabled={isLoading || !!error || totalHoldings === 0}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    Continue
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+                {currentStep === 1 && (
+                  <Button
+                    onClick={goToNextStep}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    Continue
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+                {currentStep === 2 && (
+                  <Button
+                    onClick={handleSaveAll}
+                    disabled={saveMutation.isPending}
+                    className="bg-accent hover:bg-accent/90 text-accent-foreground"
+                  >
+                    {saveMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save All"
+                    )}
+                  </Button>
+                )}
+              </div>
+            </>
           )}
         </div>
       </DialogContent>

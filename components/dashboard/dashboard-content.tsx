@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckInPromptCard } from "@/components/check-in/check-in-prompt-card";
+import { CheckinPrompt } from "@/components/dashboard/checkin-prompt";
 import { NetWorthHero } from "@/components/dashboard/net-worth-hero";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { AssetAllocation } from "@/components/dashboard/asset-allocation";
@@ -20,6 +20,13 @@ export function DashboardContent({ userName }: DashboardContentProps) {
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
       <DashboardHeader userName={userName} />
+
+      {/* Check-in Prompt Card */}
+      <div className="mb-6">
+        <SectionErrorBoundary sectionName="Check-in Prompt">
+          <CheckinPrompt />
+        </SectionErrorBoundary>
+      </div>
 
       {/* Net Worth Hero Card */}
       <div className="mb-6">
@@ -73,9 +80,6 @@ export function DashboardContent({ userName }: DashboardContentProps) {
         </SectionErrorBoundary>
       </div>
 
-      <SectionErrorBoundary sectionName="Check-in Prompt">
-        <CheckInPromptCard />
-      </SectionErrorBoundary>
     </div>
   );
 }
