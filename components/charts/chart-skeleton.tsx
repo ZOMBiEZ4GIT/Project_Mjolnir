@@ -1,5 +1,7 @@
 "use client";
 
+import { ChartCard } from "./chart-card";
+
 interface ChartSkeletonProps {
   /**
    * Optional title to display above the skeleton.
@@ -24,6 +26,7 @@ interface ChartSkeletonProps {
  *
  * Provides consistent loading states across all chart components.
  * Supports different chart type variants: bar, pie, and line.
+ * Uses ChartCard wrapper for consistent card styling when withContainer is true.
  */
 export function ChartSkeleton({
   title,
@@ -33,7 +36,9 @@ export function ChartSkeleton({
 }: ChartSkeletonProps) {
   const content = (
     <div className="animate-pulse">
-      {title && <div className="h-5 w-48 bg-muted rounded mb-6" />}
+      {title && !withContainer && (
+        <div className="h-5 w-48 bg-muted rounded mb-6" />
+      )}
       <div
         className={`${height} bg-muted/50 rounded flex items-center justify-center`}
       >
@@ -45,21 +50,16 @@ export function ChartSkeleton({
   );
 
   if (withContainer) {
-    return (
-      <div className="rounded-lg border border-border bg-card/50 p-6">
-        {content}
-      </div>
-    );
+    return <ChartCard title={title || ""}>{content}</ChartCard>;
   }
 
   return content;
 }
 
 /**
- * Bar chart skeleton pattern.
+ * Bar chart skeleton — varying height bars.
  */
 function BarSkeleton() {
-  // Generate varying heights for visual interest
   const heights = [40, 60, 45, 70, 55, 80, 65, 90, 75, 85, 70, 95];
 
   return (
@@ -76,18 +76,20 @@ function BarSkeleton() {
 }
 
 /**
- * Pie chart skeleton pattern.
+ * Pie chart skeleton — circular shape with inner ring.
  */
 function PieSkeleton() {
-  return <div className="w-48 h-48 bg-muted rounded-full" />;
+  return (
+    <div className="w-48 h-48 rounded-full bg-muted border-[16px] border-border" />
+  );
 }
 
 /**
- * Line chart skeleton pattern.
+ * Line chart skeleton — wavy line shape.
  */
 function LineSkeleton() {
   return (
-    <div className="w-full h-full flex items-center px-4">
+    <div className="w-full h-full flex items-center px-4 text-border">
       <svg
         viewBox="0 0 300 100"
         className="w-full h-3/4"
@@ -96,7 +98,7 @@ function LineSkeleton() {
         <path
           d="M0,80 L25,70 L50,75 L75,50 L100,60 L125,40 L150,45 L175,30 L200,35 L225,20 L250,25 L275,15 L300,20"
           fill="none"
-          stroke="#3f3f46"
+          stroke="currentColor"
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
