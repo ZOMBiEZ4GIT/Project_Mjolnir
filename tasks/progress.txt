@@ -1,4 +1,10 @@
 ## Codebase Patterns
+- Radix UI primitives (Dialog, AlertDialog, Select, Switch, Accordion) handle ARIA automatically — no manual attributes needed
+- Buttons with hidden text (`hidden sm:inline`) need `aria-label` for accessibility on mobile
+- Chart containers use `role="img" aria-label="..."` for screen reader accessibility
+- Exclusive-choice button groups use `role="radiogroup"` + `role="radio"` + `aria-checked` (not tablist)
+- Step indicators use `aria-current="step"` on the current step (not aria-selected)
+- GroupHeader has optional `contentId` prop for `aria-controls` linking to content region
 - Framer Motion inline Variants objects need `Variants` type annotation or `as const` on ease strings to satisfy TypeScript
 - Project uses Next.js 14+ App Router with TypeScript
 - Drizzle ORM is already installed (drizzle-orm, drizzle-kit, @neondatabase/serverless)
@@ -262,5 +268,25 @@ Started: 2026-02-07
   - Use `ring-inset` for table rows inside `overflow-hidden` containers to prevent focus ring clipping
   - Clickable table rows need `tabIndex={0}` + keyboard handler (Enter/Space) for keyboard accessibility
   - `focus:` is wrong for keyboard-only focus — always use `focus-visible:` to avoid rings on mouse clicks
+---
+
+## 2026-02-07 - US-007
+- Comprehensive ARIA label audit across 17 files
+- **Icon-only buttons**: Added `aria-label` to SpeedDial FAB (`aria-expanded` + dynamic label), dashboard refresh button, chart export button
+- **Expandable sections**: Added `aria-expanded` + `aria-controls` to contributions expander (check-in-modal), error page details toggle, GroupHeader (new `contentId` prop + `id` on content region)
+- **MonthSelector**: Added `role="radiogroup"` on container + `role="radio"` and `aria-checked` on buttons
+- **ChartViewToggle**: Added `role="tablist"`, `role="tab"`, `aria-selected`, and `aria-label` (replacing `title`)
+- **CheckinStepper**: Added `aria-current="step"` on the current step `<li>` element
+- **Progress bars**: Added `role="progressbar"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-label` to currency exposure bars
+- **Charts**: Added `role="img"` with `aria-label` to all chart containers — net-worth-chart, asset-allocation-pie-chart, super-growth-chart, assets-vs-debt-chart, tv-chart-wrapper, sparkline (both shared and hero variant)
+- **Already correct** (no changes needed): FilterTabs, TypeSelector, TimeRangeSelector (all had role/tablist/tab/aria-selected), CurrencyToggle (radiogroup), all Radix dialogs (Dialog/AlertDialog/Animated variants), Switch components, sidebar/mobile-nav labels
+- Files changed: 17 files (app/error.tsx, chart-export-button, sparkline, tv-chart-wrapper, check-in-modal, checkin-stepper, month-selector, asset-allocation-pie-chart, assets-vs-debt-chart, currency-exposure, dashboard-header, net-worth-chart, net-worth-hero, super-growth-chart, group-header, holdings-table, speed-dial)
+- **Learnings for future iterations:**
+  - Radix UI primitives (Dialog, AlertDialog, Select, Switch, Accordion) handle ARIA automatically — no manual ARIA attributes needed
+  - Buttons with hidden text (sm:inline pattern) need `aria-label` for mobile where text is invisible
+  - Use `role="img" aria-label="..."` for chart containers since SVG charts aren't inherently accessible
+  - `role="radiogroup"` + `role="radio"` + `aria-checked` for exclusive-choice button groups (not tab-like)
+  - `aria-current="step"` is the correct attribute for step indicators (not aria-selected)
+  - GroupHeader's new optional `contentId` prop is backwards-compatible — callers that don't pass it get no `aria-controls`
 ---
 
