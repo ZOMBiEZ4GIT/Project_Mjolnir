@@ -72,11 +72,28 @@
 - Transaction action colour mapping: BUY=positive/green, SELL=destructive/red, DIVIDEND=accent/purple, SPLIT=blue-400/blue-500
 - onTransactionSaved/onDeleted callbacks enable row highlight and fade-out animations from parent component
 
+- CheckinPrompt (components/dashboard/checkin-prompt.tsx) replaces CheckInPromptCard — moved to dashboard/ directory
+- sessionStorage dismissal pattern: use `mounted` state + useEffect to avoid hydration mismatch when reading sessionStorage
+- Accent glow prompt card: `border-accent/30 bg-card/50 shadow-glow-sm` for attention-grabbing cards
+
 ---
 
 # UX-5 Snapshot & Check-in Polish Progress Log
 
 Started: 2026-02-06
 
+---
+
+## 2026-02-06 - US-001
+- Implemented CheckinPrompt component at components/dashboard/checkin-prompt.tsx
+- Replaced old CheckInPromptCard from components/check-in/check-in-prompt-card.tsx
+- Moved check-in prompt to top of dashboard (after header, before net worth hero)
+- Added: accent border/glow, animated slide-down entrance, CalendarCheck icon, "Remind me later" with sessionStorage dismissal
+- Respects prefers-reduced-motion via useReducedMotion()
+- Files changed: components/dashboard/checkin-prompt.tsx (new), components/dashboard/dashboard-content.tsx (updated)
+- **Learnings for future iterations:**
+  - Old check-in-prompt-card.tsx still exists but is no longer imported — can be cleaned up later
+  - sessionStorage reads must be deferred to useEffect to avoid SSR hydration mismatch
+  - `motion.div initial={reducedMotion ? false : {...}}` is the pattern to disable animations for reduced motion
 ---
 
