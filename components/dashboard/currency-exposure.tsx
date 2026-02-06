@@ -66,7 +66,7 @@ function getCurrencyBarColor(currency: Currency): string {
     case "NZD":
       return "bg-blue-400";
     case "USD":
-      return "bg-amber-500";
+      return "bg-warning";
     default:
       return "bg-muted";
   }
@@ -82,7 +82,7 @@ function getCurrencyBadgeColor(currency: Currency): string {
     case "NZD":
       return "bg-blue-400/20";
     case "USD":
-      return "bg-amber-500/20";
+      return "bg-warning/20";
     default:
       return "bg-muted/20";
   }

@@ -32,6 +32,8 @@
     --positive-foreground: 0 0% 100%;
     --negative: 0 84% 60%;
     --negative-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
     --accent-glow: rgba(139, 92, 246, 0.35);
     --positive-glow: rgba(34, 197, 94, 0.35);
     --negative-glow: rgba(239, 68, 68, 0.35);
@@ -67,6 +69,8 @@
     --positive-foreground: 0 0% 100%;
     --negative: 0 84% 60%;
     --negative-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
     --accent-glow: rgba(139, 92, 246, 0.35);
     --positive-glow: rgba(34, 197, 94, 0.35);
     --negative-glow: rgba(239, 68, 68, 0.35);
