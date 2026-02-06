@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   motion,
+  AnimatePresence,
   useSpring,
   useMotionValue,
   useReducedMotion,
@@ -12,7 +13,6 @@ import {
   AlertCircle,
   XCircle,
   ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -83,13 +83,72 @@ const staggerItemVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
+const errorStaggerContainer = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.03 },
+  },
+};
+
+const errorStaggerItem = {
+  hidden: { opacity: 0, x: -8 },
+  visible: { opacity: 1, x: 0 },
+};
+
+/** Generate a fix suggestion based on error message patterns */
+export function generateSuggestion(message: string): string | undefined {
+  const lower = message.toLowerCase();
+
+  // Missing field pattern
+  const missingMatch = lower.match(/missing (?:required )?(?:field|column|value)s?\s*(?:for\s+)?[:\s]*(.+)/i);
+  if (missingMatch) {
+    return `Ensure all rows have a value for ${missingMatch[1].trim()}`;
+  }
+  if (lower.includes("missing") || lower.includes("required")) {
+    return "Ensure all required fields have values";
+  }
+
+  // Invalid format pattern
+  if (lower.includes("invalid date") || lower.includes("date format")) {
+    return "Expected format: YYYY-MM-DD (e.g., 2024-03-15)";
+  }
+  if (lower.includes("invalid number") || lower.includes("not a number") || lower.includes("numeric")) {
+    return "Expected a numeric value (e.g., 95.50)";
+  }
+  if (lower.includes("invalid format") || lower.includes("format")) {
+    return "Check the field format matches the expected pattern";
+  }
+
+  // Duplicate pattern
+  if (lower.includes("duplicate") || lower.includes("already exists")) {
+    return "This row matches an existing record — it will be skipped to prevent duplicates";
+  }
+
+  // Invalid value pattern
+  const invalidMatch = lower.match(/invalid (?:value|action|type)[:\s]*['""]?(\w+)['""]?/i);
+  if (invalidMatch) {
+    return `Value "${invalidMatch[1]}" is not valid for this field`;
+  }
+  if (lower.includes("invalid")) {
+    return "Check this value against the expected options";
+  }
+
+  // Unknown symbol
+  if (lower.includes("unknown symbol") || lower.includes("symbol not found") || lower.includes("holding not found")) {
+    return "Verify the symbol exists or add the holding first";
+  }
+
+  return undefined;
+}
+
 export function ImportResults({
   imported,
   skipped,
   errors,
   className,
 }: ImportResultsProps) {
-  const [isErrorsExpanded, setIsErrorsExpanded] = React.useState(false);
+  // Collapsed by default if > 5 errors, expanded if <= 5
+  const [isErrorsExpanded, setIsErrorsExpanded] = React.useState(() => errors.length > 0 && errors.length <= 5);
   const reducedMotion = useReducedMotion();
   const hasErrors = errors.length > 0;
   const isAllSuccess = imported > 0 && skipped === 0 && errors.length === 0;
@@ -168,39 +227,60 @@ export function ImportResults({
             className="w-full justify-between text-muted-foreground hover:text-foreground"
           >
             <span className="text-sm">
-              {isErrorsExpanded ? "Hide" : "Show"} {errors.length} error{errors.length === 1 ? "" : "s"}
+              {isErrorsExpanded ? "Hide errors" : `Show ${errors.length} error${errors.length === 1 ? "" : "s"}`}
             </span>
-            {isErrorsExpanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
+            <motion.div
+              animate={{ rotate: isErrorsExpanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
               <ChevronDown className="h-4 w-4" />
-            )}
+            </motion.div>
           </Button>
 
-          {isErrorsExpanded && (
-            <div className="mt-2 max-h-48 overflow-y-auto rounded-md bg-muted/50 p-3">
-              <ul className="space-y-2">
-                {errors.map((error, index) => (
-                  <li
-                    key={index}
-                    className="flex items-start gap-2 text-sm border-l-2 border-destructive pl-3"
+          <AnimatePresence initial={false}>
+            {isErrorsExpanded && (
+              <motion.div
+                key="error-list"
+                initial={reducedMotion ? false : { height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={reducedMotion ? undefined : { height: 0, opacity: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                style={{ overflow: "hidden" }}
+              >
+                <div className="mt-2 max-h-64 overflow-y-auto rounded-md bg-muted/50 p-3">
+                  <motion.ul
+                    className="space-y-2"
+                    variants={reducedMotion ? undefined : errorStaggerContainer}
+                    initial="hidden"
+                    animate="visible"
                   >
-                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                      Row {error.row}
-                    </span>
-                    <div>
-                      <span className="text-destructive">{error.message}</span>
-                      {error.suggestion && (
-                        <p className="text-body-sm text-muted-foreground mt-0.5">
-                          {error.suggestion}
-                        </p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+                    {errors.map((error, index) => {
+                      const suggestion = error.suggestion ?? generateSuggestion(error.message);
+                      return (
+                        <motion.li
+                          key={index}
+                          variants={reducedMotion ? undefined : errorStaggerItem}
+                          className="flex items-start gap-2 text-sm border-l-2 border-destructive pl-3"
+                        >
+                          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                            Row {error.row}
+                          </span>
+                          <div>
+                            <span className="text-destructive">{error.message}</span>
+                            {suggestion && (
+                              <p className="text-body-sm text-muted-foreground mt-0.5">
+                                {suggestion}
+                              </p>
+                            )}
+                          </div>
+                        </motion.li>
+                      );
+                    })}
+                  </motion.ul>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </div>
