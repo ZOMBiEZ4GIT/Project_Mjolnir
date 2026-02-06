@@ -119,6 +119,8 @@
 - PriceSkeleton (components/holdings/price-skeleton.tsx) loading skeleton for price cells — variant="price" (3-bar) or variant="value" (single-bar)
 - TanStack Query: `isFetching && !isLoading` detects background refetches without triggering initial skeleton
 
+- CurrencyToggle (components/ui/currency-toggle.tsx) is a horizontal pill toggle with Framer Motion layoutId='currency-indicator' — replaces CurrencySelector dropdown on dashboard
+
 ---
 
 # UX-9 Multi-Currency Display Progress Log
@@ -127,3 +129,24 @@ Started: 2026-02-06
 
 ---
 
+## 2026-02-06 - US-001
+- Implemented animated currency toggle pills for dashboard header
+- Files changed: components/ui/currency-toggle.tsx (new), components/dashboard/dashboard-header.tsx (modified)
+- **Learnings for future iterations:**
+  - CurrencyToggle uses layoutId='currency-indicator' for the sliding pill — avoid reusing this layoutId in other components
+  - CurrencySelector (components/ui/currency-selector.tsx) still exists for use on settings page — dashboard now uses CurrencyToggle instead
+  - useCurrency() hook from currency-provider.tsx provides displayCurrency, setDisplayCurrency, isLoading
+  - useReducedMotion() from framer-motion returns boolean — use to set transition duration to 0 for instant switch
+  - Spring transition { stiffness: 300, damping: 25 } gives a snappy but smooth slide for the indicator pill
+---
+
+## 2026-02-06 - US-002
+- Polished settings page currency selector with flag emojis and design tokens
+- Files changed: components/ui/currency-selector.tsx, app/(dashboard)/settings/page.tsx
+- **Learnings for future iterations:**
+  - CURRENCY_OPTIONS now includes `flag` field (🇦🇺, 🇳🇿, 🇺🇸) — use for any currency display needing flag emojis
+  - DollarSign icon removed from CurrencySelector trigger — flags serve as the visual identifier now
+  - Compact mode shows just currency code, full mode shows flag + code in trigger and flag + code + "— Full Name" in dropdown items
+  - SelectContent/SelectItem design tokens: bg-card border-border for content, focus:bg-accent/10 for item highlight
+  - Settings page currency selector width increased from 180px to 220px to fit flag + full name in dropdown
+---
