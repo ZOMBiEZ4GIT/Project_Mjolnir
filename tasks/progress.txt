@@ -51,7 +51,9 @@
 - PageWrapper (components/layout/page-wrapper.tsx) wraps page content with fade transition — placed inside DashboardErrorBoundary in dashboard layout
 - Mobile header (components/layout/mobile-nav.tsx) is fixed h-14 z-30 — content area needs pt-14 on mobile
 - Sheet drawer (shadcn/ui) handles focus trapping and Escape close via Radix Dialog primitive
-- Focus ring pattern: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring` matches shadcn/ui conventions
+- Focus ring pattern: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background` — standard across all interactive elements
+- Use `ring-inset` for elements inside `overflow-hidden` containers (e.g., table rows) to prevent focus ring clipping
+- Always use `focus-visible:` (not `focus:`) for keyboard-only focus rings — avoids rings on mouse clicks
 - Shared UI components (e.g. SpeedDial) live in `components/shared/` directory
 - To open AddHoldingDialog/AddTransactionDialog programmatically: pass a hidden `<button ref={ref} />` as children, then call `ref.current?.click()`
 - CheckInModal uses controlled `open`/`onOpenChange` props — can be opened from any external trigger
@@ -237,5 +239,28 @@ Started: 2026-02-07
   - `id="main-content"` is on the `<main>` element in AppShell, not the dashboard layout — skip link targets the actual content container
   - SkipLink is in root layout (app/layout.tsx), so it works across both auth and dashboard pages
   - CSS translate + opacity transition (not JS) for skip link visibility — simplest approach, no "use client" needed beyond the component itself
+---
+
+## 2026-02-07 - US-006
+- Audited and standardized focus-visible ring states across all interactive components
+- Global pattern documented in globals.css comment: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`
+- **Button, Input, Textarea**: Upgraded from `ring-1` to `ring-2`, added `ring-offset-2 ring-offset-background`
+- **SelectTrigger**: Changed from `focus:` to `focus-visible:`, upgraded to ring-2 with offset
+- **Dialog/AnimatedDialog close buttons**: Changed from `focus:` to `focus-visible:`, added `ring-offset-background`
+- **Nav items, sidebar toggle, mobile nav links**: Added `ring-offset-2 ring-offset-background`
+- **Filter tabs, TypeSelector, CurrencyToggle**: Added `ring-offset-2 ring-offset-background`
+- **TimeRangeSelector**: Added focus-visible styles (was completely missing)
+- **SpeedDial FAB + action buttons**: Added focus-visible styles (was completely missing)
+- **SkipLink**: Changed `focus:` to `focus-visible:`, added ring styles
+- **Holdings table clickable rows**: Added `focus-visible:ring-inset` (inset prevents clipping by overflow-hidden), `tabIndex={0}`, keyboard handler for Enter/Space
+- **GroupHeader button**: Added focus-visible styles with rounded-md
+- **Retry price button**: Added focus-visible styles
+- Files changed: 18 files (globals.css, button, input, textarea, select, dialog, animated-dialog, nav-item, sidebar, mobile-nav, filter-tabs, type-selector, currency-toggle, time-range-selector, speed-dial, skip-link, holdings-table, group-header)
+- **Learnings for future iterations:**
+  - Switch component already had correct `ring-2 ring-offset-2 ring-offset-background` — no change needed
+  - `--ring` CSS variable equals `--accent` (263 84% 66%) — `ring-ring` = `ring-accent`
+  - Use `ring-inset` for table rows inside `overflow-hidden` containers to prevent focus ring clipping
+  - Clickable table rows need `tabIndex={0}` + keyboard handler (Enter/Space) for keyboard accessibility
+  - `focus:` is wrong for keyboard-only focus — always use `focus-visible:` to avoid rings on mouse clicks
 ---
 
