@@ -32,12 +32,6 @@
 - html2canvas backgroundColor requires raw hex — use `#18181b` to match --card token
 - Email templates (components/emails/) use inline hex values — email clients don't support CSS variables
 - Only legitimate remaining hardcoded grey: `bg-gray-500` fallback in category indicator functions (asset-allocation, currency-exposure)
-- TimeRangeSelector (components/charts/time-range-selector.tsx) exports TimeRange type and TIME_RANGE_OPTIONS — import from @/components/charts
-- lightweight-charts v5 API: `chart.addSeries(AreaSeries, options)` — not `chart.addAreaSeries(options)` (deprecated)
-- TradingView charts require `next/dynamic` with `ssr: false` — use TVChart from components/charts/tv-chart.tsx
-- TVChartWrapper supports `onCrosshairMove` callback for custom tooltips — returns TVCrosshairData { time, value, x, y } or null
-- TradingView custom tooltip: use absolute positioned div with pointer-events-none overlaying the chart container
-- TradingView Time type accepts YYYY-MM-DD date strings cast as `Time` — works for monthly data points
 - Navigation items defined in lib/navigation.ts — import navItems and NavItem type from there (sidebar, mobile nav, command menu)
 - New layout components live in components/layout/ — NavItemLink (nav-item.tsx) uses Framer Motion layoutId='active-nav' for animated active pill
 - TooltipProvider with delayDuration={0} wraps collapsed nav items for instant tooltip display
@@ -94,30 +88,134 @@
 - Check-in status API returns `latestContributions` for pre-populating super contribution fields
 - Success summary pattern: store mutation result in state + `showSuccess` boolean, render different content in same step (no extra wizard step)
 - CheckinStepper accepts currentStep=3 (beyond max) to mark all steps completed — no code change needed in stepper
-- NumberTicker component (components/dashboard/number-ticker.tsx) animates currency values using useSpring + useMotionValue; tabular-nums prevents layout shift
-- ChangeBadge component (components/dashboard/change-badge.tsx) shows positive/negative/zero with TrendingUp/TrendingDown/Minus icons; size="sm"|"md"
-- StaleIndicator component (components/dashboard/stale-indicator.tsx) shows amber warning with tooltip (icon variant) or inline text (badge variant)
-- framer-motion v12 `useSpring` subscribes via `.on("change", cb)` — use this to update textContent directly for performance
-- Dashboard sections stagger in via motion.div container (80ms delay) with fadeIn+slideUp (opacity 0→1, y 16→0, 300ms easeOut)
-- Progress bar animation: use useState(0) → useEffect setTimeout → setState(target) with CSS transition
-- Donut centre overlay: absolute positioned div with pointer-events-none, marginBottom to offset legend
-- Chart hex colours (#374151, #9CA3AF etc.) are required for SVG rendering — don't convert to CSS variables
-- Grid gap-6 for section spacing, gap-4 only for small internal layouts
-- All card-level elements use rounded-2xl; inner elements (tooltips, icons, row items) keep rounded-lg
-- Yahoo Finance `chart()` method: `yahooFinance.chart(symbol, { period1, period2, interval: "1d" })` returns `{ quotes: [{ close }] }`
-- CoinGecko market_chart: `/coins/{id}/market_chart?vs_currency=usd&days=30&interval=daily` returns `{ prices: [[timestamp, price]] }`
-- Sparkline data API: `GET /api/prices/sparkline` returns `{ holdingId, symbol, prices: number[] }[]` — staleTime 30min
-- SVG elements (non-Recharts) can use `stroke="currentColor"` with Tailwind `text-*` classes — avoids hardcoded hex
-- ChartSkeleton uses ChartCard wrapper when `withContainer=true` — consistent with all chart sections
-- All chart tooltips use `bg-card` (not `bg-background`) for consistent elevated surface styling
-- Chart hex colours centralised in `lib/chart-palette.ts` — import CHART_GRID, CHART_TEXT, CHART_AXIS, POSITIVE, NEGATIVE, etc. instead of hardcoding hex
-- Category asset type colours (STOCK, ETF, CRYPTO, SUPER, CASH) also in chart-palette.ts — use in getAssetHexColor() and similar functions
 
 ---
 
-# UX-8 Live Price UI Progress Log
+# UX-6 Dashboard Transformation Progress Log
 
 Started: 2026-02-06
 
 ---
 
+## 2026-02-06 - US-001
+- Created `components/dashboard/number-ticker.tsx` — animated number ticker
+- Uses `useSpring` + `useMotionValue` from framer-motion with `numberSpring` preset
+- Initial mount: counts from 0 to value (600ms spring via stiffness=80, damping=20)
+- Value changes: morphs to new value using spring physics
+- Uses `formatCurrency()` for proper AUD/NZD/USD formatting during animation
+- `tabular-nums` font-variant prevents layout shift
+- `useReducedMotion()` check skips animation when OS prefers reduced motion
+- Files changed: `components/dashboard/number-ticker.tsx` (new)
+- **Learnings for future iterations:**
+  - framer-motion v12 `useSpring` subscribes via `.on("change", cb)` — use this to update textContent directly for performance
+  - `motion.span` with ref + textContent update avoids React re-renders during animation
+  - `requestAnimationFrame` needed after setting initial 0 to ensure spring starts from 0 → target
+---
+
+## 2026-02-06 - US-002
+- Created `components/dashboard/change-badge.tsx` — reusable change indicator
+- Positive (green), negative (red), zero (muted) with TrendingUp/TrendingDown/Minus icons
+- Two sizes: sm (compact for tables) and md (standard for cards)
+- Uses design tokens: `text-positive bg-positive/10`, `text-destructive bg-destructive/10`
+- Optional `showAmount` prop to toggle currency amount display
+- Files changed: `components/dashboard/change-badge.tsx` (new)
+- **Learnings for future iterations:**
+  - Use `Math.abs()` for both amount and percentage display, prepend sign manually for consistent formatting
+---
+
+## 2026-02-06 - US-003
+- Created `components/dashboard/stale-indicator.tsx` — stale data indicator
+- Icon variant: amber AlertTriangle with shadcn/ui Tooltip showing "Last updated: X ago"
+- Badge variant: amber pill with icon + relative time text
+- Returns null when `isStale` is false (safe to render unconditionally)
+- Files changed: `components/dashboard/stale-indicator.tsx` (new)
+- **Learnings for future iterations:**
+  - TooltipProvider with `delayDuration={0}` needed per usage site (or wrap at app level)
+  - `asChild` on TooltipTrigger avoids extra DOM element — use span wrapper for inline display
+---
+
+## 2026-02-06 - US-004
+- Rebuilt `components/dashboard/net-worth-hero.tsx` with premium styling
+- Purple glow: `shadow-glow-md` + `border-accent/20` + gradient `from-card via-card to-accent/5`
+- Net worth value now uses `NumberTicker` with `text-display-xl` typography
+- "Net Worth" label uses `text-label` (small caps, tracking wide)
+- Change indicator uses `ChangeBadge` component
+- Stale data uses `StaleIndicator` (top-right corner)
+- `slideUp` entrance animation with `useReducedMotion` check
+- Mobile: sparkline shows below value instead of inline
+- Removed unused `formatCurrency` import (caught by lint)
+- Files changed: `components/dashboard/net-worth-hero.tsx` (modified)
+- **Learnings for future iterations:**
+  - When replacing formatCurrency with NumberTicker, remove the import — ESLint `no-unused-vars` catches this
+  - `rounded-2xl` from design system for card borders
+  - `relative` positioning needed on card for `absolute` stale indicator placement
+---
+
+## 2026-02-06 - US-005
+- Updated `components/dashboard/summary-cards.tsx` with NumberTicker, ChangeBadge, stagger animations
+- Cards stagger in with 100ms delay (overrides default 50ms)
+- Hover effect: `shadow-card-hover` with 150ms transition
+- Added percentage-of-net-worth indicator
+- For debt cards, flip badge sign so decrease shows as positive (green)
+- All hardcoded colours replaced with design tokens
+- Files changed: `components/dashboard/summary-cards.tsx` (modified)
+- **Learnings for future iterations:**
+  - For debt: negate changeAmount/changePercent before passing to ChangeBadge so decrease = positive
+  - Override staggerContainer staggerChildren: spread `...staggerContainer` then override `visible.transition`
+---
+
+## 2026-02-06 - US-006
+- Updated `components/dashboard/asset-allocation.tsx` with animations and design tokens
+- Bar rows stagger in (50ms), progress bars animate 0% → target (400ms ease-out)
+- Donut chart centre overlay with NumberTicker showing total assets
+- fadeIn entrance on card, hover bg-accent/5 on rows
+- Replaced text-sm/text-xs with text-body-sm and text-label typography tokens
+- Card uses rounded-2xl border border-border bg-card
+- Files changed: `components/dashboard/asset-allocation.tsx` (modified)
+- **Learnings for future iterations:**
+  - Progress bar animation: use useState(0) → useEffect setTimeout → setState(target) with CSS transition
+  - Donut centre overlay: absolute positioned div with pointer-events-none, marginBottom to offset legend
+---
+
+## 2026-02-06 - US-007
+- Updated `components/dashboard/top-performers.tsx` — ChangeBadge, stagger rows, fadeIn
+- Replaced inline gain/loss display with `ChangeBadge` component (size="sm")
+- Stagger rows (50ms), fadeIn card entrance, hover bg-accent/5
+- text-label for section headers, text-body-sm for labels
+- Files changed: `components/dashboard/top-performers.tsx` (modified)
+---
+
+## 2026-02-06 - US-008 through US-012 (Design Token Batch)
+- US-008: dashboard-header.tsx — heading uses text-heading-lg/text-display-md
+- US-009: stale-data-warning.tsx — all yellow-* → amber-* (border-amber-500/30, bg-amber-500/10, text-amber-500)
+- US-010: currency-exposure.tsx — rounded-2xl bg-card, text-label, text-body-sm
+- US-011: super-breakdown-section.tsx + super-growth-chart.tsx — rounded-2xl bg-card, text-label
+- US-012: net-worth-chart.tsx — rounded-2xl bg-card, text-label
+- **Learnings for future iterations:**
+  - Chart hex colours (#374151, #9CA3AF etc.) are required for SVG rendering — don't convert to CSS variables
+  - Category indicator colours (bg-green-500, bg-blue-500 etc.) are intentional — not part of design token migration
+---
+
+## 2026-02-06 - US-013
+- Updated `components/dashboard/dashboard-content.tsx` — stagger animation wrapper
+- motion.div stagger container (80ms) wrapping all dashboard sections
+- Each section: fadeIn+slideUp (opacity 0→1, y 16→0, 300ms easeOut)
+- useReducedMotion check — all sections appear instantly when reduced motion preferred
+- space-y-6 container layout, px-4 py-4 sm:px-6 sm:py-6 content padding
+- Files changed: `components/dashboard/dashboard-content.tsx` (modified)
+---
+
+## 2026-02-06 - US-014
+- Responsive dashboard grid refinement
+- Consistent gap-6 spacing across all grid layouts (summary-cards.tsx updated from gap-4)
+- All card-level elements use rounded-2xl (checkin-prompt, stale-data-warning, asset-allocation-pie-chart updated from rounded-lg)
+- asset-allocation-pie-chart also updated to use bg-card and text-label tokens
+- Desktop (lg+): Summary cards 2-col, Allocation+Currency 2-col, Top Performers full width with internal 2-col
+- Tablet (md): Summary cards 2-col, Allocation+Currency stacked
+- Mobile: Everything single column
+- Files changed: `summary-cards.tsx`, `checkin-prompt.tsx`, `stale-data-warning.tsx`, `asset-allocation-pie-chart.tsx`
+- **Learnings for future iterations:**
+  - Check card-level border radius consistency after design token migrations — inner elements (tooltips, icons, row items) keep rounded-lg
+  - Grid gap-6 for section spacing, gap-4 only for small internal layouts
+
+## ALL 14 STORIES COMPLETE — UX-6 Dashboard Transformation finished

@@ -1,0 +1,211 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/ux7-charts-data-visualisation",
+  "description": "UX-7: Charts & Data Visualisation — Replace net worth chart with TradingView Lightweight Charts, add animated time range selector, sparklines in holdings table, donut centre overlay with NumberTicker, chart loading skeletons, and design token treatment for all chart components.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Install TradingView Lightweight Charts and create wrapper",
+      "description": "As a developer, I want a configured TradingView Lightweight Charts wrapper so I can build premium financial charts.",
+      "acceptanceCriteria": [
+        "Install lightweight-charts as a dependency",
+        "Create components/charts/tv-chart-wrapper.tsx — a React wrapper for TradingView Lightweight Charts",
+        "Wrapper handles: creating chart instance on mount, disposing on unmount, resizing on container resize",
+        "Wrapper accepts: data (array of { time, value } objects), height (default 264px), className",
+        "Chart uses dark theme: background #09090b (page background), text colour from design tokens",
+        "Grid lines: subtle, matching border-border colour",
+        "Crosshair: visible on hover, matches accent colour",
+        "Chart is SSR-safe — uses dynamic import with ssr: false (TradingView requires DOM)",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Replace net worth chart with TradingView area chart",
+      "description": "As a user, I want a premium net worth growth chart with purple gradient fill so my financial data looks polished.",
+      "acceptanceCriteria": [
+        "Update components/dashboard/net-worth-chart.tsx to use TradingView Lightweight Charts for Net Worth view mode",
+        "Area chart with purple gradient fill: line colour #8b5cf6 (accent), top fill rgba(139, 92, 246, 0.3), bottom fill rgba(139, 92, 246, 0.02)",
+        "Hover crosshair shows: date, net worth value formatted in display currency",
+        "Custom tooltip styled with design tokens: bg-card, border-border, text-foreground",
+        "Chart line has 2px width, smooth rendering",
+        "Y-axis: auto-scaled with padding, formatted as compact currency",
+        "X-axis: month labels",
+        "Chart animates in: fades from transparent to visible on mount (200ms)",
+        "Keep Recharts AssetsVsDebtChart for Assets vs Debt view mode (unchanged)",
+        "Chart view toggle continues to switch between the two modes",
+        "Export button continues to work (use html2canvas on the chart container)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Create animated time range selector",
+      "description": "As a user, I want the time range selector to have a smooth sliding indicator so selecting ranges feels interactive.",
+      "acceptanceCriteria": [
+        "Create components/charts/time-range-selector.tsx — replaces existing inline TimeRangeSelector function in net-worth-chart.tsx",
+        "Options: 3M, 6M, 1Y, All (same as current)",
+        "Active option has sliding background indicator using Framer Motion layoutId='time-range-indicator'",
+        "Active tab: bg-accent/20 text-foreground with sliding pill",
+        "Inactive tabs: text-muted-foreground with hover:text-foreground",
+        "Indicator slides smoothly between options (200ms, ease-in-out)",
+        "Props: value: TimeRange, onChange: (range: TimeRange) => void",
+        "Compact size to fit alongside chart view toggle and export button",
+        "Respects prefers-reduced-motion",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Add donut chart centre overlay with NumberTicker",
+      "description": "As a user, I want to see my total net worth in the centre of the allocation donut so I get both the breakdown and total at a glance.",
+      "acceptanceCriteria": [
+        "Update components/dashboard/asset-allocation-pie-chart.tsx: add absolute-positioned overlay in centre of donut",
+        "Centre displays: 'Total' label in text-body-sm text-muted-foreground above the value",
+        "Value uses NumberTicker component from UX-6 with compact currency formatting",
+        "Centre text vertically and horizontally centred within inner radius",
+        "Centre overlay does not interfere with donut hover/click interactions (pointer-events: none on overlay)",
+        "Centre value updates when display currency changes (NumberTicker animates the change)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Create sparkline mini-chart component",
+      "description": "As a user, I want to see tiny trend lines so I can spot performance at a glance.",
+      "acceptanceCriteria": [
+        "Create components/charts/sparkline.tsx — small, reusable sparkline component",
+        "Props: data: number[], width?: number (default 80), height?: number (default 32), positive?: boolean (controls colour)",
+        "Renders using Recharts LineChart with no axes, no grid, no dots — just the line",
+        "Positive trend (last > first): accent/green line colour",
+        "Negative trend (last < first): destructive/red line colour",
+        "Line width: 1.5px, smooth monotone interpolation",
+        "No animation on sparkline (static render for performance in table rows)",
+        "Component handles edge cases: empty data (renders nothing), single data point (renders nothing), all same values (flat line)",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Integrate sparklines into holdings table",
+      "description": "As a developer, I want sparklines displayed in the holdings table for tradeable assets.",
+      "acceptanceCriteria": [
+        "Add a Trend column to holdings table for tradeable holdings (stocks, ETFs, crypto)",
+        "Column shows Sparkline component with last 30 days of price data",
+        "Fetch sparkline data: add API endpoint GET /api/holdings/[id]/sparkline returning daily prices from price cache or derive from transaction history",
+        "Alternatively, batch-fetch sparkline data for all tradeable holdings in a single API call",
+        "Column hidden on mobile (below md breakpoint) — sparklines are desktop-only",
+        "Snapshot-based holdings (super, cash, debt) show no sparkline — column cell is empty",
+        "Loading state: show small skeleton (gray rectangle) while sparkline data loads",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Create reusable chart wrapper component",
+      "description": "As a developer, I want a consistent chart wrapper so all chart sections have the same card styling, title, and animation.",
+      "acceptanceCriteria": [
+        "Create components/charts/chart-card.tsx",
+        "Props: title: string, actions?: ReactNode (for buttons/toggles in header), children: ReactNode, className?: string",
+        "Renders: card container with bg-card border border-border rounded-2xl p-4 sm:p-6",
+        "Header: title in text-label typography (left), actions slot (right)",
+        "Entrance animation: fadeIn preset on mount",
+        "Respects prefers-reduced-motion",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Update chart loading skeletons",
+      "description": "As a user, I want chart loading states that match the shape of the chart being loaded.",
+      "acceptanceCriteria": [
+        "Update components/charts/chart-skeleton.tsx: replace hardcoded bg-gray-* colours with design tokens (bg-muted, bg-border)",
+        "Line variant: shows wavy line skeleton shape",
+        "Pie variant: shows circular skeleton shape",
+        "Bar variant: shows bar skeleton shapes of varying heights",
+        "Use animate-pulse for shimmer effect",
+        "All skeletons use ChartCard wrapper for consistent card styling",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Polish chart tooltips with design tokens",
+      "description": "As a user, I want consistent, polished tooltips across all charts.",
+      "acceptanceCriteria": [
+        "Update all custom tooltip components: net-worth-chart.tsx, asset-allocation-pie-chart.tsx, assets-vs-debt-chart.tsx, holding-price-chart.tsx, super-balance-history-chart.tsx",
+        "All tooltips use: bg-card border border-border rounded-lg p-3 shadow-lg",
+        "Text colours: text-foreground for values, text-muted-foreground for labels",
+        "Positive values in text-positive, negative in text-destructive",
+        "Consistent padding, font sizes, and spacing across all tooltips",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Apply design tokens to all chart components",
+      "description": "As a developer, I want all chart components using design system tokens.",
+      "acceptanceCriteria": [
+        "Audit and update all files in components/charts/ and components/dashboard/ chart components",
+        "Replace: bg-gray-* → bg-card/bg-muted, text-gray-* → text-muted-foreground, border-gray-* → border-border, text-white → text-foreground",
+        "Recharts colour constants (hex values) remain as hex but should be defined as named constants in shared lib/chart-palette.ts",
+        "Visual appearance preserved or improved",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Add chart entrance animations",
+      "description": "As a user, I want charts to fade in smoothly when they load rather than appearing abruptly.",
+      "acceptanceCriteria": [
+        "Wrap each chart section in Framer Motion container using fadeIn preset",
+        "Animation triggers after data loads (not on skeleton state)",
+        "Charts that switch between views (net worth ↔ assets vs debt, bars ↔ pie) use AnimatePresence for crossfade",
+        "Respects prefers-reduced-motion",
+        "No layout shift during animation (chart container has fixed height)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}
