@@ -216,8 +216,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring to: NavItemLink (nav-item.tsx), sidebar collapse toggle button (sidebar.tsx), and mobile drawer nav links (mobile-nav.tsx). Sidebar nav items use Next.js Link (native <a> tags) — focusable via Tab and activated by Enter. Collapse toggle uses native <button> — focusable and activated by Enter/Space. Mobile drawer uses Radix Sheet for focus trapping. Cmd+K command menu rendered via AppShell on all pages. Build and lint pass."
     }
   ]
 }

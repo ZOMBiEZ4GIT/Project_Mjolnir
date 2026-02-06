@@ -407,3 +407,24 @@ Started: 2026-02-06
   - components/dashboard/ directory still contains other active components (dashboard-header, dashboard-content, net-worth-hero, etc.) — only nav.tsx and mobile-nav.tsx were deprecated
   - Always update Codebase Patterns when removing referenced files to avoid misleading future iterations
 ---
+
+## 2026-02-06 - US-012
+- Added focus-visible ring styles to all interactive navigation elements:
+  - NavItemLink (components/layout/nav-item.tsx): added focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring to Link
+  - Sidebar collapse toggle (components/layout/sidebar.tsx): added same focus ring to button
+  - Mobile drawer nav links (components/layout/mobile-nav.tsx): added same focus ring to Link items
+- Keyboard accessibility audit results:
+  - Tab: All nav items focusable (Link renders <a>, button is native)
+  - Enter: Activates links (native browser behavior for <a>)
+  - Space: Activates collapse toggle (native browser behavior for <button>)
+  - Focus ring: Now visible on all interactive elements using focus-visible:ring-2 focus-visible:ring-ring
+  - Focus trapping: Mobile drawer uses Radix Sheet (Dialog primitive) which traps focus automatically
+  - Cmd+K: CommandMenu rendered in AppShell, works from any page
+- Files changed: components/layout/nav-item.tsx, components/layout/sidebar.tsx, components/layout/mobile-nav.tsx
+- **Learnings for future iterations:**
+  - focus-visible (not focus) is the correct pseudo-class — it only shows ring on keyboard navigation, not mouse clicks
+  - shadcn/ui Button already has focus-visible styles — only custom interactive elements (Link, raw button) need explicit focus ring
+  - Standard pattern: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring` matches shadcn/ui conventions
+  - Next.js Link renders <a> — Enter activates, Space does NOT (standard browser behavior for links)
+  - Native <button> responds to both Enter and Space (standard browser behavior)
+---
