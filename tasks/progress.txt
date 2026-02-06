@@ -238,3 +238,15 @@ Started: 2026-02-06
   - Skeleton loading already used `bg-muted animate-pulse` pattern — no changes needed
   - All dashboard cards consistently use `bg-card` (not `bg-card/50`) — keep this pattern
 ---
+
+## 2026-02-06 - US-009
+- Polished currency filter dropdown on holdings page with flag emojis and design tokens
+- Files changed: components/holdings/currency-filter.tsx
+- **Learnings for future iterations:**
+  - CurrencyFilter options now include flag emojis: 🇦🇺 AUD, 🇳🇿 NZD, 🇺🇸 USD (All Currencies has no flag)
+  - SelectTrigger: `bg-card border border-border text-foreground` — matches card surface pattern
+  - SelectContent: `bg-card border-border` — uses card background for elevated dropdown
+  - SelectItem: `text-foreground focus:bg-accent/10 focus:text-foreground` — accent highlight on focus/selection
+  - Width increased from 160px to 180px to accommodate flag emojis
+  - Filter icon keeps `text-muted-foreground` as a subdued visual cue
+---
