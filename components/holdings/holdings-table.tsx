@@ -1064,7 +1064,7 @@ function HoldingsTableContent({
                       </span>
                       <span
                         className={`text-xs flex items-center gap-1 ${
-                          isStale ? "text-yellow-400" : "text-muted-foreground"
+                          isStale ? "text-warning" : "text-muted-foreground"
                         }`}
                       >
                         {isStale && (
@@ -1397,7 +1397,7 @@ function HoldingsCurrencySection({
                           </span>
                           <span
                             className={`text-xs flex items-center gap-1 ${
-                              isStale ? "text-yellow-400" : "text-muted-foreground"
+                              isStale ? "text-warning" : "text-muted-foreground"
                             }`}
                           >
                             {isStale && (
