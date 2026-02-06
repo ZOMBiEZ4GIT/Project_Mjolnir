@@ -1,0 +1,194 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/ux11-import-export-ui",
+  "description": "UX-11: Import/Export UI — Polish import and export experiences with design tokens, animations, and improved feedback. File upload gets animated drag-and-drop and progress bar. Preview step before committing import. Export cards with stagger animations and download progress. Import results with animated counts, expandable errors with fix suggestions, and downloadable error report. Recent imports history with stagger and expandable details.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Polish file upload component with design tokens and animation",
+      "description": "As a user, I want the file upload area to feel polished and responsive so dragging and dropping files feels natural.",
+      "acceptanceCriteria": [
+        "Update components/import/file-upload.tsx with design token states: default (dashed border-border, bg-card, text-muted-foreground icon), drag-over (border-accent, bg-accent/5, icon pulses), file selected (solid border-border, file icon + name + size in text-foreground, clear button), error (border-destructive, text-destructive)",
+        "Add entrance animation: fadeIn preset on mount",
+        "File icon animates in when selected (scale 0.8 → 1.0, 200ms)",
+        "Clear button has hover:text-foreground effect",
+        "Replace all hardcoded bg-gray-*, text-gray-*, border-gray-* with design tokens",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Added Framer Motion animations, design token states, reduced motion support"
+    },
+    {
+      "id": "US-002",
+      "title": "Add animated upload progress bar",
+      "description": "As a user, I want to see clear progress when my file is being processed so I know the import is working.",
+      "acceptanceCriteria": [
+        "Update components/import/import-progress.tsx: determinate progress bar (bg-accent fill on bg-muted track, rounded-full, height 6px) when row count known",
+        "Progress fills 0% to 100% as rows processed with 'Processing row X of Y...' text below in text-muted-foreground",
+        "Progress bar fill animates smoothly (CSS transition width 300ms ease-out)",
+        "If row count unknown (parsing phase): show indeterminate shimmer animation",
+        "Subtle pulsing glow on progress bar (shadow-glow-sm)",
+        "Entrance animation: progress bar slides in from left (200ms)",
+        "Uses design tokens throughout — no hardcoded colours",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Custom progress bar with shimmer animation, backward-compatible props"
+    },
+    {
+      "id": "US-003",
+      "title": "Add parsed-row preview step before import",
+      "description": "As a user, I want to see a preview of my data before it's imported so I can verify it looks correct and catch issues early.",
+      "acceptanceCriteria": [
+        "Add preview step between file selection and import execution on app/(dashboard)/import/page.tsx",
+        "Preview table shows first 10 rows with CSV column headers; if more rows show '...and X more rows' below",
+        "Total row count displayed prominently: 'Y rows ready to import'",
+        "Preview table uses design tokens: bg-card, border-border, text-foreground, text-muted-foreground",
+        "Preview table rows stagger in (30ms delay per row, capped at 300ms)",
+        "Two buttons below preview: 'Import [Y] Rows' (primary accent) and 'Cancel' (secondary)",
+        "If validation issues visible in preview, show amber warning banner above table",
+        "Preview step transitions in with slide animation (slide left, 250ms)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "New ImportPreview component + CSV parsing in import page"
+    },
+    {
+      "id": "US-004",
+      "title": "Polish export cards with stagger animations",
+      "description": "As a user, I want the export page to feel polished with animated cards that make the options clear.",
+      "acceptanceCriteria": [
+        "Update app/(dashboard)/export/page.tsx: cards use bg-card border border-border rounded-2xl p-4 sm:p-6",
+        "Cards stagger in on page load (80ms delay) using staggerContainer/staggerItem presets, fade in + slide up",
+        "Card layout: icon top-left (Lucide), title in text-foreground font-medium, description in text-muted-foreground text-body-sm, count badge, CSV/JSON buttons",
+        "Card hover effect: shadow-card-hover with 150ms transition",
+        "Full backup card has accent border: border-accent/30 to distinguish from individual exports",
+        "Replace all hardcoded colours with design tokens",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Refactored export page with stagger animations, custom card layout, design tokens"
+    },
+    {
+      "id": "US-005",
+      "title": "Add download progress indicator and success animation",
+      "description": "As a user, I want to see progress when downloading exports and a clear success indicator when complete.",
+      "acceptanceCriteria": [
+        "Export buttons have states: default (text + download icon), downloading ('Downloading...' + spin icon, disabled), success (checkmark + 'Downloaded!' in text-positive, 1.5s), error (X icon + 'Failed' in text-destructive, 2s)",
+        "Success state includes scale pulse animation (1.0 → 1.05 → 1.0, 300ms)",
+        "Toast on success: 'Exported [type] as [format] — [filename]'",
+        "Toast on error: 'Failed to export [type]'",
+        "Download state tracked per-button (Map keyed by type+format)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Per-button state machine with Map, auto-reset timers, scale pulse animation"
+    },
+    {
+      "id": "US-006",
+      "title": "Enhance import results with animated counts",
+      "description": "As a user, I want import results to feel dynamic with animated numbers so I can quickly understand the outcome.",
+      "acceptanceCriteria": [
+        "Update components/import/import-results.tsx: three result cards (Imported/Skipped/Errors) in a row",
+        "Each card: icon + count + label. Counts animate up from 0 using NumberTicker (600ms)",
+        "Imported card: checkmark icon, text-positive, bg-positive/10",
+        "Skipped card: alert-circle icon, text-warning, bg-warning/10",
+        "Errors card: x-circle icon, text-destructive, bg-destructive/10",
+        "Cards stagger in (100ms delay between)",
+        "If all rows imported (0 skipped, 0 errors): show success banner with checkmark 'All rows imported successfully!'",
+        "Replace all hardcoded colour classes with design tokens",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "AnimatedCount with useSpring, 3-card grid, stagger animations, success banner"
+    },
+    {
+      "id": "US-007",
+      "title": "Add expandable error rows with fix suggestions",
+      "description": "As a user, I want to see detailed errors from my import with helpful suggestions so I can fix my CSV and re-import.",
+      "acceptanceCriteria": [
+        "Update error details in components/import/import-results.tsx: collapsible section (collapsed by default if > 5 errors)",
+        "Toggle button: 'Show X errors' / 'Hide errors'. Expand/collapse uses Framer Motion height animation (200ms)",
+        "Each error row: row number badge (bg-muted rounded-full), error message (text-destructive), fix suggestion (text-muted-foreground text-body-sm)",
+        "Fix suggestions pattern-matched: missing field → 'Ensure all rows have value for [field]', invalid format → 'Expected format: [example]', duplicate → 'This row matches existing record', invalid value → 'Value [value] not valid'",
+        "Error rows stagger in when expanded (30ms delay per row)",
+        "Each error row has left border: border-l-2 border-destructive",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Animated expand/collapse, pattern-matched fix suggestions, stagger rows"
+    },
+    {
+      "id": "US-008",
+      "title": "Add downloadable error report",
+      "description": "As a user, I want to download a report of import errors so I can fix my CSV file offline and re-import.",
+      "acceptanceCriteria": [
+        "Add 'Download Error Report' button in error section of import results (secondary styling, download icon, text-muted-foreground)",
+        "Button only appears when errors > 0",
+        "Downloaded file: CSV with columns row_number, error_message, suggestion, original_data",
+        "Filename: import-errors-YYYY-MM-DD.csv",
+        "Download triggers success animation (checkmark + 'Downloaded!' state) same as export buttons",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "CSV download with suggestions, success animation reusing export pattern"
+    },
+    {
+      "id": "US-009",
+      "title": "Polish recent imports history with animations",
+      "description": "As a user, I want the recent imports section to feel polished with smooth animations and clear status indicators.",
+      "acceptanceCriteria": [
+        "Update components/import/recent-imports.tsx: section title 'Recent Imports' in text-label typography",
+        "Import rows stagger in on mount (50ms delay per row)",
+        "Each row shows: filename, import type badge (pill-shaped), counts summary, relative timestamp",
+        "Type badges: Transactions (bg-accent/20 text-accent), Snapshots (bg-positive/20 text-positive)",
+        "Row hover: bg-accent/5 with 150ms transition",
+        "Expandable details per row (click): shows imported/skipped/error counts, full timestamp, first 3 errors if any",
+        "Expand/collapse uses Framer Motion height animation (200ms), chevron rotates 90° → 0°",
+        "Relative timestamps: '2 hours ago', 'Yesterday', '3 days ago'",
+        "Empty state: 'No imports yet' with subtle illustration, design tokens",
+        "Skeleton loading: bg-muted animate-pulse",
+        "Replace all hardcoded colours with design tokens",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Stagger animations, expandable details, design tokens, text-label section header"
+    },
+    {
+      "id": "US-010",
+      "title": "Replace hardcoded colours across all import/export components",
+      "description": "As a developer, I want all import/export components using design system tokens.",
+      "acceptanceCriteria": [
+        "Audit and update: app/(dashboard)/export/page.tsx, app/(dashboard)/import/page.tsx, components/import/file-upload.tsx, components/import/import-progress.tsx, components/import/import-results.tsx, components/import/recent-imports.tsx, components/charts/chart-export-button.tsx",
+        "Replace text-white → text-foreground, text-gray-* → text-muted-foreground, bg-gray-* → bg-card/bg-muted/bg-background, border-gray-* → border-border",
+        "Replace text-green-* → text-positive, text-red-* → text-destructive, text-yellow-*/text-amber-* → text-warning",
+        "Replace bg-green-* → bg-positive/10 or /20, bg-red-* → bg-destructive/10 or /20, bg-yellow-* → bg-warning/10 or /20",
+        "Page headers use typography tokens (text-heading-lg, text-heading-md)",
+        "Descriptions use text-body-sm text-muted-foreground",
+        "Visual appearance preserved or improved",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Audit complete — all files already use design tokens from US-001–009. Added typography tokens to import page header."
+    }
+  ]
+}
