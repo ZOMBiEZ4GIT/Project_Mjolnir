@@ -97,3 +97,17 @@ Started: 2026-02-06
   - `motion.div initial={reducedMotion ? false : {...}}` is the pattern to disable animations for reduced motion
 ---
 
+## 2026-02-06 - US-002
+- Created CheckinStepper component at components/check-in/checkin-stepper.tsx
+- 3-step horizontal stepper: "Select Month" → "Update Holdings" → "Review & Save"
+- Step states: Completed (accent + checkmark), Current (accent + number + pulsing glow), Upcoming (muted + number)
+- Animated connection lines fill with accent colour when step completed
+- Respects prefers-reduced-motion via useReducedMotion()
+- Files changed: components/check-in/checkin-stepper.tsx (new)
+- **Learnings for future iterations:**
+  - Framer Motion `animate` with keyframes array creates pulsing glow effect: `boxShadow: ["0 0 0 0 ...", "0 0 0 6px ...", "0 0 0 0 ..."]`
+  - HSL CSS variable in boxShadow keyframes: use `hsl(var(--accent) / 0.2)` syntax
+  - Connection line between steps: use `overflow-hidden` parent with inner `motion.div` that animates width 0%→100%
+  - Labels below circles with `self-start mt-4 mb-5` on connection line to align with circle centres
+---
+
