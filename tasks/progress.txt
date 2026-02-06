@@ -171,3 +171,16 @@ Started: 2026-02-06
   - Month headers (sticky `<TableRow>`) don't need animation variants — only data rows use `MotionTableRow`
 ---
 
+## 2026-02-06 - US-007
+- Polished transaction type badges with consistent design tokens
+- Updated `getActionColorClass()` in page.tsx: separated BUY and DIVIDEND (were sharing same colour), gave DIVIDEND `bg-accent/20 text-accent` to match type-selector and summary cards
+- Fixed SPLIT badge from hardcoded `bg-blue-900 text-blue-300` to `bg-blue-500/20 text-blue-400`
+- Changed badge shape from `rounded` to `rounded-full` (pill-shaped) with normalized `px-2 py-0.5` padding
+- Verified colour scheme consistency across all three components: table badges (page.tsx), type selector (type-selector.tsx), summary cards (transaction-summary.tsx)
+- Files changed: `app/(dashboard)/transactions/page.tsx`
+- **Learnings for future iterations:**
+  - Transaction action colour mapping is defined in three places: `getActionColorClass()` in page.tsx, `TYPE_COLOURS` in type-selector.tsx, and card `colorClass` in transaction-summary.tsx — keep all three in sync
+  - SPLIT uses hardcoded `text-blue-400`/`bg-blue-500/20` intentionally — there's no semantic "info" token in the design system
+  - The previous code grouped BUY and DIVIDEND together as both "green" — they should be distinct (BUY=positive/green, DIVIDEND=accent/purple)
+---
+
