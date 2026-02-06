@@ -6,10 +6,10 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { RefreshCw, Briefcase, Filter } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
-import { HoldingsTable, type HoldingWithData, type PriceData, type GroupByValue } from "@/components/holdings/holdings-table";
+import { HoldingsTable, type HoldingWithData, type PriceData } from "@/components/holdings/holdings-table";
 import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
 import { CurrencyFilter, type CurrencyFilterValue } from "@/components/holdings/currency-filter";
-import { GroupBySelector } from "@/components/holdings/group-by-selector";
+import { FilterTabs, type HoldingTypeFilter } from "@/components/holdings/filter-tabs";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -130,10 +130,10 @@ export default function HoldingsPage() {
   const currencyFilter: CurrencyFilterValue = currencyFilterParam && ["all", "AUD", "NZD", "USD"].includes(currencyFilterParam)
     ? currencyFilterParam
     : "all";
-  const groupByParam = searchParams.get("group_by") as GroupByValue | null;
-  const groupBy: GroupByValue = groupByParam && ["type", "currency"].includes(groupByParam)
-    ? groupByParam
-    : "type";
+  const typeFilterParam = searchParams.get("type") as HoldingTypeFilter | null;
+  const typeFilter: HoldingTypeFilter = typeFilterParam && ["all", "stock", "etf", "crypto", "super", "cash", "debt"].includes(typeFilterParam)
+    ? typeFilterParam
+    : "all";
 
   const handleShowDormantChange = (checked: boolean) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -155,14 +155,14 @@ export default function HoldingsPage() {
     router.push(`/holdings${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
-  const handleGroupByChange = (value: GroupByValue) => {
+  const handleTypeFilterChange = (value: HoldingTypeFilter) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (value === "type") {
-      params.delete("group_by");
+    if (value === "all") {
+      params.delete("type");
     } else {
-      params.set("group_by", value);
+      params.set("type", value);
     }
-    router.push(`/holdings${params.toString() ? `?${params.toString()}` : ""}`);
+    router.replace(`/holdings${params.toString() ? `?${params.toString()}` : ""}`);
   };
 
   const {
@@ -277,12 +277,18 @@ export default function HoldingsPage() {
     }
   }, [priceMap, pricesLoading, backgroundRefreshMutation]);
 
-  // Filter holdings by currency
+  // Filter holdings by currency and type
   const filteredHoldings = useMemo(() => {
     if (!holdings) return [];
-    if (currencyFilter === "all") return holdings;
-    return holdings.filter((holding) => holding.currency === currencyFilter);
-  }, [holdings, currencyFilter]);
+    let result = holdings;
+    if (currencyFilter !== "all") {
+      result = result.filter((holding) => holding.currency === currencyFilter);
+    }
+    if (typeFilter !== "all") {
+      result = result.filter((holding) => holding.type === typeFilter);
+    }
+    return result;
+  }, [holdings, currencyFilter, typeFilter]);
 
   // Show loading while Clerk auth is loading
   if (!isLoaded) {
@@ -377,30 +383,35 @@ export default function HoldingsPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-4 mb-4">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="show-dormant-filtered"
-              checked={showDormant}
-              onCheckedChange={handleShowDormantChange}
-            />
-            <Label htmlFor="show-dormant-filtered" className="text-muted-foreground cursor-pointer text-sm">
-              Show dormant holdings
-            </Label>
+          <FilterTabs value={typeFilter} onChange={handleTypeFilterChange} />
+          <div className="ml-auto flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="show-dormant-filtered"
+                checked={showDormant}
+                onCheckedChange={handleShowDormantChange}
+              />
+              <Label htmlFor="show-dormant-filtered" className="text-muted-foreground cursor-pointer text-sm">
+                Show dormant holdings
+              </Label>
+            </div>
+            <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
+            <NativeCurrencyToggle />
           </div>
-          <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
-          <GroupBySelector value={groupBy} onChange={handleGroupByChange} />
-          <NativeCurrencyToggle />
         </div>
         <EmptyState
           icon={Filter}
-          title={`No ${currencyFilter} holdings found`}
-          description="Try selecting a different currency filter or 'All Currencies' to see your holdings."
+          title="No matching holdings"
+          description="Try a different filter to see your holdings."
           action={
             <Button
               variant="outline"
-              onClick={() => handleCurrencyFilterChange("all")}
+              onClick={() => {
+                handleCurrencyFilterChange("all");
+                handleTypeFilterChange("all");
+              }}
             >
-              Show all currencies
+              Clear filters
             </Button>
           }
         />
@@ -442,20 +453,22 @@ export default function HoldingsPage() {
           </AddHoldingDialog>
         </div>
       </div>
-      <div className="flex items-center gap-4 mb-4">
-        <div className="flex items-center gap-2">
-          <Switch
-            id="show-dormant"
-            checked={showDormant}
-            onCheckedChange={handleShowDormantChange}
-          />
-          <Label htmlFor="show-dormant" className="text-muted-foreground cursor-pointer text-sm">
-            Show dormant holdings
-          </Label>
+      <div className="flex flex-wrap items-center gap-4 mb-4">
+        <FilterTabs value={typeFilter} onChange={handleTypeFilterChange} />
+        <div className="ml-auto flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="show-dormant"
+              checked={showDormant}
+              onCheckedChange={handleShowDormantChange}
+            />
+            <Label htmlFor="show-dormant" className="text-muted-foreground cursor-pointer text-sm">
+              Show dormant holdings
+            </Label>
+          </div>
+          <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
+          <NativeCurrencyToggle />
         </div>
-        <CurrencyFilter value={currencyFilter} onChange={handleCurrencyFilterChange} />
-        <GroupBySelector value={groupBy} onChange={handleGroupByChange} />
-        <NativeCurrencyToggle />
       </div>
       <HoldingsTable
         holdings={filteredHoldings}
@@ -463,7 +476,7 @@ export default function HoldingsPage() {
         pricesLoading={pricesLoading}
         onRetryPrice={handleRetryPrice}
         retryingPriceIds={retryingPriceIds}
-        groupBy={groupBy}
+        groupBy="type"
       />
     </div>
   );
