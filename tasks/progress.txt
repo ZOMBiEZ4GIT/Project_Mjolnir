@@ -195,3 +195,17 @@ Started: 2026-02-06
   - CurrencyDisplay flash triggers on showNative change — only flashes on components where nativeCurrency differs from currency
   - prevShowNativeRef pattern added alongside prevAmountRef/prevCurrencyRef to track showNative changes independently
 ---
+
+## 2026-02-06 - US-006
+- Polished FX rates display with design tokens and auto-updating timestamp
+- Files changed: components/ui/fx-rates-display.tsx
+- **Learnings for future iterations:**
+  - Auto-updating relative timestamp: `useState` tick counter + `setInterval` every 30s — minimal rerenders to keep timestamp fresh
+  - Replaced `Info` icon with `TrendingUp` for compact mode button — better semantic match for exchange rates
+  - `text-amber-400` replaced with `text-warning` design token throughout
+  - Stale state shows "Rates may be outdated" message above the timestamp line
+  - Clock icon added next to relative timestamp for visual clarity
+  - `text-body-sm` design token used instead of `text-xs` for timestamp line
+  - Tooltip styled with `bg-card border border-border rounded-lg p-3 shadow-lg` — consistent with CurrencyDisplay tooltip pattern
+  - Inline mode uses `bg-card/50` instead of `bg-background/50` — matches card container pattern from codebase
+---
