@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
-import { RefreshCw, Briefcase, Filter } from "lucide-react";
+import { RefreshCw, Briefcase, Filter, Wallet, ArrowRightLeft, Camera } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { HoldingsTable, type HoldingWithData, type PriceData } from "@/components/holdings/holdings-table";
@@ -15,6 +15,9 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { NativeCurrencyToggle } from "@/components/ui/native-currency-toggle";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SpeedDial, type SpeedDialAction } from "@/components/shared/speed-dial";
+import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog";
+import { CheckInModal } from "@/components/check-in/check-in-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -225,6 +228,32 @@ export default function HoldingsPage() {
     },
     // Silent error handling - no toast for background refresh failures
   });
+
+  // Speed-dial FAB: refs for hidden dialog triggers + check-in modal state
+  const addHoldingRef = useRef<HTMLButtonElement>(null);
+  const addTransactionRef = useRef<HTMLButtonElement>(null);
+  const [checkInOpen, setCheckInOpen] = useState(false);
+
+  const speedDialActions = useMemo<SpeedDialAction[]>(() => [
+    {
+      id: "add-holding",
+      label: "Add Holding",
+      icon: <Wallet className="h-4 w-4" />,
+      onClick: () => addHoldingRef.current?.click(),
+    },
+    {
+      id: "add-transaction",
+      label: "Add Transaction",
+      icon: <ArrowRightLeft className="h-4 w-4" />,
+      onClick: () => addTransactionRef.current?.click(),
+    },
+    {
+      id: "monthly-check-in",
+      label: "Monthly Check-in",
+      icon: <Camera className="h-4 w-4" />,
+      onClick: () => setCheckInOpen(true),
+    },
+  ], []);
 
   // Track which holdings are currently being retried
   const [retryingPriceIds, setRetryingPriceIds] = useState<Set<string>>(new Set());
@@ -479,6 +508,16 @@ export default function HoldingsPage() {
         groupBy="type"
         typeFilter={typeFilter}
       />
+
+      {/* Speed-dial FAB with hidden dialog triggers */}
+      <AddHoldingDialog>
+        <button ref={addHoldingRef} className="hidden" aria-hidden="true" />
+      </AddHoldingDialog>
+      <AddTransactionDialog>
+        <button ref={addTransactionRef} className="hidden" aria-hidden="true" />
+      </AddTransactionDialog>
+      <CheckInModal open={checkInOpen} onOpenChange={setCheckInOpen} />
+      <SpeedDial actions={speedDialActions} />
     </div>
   );
 }
