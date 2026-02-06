@@ -202,3 +202,18 @@ Started: 2026-02-06
   - `useRef` for timer cleanup prevents stale closure issues and memory leaks on fast unmount/remount
 ---
 
+## 2026-02-06 - US-009
+- Audited all files in `components/transactions/` and `app/(dashboard)/transactions/page.tsx` for hardcoded colours
+- **Result:** All transaction components are already fully using design tokens — no changes needed
+- Previous stories (US-001 through US-008) already migrated all green/red/grey/white colours to semantic tokens
+- Verified: `bg-positive/20 text-positive` (BUY), `bg-destructive/20 text-destructive` (SELL), `bg-accent/20 text-accent` (DIVIDEND), `text-foreground`, `text-muted-foreground`, `bg-card/50`, `border-border`, `bg-background`, `bg-muted/50`
+- Remaining hardcoded colours are intentionally exempt: `text-yellow-*`/`bg-yellow-*` (warning), `text-blue-400`/`bg-blue-500/20` (SPLIT info) — per codebase patterns these are semantic and NOT part of design token migration
+- Filter dropdowns: already using `bg-background border-border text-foreground`
+- Empty state: uses shared `EmptyState` component with token-based styles
+- Typecheck (`npm run build`) and lint (`npm run lint`) both pass
+- Files changed: `tasks/prd.json`, `tasks/progress.txt` (no code changes needed)
+- **Learnings for future iterations:**
+  - When previous stories incrementally migrate colours, audit stories may find no remaining work — this is a success case
+  - Yellow/blue hardcoded colours are intentionally kept as semantic colours (warning/info) and should NOT be replaced with design tokens
+---
+
