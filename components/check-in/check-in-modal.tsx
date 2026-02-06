@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { toast } from "sonner";
@@ -11,16 +11,20 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  ArrowLeft,
+  ArrowRight,
+  Landmark,
+  Wallet,
+  CreditCard,
+} from "lucide-react";
+import { CheckinStepper } from "@/components/check-in/checkin-stepper";
+import { MonthSelector } from "@/components/check-in/month-selector";
 
 // Holding data from check-in status API
 interface HoldingToUpdate {
@@ -91,6 +95,13 @@ const typeLabels: Record<string, string> = {
   super: "Superannuation",
   cash: "Cash",
   debt: "Debt",
+};
+
+// Type icons for display
+const typeIcons: Record<string, typeof Landmark> = {
+  super: Landmark,
+  cash: Wallet,
+  debt: CreditCard,
 };
 
 // Type order for grouping
@@ -354,9 +365,24 @@ function SuperHoldingEntry({
   );
 }
 
+// Format currency amount for review display
+function formatCurrency(amount: string, currency: string): string {
+  const symbol = currencySymbols[currency] || currency;
+  const num = parseFloat(amount);
+  if (isNaN(num)) return `${symbol}0.00`;
+  return `${symbol}${num.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const queryClient = useQueryClient();
+
+  // Wizard step: 0 = Select Month, 1 = Update Holdings, 2 = Review & Save
+  const [currentStep, setCurrentStep] = useState(0);
+
+  // Error shake state for validation
+  const [shakeStep2, setShakeStep2] = useState(false);
+  const step2Ref = useRef<HTMLDivElement>(null);
 
   // Month selector: current or previous month
   const currentMonth = getFirstOfMonth(new Date());
@@ -418,12 +444,14 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       // Reset on close
+      setCurrentStep(0);
       setUpdatedHoldingIds(new Set());
       setSelectedMonth(currentMonth);
       setSuperHoldingsData({});
       setCashHoldingsData({});
       setDebtHoldingsData({});
       setValidationErrors({});
+      setShakeStep2(false);
     }
     onOpenChange(newOpen);
   };
@@ -516,7 +544,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     return debtHoldingsData[holdingId] || { balance: "" };
   };
 
-  // Handle month change
+  // Handle month change (from MonthSelector on Step 1)
   const handleMonthChange = (month: string) => {
     setSelectedMonth(month);
     // Reset updated holdings and data when month changes
@@ -525,6 +553,60 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     setCashHoldingsData({});
     setDebtHoldingsData({});
     setValidationErrors({});
+  };
+
+  // Validate all balances are filled (for Step 2 Continue)
+  const validateBalances = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    for (const holding of data?.holdings || []) {
+      if (holding.type === "super") {
+        const entryData = getSuperHoldingData(holding.id);
+        if (!entryData.balance || entryData.balance.trim() === "") {
+          errors[holding.id] = "Balance is required";
+        }
+      } else if (holding.type === "cash") {
+        const entryData = getCashHoldingData(holding.id);
+        if (!entryData.balance || entryData.balance.trim() === "") {
+          errors[holding.id] = "Balance is required";
+        }
+      } else if (holding.type === "debt") {
+        const entryData = getDebtHoldingData(holding.id);
+        if (!entryData.balance || entryData.balance.trim() === "") {
+          errors[holding.id] = "Balance is required";
+        }
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Step navigation
+  const goToNextStep = () => {
+    if (currentStep === 1) {
+      // Validate before moving to review
+      if (!validateBalances()) {
+        // Trigger shake animation
+        setShakeStep2(true);
+        setTimeout(() => setShakeStep2(false), 500);
+        toast.error("Please fill in all required balances");
+
+        // Focus first empty balance input
+        if (step2Ref.current) {
+          const firstErrorInput = step2Ref.current.querySelector(
+            ".border-destructive input"
+          ) as HTMLInputElement | null;
+          firstErrorInput?.focus();
+        }
+        return;
+      }
+    }
+    setCurrentStep((prev) => Math.min(prev + 1, 2));
+  };
+
+  const goToPreviousStep = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
   // Save mutation
@@ -552,38 +634,8 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     },
   });
 
-  // Validate all entries and save
+  // Build save body and execute
   const handleSaveAll = () => {
-    const errors: Record<string, string> = {};
-
-    // Validate all holdings have balances
-    for (const holding of data?.holdings || []) {
-      if (holding.type === "super") {
-        const entryData = getSuperHoldingData(holding.id);
-        if (!entryData.balance || entryData.balance.trim() === "") {
-          errors[holding.id] = "Balance is required";
-        }
-      } else if (holding.type === "cash") {
-        const entryData = getCashHoldingData(holding.id);
-        if (!entryData.balance || entryData.balance.trim() === "") {
-          errors[holding.id] = "Balance is required";
-        }
-      } else if (holding.type === "debt") {
-        const entryData = getDebtHoldingData(holding.id);
-        if (!entryData.balance || entryData.balance.trim() === "") {
-          errors[holding.id] = "Balance is required";
-        }
-      }
-    }
-
-    setValidationErrors(errors);
-
-    if (Object.keys(errors).length > 0) {
-      toast.error("Please fill in all required balances");
-      return;
-    }
-
-    // Build the save request body
     const body: CheckInSaveBody = {
       month: selectedMonth,
     };
@@ -633,157 +685,320 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     saveMutation.mutate(body);
   };
 
+  // Step descriptions for the header
+  const stepDescriptions = [
+    "Choose which month to log balances for",
+    "Enter current balances for your holdings",
+    "Review your entries before saving",
+  ];
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto border-border bg-background">
         <DialogHeader>
           <DialogTitle className="text-foreground">Monthly Check-in</DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Update your balances for the selected month
+            {stepDescriptions[currentStep]}
           </DialogDescription>
         </DialogHeader>
 
-        {/* Month Selector */}
-        <div className="flex items-center gap-4 py-4">
-          <label className="text-sm font-medium text-muted-foreground">Month:</label>
-          <Select value={selectedMonth} onValueChange={handleMonthChange}>
-            <SelectTrigger className="w-[200px] bg-card border-border text-foreground">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="bg-card border-border">
-              <SelectItem value={currentMonth} className="text-foreground">
-                {formatMonthYear(currentMonth)} (Current)
-              </SelectItem>
-              <SelectItem value={previousMonth} className="text-foreground">
-                {formatMonthYear(previousMonth)}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Stepper */}
+        <div className="py-2">
+          <CheckinStepper currentStep={currentStep} />
         </div>
 
-        {/* Progress Indicator */}
-        {totalHoldings > 0 && (
-          <div className="text-sm text-muted-foreground mb-4">
-            {updatedCount} of {totalHoldings} holding
-            {totalHoldings !== 1 ? "s" : ""} updated
-          </div>
-        )}
+        {/* Step Content */}
+        <div className="min-h-[200px]">
+          {/* Step 1: Select Month */}
+          {currentStep === 0 && (
+            <div className="space-y-6">
+              <MonthSelector
+                currentMonth={currentMonth}
+                previousMonth={previousMonth}
+                selectedMonth={selectedMonth}
+                onSelectMonth={handleMonthChange}
+              />
 
-        {/* Loading State */}
-        {isLoading && (
-          <div className="py-8 text-center text-muted-foreground">
-            Loading holdings...
-          </div>
-        )}
+              {/* Holdings info */}
+              {isLoading && (
+                <div className="py-4 text-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                  Loading holdings...
+                </div>
+              )}
 
-        {/* Error State */}
-        {error && (
-          <div className="py-8 text-center text-destructive">
-            Failed to load holdings. Please try again.
-          </div>
-        )}
+              {error && (
+                <div className="py-4 text-center text-destructive">
+                  Failed to load holdings. Please try again.
+                </div>
+              )}
 
-        {/* Empty State */}
-        {!isLoading && !error && totalHoldings === 0 && (
-          <div className="py-8 text-center text-muted-foreground">
-            All holdings are up to date for {formatMonthYear(selectedMonth)}!
-          </div>
-        )}
+              {!isLoading && !error && totalHoldings === 0 && (
+                <div className="rounded-lg border border-border bg-card/50 p-4 text-center">
+                  <p className="text-muted-foreground">
+                    All holdings are up to date for {formatMonthYear(selectedMonth)}!
+                  </p>
+                </div>
+              )}
 
-        {/* Holdings List Grouped by Type */}
-        {!isLoading && !error && totalHoldings > 0 && (
-          <div className="space-y-6">
-            {typeOrder.map((type) => {
-              const holdings = groupedHoldings[type];
-              if (!holdings || holdings.length === 0) return null;
-
-              return (
-                <div key={type} className="space-y-3">
-                  <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
-                    {typeLabels[type] || type}
-                  </h3>
-                  {/* Debt section explanatory text */}
-                  {type === "debt" && (
-                    <p className="text-sm text-muted-foreground">
-                      Enter as positive number (e.g., 5000 for $5,000 owed)
-                    </p>
-                  )}
-                  <div className="space-y-2">
-                    {holdings.map((holding) => {
-                      // Render SuperHoldingEntry for super type
-                      if (type === "super") {
-                        return (
-                          <SuperHoldingEntry
-                            key={holding.id}
-                            holding={holding}
-                            data={getSuperHoldingData(holding.id)}
-                            onDataChange={handleSuperHoldingDataChange}
-                            error={validationErrors[holding.id]}
-                          />
-                        );
-                      }
-
-                      // Render CashHoldingEntry for cash type
-                      if (type === "cash") {
-                        return (
-                          <CashHoldingEntry
-                            key={holding.id}
-                            holding={holding}
-                            data={getCashHoldingData(holding.id)}
-                            onDataChange={handleCashHoldingDataChange}
-                            error={validationErrors[holding.id]}
-                          />
-                        );
-                      }
-
-                      // Render DebtHoldingEntry for debt type
-                      if (type === "debt") {
-                        return (
-                          <DebtHoldingEntry
-                            key={holding.id}
-                            holding={holding}
-                            data={getDebtHoldingData(holding.id)}
-                            onDataChange={handleDebtHoldingDataChange}
-                            error={validationErrors[holding.id]}
-                          />
-                        );
-                      }
-
-                      return null;
+              {!isLoading && !error && totalHoldings > 0 && (
+                <div className="rounded-lg border border-border bg-card/50 p-4">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="text-foreground font-medium">{totalHoldings} holding{totalHoldings !== 1 ? "s" : ""}</span>
+                    {" "}need updating for {formatMonthYear(selectedMonth)}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {typeOrder.map((type) => {
+                      const count = groupedHoldings[type]?.length ?? 0;
+                      if (count === 0) return null;
+                      const Icon = typeIcons[type];
+                      return (
+                        <span
+                          key={type}
+                          className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-muted text-muted-foreground"
+                        >
+                          {Icon && <Icon className="h-3 w-3" />}
+                          {count} {typeLabels[type] || type}
+                        </span>
+                      );
                     })}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Footer with Skip and Save All Buttons */}
-        <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-border">
-          <Button
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            className="border-border text-foreground hover:bg-muted"
-            disabled={saveMutation.isPending}
-          >
-            Skip
-          </Button>
-          {totalHoldings > 0 && (
-            <Button
-              onClick={handleSaveAll}
-              disabled={saveMutation.isPending || updatedCount === 0}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-            >
-              {saveMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save All"
               )}
-            </Button>
+            </div>
           )}
+
+          {/* Step 2: Update Holdings */}
+          {currentStep === 1 && (
+            <div
+              ref={step2Ref}
+              className={`space-y-6 ${shakeStep2 ? "animate-shake" : ""}`}
+            >
+              {/* Progress Indicator */}
+              {totalHoldings > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {updatedCount} of {totalHoldings} holding
+                  {totalHoldings !== 1 ? "s" : ""} updated
+                </div>
+              )}
+
+              {/* Loading State */}
+              {isLoading && (
+                <div className="py-8 text-center text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                  Loading holdings...
+                </div>
+              )}
+
+              {/* Error State */}
+              {error && (
+                <div className="py-8 text-center text-destructive">
+                  Failed to load holdings. Please try again.
+                </div>
+              )}
+
+              {/* Holdings List Grouped by Type */}
+              {!isLoading && !error && totalHoldings > 0 && (
+                <div className="space-y-6">
+                  {typeOrder.map((type) => {
+                    const holdings = groupedHoldings[type];
+                    if (!holdings || holdings.length === 0) return null;
+
+                    return (
+                      <div key={type} className="space-y-3">
+                        <h3 className="text-lg font-semibold text-foreground border-b border-border pb-2">
+                          {typeLabels[type] || type}
+                        </h3>
+                        {/* Debt section explanatory text */}
+                        {type === "debt" && (
+                          <p className="text-sm text-muted-foreground">
+                            Enter as positive number (e.g., 5000 for $5,000 owed)
+                          </p>
+                        )}
+                        <div className="space-y-2">
+                          {holdings.map((holding) => {
+                            if (type === "super") {
+                              return (
+                                <SuperHoldingEntry
+                                  key={holding.id}
+                                  holding={holding}
+                                  data={getSuperHoldingData(holding.id)}
+                                  onDataChange={handleSuperHoldingDataChange}
+                                  error={validationErrors[holding.id]}
+                                />
+                              );
+                            }
+
+                            if (type === "cash") {
+                              return (
+                                <CashHoldingEntry
+                                  key={holding.id}
+                                  holding={holding}
+                                  data={getCashHoldingData(holding.id)}
+                                  onDataChange={handleCashHoldingDataChange}
+                                  error={validationErrors[holding.id]}
+                                />
+                              );
+                            }
+
+                            if (type === "debt") {
+                              return (
+                                <DebtHoldingEntry
+                                  key={holding.id}
+                                  holding={holding}
+                                  data={getDebtHoldingData(holding.id)}
+                                  onDataChange={handleDebtHoldingDataChange}
+                                  error={validationErrors[holding.id]}
+                                />
+                              );
+                            }
+
+                            return null;
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 3: Review & Save */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <div className="rounded-lg border border-border bg-card/50 p-4">
+                <p className="text-sm text-muted-foreground">
+                  Saving snapshots for <span className="text-foreground font-medium">{formatMonthYear(selectedMonth)}</span>
+                </p>
+              </div>
+
+              {/* Review entries grouped by type */}
+              {typeOrder.map((type) => {
+                const holdings = groupedHoldings[type];
+                if (!holdings || holdings.length === 0) return null;
+
+                const Icon = typeIcons[type];
+
+                return (
+                  <div key={type} className="space-y-2">
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+                      {typeLabels[type] || type}
+                    </h3>
+                    <div className="space-y-1.5">
+                      {holdings.map((holding) => {
+                        let balance = "";
+                        let employerContrib = "";
+                        let employeeContrib = "";
+
+                        if (type === "super") {
+                          const d = getSuperHoldingData(holding.id);
+                          balance = d.balance;
+                          employerContrib = d.employerContrib;
+                          employeeContrib = d.employeeContrib;
+                        } else if (type === "cash") {
+                          balance = getCashHoldingData(holding.id).balance;
+                        } else if (type === "debt") {
+                          balance = getDebtHoldingData(holding.id).balance;
+                        }
+
+                        return (
+                          <div
+                            key={holding.id}
+                            className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+                          >
+                            <div>
+                              <span className="text-sm font-medium text-foreground">
+                                {holding.name}
+                              </span>
+                              {/* Show contributions if entered */}
+                              {type === "super" && (employerContrib || employeeContrib) && (
+                                <div className="mt-1 flex gap-3 text-xs text-muted-foreground">
+                                  {employerContrib && (
+                                    <span>Employer: {formatCurrency(employerContrib, holding.currency)}</span>
+                                  )}
+                                  {employeeContrib && (
+                                    <span>Employee: {formatCurrency(employeeContrib, holding.currency)}</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <span className="text-sm font-medium text-foreground">
+                              {formatCurrency(balance, holding.currency)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer Navigation */}
+        <div className="flex justify-between gap-3 pt-4 mt-4 border-t border-border">
+          <div>
+            {currentStep > 0 && (
+              <Button
+                variant="outline"
+                onClick={goToPreviousStep}
+                className="border-border text-foreground hover:bg-muted"
+                disabled={saveMutation.isPending}
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-3">
+            {currentStep === 0 && (
+              <Button
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+                className="border-border text-foreground hover:bg-muted"
+              >
+                Cancel
+              </Button>
+            )}
+            {currentStep === 0 && (
+              <Button
+                onClick={goToNextStep}
+                disabled={isLoading || !!error || totalHoldings === 0}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                Continue
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+            {currentStep === 1 && (
+              <Button
+                onClick={goToNextStep}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                Continue
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
+            {currentStep === 2 && (
+              <Button
+                onClick={handleSaveAll}
+                disabled={saveMutation.isPending}
+                className="bg-accent hover:bg-accent/90 text-accent-foreground"
+              >
+                {saveMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save All"
+                )}
+              </Button>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
