@@ -226,3 +226,15 @@ Started: 2026-02-06
   - Row hover: `hover:bg-accent/5` with `rounded-lg px-2 py-1.5 -mx-2` for padded hover area without affecting layout
   - NumberTicker used for value amounts — animates on currency change (e.g., AUD→USD recalculation)
 ---
+
+## 2026-02-06 - US-008
+- Polished currency exposure card with design tokens
+- Files changed: components/dashboard/currency-exposure.tsx
+- **Learnings for future iterations:**
+  - Currency exposure card was already mostly using design tokens from US-007 work
+  - Changed currency display name from `text-muted-foreground` to `text-foreground font-medium` per AC
+  - Replaced `bg-gray-500` fallback in getCurrencyBarColor with `bg-muted` design token
+  - Replaced `bg-gray-500/20` fallback in getCurrencyBadgeColor with `bg-muted/20` design token
+  - Skeleton loading already used `bg-muted animate-pulse` pattern — no changes needed
+  - All dashboard cards consistently use `bg-card` (not `bg-card/50`) — keep this pattern
+---
