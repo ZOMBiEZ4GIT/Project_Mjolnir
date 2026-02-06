@@ -19,8 +19,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 1,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "All presets added to lib/animations.ts. reducedMotionOverride export provided for runtime reduced-motion handling."
     },
     {
       "id": "US-002",
@@ -38,8 +38,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Uses DialogPrimitive.Content asChild with motion.div to avoid onDrag type conflict between Radix and Framer Motion. style={{ x: '-50%', y: '-50%' }} for Framer Motion centering instead of CSS translate."
     },
     {
       "id": "US-003",
@@ -55,8 +55,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Same asChild + motion.div pattern as animated-dialog.tsx. Exports all AlertDialog parts with Animated prefix plus Action and Cancel buttons. No close X button (alert dialogs require explicit action)."
     },
     {
       "id": "US-004",
@@ -76,8 +76,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "react-hook-form, @hookform/resolvers, zod already installed. Created FormField (input), FormTextareaField, FormSelectField — all use Controller with focusGlow animation, border-destructive on error, text-sm text-destructive error messages. Select field uses Radix Select (no motion wrapper needed). Import from @/components/ui/form-field, form-textarea-field, form-select-field."
     },
     {
       "id": "US-005",
@@ -92,8 +92,8 @@
         "Typecheck passes (npm run build)"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created hooks/use-form-shake.ts — returns { formRef, triggerShake }. Uses animate-shake CSS class (Tailwind keyframes). Focuses first error field via aria-invalid/border-destructive/data-invalid selectors. Respects prefers-reduced-motion (skips shake, still focuses). Call triggerShake() in handleSubmit's onInvalid callback."
     },
     {
       "id": "US-006",
@@ -108,8 +108,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Created lib/toast-helpers.ts with showSuccess (3s auto-dismiss), showError (persists, optional onRetry action button), showInfo (4s auto-dismiss). Updated sonner.tsx with 4s default duration. Migrated add-holding-dialog, delete-snapshot-dialog, and check-in-modal to use new helpers. check-in-modal uses aliased imports (toastSuccess/toastError) to avoid shadowing local showSuccess state."
     },
     {
       "id": "US-007",
@@ -127,8 +127,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced Dialog with AnimatedDialog, manual useState form state with useForm+FormProvider, manual validation with zod schema using superRefine for conditional validation (symbol required for tradeable, exchange required for stock/etf, symbol format for ASX/NZX). Uses FormField and FormSelectField components, useFormShake for error shake on invalid submit. Server errors mapped to form fields via form.setError(). Resolver cast required: zodResolver(schema) as unknown as Resolver<FormValues>."
     },
     {
       "id": "US-008",
@@ -145,8 +145,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced Dialog with AnimatedDialog, manual useState form state with useForm+FormProvider, manual validation with zod schema using superRefine for conditional validation (same schema pattern as AddHoldingDialog). Uses FormField and FormSelectField components, useFormShake for error shake on invalid submit. Server errors mapped to form fields via form.setError(). form.reset() in useEffect pre-populates from holding data on open. 'No changes to save' info toast preserved via showInfo helper. Dormant checkbox uses form.watch/form.setValue."
     },
     {
       "id": "US-009",
@@ -165,8 +165,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced Dialog with AnimatedDialog (animated-dialog.tsx). Replaced manual shake (useState+setTimeout) with useFormShake hook — triggerShake() handles CSS animate-shake class and auto-focuses first error field. Removed shakeStep2 state, step2Ref replaced with formRef from useFormShake (cast to RefObject<HTMLDivElement | null>). react-hook-form + zod schema were already in place from prior iteration. Toast helpers already migrated (aliased toastSuccess/toastError). Multi-step wizard and dynamic field array unchanged."
     },
     {
       "id": "US-010",
@@ -183,8 +183,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced Dialog with AnimatedDialog, manual useState form state with useForm+FormProvider, manual validation with zod schema using superRefine for conditional balance validation (debt allows negative). Uses FormField and FormTextareaField components, useFormShake for error shake on invalid submit. Contributions section preserved with collapsible toggle — contribution data pre-populated via useEffect on query data. Toast helpers (showSuccess/showError) replace direct toast calls. Zod v4 uses { error: '...' } instead of { required_error, invalid_type_error }."
     },
     {
       "id": "US-011",
@@ -201,8 +201,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced AlertDialog imports with AnimatedAlertDialog equivalents in both delete-snapshot-dialog.tsx and delete-transaction-dialog.tsx. Migrated delete-transaction-dialog.tsx from raw toast.success/toast.error to showSuccess/showError helpers. delete-snapshot-dialog.tsx already had toast helpers from US-006. All existing detail information (holding name, amounts, warnings) preserved unchanged."
     },
     {
       "id": "US-012",
@@ -220,8 +220,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 12,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Installed shadcn/ui Accordion (Radix AccordionPrimitive). Created SettingsSection wrapper component with icon+title+description trigger and animated content. Refactored settings page to use Accordion type='multiple' with defaultValue=['currency']. Four sections: Currency Preferences, Email Reminders, Keyboard Shortcuts, About (new). Added accordion-down/accordion-up keyframes to tailwind.config.ts. Updated SettingsSkeleton to match accordion layout. Added global prefers-reduced-motion rule to globals.css for instant show/hide."
     },
     {
       "id": "US-013",
@@ -238,8 +238,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 13,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Reusable ConfirmDialog component wraps AnimatedAlertDialog. Props: open, onOpenChange, title, description, confirmLabel, cancelLabel, variant (default|destructive), onConfirm, loading. Destructive variant styles confirm button with bg-destructive. Loading state shows Loader2 spinner and disables both buttons. Keyboard handled natively by Radix AlertDialog (Enter confirms, Escape cancels)."
     }
   ]
 }

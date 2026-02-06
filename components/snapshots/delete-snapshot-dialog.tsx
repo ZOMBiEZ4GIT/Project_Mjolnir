@@ -1,18 +1,18 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { showSuccess, showError } from "@/lib/toast-helpers";
 import { Loader2 } from "lucide-react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  AnimatedAlertDialog,
+  AnimatedAlertDialogAction,
+  AnimatedAlertDialogCancel,
+  AnimatedAlertDialogContent,
+  AnimatedAlertDialogDescription,
+  AnimatedAlertDialogFooter,
+  AnimatedAlertDialogHeader,
+  AnimatedAlertDialogTitle,
+} from "@/components/ui/animated-alert-dialog";
 
 interface SnapshotToDelete {
   id: string;
@@ -76,11 +76,11 @@ export function DeleteSnapshotDialog({
       queryClient.invalidateQueries({ queryKey: ["check-in-holdings"] });
       queryClient.invalidateQueries({ queryKey: ["holdings"] });
 
-      toast.success("Snapshot deleted successfully");
+      showSuccess("Snapshot deleted successfully");
       onOpenChange(false);
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete snapshot");
+      showError(error.message || "Failed to delete snapshot");
     },
   });
 
@@ -95,14 +95,14 @@ export function DeleteSnapshotDialog({
   const isSuper = snapshot.holdingType === "super";
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="bg-background border-border">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="text-foreground">Delete Snapshot</AlertDialogTitle>
-          <AlertDialogDescription className="text-muted-foreground">
+    <AnimatedAlertDialog open={open} onOpenChange={onOpenChange}>
+      <AnimatedAlertDialogContent className="bg-background border-border">
+        <AnimatedAlertDialogHeader>
+          <AnimatedAlertDialogTitle className="text-foreground">Delete Snapshot</AnimatedAlertDialogTitle>
+          <AnimatedAlertDialogDescription className="text-muted-foreground">
             Are you sure you want to delete this snapshot? This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+          </AnimatedAlertDialogDescription>
+        </AnimatedAlertDialogHeader>
 
         <div className="my-4 p-4 bg-card rounded-lg border border-border space-y-2">
           <div className="flex justify-between">
@@ -127,14 +127,14 @@ export function DeleteSnapshotDialog({
           </p>
         )}
 
-        <AlertDialogFooter>
-          <AlertDialogCancel
+        <AnimatedAlertDialogFooter>
+          <AnimatedAlertDialogCancel
             className="bg-card border-border text-foreground hover:bg-muted"
             disabled={mutation.isPending}
           >
             Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction
+          </AnimatedAlertDialogCancel>
+          <AnimatedAlertDialogAction
             onClick={handleDelete}
             disabled={mutation.isPending}
             className="bg-destructive hover:bg-destructive/90 text-foreground"
@@ -147,9 +147,9 @@ export function DeleteSnapshotDialog({
             ) : (
               "Delete"
             )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </AnimatedAlertDialogAction>
+        </AnimatedAlertDialogFooter>
+      </AnimatedAlertDialogContent>
+    </AnimatedAlertDialog>
   );
 }

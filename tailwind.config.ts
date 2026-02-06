@@ -125,9 +125,19 @@ export default {
           "10%, 30%, 50%, 70%, 90%": { transform: "translateX(-4px)" },
           "20%, 40%, 60%, 80%": { transform: "translateX(4px)" },
         },
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
       },
       animation: {
         shake: "shake 0.5s ease-in-out",
+        "accordion-down": "accordion-down 0.2s ease-out forwards",
+        "accordion-up": "accordion-up 0.15s ease-in forwards",
       },
     },
   },

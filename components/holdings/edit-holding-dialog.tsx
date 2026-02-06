@@ -1,27 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useForm, FormProvider, type Resolver } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { showSuccess, showError, showInfo } from "@/lib/toast-helpers";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AnimatedDialog,
+  AnimatedDialogContent,
+  AnimatedDialogDescription,
+  AnimatedDialogFooter,
+  AnimatedDialogHeader,
+  AnimatedDialogTitle,
+} from "@/components/ui/animated-dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FormField } from "@/components/ui/form-field";
+import { FormSelectField } from "@/components/ui/form-select-field";
+import { useFormShake } from "@/hooks/use-form-shake";
 import type { Holding } from "@/lib/db/schema";
 
 const HOLDING_TYPE_LABELS: Record<Holding["type"], string> = {
@@ -41,23 +39,63 @@ const TRADEABLE_TYPES = ["stock", "etf", "crypto"] as const;
 // Types that require exchange
 const EXCHANGE_REQUIRED_TYPES = ["stock", "etf"] as const;
 
-type Currency = (typeof CURRENCIES)[number];
-type Exchange = (typeof EXCHANGES)[number];
+const CURRENCY_OPTIONS = CURRENCIES.map((c) => ({ value: c, label: c }));
+const EXCHANGE_OPTIONS = EXCHANGES.map((e) => ({ value: e, label: e }));
 
-interface FormData {
-  name: string;
-  symbol: string;
-  currency: Currency | "";
-  exchange: Exchange | "";
-  isDormant: boolean;
-}
+// Zod schema for edit form
+const editHoldingSchema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    symbol: z.string().optional().default(""),
+    currency: z.string().min(1, "Currency is required"),
+    exchange: z.string().optional().default(""),
+    isDormant: z.boolean().default(false),
+    // Hidden field to drive conditional validation
+    _type: z.enum(["stock", "etf", "crypto", "super", "cash", "debt"]),
+  })
+  .superRefine((data, ctx) => {
+    const isTradeable = (TRADEABLE_TYPES as readonly string[]).includes(data._type);
+    const requiresExchange = (EXCHANGE_REQUIRED_TYPES as readonly string[]).includes(data._type);
 
-interface FormErrors {
-  name?: string;
-  symbol?: string;
-  currency?: string;
-  exchange?: string;
-}
+    // Symbol required for tradeable types
+    if (isTradeable && !data.symbol.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Symbol is required",
+        path: ["symbol"],
+      });
+    }
+
+    // Validate symbol format for ASX/NZX
+    if (isTradeable && data.symbol.trim()) {
+      const upperSymbol = data.symbol.trim().toUpperCase();
+      if (data.exchange === "ASX" && !upperSymbol.endsWith(".AX")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "ASX symbols must end with .AX (e.g., VAS.AX)",
+          path: ["symbol"],
+        });
+      }
+      if (data.exchange === "NZX" && !upperSymbol.endsWith(".NZ")) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "NZX symbols must end with .NZ (e.g., SPK.NZ)",
+          path: ["symbol"],
+        });
+      }
+    }
+
+    // Exchange required for stock/etf
+    if (requiresExchange && !data.exchange) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Exchange is required",
+        path: ["exchange"],
+      });
+    }
+  });
+
+type EditFormValues = z.infer<typeof editHoldingSchema>;
 
 interface EditHoldingDialogProps {
   holding: Holding;
@@ -89,146 +127,90 @@ async function updateHolding(
   return response.json();
 }
 
-function validateSymbolForExchange(
-  symbol: string,
-  exchange: Exchange | ""
-): string | undefined {
-  if (!symbol) return undefined;
-
-  const upperSymbol = symbol.toUpperCase();
-
-  if (exchange === "ASX" && !upperSymbol.endsWith(".AX")) {
-    return "ASX symbols must end with .AX (e.g., VAS.AX)";
-  }
-
-  if (exchange === "NZX" && !upperSymbol.endsWith(".NZ")) {
-    return "NZX symbols must end with .NZ (e.g., SPK.NZ)";
-  }
-
-  return undefined;
-}
-
 export function EditHoldingDialog({
   holding,
   open,
   onOpenChange,
 }: EditHoldingDialogProps) {
-  const [formData, setFormData] = useState<FormData>({
-    name: "",
-    symbol: "",
-    currency: "",
-    exchange: "",
-    isDormant: false,
-  });
-  const [errors, setErrors] = useState<FormErrors>({});
-
   const queryClient = useQueryClient();
+  const { formRef, triggerShake } = useFormShake();
 
-  // Initialize form data when holding changes or dialog opens
+  const form = useForm<EditFormValues>({
+    resolver: zodResolver(editHoldingSchema) as unknown as Resolver<EditFormValues>,
+    defaultValues: {
+      name: "",
+      symbol: "",
+      currency: "",
+      exchange: "",
+      isDormant: false,
+      _type: "stock",
+    },
+  });
+
+  // Reset form data when holding changes or dialog opens
   useEffect(() => {
     if (open && holding) {
-      setFormData({
+      form.reset({
         name: holding.name,
         symbol: holding.symbol || "",
-        currency: (holding.currency as Currency) || "",
-        exchange: (holding.exchange as Exchange) || "",
+        currency: holding.currency || "",
+        exchange: holding.exchange || "",
         isDormant: holding.isDormant ?? false,
+        _type: holding.type,
       });
-      setErrors({});
     }
-  }, [open, holding]);
+  }, [open, holding, form]);
+
+  const isTradeable = (TRADEABLE_TYPES as readonly string[]).includes(holding.type);
+  const requiresExchange = (EXCHANGE_REQUIRED_TYPES as readonly string[]).includes(holding.type);
 
   const mutation = useMutation({
     mutationFn: (data: Parameters<typeof updateHolding>[1]) =>
       updateHolding(holding.id, data),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["holdings"] });
-      // Show specific toast message for dormant status change
       if (variables.isDormant !== undefined) {
         const statusText = variables.isDormant ? "marked as dormant" : "marked as active";
-        toast.success(`Holding ${statusText}`);
+        showSuccess(`Holding ${statusText}`);
       } else {
-        toast.success("Holding updated successfully");
+        showSuccess("Holding updated successfully");
       }
       onOpenChange(false);
     },
-    onError: (error: { errors?: FormErrors; error?: string }) => {
+    onError: (error: { errors?: Record<string, string>; error?: string }) => {
       if (error.errors) {
-        setErrors(error.errors);
+        Object.entries(error.errors).forEach(([field, message]) => {
+          form.setError(field as keyof EditFormValues, { message });
+        });
       } else {
-        toast.error(error.error || "Failed to update holding");
+        showError(error.error || "Failed to update holding");
       }
     },
   });
 
-  const isTradeable = TRADEABLE_TYPES.includes(
-    holding.type as (typeof TRADEABLE_TYPES)[number]
-  );
-  const requiresExchange = EXCHANGE_REQUIRED_TYPES.includes(
-    holding.type as (typeof EXCHANGE_REQUIRED_TYPES)[number]
-  );
-
-  const handleSubmit = () => {
-    const newErrors: FormErrors = {};
-
-    // Validate name
-    if (!formData.name.trim()) {
-      newErrors.name = "Name is required";
-    }
-
-    // Validate currency
-    if (!formData.currency) {
-      newErrors.currency = "Currency is required";
-    }
-
-    // Validate symbol for tradeable types
-    if (isTradeable) {
-      if (!formData.symbol.trim()) {
-        newErrors.symbol = "Symbol is required";
-      } else {
-        // Validate symbol format for ASX/NZX
-        const symbolError = validateSymbolForExchange(
-          formData.symbol,
-          formData.exchange
-        );
-        if (symbolError) {
-          newErrors.symbol = symbolError;
-        }
-      }
-    }
-
-    // Validate exchange for stock/etf
-    if (requiresExchange && !formData.exchange) {
-      newErrors.exchange = "Exchange is required";
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
+  const onValid = (data: EditFormValues) => {
     // Build update payload - only include changed fields
     const updateData: Parameters<typeof updateHolding>[1] = {};
 
-    if (formData.name.trim() !== holding.name) {
-      updateData.name = formData.name.trim();
+    if (data.name.trim() !== holding.name) {
+      updateData.name = data.name.trim();
     }
-    if (formData.currency !== holding.currency) {
-      updateData.currency = formData.currency;
+    if (data.currency !== holding.currency) {
+      updateData.currency = data.currency;
     }
-    if (isTradeable && formData.symbol.trim().toUpperCase() !== holding.symbol) {
-      updateData.symbol = formData.symbol.trim().toUpperCase();
+    if (isTradeable && data.symbol.trim().toUpperCase() !== holding.symbol) {
+      updateData.symbol = data.symbol.trim().toUpperCase();
     }
-    if (requiresExchange && formData.exchange !== holding.exchange) {
-      updateData.exchange = formData.exchange;
+    if (requiresExchange && data.exchange !== holding.exchange) {
+      updateData.exchange = data.exchange;
     }
-    if (formData.isDormant !== (holding.isDormant ?? false)) {
-      updateData.isDormant = formData.isDormant;
+    if (data.isDormant !== (holding.isDormant ?? false)) {
+      updateData.isDormant = data.isDormant;
     }
 
     // Only submit if there are changes
     if (Object.keys(updateData).length === 0) {
-      toast.info("No changes to save");
+      showInfo("No changes to save");
       onOpenChange(false);
       return;
     }
@@ -236,162 +218,98 @@ export function EditHoldingDialog({
     mutation.mutate(updateData);
   };
 
+  const onSubmit = form.handleSubmit(onValid, () => {
+    triggerShake();
+  });
+
   const handleClose = () => {
     onOpenChange(false);
-    setErrors({});
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Edit Holding</DialogTitle>
-          <DialogDescription>
-            Update the details for this {holding.type} holding.
-          </DialogDescription>
-        </DialogHeader>
+    <AnimatedDialog open={open} onOpenChange={handleClose}>
+      <AnimatedDialogContent className="sm:max-w-md">
+        <FormProvider {...form}>
+          <form onSubmit={onSubmit}>
+            <AnimatedDialogHeader>
+              <AnimatedDialogTitle>Edit Holding</AnimatedDialogTitle>
+              <AnimatedDialogDescription>
+                Update the details for this {holding.type} holding.
+              </AnimatedDialogDescription>
+            </AnimatedDialogHeader>
 
-        <div className="grid gap-4 py-4">
-          {/* Type field - read-only */}
-          <div className="grid gap-2">
-            <Label>Type</Label>
-            <div className="flex h-10 w-full rounded-md border border-input bg-muted px-3 py-2 text-sm text-muted-foreground">
-              {HOLDING_TYPE_LABELS[holding.type]}
-            </div>
-          </div>
+            <div ref={formRef as React.RefObject<HTMLDivElement | null>} className="grid gap-4 py-4">
+              {/* Type field - read-only */}
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <div className="flex h-9 w-full rounded-md border border-input bg-muted px-3 py-1 text-sm text-muted-foreground items-center">
+                  {HOLDING_TYPE_LABELS[holding.type]}
+                </div>
+              </div>
 
-          {/* Name field */}
-          <div className="grid gap-2">
-            <Label htmlFor="edit-name">Name</Label>
-            <Input
-              id="edit-name"
-              value={formData.name}
-              onChange={(e) => {
-                setFormData({ ...formData, name: e.target.value });
-                if (errors.name) setErrors({ ...errors, name: undefined });
-              }}
-              className={errors.name ? "border-destructive focus-visible:ring-destructive" : ""}
-            />
-            {errors.name && (
-              <p className="text-sm text-destructive">{errors.name}</p>
-            )}
-          </div>
-
-          {/* Symbol field - only for tradeable types */}
-          {isTradeable && (
-            <div className="grid gap-2">
-              <Label htmlFor="edit-symbol">Symbol</Label>
-              <Input
-                id="edit-symbol"
-                value={formData.symbol}
-                onChange={(e) => {
-                  setFormData({ ...formData, symbol: e.target.value });
-                  if (errors.symbol) setErrors({ ...errors, symbol: undefined });
-                }}
-                className={errors.symbol ? "border-destructive focus-visible:ring-destructive" : ""}
+              {/* Name field */}
+              <FormField<EditFormValues>
+                name="name"
+                label="Name"
+                placeholder="e.g., Vanguard Australian Shares"
               />
-              {errors.symbol && (
-                <p className="text-sm text-destructive">{errors.symbol}</p>
+
+              {/* Symbol field - only for tradeable types */}
+              {isTradeable && (
+                <FormField<EditFormValues>
+                  name="symbol"
+                  label="Symbol"
+                  placeholder="e.g., VAS.AX"
+                />
               )}
-            </div>
-          )}
 
-          {/* Currency field */}
-          <div className="grid gap-2">
-            <Label htmlFor="edit-currency">Currency</Label>
-            <Select
-              value={formData.currency}
-              onValueChange={(value: Currency) => {
-                setFormData({ ...formData, currency: value });
-                if (errors.currency)
-                  setErrors({ ...errors, currency: undefined });
-              }}
-            >
-              <SelectTrigger
-                id="edit-currency"
-                className={errors.currency ? "border-destructive focus:ring-destructive" : ""}
-              >
-                <SelectValue placeholder="Select currency" />
-              </SelectTrigger>
-              <SelectContent>
-                {CURRENCIES.map((currency) => (
-                  <SelectItem key={currency} value={currency}>
-                    {currency}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.currency && (
-              <p className="text-sm text-destructive">{errors.currency}</p>
-            )}
-          </div>
+              {/* Currency field */}
+              <FormSelectField<EditFormValues>
+                name="currency"
+                label="Currency"
+                placeholder="Select currency"
+                options={CURRENCY_OPTIONS}
+              />
 
-          {/* Exchange field - only for stock/etf */}
-          {requiresExchange && (
-            <div className="grid gap-2">
-              <Label htmlFor="edit-exchange">Exchange</Label>
-              <Select
-                value={formData.exchange}
-                onValueChange={(value: Exchange) => {
-                  setFormData({ ...formData, exchange: value });
-                  if (errors.exchange)
-                    setErrors({ ...errors, exchange: undefined });
-                  // Clear symbol error when exchange changes
-                  if (errors.symbol)
-                    setErrors({
-                      ...errors,
-                      exchange: undefined,
-                      symbol: undefined,
-                    });
-                }}
-              >
-                <SelectTrigger
-                  id="edit-exchange"
-                  className={errors.exchange ? "border-destructive focus:ring-destructive" : ""}
+              {/* Exchange field - only for stock/etf */}
+              {requiresExchange && (
+                <FormSelectField<EditFormValues>
+                  name="exchange"
+                  label="Exchange"
+                  placeholder="Select exchange"
+                  options={EXCHANGE_OPTIONS}
+                />
+              )}
+
+              {/* Mark as Dormant checkbox */}
+              <div className="flex items-center space-x-2 pt-2">
+                <Checkbox
+                  id="edit-is-dormant"
+                  checked={form.watch("isDormant")}
+                  onCheckedChange={(checked) => {
+                    form.setValue("isDormant", checked === true);
+                  }}
+                />
+                <Label
+                  htmlFor="edit-is-dormant"
+                  className="text-sm font-normal cursor-pointer"
                 >
-                  <SelectValue placeholder="Select exchange" />
-                </SelectTrigger>
-                <SelectContent>
-                  {EXCHANGES.map((exchange) => (
-                    <SelectItem key={exchange} value={exchange}>
-                      {exchange}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.exchange && (
-                <p className="text-sm text-destructive">{errors.exchange}</p>
-              )}
+                  Mark as Dormant
+                </Label>
+              </div>
             </div>
-          )}
 
-          {/* Mark as Dormant checkbox */}
-          <div className="flex items-center space-x-2 pt-2">
-            <Checkbox
-              id="edit-is-dormant"
-              checked={formData.isDormant}
-              onCheckedChange={(checked) => {
-                setFormData({ ...formData, isDormant: checked === true });
-              }}
-            />
-            <Label
-              htmlFor="edit-is-dormant"
-              className="text-sm font-normal cursor-pointer"
-            >
-              Mark as Dormant
-            </Label>
-          </div>
-        </div>
-
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={handleClose}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={mutation.isPending}>
-            {mutation.isPending ? "Saving..." : "Save"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <AnimatedDialogFooter className="gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending ? "Saving..." : "Save"}
+              </Button>
+            </AnimatedDialogFooter>
+          </form>
+        </FormProvider>
+      </AnimatedDialogContent>
+    </AnimatedDialog>
   );
 }

@@ -72,6 +72,8 @@
 - TypeSelector (components/transactions/type-selector.tsx) uses layoutId="active-transaction-type" for animated tab indicator
 - react-hook-form + zod installed; shadcn/ui form.tsx component available in components/ui/form.tsx
 - z.coerce.number() with useForm requires casting resolver: `zodResolver(schema) as unknown as Resolver<FormValues>`
+- Zod v4 API difference: use `{ error: "..." }` for custom error messages on z.coerce.number(), not `{ required_error, invalid_type_error }` (Zod v3 API)
+- Zod v4 superRefine: use `code: "custom"` string literal instead of `z.ZodIssueCode.custom` enum
 - For numeric inputs with z.coerce: pass `field.value ?? ""` to prevent "undefined" showing
 - TransactionSummary cards use stagger animation with motion.div and variants pattern
 - Transaction table uses monthly grouping with sticky headers (sticky top-0 z-20 bg-background)
@@ -128,6 +130,20 @@
 - Effective exchange rate: compute from amount/nativeAmount rather than passing rates as prop
 - NativeCurrencyToggle accepts `showDescription` prop for optional descriptive text; Switch override: `data-[state=checked]:bg-accent data-[state=unchecked]:bg-muted`
 - CurrencyDisplay flash also triggers on showNative change for components with different native currency
+- Radix + Framer Motion: use `asChild` + `motion.div` pattern (not `motion.create(Primitive)`) to avoid `onDrag` type conflict
+- AnimatedDialog/AnimatedAlertDialog: drop-in replacements for Dialog/AlertDialog — import from `@/components/ui/animated-dialog` or `animated-alert-dialog`
+- Framer Motion centering: use `style={{ x: "-50%", y: "-50%" }}` not CSS translate classes (FM overwrites transform)
+- FormField/FormTextareaField/FormSelectField: convenience wrappers in components/ui/ — use Controller + useFormContext, require FormProvider parent
+- FormField uses motion.input with focusGlow for purple glow on focus; FormSelectField uses Radix Select (no motion wrapper)
+- useFormShake hook (hooks/use-form-shake.ts): returns { formRef, triggerShake } — attach ref to form container, call triggerShake() in handleSubmit onInvalid callback; cast formRef to `React.RefObject<HTMLDivElement | null>` when attaching to a `<div>`
+- animate-shake CSS class defined in tailwind.config.ts — use for CSS-based shake animations (500ms ease-in-out)
+- Toast helpers: import { showSuccess, showError, showInfo } from "@/lib/toast-helpers" — success auto-dismiss 3s, error persists until dismissed, info 4s
+- showError accepts optional { onRetry } to render a Retry action button; use for retryable operations
+- check-in-modal.tsx: use aliased imports (toastSuccess/toastError) because local `showSuccess` state variable shadows the import
+- shadcn/ui Accordion requires `accordion-down`/`accordion-up` keyframes in tailwind.config.ts — add manually after `shadcn add accordion`
+- SettingsSection (components/settings/settings-section.tsx) wraps AccordionItem with icon+title+description trigger — use for settings-style pages
+- Global `prefers-reduced-motion: reduce` in globals.css disables all CSS animations/transitions (0.01ms duration)
+- ConfirmDialog (components/ui/confirm-dialog.tsx) is a ready-to-use confirmation dialog — wraps AnimatedAlertDialog with simple props API (title, description, variant, onConfirm, loading)
 
 ---
 
@@ -135,5 +151,153 @@
 
 Started: 2026-02-06
 
+---
+
+## 2026-02-06 - US-001
+- What was implemented: Extended lib/animations.ts with modal, sheet, error shake, focus glow, accordion, and checkmark animation presets
+- Files changed: lib/animations.ts
+- **Learnings for future iterations:**
+  - modalAnimation combines modalScale + modalExit into a single spread-friendly preset — use this in animated dialog wrappers
+  - accordionAnimation uses Variants type with "collapsed"/"expanded" keys — use with `variants` prop and `animate` prop toggle
+  - checkmark preset uses spring physics for pathLength and scale — spread onto motion.path for SVG check animations
+  - reducedMotionOverride provides `{ transition: { duration: 0 } }` — spread on top of any preset when `useReducedMotion()` returns true
+  - errorShake uses keyframe array for x: [0, -8, 8, -4, 4, 0] — trigger by conditionally applying to `animate` prop
+---
+
+## 2026-02-06 - US-002
+- What was implemented: Created components/ui/animated-dialog.tsx — animated wrapper for shadcn Dialog with Framer Motion scale+fade transitions
+- Files changed: components/ui/animated-dialog.tsx
+- **Learnings for future iterations:**
+  - `motion.create(RadixPrimitive)` causes `onDrag` type conflict (Radix DragEvent vs Framer Motion PanInfo) — use `asChild` + `motion.div` pattern instead
+  - Centering: use Framer Motion `style={{ x: "-50%", y: "-50%" }}` instead of CSS `translate-x-[-50%] translate-y-[-50%]` to avoid Framer Motion overwriting CSS transforms
+  - Backdrop uses `bg-black/80 backdrop-blur-sm` on the overlay component
+  - Drop-in replacement pattern: export all parts with `Animated` prefix, consumers just change import path
+---
+
+## 2026-02-06 - US-003
+- What was implemented: Created components/ui/animated-alert-dialog.tsx — animated wrapper for shadcn AlertDialog with Framer Motion scale+fade transitions
+- Files changed: components/ui/animated-alert-dialog.tsx
+- **Learnings for future iterations:**
+  - AlertDialog differs from Dialog: no close X button (requires explicit Action/Cancel), has Action and Cancel button components
+  - Same `asChild` + `motion.div` pattern works identically for AlertDialog content as for Dialog content
+  - AlertDialogHeader uses `space-y-2` (not `space-y-1.5` like Dialog) — kept consistent with original shadcn alert-dialog styling
+  - Import from `@/components/ui/animated-alert-dialog` — drop-in replacement for `@/components/ui/alert-dialog`
+---
+
+## 2026-02-06 - US-004
+- What was implemented: Created three form field wrapper components (FormField, FormTextareaField, FormSelectField) using Controller from react-hook-form
+- Files changed: components/ui/form-field.tsx, components/ui/form-textarea-field.tsx, components/ui/form-select-field.tsx
+- **Learnings for future iterations:**
+  - react-hook-form, @hookform/resolvers, zod were already installed — check package.json before installing
+  - shadcn/ui form.tsx already provides FormField/FormItem/FormLabel/FormControl/FormMessage primitives — new components are convenience wrappers
+  - FormField and FormTextareaField use `motion.input`/`motion.textarea` with `focusGlow` spread for purple glow effect on focus
+  - FormSelectField uses Radix Select (no motion wrapper needed since Select has its own animation)
+  - `field.value ?? ""` prevents "undefined" showing in inputs when form values are initially undefined
+  - Export as named re-export: `export { Component as FormField }` to get clean import names
+  - These wrapper components require `<FormProvider>` (or `<Form>`) wrapping the form — they use `useFormContext()` internally
+---
+
+## 2026-02-06 - US-005
+- What was implemented: Created hooks/use-form-shake.ts — reusable hook for error shake animation on form submit with auto-focus to first error field
+- Files changed: hooks/use-form-shake.ts
+- **Learnings for future iterations:**
+  - useFormShake returns `{ formRef, triggerShake }` — attach formRef to the form/div container, call triggerShake() in handleSubmit's onInvalid callback
+  - Uses Tailwind's `animate-shake` class (already in tailwind.config.ts) instead of Framer Motion errorShake — simpler for CSS-class-based approach
+  - animationend event listener auto-removes the class after animation completes — no setTimeout needed
+  - Focus logic uses `requestAnimationFrame` to let React render error states before querying DOM for error selectors
+  - Selects first error via `[aria-invalid="true"], .border-destructive, [data-invalid]` — covers RHF native, shadcn/ui, and custom patterns
+  - Respects prefers-reduced-motion: skips shake animation but still focuses first error field
+  - check-in-modal.tsx already has a manual shake implementation (useState + setTimeout) — can be refactored to use this hook in US-009
+---
+
+## 2026-02-06 - US-006
+- What was implemented: Created lib/toast-helpers.ts with standardised showSuccess/showError/showInfo helpers, updated sonner.tsx with default duration, migrated 3 components to use new helpers
+- Files changed: lib/toast-helpers.ts (new), components/ui/sonner.tsx, components/holdings/add-holding-dialog.tsx, components/snapshots/delete-snapshot-dialog.tsx, components/check-in/check-in-modal.tsx
+- **Learnings for future iterations:**
+  - check-in-modal.tsx has a local `showSuccess` state variable — import toast helpers with aliases (`toastSuccess`, `toastError`) to avoid shadowing
+  - showError uses `duration: Infinity` to persist until dismissed; showSuccess uses 3s; showInfo uses 4s
+  - showError accepts optional `onRetry` callback which renders a Retry action button on the toast
+  - Sonner toast.success/toast.error/toast.info already render appropriate icons (checkmark, X, info) — no custom icon config needed
+  - Import from `@/lib/toast-helpers` — use `showSuccess`, `showError`, `showInfo` instead of raw `toast.*` calls
+---
+
+## 2026-02-06 - US-007
+- What was implemented: Refactored AddHoldingDialog to use AnimatedDialog, react-hook-form with FormProvider, zod validation schema, FormField/FormSelectField components, and useFormShake hook
+- Files changed: components/holdings/add-holding-dialog.tsx
+- **Learnings for future iterations:**
+  - Zod `superRefine` is the right approach for conditional validation driven by a hidden `_type` field — avoids discriminated union complexity for wizard-style forms
+  - `zodResolver(schema) as unknown as Resolver<FormValues>` cast is required when schema has `.optional().default("")` fields (RHF infers different types than zod output)
+  - `useFormShake` ref type is `HTMLDivElement | HTMLFormElement` — when attaching to a plain `<div>`, cast to `React.RefObject<HTMLDivElement | null>`
+  - Server validation errors from the API can be mapped to form fields via `form.setError(fieldName, { message })` in mutation onError
+  - Step 1 (type selection) stays outside FormProvider since it doesn't use react-hook-form; step 2 wraps in `<FormProvider>` + `<form onSubmit>`
+  - Back button needs `type="button"` to prevent form submission
+  - `form.clearErrors()` on handleBack is cleaner than resetting errors manually
+---
+
+## 2026-02-06 - US-008
+- What was implemented: Refactored EditHoldingDialog to use AnimatedDialog, react-hook-form with FormProvider, zod validation schema, FormField/FormSelectField components, useFormShake hook, and toast helpers
+- Files changed: components/holdings/edit-holding-dialog.tsx
+- **Learnings for future iterations:**
+  - Edit dialogs with controlled `open` prop: use `useEffect` watching `open` + entity to call `form.reset()` with entity data — this pre-populates form fields when dialog opens
+  - "No changes" detection: compare form data against original entity in onValid callback, call `showInfo()` and close if no diff — don't skip to mutation
+  - Same zod schema with `superRefine` + `_type` hidden field pattern works for edit forms as well as add forms — reusable approach for conditional validation by holding type
+  - Cancel button inside `<form>` must use `type="button"` to prevent form submission (same learning as US-007)
+  - Checkbox with react-hook-form: use `form.watch("field")` for `checked` and `form.setValue("field", value)` for `onCheckedChange` — no Controller needed for simple boolean
+---
+
+## 2026-02-06 - US-009
+- What was implemented: Refactored CheckInModal to use AnimatedDialog (replacing plain Dialog) and useFormShake hook (replacing manual shake state)
+- Files changed: components/check-in/check-in-modal.tsx
+- **Learnings for future iterations:**
+  - CheckInModal already had react-hook-form + zod + useFieldArray + toast helpers from prior iterations — only Dialog→AnimatedDialog and manual shake→useFormShake needed changing
+  - useFormShake hook replaces three pieces of manual state: useState for shake boolean, setTimeout for auto-clear, and manual querySelector for focus — cleaner and consistent with other dialogs
+  - Cast `formRef` to `React.RefObject<HTMLDivElement | null>` when attaching to a `<div>` wrapper (not a `<form>`) since useFormShake ref type is `HTMLDivElement | HTMLFormElement`
+  - For wizard-style dialogs, useFormShake ref attaches to the step container (not the entire dialog) — this ensures shake only affects the step with validation errors
+  - The check-in modal's dynamic field array pattern (useFieldArray + replace) is better suited to manual Input components than FormField wrappers — FormField requires a single field name and doesn't handle array indices cleanly
+---
+
+## 2026-02-06 - US-010
+- What was implemented: Refactored EditSnapshotModal to use AnimatedDialog, react-hook-form with FormProvider, zod validation schema, FormField/FormTextareaField components, useFormShake hook, and toast helpers
+- Files changed: components/snapshots/edit-snapshot-modal.tsx
+- **Learnings for future iterations:**
+  - Zod v4 uses `{ error: "..." }` for custom error messages on `z.coerce.number()` — not `{ required_error, invalid_type_error }` (those are Zod v3 API)
+  - Zod v4 `superRefine` uses `code: "custom"` string literal instead of `z.ZodIssueCode.custom` enum
+  - Edit modals with async data (contributions query): use `useEffect` watching query data to `form.setValue()` for specific fields, separate from the main `form.reset()` on dialog open
+  - `showContributions` toggle stays as React `useState` (not in form schema) since it's UI-only state controlling visibility, not form data
+  - FormField with `label="Balance (A$)"` pattern works well — shows currency in label instead of separate prefix span
+  - Balance field: `z.coerce.number()` handles string-to-number conversion automatically, eliminating manual `parseFloat` calls
+---
+
+## 2026-02-06 - US-011
+- What was implemented: Migrated delete-snapshot-dialog.tsx and delete-transaction-dialog.tsx from plain AlertDialog to AnimatedAlertDialog. Migrated delete-transaction-dialog.tsx from raw `toast` calls to `showSuccess`/`showError` helpers.
+- Files changed: components/snapshots/delete-snapshot-dialog.tsx, components/transactions/delete-transaction-dialog.tsx
+- **Learnings for future iterations:**
+  - Delete dialog migration is a straightforward import swap — AlertDialog→AnimatedAlertDialog, AlertDialogX→AnimatedAlertDialogX prefix change
+  - delete-snapshot-dialog.tsx was already using toast helpers from US-006 — only needed the AlertDialog→AnimatedAlertDialog swap
+  - delete-transaction-dialog.tsx still had raw `toast.success`/`toast.error` from sonner — migrated to `showSuccess`/`showError` from toast-helpers
+  - All detail information (holding names, amounts, warnings, cost basis notice) preserved unchanged — only wrapper components changed
+---
+
+## 2026-02-06 - US-012
+- What was implemented: Refactored settings page to use accordion sections. Installed shadcn/ui Accordion component. Created SettingsSection wrapper. Reorganized page into 4 collapsible sections: Currency Preferences (expanded by default), Email Reminders, Keyboard Shortcuts, About (new). Updated skeleton to match accordion layout. Added accordion keyframes to tailwind.config.ts. Added global prefers-reduced-motion CSS rule.
+- Files changed: app/(dashboard)/settings/page.tsx, app/globals.css, components/settings/settings-section.tsx (new), components/settings/settings-skeleton.tsx, components/ui/accordion.tsx (new), tailwind.config.ts, package.json, package-lock.json
+- **Learnings for future iterations:**
+  - shadcn/ui Accordion requires `accordion-down`/`accordion-up` keyframes in tailwind.config.ts — these are NOT added automatically by `shadcn add accordion`
+  - Radix Accordion uses CSS custom property `--radix-accordion-content-height` for height animation — keyframes reference this variable
+  - Accordion `type="multiple"` allows multiple sections open simultaneously; `defaultValue` accepts string array of initially open items
+  - SettingsSection pattern: AccordionItem with custom trigger (icon+title+description) and AccordionContent with pl-8 indent — reusable for any settings-like page
+  - Default shadcn AccordionItem has `border-b` and AccordionTrigger has `hover:underline` — override with `className` on SettingsSection
+  - Global `prefers-reduced-motion: reduce` rule in globals.css sets all animation/transition durations to 0.01ms — covers accordion, shake, and all CSS animations
+  - `data-[state=open]:shadow-card` on AccordionItem gives subtle elevation to expanded sections
+---
+
+## 2026-02-06 - US-013
+- What was implemented: Created components/ui/confirm-dialog.tsx — a reusable, ready-to-use confirmation dialog component wrapping AnimatedAlertDialog with a simple props API
+- Files changed: components/ui/confirm-dialog.tsx (new)
+- **Learnings for future iterations:**
+  - ConfirmDialog is a higher-level component than AnimatedAlertDialog — use it for simple confirm/cancel flows, use AnimatedAlertDialog directly for dialogs needing custom content (detail tables, warnings, etc.)
+  - Radix AlertDialog handles Enter-to-confirm and Escape-to-cancel natively — no custom keyboard handling needed
+  - `variant="destructive"` sets confirm button to `bg-destructive hover:bg-destructive/90 text-foreground` — matches existing delete dialog patterns
+  - Loading state shows Loader2 spinner inline with confirm label and disables both buttons — consistent with delete-snapshot-dialog pattern
 ---
 
