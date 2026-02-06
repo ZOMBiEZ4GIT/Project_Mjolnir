@@ -14,7 +14,6 @@ import {
   formatCurrency,
   CURRENCY_SYMBOLS,
   type Currency,
-  type FormatCurrencyOptions,
 } from "@/lib/utils/currency";
 import {
   Tooltip,
@@ -189,13 +188,6 @@ export function CurrencyDisplay({
     return <CurrencyDisplaySkeleton className={className} />;
   }
 
-  const formatOptions: FormatCurrencyOptions = {
-    compact,
-    showSymbol: true,
-  };
-
-  const formattedAmount = formatCurrency(amount, currency, formatOptions);
-
   // Check if native currency is different from display currency
   const hasDifferentNativeCurrency =
     showNative &&
@@ -203,66 +195,87 @@ export function CurrencyDisplay({
     nativeAmount !== undefined &&
     nativeCurrency !== currency;
 
-  // Build tooltip content
-  const tooltipContent = hasDifferentNativeCurrency
-    ? `${formattedAmount} ${currency} (Native: ${formatCurrency(
-        nativeAmount,
-        nativeCurrency,
-        { showSymbol: true }
-      )} ${nativeCurrency})`
-    : `${formattedAmount} ${currency}`;
+  // Compute effective exchange rate: 1 native = X display
+  const effectiveRate =
+    hasDifferentNativeCurrency && nativeAmount !== 0
+      ? Math.abs(amount / nativeAmount!)
+      : null;
 
   const isNegative = amount < 0;
   const symbol = CURRENCY_SYMBOLS[currency];
 
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span
-            className={cn(
-              "cursor-default inline-flex items-center gap-1 rounded-sm transition-colors",
-              showFlash && !shouldReduceMotion && "bg-accent/15",
-              className
-            )}
-            style={{
-              fontVariantNumeric: "tabular-nums",
-              transitionDuration: showFlash ? "0ms" : "400ms",
-            }}
+  const valueSpan = (
+    <span
+      className={cn(
+        "cursor-default inline-flex items-center gap-1 rounded-sm transition-colors",
+        showFlash && !shouldReduceMotion && "bg-accent/15",
+        className
+      )}
+      style={{
+        fontVariantNumeric: "tabular-nums",
+        transitionDuration: showFlash ? "0ms" : "400ms",
+      }}
+    >
+      <span className="inline-flex items-baseline">
+        {/* Currency symbol with crossfade */}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={symbol}
+            initial={shouldReduceMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.15 }}
           >
-            <span className="inline-flex items-baseline">
-              {/* Currency symbol with crossfade */}
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.span
-                  key={symbol}
-                  initial={shouldReduceMotion ? false : { opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: shouldReduceMotion ? 0 : 0.15 }}
-                >
-                  {isNegative ? "-" : ""}
-                  {symbol}
-                </motion.span>
-              </AnimatePresence>
-              {/* Animated number */}
-              <span ref={displayRef}>
-                {formatNumber(amount, compact)}
-              </span>
-            </span>
-            {hasDifferentNativeCurrency && (
-              <span
-                className="text-xs text-muted-foreground font-normal"
-                aria-label={`Native currency: ${nativeCurrency}`}
-              >
-                ({nativeCurrency})
-              </span>
-            )}
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{tooltipContent}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+            {isNegative ? "-" : ""}
+            {symbol}
+          </motion.span>
+        </AnimatePresence>
+        {/* Animated number */}
+        <span ref={displayRef}>
+          {formatNumber(amount, compact)}
+        </span>
+      </span>
+      {hasDifferentNativeCurrency && (
+        <span
+          className="text-body-sm text-muted-foreground font-normal"
+          aria-label={`Native currency: ${nativeCurrency}`}
+        >
+          ({nativeCurrency})
+        </span>
+      )}
+    </span>
   );
+
+  // When currencies differ and showNative is on, show rich tooltip
+  if (hasDifferentNativeCurrency) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>{valueSpan}</TooltipTrigger>
+          <TooltipContent className="bg-card border border-border rounded-lg p-2 shadow-lg">
+            <div className="flex flex-col gap-1">
+              <p className="text-foreground text-xs">
+                Converted from{" "}
+                <span className="font-medium">
+                  {formatCurrency(nativeAmount!, nativeCurrency!, {
+                    showSymbol: true,
+                  })}{" "}
+                  {nativeCurrency}
+                </span>
+              </p>
+              {effectiveRate !== null && (
+                <p className="text-muted-foreground text-xs">
+                  Rate: 1 {nativeCurrency} = {effectiveRate.toFixed(4)}{" "}
+                  {currency}
+                </p>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  // No conversion — render without tooltip
+  return valueSpan;
 }
