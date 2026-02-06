@@ -11,6 +11,7 @@ import { ChangeBadge } from "@/components/dashboard/change-badge";
 import { StaleIndicator } from "@/components/dashboard/stale-indicator";
 import { slideUp } from "@/lib/animations";
 import { POSITIVE, NEGATIVE } from "@/lib/chart-palette";
+import { HeroBeams } from "@/components/effects/hero-beams";
 
 interface HoldingValue {
   id: string;
@@ -206,6 +207,9 @@ export function NetWorthHero() {
       animate={slideUp.animate}
       transition={shouldReduceMotion ? { duration: 0 } : slideUp.transition}
     >
+      {/* Ambient beam effect behind content */}
+      {!shouldReduceMotion && <HeroBeams />}
+
       {/* Stale data warning — top-right corner */}
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
         <StaleIndicator
