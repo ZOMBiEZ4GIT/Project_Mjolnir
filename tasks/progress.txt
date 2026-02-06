@@ -1,4 +1,5 @@
 ## Codebase Patterns
+- Framer Motion inline Variants objects need `Variants` type annotation or `as const` on ease strings to satisfy TypeScript
 - Project uses Next.js 14+ App Router with TypeScript
 - Drizzle ORM is already installed (drizzle-orm, drizzle-kit, @neondatabase/serverless)
 - shadcn/ui components available in components/ui
@@ -189,5 +190,22 @@ Started: 2026-02-07
   - Conditional rendering with `{!shouldReduceMotion && <Effect />}` is cleaner than CSS-only hide for pure decorative effects
   - Staggered animation delays (2s, 3s, 4s) create more natural movement than synchronized beams
   - `bg-gradient-to-t from-transparent via-color to-transparent` creates a nice beam line that fades at both ends
+---
+
+## 2026-02-07 - US-003
+- Redesigned `app/error.tsx` with AnimatedGradient 'error' variant (red/rose tints)
+- Added AlertTriangle icon (h-16 w-16 = 64px) in text-destructive
+- Title uses text-heading-lg, description uses text-body-md text-muted-foreground
+- Dev-only collapsible error details section with ChevronDown toggle and bg-muted rounded-lg font-mono container
+- Action buttons: 'Try Again' (primary, calls reset()) and 'Go to Dashboard' (secondary, links to /)
+- Entrance animation: stagger container with 80ms delay per child, each fades in + slides up (y:16→0, 300ms easeOut)
+- Card container: bg-card/80 backdrop-blur-sm border border-border rounded-2xl p-8
+- Centred via flex min-h-screen items-center justify-center
+- Content at z-10, AnimatedGradient at z-0
+- Files changed: app/error.tsx
+- **Learnings for future iterations:**
+  - Framer Motion Variants type requires `as const` on ease strings (e.g., `"easeOut" as const`) to satisfy strict typing
+  - `useReducedMotion()` + conditional `variants={shouldReduceMotion ? undefined : staggerItem}` cleanly skips animation
+  - Error pages are "use client" — can use Framer Motion directly
 ---
 
