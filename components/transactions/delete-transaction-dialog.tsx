@@ -1,17 +1,17 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { showSuccess, showError } from "@/lib/toast-helpers";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  AnimatedAlertDialog,
+  AnimatedAlertDialogAction,
+  AnimatedAlertDialogCancel,
+  AnimatedAlertDialogContent,
+  AnimatedAlertDialogDescription,
+  AnimatedAlertDialogFooter,
+  AnimatedAlertDialogHeader,
+  AnimatedAlertDialogTitle,
+} from "@/components/ui/animated-alert-dialog";
 
 interface TransactionWithHolding {
   id: string;
@@ -118,12 +118,12 @@ export function DeleteTransactionDialog({
       queryClient.invalidateQueries({
         queryKey: ["holdings", transaction.holdingId, "quantity"],
       });
-      toast.success("Transaction deleted");
+      showSuccess("Transaction deleted");
       onDeleted?.(transaction.id);
       onOpenChange(false);
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete transaction");
+      showError(error.message || "Failed to delete transaction");
     },
   });
 
@@ -134,11 +134,11 @@ export function DeleteTransactionDialog({
   const total = calculateTotal(transaction);
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
-          <AlertDialogDescription className="space-y-3">
+    <AnimatedAlertDialog open={open} onOpenChange={onOpenChange}>
+      <AnimatedAlertDialogContent>
+        <AnimatedAlertDialogHeader>
+          <AnimatedAlertDialogTitle>Delete Transaction</AnimatedAlertDialogTitle>
+          <AnimatedAlertDialogDescription className="space-y-3">
             <p>
               Are you sure you want to delete this transaction? This action cannot
               be undone.
@@ -192,19 +192,19 @@ export function DeleteTransactionDialog({
                 cost basis calculations for this holding.
               </p>
             </div>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={mutation.isPending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
+          </AnimatedAlertDialogDescription>
+        </AnimatedAlertDialogHeader>
+        <AnimatedAlertDialogFooter>
+          <AnimatedAlertDialogCancel disabled={mutation.isPending}>Cancel</AnimatedAlertDialogCancel>
+          <AnimatedAlertDialogAction
             onClick={handleDelete}
             disabled={mutation.isPending}
             className="bg-destructive hover:bg-destructive/90 focus:ring-destructive"
           >
             {mutation.isPending ? "Deleting..." : "Delete Transaction"}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </AnimatedAlertDialogAction>
+        </AnimatedAlertDialogFooter>
+      </AnimatedAlertDialogContent>
+    </AnimatedAlertDialog>
   );
 }
