@@ -38,8 +38,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Uses DialogPrimitive.Content asChild with motion.div to avoid onDrag type conflict between Radix and Framer Motion. style={{ x: '-50%', y: '-50%' }} for Framer Motion centering instead of CSS translate."
     },
     {
       "id": "US-003",

@@ -128,6 +128,9 @@
 - Effective exchange rate: compute from amount/nativeAmount rather than passing rates as prop
 - NativeCurrencyToggle accepts `showDescription` prop for optional descriptive text; Switch override: `data-[state=checked]:bg-accent data-[state=unchecked]:bg-muted`
 - CurrencyDisplay flash also triggers on showNative change for components with different native currency
+- Radix + Framer Motion: use `asChild` + `motion.div` pattern (not `motion.create(Primitive)`) to avoid `onDrag` type conflict
+- AnimatedDialog/AnimatedAlertDialog: drop-in replacements for Dialog/AlertDialog — import from `@/components/ui/animated-dialog` or `animated-alert-dialog`
+- Framer Motion centering: use `style={{ x: "-50%", y: "-50%" }}` not CSS translate classes (FM overwrites transform)
 
 ---
 
@@ -146,5 +149,15 @@ Started: 2026-02-06
   - checkmark preset uses spring physics for pathLength and scale — spread onto motion.path for SVG check animations
   - reducedMotionOverride provides `{ transition: { duration: 0 } }` — spread on top of any preset when `useReducedMotion()` returns true
   - errorShake uses keyframe array for x: [0, -8, 8, -4, 4, 0] — trigger by conditionally applying to `animate` prop
+---
+
+## 2026-02-06 - US-002
+- What was implemented: Created components/ui/animated-dialog.tsx — animated wrapper for shadcn Dialog with Framer Motion scale+fade transitions
+- Files changed: components/ui/animated-dialog.tsx
+- **Learnings for future iterations:**
+  - `motion.create(RadixPrimitive)` causes `onDrag` type conflict (Radix DragEvent vs Framer Motion PanInfo) — use `asChild` + `motion.div` pattern instead
+  - Centering: use Framer Motion `style={{ x: "-50%", y: "-50%" }}` instead of CSS `translate-x-[-50%] translate-y-[-50%]` to avoid Framer Motion overwriting CSS transforms
+  - Backdrop uses `bg-black/80 backdrop-blur-sm` on the overlay component
+  - Drop-in replacement pattern: export all parts with `Animated` prefix, consumers just change import path
 ---
 
