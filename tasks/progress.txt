@@ -209,3 +209,19 @@ Started: 2026-02-07
   - Error pages are "use client" — can use Framer Motion directly
 ---
 
+## 2026-02-07 - US-004
+- Redesigned `app/not-found.tsx` with AnimatedGradient 'auth' variant (purple tints)
+- Large decorative '404' text in text-display-xl text-accent/30 with scaleIn animation (0.8→1.0)
+- Title 'Page not found' in text-heading-lg, description in text-body-md text-muted-foreground
+- Three navigation links: Dashboard (primary, /), Holdings (secondary, /holdings), Transactions (secondary, /transactions)
+- Entrance animation: stagger container with 80ms delay, scaleIn for 404 text, fadeIn+slideUp for rest
+- Card container: bg-card/80 backdrop-blur-sm border border-border rounded-2xl p-8
+- Centred via flex min-h-screen items-center justify-center, content at z-10
+- Buttons stack vertically on mobile (flex-col), row on sm+ (sm:flex-row)
+- Files changed: app/not-found.tsx
+- **Learnings for future iterations:**
+  - not-found.tsx can be "use client" in Next.js App Router — Framer Motion works fine
+  - Same staggerContainer/staggerItem pattern from error.tsx reused — keep consistent across error/404 pages
+  - scaleIn variant (0.8→1.0) is a nice entrance for large decorative text — distinct from fadeIn+slideUp
+---
+
