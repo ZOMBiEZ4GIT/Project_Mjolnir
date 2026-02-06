@@ -1,10 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { motion, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
-import { TrendingUp, TrendingDown, Wallet, CreditCard } from "lucide-react";
+import { type Currency, type ExchangeRates } from "@/lib/utils/currency";
+import { Wallet, CreditCard } from "lucide-react";
+import { NumberTicker } from "@/components/dashboard/number-ticker";
+import { ChangeBadge } from "@/components/dashboard/change-badge";
+import { staggerContainer, staggerItem } from "@/lib/animations";
 
 interface HoldingValue {
   id: string;
@@ -61,24 +65,14 @@ async function fetchHistory(): Promise<HistoryResponse> {
   return response.json();
 }
 
-/**
- * Formats a percentage with sign.
- */
-function formatPercentage(value: number): string {
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(1)}%`;
-}
-
-/**
- * Loading skeleton for a summary card.
- */
 function CardSkeleton() {
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
       <div className="animate-pulse">
-        <div className="h-4 w-20 bg-muted rounded mb-3" />
+        <div className="h-3 w-20 bg-muted rounded mb-3" />
         <div className="h-8 w-40 bg-muted rounded mb-3" />
-        <div className="h-4 w-32 bg-muted rounded" />
+        <div className="h-5 w-32 bg-muted rounded mb-2" />
+        <div className="h-3 w-24 bg-muted rounded" />
       </div>
     </div>
   );
@@ -87,21 +81,20 @@ function CardSkeleton() {
 interface SummaryCardProps {
   title: string;
   value: number;
+  netWorth: number;
   previousValue: number | null;
   icon: React.ReactNode;
-  accentColor: "green" | "red";
+  variant: "assets" | "debt";
   currency: Currency;
 }
 
-/**
- * Individual summary card component.
- */
 function SummaryCard({
   title,
   value,
+  netWorth,
   previousValue,
   icon,
-  accentColor,
+  variant,
   currency,
 }: SummaryCardProps) {
   const hasChange = previousValue !== null && previousValue !== 0;
@@ -109,60 +102,60 @@ function SummaryCard({
   const changePercent = hasChange
     ? (changeAmount / Math.abs(previousValue)) * 100
     : 0;
-  const isPositiveChange = changeAmount >= 0;
 
-  // For debt, positive change (increase) is bad, so we flip the indicator
-  const showPositiveIndicator =
-    accentColor === "green" ? isPositiveChange : !isPositiveChange;
+  // For debt, positive change (increase) is bad, so we flip the badge sign
+  const badgeAmount = variant === "debt" ? -changeAmount : changeAmount;
+  const badgePercent = variant === "debt" ? -changePercent : changePercent;
+
+  // Percentage of net worth
+  const netWorthPercent =
+    netWorth !== 0 ? Math.abs((value / netWorth) * 100) : 0;
 
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+    <motion.div
+      variants={staggerItem}
+      className="rounded-2xl border border-border bg-card p-4 sm:p-6 transition-shadow duration-150 hover:shadow-card-hover"
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+        <span className="text-label uppercase text-muted-foreground">
           {title}
         </span>
-        <div className={accentColor === "green" ? "text-positive" : "text-destructive"}>{icon}</div>
+        <div className={variant === "assets" ? "text-positive" : "text-destructive"}>
+          {icon}
+        </div>
       </div>
 
       {/* Value */}
-      <div className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground mb-2">
-        {formatCurrency(value, currency)}
-      </div>
+      <NumberTicker
+        value={value}
+        currency={currency}
+        className="text-heading-lg text-foreground block mb-2"
+      />
 
       {/* Change from last month */}
       {hasChange && (
-        <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-          {showPositiveIndicator ? (
-            <TrendingUp className="h-4 w-4 text-positive shrink-0" />
-          ) : (
-            <TrendingDown className="h-4 w-4 text-destructive shrink-0" />
-          )}
-          <span
-            className={`text-xs sm:text-sm font-medium ${
-              showPositiveIndicator ? "text-positive" : "text-destructive"
-            }`}
-          >
-            {changeAmount >= 0 ? "+" : ""}
-            {formatCurrency(changeAmount, currency)} ({formatPercentage(changePercent)})
-          </span>
-          <span className="text-xs text-muted-foreground">from last month</span>
+        <div className="flex flex-wrap items-center gap-1.5 mb-2">
+          <ChangeBadge
+            amount={badgeAmount}
+            percentage={badgePercent}
+            currency={currency}
+            size="sm"
+          />
+          <span className="text-body-sm text-muted-foreground">from last month</span>
         </div>
       )}
-    </div>
+
+      {/* Percentage of net worth */}
+      <div className="text-body-sm text-muted-foreground">
+        {netWorthPercent.toFixed(0)}% of net worth
+      </div>
+    </motion.div>
   );
 }
 
-/**
- * Summary Cards Component
- *
- * Displays two smaller cards showing Total Assets and Total Debt.
- * Each card shows:
- * - Current value in the user's display currency
- * - Change from last month (amount and percentage)
- * - Appropriate icon and color coding
- */
 export function SummaryCards() {
+  const shouldReduceMotion = useReducedMotion();
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
 
@@ -184,7 +177,6 @@ export function SummaryCards() {
     refetchInterval: 60 * 1000,
   });
 
-  // Show skeleton while loading or not authenticated
   if (!isLoaded || !isSignedIn || isLoadingNetWorth || currencyLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -194,16 +186,14 @@ export function SummaryCards() {
     );
   }
 
-  // Show error state
   if (netWorthError) {
     return (
-      <div className="rounded-lg border border-destructive bg-destructive/10 p-6">
+      <div className="rounded-2xl border border-destructive bg-destructive/10 p-6">
         <p className="text-destructive">Failed to load summary data</p>
       </div>
     );
   }
 
-  // No data available
   if (!netWorthData) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -213,8 +203,6 @@ export function SummaryCards() {
     );
   }
 
-  // Get previous month data
-  // Note: History is in AUD, so we convert to display currency for comparison
   let previousAssets: number | null = null;
   let previousDebt: number | null = null;
 
@@ -226,24 +214,40 @@ export function SummaryCards() {
     }
   }
 
+  const containerVariants = shouldReduceMotion
+    ? undefined
+    : {
+        ...staggerContainer,
+        visible: {
+          transition: { staggerChildren: 0.1 },
+        },
+      };
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <motion.div
+      className="grid grid-cols-1 md:grid-cols-2 gap-4"
+      variants={containerVariants}
+      initial={shouldReduceMotion ? undefined : "hidden"}
+      animate={shouldReduceMotion ? undefined : "visible"}
+    >
       <SummaryCard
         title="Total Assets"
         value={netWorthData.totalAssets}
+        netWorth={netWorthData.netWorth}
         previousValue={previousAssets}
         icon={<Wallet className="h-5 w-5" />}
-        accentColor="green"
+        variant="assets"
         currency={displayCurrency}
       />
       <SummaryCard
         title="Total Debt"
         value={netWorthData.totalDebt}
+        netWorth={netWorthData.netWorth}
         previousValue={previousDebt}
         icon={<CreditCard className="h-5 w-5" />}
-        accentColor="red"
+        variant="debt"
         currency={displayCurrency}
       />
-    </div>
+    </motion.div>
   );
 }
