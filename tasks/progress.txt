@@ -228,3 +228,14 @@ Started: 2026-02-06
   - `form.clearErrors()` on handleBack is cleaner than resetting errors manually
 ---
 
+## 2026-02-06 - US-008
+- What was implemented: Refactored EditHoldingDialog to use AnimatedDialog, react-hook-form with FormProvider, zod validation schema, FormField/FormSelectField components, useFormShake hook, and toast helpers
+- Files changed: components/holdings/edit-holding-dialog.tsx
+- **Learnings for future iterations:**
+  - Edit dialogs with controlled `open` prop: use `useEffect` watching `open` + entity to call `form.reset()` with entity data — this pre-populates form fields when dialog opens
+  - "No changes" detection: compare form data against original entity in onValid callback, call `showInfo()` and close if no diff — don't skip to mutation
+  - Same zod schema with `superRefine` + `_type` hidden field pattern works for edit forms as well as add forms — reusable approach for conditional validation by holding type
+  - Cancel button inside `<form>` must use `type="button"` to prevent form submission (same learning as US-007)
+  - Checkbox with react-hook-form: use `form.watch("field")` for `checked` and `form.setValue("field", value)` for `onCheckedChange` — no Controller needed for simple boolean
+---
+

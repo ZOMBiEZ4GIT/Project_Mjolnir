@@ -145,8 +145,8 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Replaced Dialog with AnimatedDialog, manual useState form state with useForm+FormProvider, manual validation with zod schema using superRefine for conditional validation (same schema pattern as AddHoldingDialog). Uses FormField and FormSelectField components, useFormShake for error shake on invalid submit. Server errors mapped to form fields via form.setError(). form.reset() in useEffect pre-populates from holding data on open. 'No changes to save' info toast preserved via showInfo helper. Dormant checkbox uses form.watch/form.setValue."
     },
     {
       "id": "US-009",
