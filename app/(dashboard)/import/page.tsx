@@ -7,6 +7,7 @@ import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { FileUpload } from "@/components/import/file-upload";
 import { ImportResults, type ImportError } from "@/components/import/import-results";
 import { ImportProgress } from "@/components/import/import-progress";
+import { ImportPreview } from "@/components/import/import-preview";
 import { RecentImports, type ImportHistoryRecord } from "@/components/import/recent-imports";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,16 @@ function downloadCsv(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+// Parse CSV text into headers and rows
+function parseCsv(text: string): { headers: string[]; rows: string[][] } {
+  const lines = text.split("\n").filter((line) => line.trim().length > 0);
+  if (lines.length === 0) return { headers: [], rows: [] };
+
+  const headers = lines[0].split(",").map((h) => h.trim());
+  const rows = lines.slice(1).map((line) => line.split(",").map((cell) => cell.trim()));
+  return { headers, rows };
+}
+
 export const dynamic = "force-dynamic";
 
 interface ImportSummary {
@@ -40,17 +51,51 @@ interface ImportSummary {
   errors: ImportError[];
 }
 
+interface PreviewData {
+  headers: string[];
+  rows: string[][];
+  warnings: string[];
+}
+
+// Validate transaction preview rows for obvious issues
+function validateTransactionPreview(headers: string[], _rows: string[][]): string[] {
+  const warnings: string[] = [];
+  const requiredHeaders = ["date", "symbol", "action", "quantity", "unit_price"];
+  const missing = requiredHeaders.filter(
+    (h) => !headers.map((x) => x.toLowerCase()).includes(h)
+  );
+  if (missing.length > 0) {
+    warnings.push(`Missing required column${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}`);
+  }
+  return warnings;
+}
+
+// Validate snapshot preview rows for obvious issues
+function validateSnapshotPreview(headers: string[], _rows: string[][]): string[] {
+  const warnings: string[] = [];
+  const requiredHeaders = ["date", "fund_name", "balance"];
+  const missing = requiredHeaders.filter(
+    (h) => !headers.map((x) => x.toLowerCase()).includes(h)
+  );
+  if (missing.length > 0) {
+    warnings.push(`Missing required column${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}`);
+  }
+  return warnings;
+}
+
 export default function ImportPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
 
   // Transaction import state
   const [transactionFile, setTransactionFile] = React.useState<File | null>(null);
+  const [transactionPreview, setTransactionPreview] = React.useState<PreviewData | null>(null);
   const [transactionResults, setTransactionResults] = React.useState<ImportSummary | null>(null);
   const [transactionLoading, setTransactionLoading] = React.useState(false);
   const [transactionRowCount, setTransactionRowCount] = React.useState<number | undefined>(undefined);
 
   // Snapshot import state
   const [snapshotFile, setSnapshotFile] = React.useState<File | null>(null);
+  const [snapshotPreview, setSnapshotPreview] = React.useState<PreviewData | null>(null);
   const [snapshotResults, setSnapshotResults] = React.useState<ImportSummary | null>(null);
   const [snapshotLoading, setSnapshotLoading] = React.useState(false);
   const [snapshotRowCount, setSnapshotRowCount] = React.useState<number | undefined>(undefined);
@@ -81,27 +126,25 @@ export default function ImportPage() {
     }
   }, [isSignedIn, fetchRecentImports]);
 
-  // Helper to count CSV rows (excluding header)
-  const countCsvRows = async (file: File): Promise<number> => {
-    const text = await file.text();
-    const lines = text.split("\n").filter((line) => line.trim().length > 0);
-    // Subtract 1 for header row
-    return Math.max(0, lines.length - 1);
-  };
-
-  // Handle file selection with row counting
+  // Handle file selection with preview parsing
   const handleTransactionFileSelect = async (file: File) => {
     setTransactionFile(file);
     setTransactionResults(null);
-    const rowCount = await countCsvRows(file);
-    setTransactionRowCount(rowCount);
+    const text = await file.text();
+    const { headers, rows } = parseCsv(text);
+    setTransactionRowCount(rows.length);
+    const warnings = validateTransactionPreview(headers, rows);
+    setTransactionPreview({ headers, rows, warnings });
   };
 
   const handleSnapshotFileSelect = async (file: File) => {
     setSnapshotFile(file);
     setSnapshotResults(null);
-    const rowCount = await countCsvRows(file);
-    setSnapshotRowCount(rowCount);
+    const text = await file.text();
+    const { headers, rows } = parseCsv(text);
+    setSnapshotRowCount(rows.length);
+    const warnings = validateSnapshotPreview(headers, rows);
+    setSnapshotPreview({ headers, rows, warnings });
   };
 
   const handleTransactionImport = async () => {
@@ -109,6 +152,7 @@ export default function ImportPage() {
 
     setTransactionLoading(true);
     setTransactionResults(null);
+    setTransactionPreview(null);
 
     try {
       const formData = new FormData();
@@ -151,6 +195,7 @@ export default function ImportPage() {
 
     setSnapshotLoading(true);
     setSnapshotResults(null);
+    setSnapshotPreview(null);
 
     try {
       const formData = new FormData();
@@ -190,12 +235,14 @@ export default function ImportPage() {
 
   const handleTransactionFileClear = () => {
     setTransactionFile(null);
+    setTransactionPreview(null);
     setTransactionResults(null);
     setTransactionRowCount(undefined);
   };
 
   const handleSnapshotFileClear = () => {
     setSnapshotFile(null);
+    setSnapshotPreview(null);
     setSnapshotResults(null);
     setSnapshotRowCount(undefined);
   };
@@ -246,14 +293,17 @@ export default function ImportPage() {
               disabled={transactionLoading}
             />
 
-            {transactionFile && !transactionResults && !transactionLoading && (
-              <Button
-                onClick={handleTransactionImport}
-                disabled={transactionLoading}
-                className="w-full"
-              >
-                Import Transactions
-              </Button>
+            {/* Preview step */}
+            {transactionPreview && !transactionResults && !transactionLoading && (
+              <ImportPreview
+                headers={transactionPreview.headers}
+                rows={transactionPreview.rows}
+                warnings={transactionPreview.warnings}
+                onConfirm={handleTransactionImport}
+                onCancel={handleTransactionFileClear}
+                isLoading={transactionLoading}
+                importType="Transactions"
+              />
             )}
 
             <ImportProgress
@@ -311,14 +361,17 @@ export default function ImportPage() {
               disabled={snapshotLoading}
             />
 
-            {snapshotFile && !snapshotResults && !snapshotLoading && (
-              <Button
-                onClick={handleSnapshotImport}
-                disabled={snapshotLoading}
-                className="w-full"
-              >
-                Import Snapshots
-              </Button>
+            {/* Preview step */}
+            {snapshotPreview && !snapshotResults && !snapshotLoading && (
+              <ImportPreview
+                headers={snapshotPreview.headers}
+                rows={snapshotPreview.rows}
+                warnings={snapshotPreview.warnings}
+                onConfirm={handleSnapshotImport}
+                onCancel={handleSnapshotFileClear}
+                isLoading={snapshotLoading}
+                importType="Snapshots"
+              />
             )}
 
             <ImportProgress
