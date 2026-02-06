@@ -10,6 +10,7 @@ import { NumberTicker } from "@/components/dashboard/number-ticker";
 import { ChangeBadge } from "@/components/dashboard/change-badge";
 import { StaleIndicator } from "@/components/dashboard/stale-indicator";
 import { slideUp } from "@/lib/animations";
+import { POSITIVE, NEGATIVE } from "@/lib/chart-palette";
 
 interface HoldingValue {
   id: string;
@@ -84,8 +85,7 @@ function Sparkline({ data }: SparklineProps) {
   const firstValue = data[0].netWorth;
   const lastValue = data[data.length - 1].netWorth;
   const isPositive = lastValue >= firstValue;
-  // Hex values required for Recharts SVG rendering (CSS variables not supported)
-  const strokeColor = isPositive ? "#22C55E" : "#EF4444";
+  const strokeColor = isPositive ? POSITIVE : NEGATIVE;
 
   return (
     <div className="h-12 w-28">

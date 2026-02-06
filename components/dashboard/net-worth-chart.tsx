@@ -3,21 +3,25 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { formatCurrency, type Currency } from "@/lib/utils/currency";
+import { formatCurrency } from "@/lib/utils/currency";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { LineChart as LineChartIcon, BarChart3 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { fadeIn } from "@/lib/animations";
 import { AssetsVsDebtChart } from "./assets-vs-debt-chart";
-import { ChartSkeleton, ChartError, ChartExportButton } from "@/components/charts";
+import {
+  ChartSkeleton,
+  ChartError,
+  ChartExportButton,
+  TVChart,
+  TimeRangeSelector,
+  TIME_RANGE_OPTIONS,
+  type TVDataPoint,
+  type TVCrosshairData,
+  type TimeRange,
+} from "@/components/charts";
+import type { Time } from "lightweight-charts";
 
 interface HistoryPoint {
   date: string;
@@ -32,21 +36,9 @@ interface HistoryResponse {
 }
 
 /**
- * Time range options for the chart.
- */
-type TimeRange = "3m" | "6m" | "1y" | "all";
-
-/**
  * Chart view modes.
  */
 type ChartViewMode = "networth" | "assetsvsdebt";
-
-const TIME_RANGE_OPTIONS: { value: TimeRange; label: string; months: number }[] = [
-  { value: "3m", label: "3M", months: 3 },
-  { value: "6m", label: "6M", months: 6 },
-  { value: "1y", label: "1Y", months: 12 },
-  { value: "all", label: "All", months: 60 }, // 5 years max
-];
 
 const DEFAULT_TIME_RANGE: TimeRange = "1y";
 const CHART_VIEW_STORAGE_KEY = "net-worth-chart-view";
@@ -60,87 +52,12 @@ async function fetchHistory(months: number): Promise<HistoryResponse> {
 }
 
 /**
- * Formats a date string to month abbreviation (e.g., "Jan").
+ * Formats a TradingView Time value for tooltip display (e.g., "January 2026").
  */
-function formatMonth(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-AU", { month: "short" });
-}
-
-/**
- * Formats a date string for tooltip display (e.g., "January 2026").
- */
-function formatMonthFull(dateString: string): string {
-  const date = new Date(dateString);
+function formatTimeFull(time: Time): string {
+  const str = String(time);
+  const date = new Date(str);
   return date.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
-}
-
-
-interface ChartDataPoint {
-  date: string;
-  displayMonth: string;
-  netWorth: number;
-}
-
-/**
- * Custom tooltip component for the chart.
- */
-interface TooltipProps {
-  active?: boolean;
-  payload?: Array<{
-    value: number;
-    payload: ChartDataPoint;
-  }>;
-  currency: Currency;
-}
-
-function CustomTooltip({ active, payload, currency }: TooltipProps) {
-  if (!active || !payload || payload.length === 0) {
-    return null;
-  }
-
-  const data = payload[0];
-  return (
-    <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
-      <p className="text-muted-foreground text-sm mb-1">
-        {formatMonthFull(data.payload.date)}
-      </p>
-      <p className="text-foreground font-semibold text-lg">
-        {formatCurrency(data.value, currency)}
-      </p>
-    </div>
-  );
-}
-
-/**
- * Time range selector component for the chart.
- */
-interface TimeRangeSelectorProps {
-  selectedRange: TimeRange;
-  onRangeChange: (range: TimeRange) => void;
-}
-
-function TimeRangeSelector({ selectedRange, onRangeChange }: TimeRangeSelectorProps) {
-  return (
-    <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
-      {TIME_RANGE_OPTIONS.map((option) => (
-        <button
-          key={option.value}
-          onClick={() => onRangeChange(option.value)}
-          className={`
-            px-3 py-1 text-sm font-medium rounded-md transition-colors
-            ${
-              selectedRange === option.value
-                ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            }
-          `}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
 }
 
 /**
@@ -185,20 +102,16 @@ function ChartViewToggle({ viewMode, onChange }: ChartViewToggleProps) {
 /**
  * Net Worth History Chart
  *
- * Displays a line chart showing net worth history with configurable time ranges.
+ * Displays a TradingView area chart for Net Worth view and Recharts for Assets vs Debt.
  * Features:
+ * - TradingView Lightweight Charts with purple gradient fill for Net Worth view
  * - Time range selector: 3M, 6M, 1Y, All
  * - Default selection is 12 months (1Y)
  * - URL param ?range=3m persists selection
- * - X-axis: months (Jan, Feb, etc.)
- * - Y-axis: net worth value (auto-scaled, in display currency)
- * - Hover shows exact value for that month
- * - Handles missing months gracefully
- * - Dark mode styling
- *
- * Note: Historical values are stored in AUD and converted to display currency
- * for chart display. This uses current exchange rates, so historical USD values
- * are estimates based on today's rates.
+ * - Custom tooltip styled with design tokens
+ * - Fade-in animation on mount (200ms)
+ * - Keeps Recharts AssetsVsDebtChart for Assets vs Debt view
+ * - Export button uses html2canvas on chart container
  */
 export function NetWorthChart() {
   const { isLoaded, isSignedIn } = useAuthSafe();
@@ -208,6 +121,10 @@ export function NetWorthChart() {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const chartRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+
+  // Tooltip state for TradingView crosshair
+  const [tooltipData, setTooltipData] = useState<TVCrosshairData | null>(null);
 
   // Chart view mode state with localStorage persistence
   const [chartViewMode, setChartViewMode] = useState<ChartViewMode>("networth");
@@ -242,7 +159,6 @@ export function NetWorthChart() {
     (newRange: TimeRange) => {
       const params = new URLSearchParams(searchParams.toString());
       if (newRange === DEFAULT_TIME_RANGE) {
-        // Remove param if default value to keep URL clean
         params.delete("range");
       } else {
         params.set("range", newRange);
@@ -261,13 +177,27 @@ export function NetWorthChart() {
     queryKey: ["net-worth-history", months],
     queryFn: () => fetchHistory(months),
     enabled: isLoaded && isSignedIn,
-    refetchInterval: 60 * 1000, // Refetch every minute
+    refetchInterval: 60 * 1000,
   });
 
   // Retry handler
   const handleRetry = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["net-worth-history", months] });
   }, [queryClient, months]);
+
+  // Transform data for TradingView — sorted by date ascending, time as YYYY-MM-DD string
+  const tvData: TVDataPoint[] = useMemo(() => {
+    if (!historyData?.history) return [];
+    return historyData.history.map((point) => ({
+      time: point.date as Time,
+      value: convert(point.netWorth, "AUD"),
+    }));
+  }, [historyData, convert]);
+
+  // Handle crosshair move from TradingView chart
+  const handleCrosshairMove = useCallback((data: TVCrosshairData | null) => {
+    setTooltipData(data);
+  }, []);
 
   // Show skeleton while loading or not authenticated
   if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
@@ -302,15 +232,8 @@ export function NetWorthChart() {
     );
   }
 
-  // Transform data for Recharts - convert from AUD to display currency
-  const chartData: ChartDataPoint[] = historyData.history.map((point) => ({
-    date: point.date,
-    displayMonth: formatMonth(point.date),
-    netWorth: convert(point.netWorth, "AUD"),
-  }));
-
   // Empty state
-  if (chartData.length === 0) {
+  if (tvData.length === 0) {
     return (
       <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -323,8 +246,8 @@ export function NetWorthChart() {
               onChange={handleChartViewChange}
             />
             <TimeRangeSelector
-              selectedRange={selectedRange}
-              onRangeChange={handleRangeChange}
+              value={selectedRange}
+              onChange={handleRangeChange}
             />
           </div>
         </div>
@@ -339,22 +262,11 @@ export function NetWorthChart() {
     );
   }
 
-  // Calculate Y-axis domain with some padding
-  const values = chartData.map((d) => d.netWorth);
-  const minValue = Math.min(...values);
-  const maxValue = Math.max(...values);
-  const range = maxValue - minValue;
-  const padding = range * 0.1 || maxValue * 0.1 || 1000;
-  const yMin = Math.max(0, minValue - padding);
-  const yMax = maxValue + padding;
-
-  // Create a formatter function for the Y-axis that uses the display currency
-  const formatCurrencyCompact = (value: number): string => {
-    return formatCurrency(value, displayCurrency, { compact: true });
-  };
-
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+    <motion.div
+      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      {...(reducedMotion ? {} : fadeIn)}
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h3 className="text-label uppercase text-muted-foreground">
           Net Worth History
@@ -369,57 +281,63 @@ export function NetWorthChart() {
             onChange={handleChartViewChange}
           />
           <TimeRangeSelector
-            selectedRange={selectedRange}
-            onRangeChange={handleRangeChange}
+            value={selectedRange}
+            onChange={handleRangeChange}
           />
         </div>
       </div>
 
-      <div ref={chartRef}>
-        {chartViewMode === "networth" ? (
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={chartData}
-                margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#374151"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="displayMonth"
-                  stroke="#9CA3AF"
-                  tick={{ fill: "#9CA3AF", fontSize: 12 }}
-                  tickLine={{ stroke: "#4B5563" }}
-                  axisLine={{ stroke: "#4B5563" }}
-                />
-                <YAxis
-                  stroke="#9CA3AF"
-                  tick={{ fill: "#9CA3AF", fontSize: 12 }}
-                  tickLine={{ stroke: "#4B5563" }}
-                  axisLine={{ stroke: "#4B5563" }}
-                  tickFormatter={formatCurrencyCompact}
-                  domain={[yMin, yMax]}
-                  width={70}
-                />
-                <Tooltip content={<CustomTooltip currency={displayCurrency} />} />
-                <Line
-                  type="monotone"
-                  dataKey="netWorth"
-                  stroke="#10B981"
-                  strokeWidth={2}
-                  dot={{ fill: "#10B981", strokeWidth: 0, r: 4 }}
-                  activeDot={{ r: 6, fill: "#10B981", stroke: "#fff", strokeWidth: 2 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <AssetsVsDebtChart data={historyData.history} />
-        )}
+      <div ref={chartRef} className="h-[264px]">
+        <AnimatePresence mode="wait">
+          {chartViewMode === "networth" ? (
+            <motion.div
+              key="networth"
+              className="relative h-[264px]"
+              initial={reducedMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={reducedMotion ? undefined : { opacity: 0 }}
+              transition={reducedMotion ? { duration: 0 } : { duration: 0.2 }}
+            >
+              <TVChart
+                data={tvData}
+                height={264}
+                onCrosshairMove={handleCrosshairMove}
+              />
+              {/* Custom tooltip overlay */}
+              {tooltipData && (
+                <div
+                  className="pointer-events-none absolute z-10 bg-card border border-border rounded-lg p-3 shadow-lg"
+                  style={{
+                    left: Math.min(
+                      tooltipData.x + 12,
+                      (chartRef.current?.clientWidth ?? 400) - 180
+                    ),
+                    top: Math.max(tooltipData.y - 60, 0),
+                  }}
+                >
+                  <p className="text-muted-foreground text-sm mb-1">
+                    {formatTimeFull(tooltipData.time)}
+                  </p>
+                  <p className="text-foreground font-semibold text-lg">
+                    {formatCurrency(tooltipData.value, displayCurrency)}
+                  </p>
+                </div>
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="assetsvsdebt"
+              className="h-[264px]"
+              initial={reducedMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={reducedMotion ? undefined : { opacity: 0 }}
+              transition={reducedMotion ? { duration: 0 } : { duration: 0.2 }}
+            >
+              <AssetsVsDebtChart data={historyData.history} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 }

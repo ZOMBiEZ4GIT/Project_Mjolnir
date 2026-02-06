@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
@@ -439,70 +439,82 @@ export function AssetAllocation() {
       </div>
 
       <div ref={chartRef}>
-        {viewMode === "bars" ? (
-          <motion.div
-            className="space-y-3"
-            variants={containerVariants}
-            initial={shouldReduceMotion ? undefined : "hidden"}
-            animate={shouldReduceMotion ? undefined : "visible"}
-          >
-            {sortedBreakdown.map((item) => {
-              const percentage =
-                totalAssets > 0 ? (item.totalValue / totalAssets) * 100 : 0;
-              return (
-                <AllocationItem
-                  key={item.type}
-                  type={item.type}
-                  totalValue={item.totalValue}
-                  percentage={percentage}
-                  count={item.count}
-                  currency={displayCurrency}
-                  animate={!shouldReduceMotion}
-                />
-              );
-            })}
-          </motion.div>
-        ) : (
-          <div className="relative h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={2}
-                  dataKey="value"
-                  nameKey="name"
-                >
-                  {pieData.map((entry) => (
-                    <Cell
-                      key={`cell-${entry.type}`}
-                      fill={getAssetHexColor(entry.type)}
-                      stroke="transparent"
-                    />
-                  ))}
-                </Pie>
-                <Tooltip content={<PieChartTooltip currency={displayCurrency} />} />
-                <Legend
-                  content={<PieChartLegend currency={displayCurrency} />}
-                  verticalAlign="bottom"
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            {/* Centre overlay — total assets */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ marginBottom: "40px" }}>
-              <div className="text-center">
-                <NumberTicker
-                  value={totalAssets}
-                  currency={displayCurrency}
-                  className="text-heading-sm text-foreground"
-                />
+        <AnimatePresence mode="wait">
+          {viewMode === "bars" ? (
+            <motion.div
+              key="bars"
+              className="space-y-3"
+              variants={containerVariants}
+              initial={shouldReduceMotion ? undefined : "hidden"}
+              animate={shouldReduceMotion ? undefined : "visible"}
+              exit={shouldReduceMotion ? undefined : { opacity: 0 }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2 }}
+            >
+              {sortedBreakdown.map((item) => {
+                const percentage =
+                  totalAssets > 0 ? (item.totalValue / totalAssets) * 100 : 0;
+                return (
+                  <AllocationItem
+                    key={item.type}
+                    type={item.type}
+                    totalValue={item.totalValue}
+                    percentage={percentage}
+                    count={item.count}
+                    currency={displayCurrency}
+                    animate={!shouldReduceMotion}
+                  />
+                );
+              })}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="pie"
+              className="relative h-64"
+              initial={shouldReduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={shouldReduceMotion ? undefined : { opacity: 0 }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2 }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={90}
+                    paddingAngle={2}
+                    dataKey="value"
+                    nameKey="name"
+                  >
+                    {pieData.map((entry) => (
+                      <Cell
+                        key={`cell-${entry.type}`}
+                        fill={getAssetHexColor(entry.type)}
+                        stroke="transparent"
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<PieChartTooltip currency={displayCurrency} />} />
+                  <Legend
+                    content={<PieChartLegend currency={displayCurrency} />}
+                    verticalAlign="bottom"
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              {/* Centre overlay — total assets */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ marginBottom: "40px" }}>
+                <div className="text-center">
+                  <NumberTicker
+                    value={totalAssets}
+                    currency={displayCurrency}
+                    className="text-heading-sm text-foreground"
+                  />
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

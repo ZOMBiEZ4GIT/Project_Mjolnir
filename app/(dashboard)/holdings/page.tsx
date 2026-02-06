@@ -7,6 +7,34 @@ import { RefreshCw, Briefcase, Filter, Wallet, ArrowRightLeft, Camera, EyeOff } 
 import { toast } from "sonner";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { HoldingsTable, type HoldingWithData, type PriceData } from "@/components/holdings/holdings-table";
+
+/**
+ * Sparkline data from the API.
+ */
+interface SparklineDataResult {
+  holdingId: string;
+  symbol: string;
+  prices: number[];
+}
+
+async function fetchSparklineData(): Promise<Map<string, number[]>> {
+  const response = await fetch("/api/prices/sparkline");
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Unauthorized");
+    }
+    throw new Error("Failed to fetch sparkline data");
+  }
+  const results: SparklineDataResult[] = await response.json();
+
+  const map = new Map<string, number[]>();
+  for (const result of results) {
+    if (result.prices.length >= 2) {
+      map.set(result.holdingId, result.prices);
+    }
+  }
+  return map;
+}
 import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
 import { CurrencyFilter, type CurrencyFilterValue } from "@/components/holdings/currency-filter";
 import { FilterTabs, type HoldingTypeFilter } from "@/components/holdings/filter-tabs";
@@ -95,7 +123,7 @@ interface PriceRefreshResult {
 }
 
 async function refreshPrices(holdingIds?: string[]): Promise<PriceRefreshResult[]> {
-  const response = await fetch("/api/prices/refresh", {
+  const response = await fetch("/api/prices", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -199,6 +227,17 @@ export default function HoldingsPage() {
     enabled: isLoaded && isSignedIn,
     // Prices can refetch independently without blocking holdings display
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Fetch sparkline data for tradeable holdings (30-day price history)
+  const {
+    data: sparklineMap,
+    isLoading: sparklineLoading,
+  } = useQuery({
+    queryKey: ["sparkline"],
+    queryFn: fetchSparklineData,
+    enabled: isLoaded && isSignedIn,
+    staleTime: 1000 * 60 * 30, // 30 minutes — historical data doesn't change often
   });
 
   // Mutation for refreshing prices (manual user action with toasts)
@@ -534,6 +573,8 @@ export default function HoldingsPage() {
         retryingPriceIds={retryingPriceIds}
         groupBy="type"
         typeFilter={typeFilter}
+        sparklineData={sparklineMap}
+        sparklineLoading={sparklineLoading}
       />
 
       {/* Speed-dial FAB with hidden dialog triggers */}

@@ -11,6 +11,7 @@ interface NumberTickerProps {
   currency: Currency;
   className?: string;
   prefix?: string;
+  compact?: boolean;
 }
 
 /**
@@ -26,6 +27,7 @@ export function NumberTicker({
   currency,
   className,
   prefix,
+  compact,
 }: NumberTickerProps) {
   const shouldReduceMotion = useReducedMotion();
   const motionValue = useMotionValue(0);
@@ -44,7 +46,7 @@ export function NumberTicker({
       // Skip animation — show final value immediately
       motionValue.set(value);
       if (displayRef.current) {
-        displayRef.current.textContent = formatCurrency(value, currency);
+        displayRef.current.textContent = formatCurrency(value, currency, { compact });
       }
       return;
     }
@@ -67,16 +69,16 @@ export function NumberTicker({
   useEffect(() => {
     const unsubscribe = springValue.on("change", (latest) => {
       if (displayRef.current) {
-        displayRef.current.textContent = formatCurrency(latest, currency);
+        displayRef.current.textContent = formatCurrency(latest, currency, { compact });
       }
     });
     return unsubscribe;
-  }, [springValue, currency]);
+  }, [springValue, currency, compact]);
 
   // Set initial display for reduced motion or SSR
   const initialDisplay = shouldReduceMotion
-    ? formatCurrency(value, currency)
-    : formatCurrency(0, currency);
+    ? formatCurrency(value, currency, { compact })
+    : formatCurrency(0, currency, { compact });
 
   return (
     <motion.span

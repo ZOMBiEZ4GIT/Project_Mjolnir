@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency, type ExchangeRates } from "@/lib/utils/currency";
+import { motion, useReducedMotion } from "framer-motion";
+import { fadeIn } from "@/lib/animations";
 
 interface CurrencyExposureItem {
   currency: Currency;
@@ -185,6 +187,7 @@ function ExposureItem({
 export function CurrencyExposure() {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading } = useCurrency();
+  const reducedMotion = useReducedMotion();
 
   const {
     data: exposureData,
@@ -233,7 +236,10 @@ export function CurrencyExposure() {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+    <motion.div
+      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      {...(reducedMotion ? {} : fadeIn)}
+    >
       <h3 className="text-label uppercase text-muted-foreground mb-6">
         Currency Exposure
       </h3>
@@ -250,6 +256,6 @@ export function CurrencyExposure() {
           />
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 }

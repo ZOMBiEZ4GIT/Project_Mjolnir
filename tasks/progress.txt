@@ -32,6 +32,12 @@
 - html2canvas backgroundColor requires raw hex — use `#18181b` to match --card token
 - Email templates (components/emails/) use inline hex values — email clients don't support CSS variables
 - Only legitimate remaining hardcoded grey: `bg-gray-500` fallback in category indicator functions (asset-allocation, currency-exposure)
+- TimeRangeSelector (components/charts/time-range-selector.tsx) exports TimeRange type and TIME_RANGE_OPTIONS — import from @/components/charts
+- lightweight-charts v5 API: `chart.addSeries(AreaSeries, options)` — not `chart.addAreaSeries(options)` (deprecated)
+- TradingView charts require `next/dynamic` with `ssr: false` — use TVChart from components/charts/tv-chart.tsx
+- TVChartWrapper supports `onCrosshairMove` callback for custom tooltips — returns TVCrosshairData { time, value, x, y } or null
+- TradingView custom tooltip: use absolute positioned div with pointer-events-none overlaying the chart container
+- TradingView Time type accepts YYYY-MM-DD date strings cast as `Time` — works for monthly data points
 - Navigation items defined in lib/navigation.ts — import navItems and NavItem type from there (sidebar, mobile nav, command menu)
 - New layout components live in components/layout/ — NavItemLink (nav-item.tsx) uses Framer Motion layoutId='active-nav' for animated active pill
 - TooltipProvider with delayDuration={0} wraps collapsed nav items for instant tooltip display
@@ -88,134 +94,246 @@
 - Check-in status API returns `latestContributions` for pre-populating super contribution fields
 - Success summary pattern: store mutation result in state + `showSuccess` boolean, render different content in same step (no extra wizard step)
 - CheckinStepper accepts currentStep=3 (beyond max) to mark all steps completed — no code change needed in stepper
+- NumberTicker component (components/dashboard/number-ticker.tsx) animates currency values using useSpring + useMotionValue; tabular-nums prevents layout shift
+- ChangeBadge component (components/dashboard/change-badge.tsx) shows positive/negative/zero with TrendingUp/TrendingDown/Minus icons; size="sm"|"md"
+- StaleIndicator component (components/dashboard/stale-indicator.tsx) shows amber warning with tooltip (icon variant) or inline text (badge variant)
+- framer-motion v12 `useSpring` subscribes via `.on("change", cb)` — use this to update textContent directly for performance
+- Dashboard sections stagger in via motion.div container (80ms delay) with fadeIn+slideUp (opacity 0→1, y 16→0, 300ms easeOut)
+- Progress bar animation: use useState(0) → useEffect setTimeout → setState(target) with CSS transition
+- Donut centre overlay: absolute positioned div with pointer-events-none, marginBottom to offset legend
+- Chart hex colours (#374151, #9CA3AF etc.) are required for SVG rendering — don't convert to CSS variables
+- Grid gap-6 for section spacing, gap-4 only for small internal layouts
+- All card-level elements use rounded-2xl; inner elements (tooltips, icons, row items) keep rounded-lg
+- Yahoo Finance `chart()` method: `yahooFinance.chart(symbol, { period1, period2, interval: "1d" })` returns `{ quotes: [{ close }] }`
+- CoinGecko market_chart: `/coins/{id}/market_chart?vs_currency=usd&days=30&interval=daily` returns `{ prices: [[timestamp, price]] }`
+- Sparkline data API: `GET /api/prices/sparkline` returns `{ holdingId, symbol, prices: number[] }[]` — staleTime 30min
+- SVG elements (non-Recharts) can use `stroke="currentColor"` with Tailwind `text-*` classes — avoids hardcoded hex
+- ChartSkeleton uses ChartCard wrapper when `withContainer=true` — consistent with all chart sections
+- All chart tooltips use `bg-card` (not `bg-background`) for consistent elevated surface styling
+- Chart hex colours centralised in `lib/chart-palette.ts` — import CHART_GRID, CHART_TEXT, CHART_AXIS, POSITIVE, NEGATIVE, etc. instead of hardcoding hex
+- Category asset type colours (STOCK, ETF, CRYPTO, SUPER, CASH) also in chart-palette.ts — use in getAssetHexColor() and similar functions
 
 ---
 
-# UX-6 Dashboard Transformation Progress Log
+# UX-7 Charts & Data Visualisation Progress Log
 
 Started: 2026-02-06
 
 ---
 
 ## 2026-02-06 - US-001
-- Created `components/dashboard/number-ticker.tsx` — animated number ticker
-- Uses `useSpring` + `useMotionValue` from framer-motion with `numberSpring` preset
-- Initial mount: counts from 0 to value (600ms spring via stiffness=80, damping=20)
-- Value changes: morphs to new value using spring physics
-- Uses `formatCurrency()` for proper AUD/NZD/USD formatting during animation
-- `tabular-nums` font-variant prevents layout shift
-- `useReducedMotion()` check skips animation when OS prefers reduced motion
-- Files changed: `components/dashboard/number-ticker.tsx` (new)
+- Installed `lightweight-charts` npm package
+- Created `components/charts/tv-chart-wrapper.tsx` — React wrapper for TradingView Lightweight Charts
+  - Dark theme with `#09090b` background, `#27272a` grid, `#a1a1aa` text, `#8b5cf6` crosshair
+  - ResizeObserver for responsive sizing
+  - Props: data, height (default 264), className, areaStyle overrides, chartOptions overrides
+  - Disposes chart on unmount, recreates on dependency changes
+- Created `components/charts/tv-chart.tsx` — SSR-safe dynamic import wrapper (ssr: false)
+- Updated `components/charts/index.ts` barrel export
+- Files changed: components/charts/tv-chart-wrapper.tsx (new), components/charts/tv-chart.tsx (new), components/charts/index.ts, package.json, package-lock.json
 - **Learnings for future iterations:**
-  - framer-motion v12 `useSpring` subscribes via `.on("change", cb)` — use this to update textContent directly for performance
-  - `motion.span` with ref + textContent update avoids React re-renders during animation
-  - `requestAnimationFrame` needed after setting initial 0 to ensure spring starts from 0 → target
+  - lightweight-charts v5 uses `chart.addSeries(AreaSeries, options)` instead of deprecated `chart.addAreaSeries(options)`
+  - Import `AreaSeries` (capital A) from lightweight-charts — it's re-exported as `areaSeries as AreaSeries`
+  - TradingView requires DOM — always use `next/dynamic` with `ssr: false`
+  - Recharts SVG hex values are still needed for Recharts charts — only use TradingView for new premium charts
 ---
 
 ## 2026-02-06 - US-002
-- Created `components/dashboard/change-badge.tsx` — reusable change indicator
-- Positive (green), negative (red), zero (muted) with TrendingUp/TrendingDown/Minus icons
-- Two sizes: sm (compact for tables) and md (standard for cards)
-- Uses design tokens: `text-positive bg-positive/10`, `text-destructive bg-destructive/10`
-- Optional `showAmount` prop to toggle currency amount display
-- Files changed: `components/dashboard/change-badge.tsx` (new)
+- Replaced Recharts LineChart with TradingView area chart in net worth "Net Worth" view mode
+- Extended `TVChartWrapper` to support `onCrosshairMove` callback for custom tooltips
+  - Added `TVCrosshairData` type (time, value, x, y coordinates)
+  - Uses `subscribeCrosshairMove` API from TradingView
+  - Callback ref pattern to avoid recreating chart on callback change
+- Updated `net-worth-chart.tsx`:
+  - Removed Recharts imports (LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer)
+  - Added TVChart with `useMemo` for data transformation (history points → TVDataPoint format)
+  - Custom tooltip overlay: absolute positioned div with pointer-events-none, bg-card border-border styling
+  - Tooltip clamped to chart container width to prevent overflow
+  - Added `motion.div` fade-in animation (opacity 0→1, 200ms duration) on Net Worth view
+  - Kept Recharts AssetsVsDebtChart unchanged for the other view mode
+  - Export button (html2canvas) continues to work on the chartRef container
+  - View toggle and time range selector preserved
+- Updated barrel exports: added `TVCrosshairData` type to tv-chart.tsx and index.ts
+- Files changed: components/charts/tv-chart-wrapper.tsx, components/charts/tv-chart.tsx, components/charts/index.ts, components/dashboard/net-worth-chart.tsx
 - **Learnings for future iterations:**
-  - Use `Math.abs()` for both amount and percentage display, prepend sign manually for consistent formatting
+  - TradingView `subscribeCrosshairMove` provides `MouseEventParams` with `point` (x/y) and `seriesData` map
+  - Use `param.seriesData.get(series)` to get the value — check for `"value" in seriesData` since Area series uses value field
+  - Use ref pattern for callback to avoid chart recreation: `onCrosshairMoveRef.current = onCrosshairMove`
+  - TradingView Time type accepts YYYY-MM-DD strings cast as `Time` — works with monthly data
+  - Custom tooltip needs `pointer-events-none` to avoid interfering with chart hover
+  - Clamp tooltip x position with `Math.min(x + offset, containerWidth - tooltipWidth)` to prevent overflow
 ---
 
 ## 2026-02-06 - US-003
-- Created `components/dashboard/stale-indicator.tsx` — stale data indicator
-- Icon variant: amber AlertTriangle with shadcn/ui Tooltip showing "Last updated: X ago"
-- Badge variant: amber pill with icon + relative time text
-- Returns null when `isStale` is false (safe to render unconditionally)
-- Files changed: `components/dashboard/stale-indicator.tsx` (new)
+- Created `components/charts/time-range-selector.tsx` — standalone animated time range selector
+  - Framer Motion `layoutId="time-range-indicator"` for smooth sliding pill between options
+  - Active tab: `bg-accent/20 text-foreground`, inactive: `text-muted-foreground hover:text-foreground`
+  - `useReducedMotion()` hook: sets transition duration to 0 when OS prefers reduced motion
+  - Props: `value: TimeRange`, `onChange: (range: TimeRange) => void`
+  - Exports `TimeRange` type and `TIME_RANGE_OPTIONS` constant for reuse
+- Updated `components/charts/index.ts` barrel exports
+- Updated `components/dashboard/net-worth-chart.tsx`:
+  - Removed inline `TimeRange` type, `TIME_RANGE_OPTIONS`, and `TimeRangeSelector` function
+  - Imports from `@/components/charts` instead
+  - Updated prop names from `selectedRange/onRangeChange` to `value/onChange`
+- Files changed: components/charts/time-range-selector.tsx (new), components/charts/index.ts, components/dashboard/net-worth-chart.tsx
 - **Learnings for future iterations:**
-  - TooltipProvider with `delayDuration={0}` needed per usage site (or wrap at app level)
-  - `asChild` on TooltipTrigger avoids extra DOM element — use span wrapper for inline display
+  - Framer Motion `layoutId` sliding indicator pattern: render `motion.span` with `layoutId` only on active item inside a button — identical to filter-tabs.tsx pattern
+  - `useReducedMotion()` from framer-motion returns boolean — use to set transition duration to 0
+  - When extracting components, watch for prop name changes — replace_all may not match different indentation levels
 ---
 
 ## 2026-02-06 - US-004
-- Rebuilt `components/dashboard/net-worth-hero.tsx` with premium styling
-- Purple glow: `shadow-glow-md` + `border-accent/20` + gradient `from-card via-card to-accent/5`
-- Net worth value now uses `NumberTicker` with `text-display-xl` typography
-- "Net Worth" label uses `text-label` (small caps, tracking wide)
-- Change indicator uses `ChangeBadge` component
-- Stale data uses `StaleIndicator` (top-right corner)
-- `slideUp` entrance animation with `useReducedMotion` check
-- Mobile: sparkline shows below value instead of inline
-- Removed unused `formatCurrency` import (caught by lint)
-- Files changed: `components/dashboard/net-worth-hero.tsx` (modified)
+- Added donut chart centre overlay with NumberTicker to `asset-allocation-pie-chart.tsx`
+  - Absolute positioned overlay with `pointer-events-none` over donut hole
+  - Shows "Total" label in `text-xs text-muted-foreground` and net worth via NumberTicker with compact formatting
+  - `marginBottom: 40` offsets the overlay upward to account for legend space below the chart
+- Extended `NumberTicker` component with optional `compact` prop
+  - Passes `{ compact }` to all `formatCurrency` calls (initial display, spring change handler, reduced motion)
+  - Added `compact` to spring change effect dependency array
+- Files changed: components/dashboard/asset-allocation-pie-chart.tsx, components/dashboard/number-ticker.tsx
 - **Learnings for future iterations:**
-  - When replacing formatCurrency with NumberTicker, remove the import — ESLint `no-unused-vars` catches this
-  - `rounded-2xl` from design system for card borders
-  - `relative` positioning needed on card for `absolute` stale indicator placement
+  - Recharts `ResponsiveContainer` + `Legend` push the donut upward — centre overlay needs `marginBottom` to offset legend height
+  - NumberTicker compact prop enables `formatCurrency` compact notation ($1.2M, $500K) for space-constrained contexts
+  - Use `pointer-events-none` on chart overlays to preserve hover/click interactions on underlying chart elements
 ---
 
 ## 2026-02-06 - US-005
-- Updated `components/dashboard/summary-cards.tsx` with NumberTicker, ChangeBadge, stagger animations
-- Cards stagger in with 100ms delay (overrides default 50ms)
-- Hover effect: `shadow-card-hover` with 150ms transition
-- Added percentage-of-net-worth indicator
-- For debt cards, flip badge sign so decrease shows as positive (green)
-- All hardcoded colours replaced with design tokens
-- Files changed: `components/dashboard/summary-cards.tsx` (modified)
+- Created `components/charts/sparkline.tsx` — reusable sparkline mini-chart component
+  - Uses Recharts `LineChart` + `Line` with no axes, no grid, no dots — just the line
+  - Props: `data: number[]`, `width` (default 80), `height` (default 32), `positive` (optional override)
+  - Auto-detects trend from first vs last data point when `positive` not provided
+  - Positive trend: `#22c55e` (green-500), negative: `#ef4444` (red-500)
+  - `isAnimationActive={false}` for static render (performance in table rows)
+  - `type="monotone"` for smooth interpolation, 1.5px stroke width
+  - Handles edge cases: null/empty data → null, single point → null
+- Updated `components/charts/index.ts` barrel export
+- Files changed: components/charts/sparkline.tsx (new), components/charts/index.ts
 - **Learnings for future iterations:**
-  - For debt: negate changeAmount/changePercent before passing to ChangeBadge so decrease = positive
-  - Override staggerContainer staggerChildren: spread `...staggerContainer` then override `visible.transition`
+  - Recharts LineChart works well for sparklines — just omit XAxis, YAxis, CartesianGrid, Tooltip, and dots
+  - `isAnimationActive={false}` prevents animation on mount — important for many sparklines in table rows
+  - `positive` prop allows external override of trend colour (useful when caller knows the context better than first-vs-last comparison)
 ---
 
 ## 2026-02-06 - US-006
-- Updated `components/dashboard/asset-allocation.tsx` with animations and design tokens
-- Bar rows stagger in (50ms), progress bars animate 0% → target (400ms ease-out)
-- Donut chart centre overlay with NumberTicker showing total assets
-- fadeIn entrance on card, hover bg-accent/5 on rows
-- Replaced text-sm/text-xs with text-body-sm and text-label typography tokens
-- Card uses rounded-2xl border border-border bg-card
-- Files changed: `components/dashboard/asset-allocation.tsx` (modified)
+- Integrated sparklines into the holdings table for tradeable assets (stocks, ETFs, crypto)
+- Created `lib/services/sparkline-data.ts` — service for fetching 30-day historical prices
+  - Yahoo Finance `chart()` API for stocks/ETFs (interval: 1d, period: 30 days)
+  - CoinGecko `/coins/{id}/market_chart` for crypto (vs_currency: usd, days: 30, interval: daily)
+  - Graceful error handling: returns empty prices array on failure
+- Created `app/api/prices/sparkline/route.ts` — batch API endpoint
+  - Fetches all active tradeable holdings for the authenticated user
+  - Returns `{ holdingId, symbol, prices: number[] }` array
+- Updated `components/holdings/holdings-table.tsx`:
+  - Added `sparklineData` and `sparklineLoading` props threaded through all table views (grouped, flat, currency)
+  - Added "Trend" column header between Price and Market Value (hidden below md breakpoint)
+  - Renders `<Sparkline>` component for each tradeable holding with data from sparklineData map
+  - Loading state: `bg-muted rounded animate-pulse` skeleton (80x32px)
+  - Snapshot-based holdings show no sparkline (column not rendered for non-tradeable sections)
+- Updated `app/(dashboard)/holdings/page.tsx`:
+  - Added `fetchSparklineData()` function and TanStack Query with 30-minute stale time
+  - Passes `sparklineMap` and `sparklineLoading` to HoldingsTable
+- Files changed: lib/services/sparkline-data.ts (new), app/api/prices/sparkline/route.ts (new), components/holdings/holdings-table.tsx, app/(dashboard)/holdings/page.tsx
 - **Learnings for future iterations:**
-  - Progress bar animation: use useState(0) → useEffect setTimeout → setState(target) with CSS transition
-  - Donut centre overlay: absolute positioned div with pointer-events-none, marginBottom to offset legend
+  - Yahoo Finance `chart()` method returns `{ quotes: [{ close, ... }] }` — use `result.quotes.map(q => q.close)` for price array
+  - CoinGecko market_chart returns `{ prices: [[timestamp, price], ...] }` — destructure as `[, price]`
+  - Use longer staleTime (30min) for sparkline data since historical prices don't change frequently
+  - Thread new props through all table view variants: HoldingsTypeSection, HoldingsFlatSection, HoldingsTableContent
+  - Sparkline column hidden below md breakpoint — desktop-only feature as specified
+  - ChartCard (components/charts/chart-card.tsx) wraps chart sections with consistent card styling, title, and fadeIn animation — use instead of manual `rounded-2xl border border-border bg-card p-4 sm:p-6` wrappers
 ---
 
 ## 2026-02-06 - US-007
-- Updated `components/dashboard/top-performers.tsx` — ChangeBadge, stagger rows, fadeIn
-- Replaced inline gain/loss display with `ChangeBadge` component (size="sm")
-- Stagger rows (50ms), fadeIn card entrance, hover bg-accent/5
-- text-label for section headers, text-body-sm for labels
-- Files changed: `components/dashboard/top-performers.tsx` (modified)
----
-
-## 2026-02-06 - US-008 through US-012 (Design Token Batch)
-- US-008: dashboard-header.tsx — heading uses text-heading-lg/text-display-md
-- US-009: stale-data-warning.tsx — all yellow-* → amber-* (border-amber-500/30, bg-amber-500/10, text-amber-500)
-- US-010: currency-exposure.tsx — rounded-2xl bg-card, text-label, text-body-sm
-- US-011: super-breakdown-section.tsx + super-growth-chart.tsx — rounded-2xl bg-card, text-label
-- US-012: net-worth-chart.tsx — rounded-2xl bg-card, text-label
+- Created `components/charts/chart-card.tsx` — reusable chart wrapper component
+  - Props: `title` (string), `actions` (ReactNode slot for header buttons/toggles), `children`, `className`
+  - Card container: `bg-card border border-border rounded-2xl p-4 sm:p-6` (matches existing chart card pattern)
+  - Header: title in `text-label uppercase text-muted-foreground` (left), actions slot (right) — responsive flex layout
+  - Entrance animation: `fadeIn` preset from `lib/animations.ts` on mount
+  - Respects `prefers-reduced-motion` via `useReducedMotion()` — skips animation when enabled
+- Updated `components/charts/index.ts` barrel export
+- Files changed: components/charts/chart-card.tsx (new), components/charts/index.ts
 - **Learnings for future iterations:**
-  - Chart hex colours (#374151, #9CA3AF etc.) are required for SVG rendering — don't convert to CSS variables
-  - Category indicator colours (bg-green-500, bg-blue-500 etc.) are intentional — not part of design token migration
+  - ChartCard extracts the repeated `rounded-2xl border border-border bg-card p-4 sm:p-6` + title + actions pattern used across net-worth-chart, asset-allocation, etc.
+  - Use ChartCard for new chart sections; existing charts can be refactored to use it incrementally
+  - `useReducedMotion()` returns boolean — spread `fadeIn` only when false to skip animation entirely
 ---
 
-## 2026-02-06 - US-013
-- Updated `components/dashboard/dashboard-content.tsx` — stagger animation wrapper
-- motion.div stagger container (80ms) wrapping all dashboard sections
-- Each section: fadeIn+slideUp (opacity 0→1, y 16→0, 300ms easeOut)
-- useReducedMotion check — all sections appear instantly when reduced motion preferred
-- space-y-6 container layout, px-4 py-4 sm:px-6 sm:py-6 content padding
-- Files changed: `components/dashboard/dashboard-content.tsx` (modified)
----
-
-## 2026-02-06 - US-014
-- Responsive dashboard grid refinement
-- Consistent gap-6 spacing across all grid layouts (summary-cards.tsx updated from gap-4)
-- All card-level elements use rounded-2xl (checkin-prompt, stale-data-warning, asset-allocation-pie-chart updated from rounded-lg)
-- asset-allocation-pie-chart also updated to use bg-card and text-label tokens
-- Desktop (lg+): Summary cards 2-col, Allocation+Currency 2-col, Top Performers full width with internal 2-col
-- Tablet (md): Summary cards 2-col, Allocation+Currency stacked
-- Mobile: Everything single column
-- Files changed: `summary-cards.tsx`, `checkin-prompt.tsx`, `stale-data-warning.tsx`, `asset-allocation-pie-chart.tsx`
+## 2026-02-06 - US-008
+- Updated `components/charts/chart-skeleton.tsx` — replaced hardcoded colours with design tokens
+  - Replaced `withContainer` manual card wrapper (`rounded-lg border border-border bg-card/50 p-6`) with `ChartCard` component
+  - When `withContainer` is true and title is provided, ChartCard renders the title — skeleton title div only shows in non-container mode
+  - Line skeleton: replaced hardcoded `stroke="#3f3f46"` with `stroke="currentColor"` + `text-border` class on parent div
+  - Pie skeleton: enhanced from plain circle to donut ring shape (`border-[16px] border-border`) to better match actual donut chart
+  - Bar skeleton: already used `bg-muted` — no changes needed
+  - Already used `animate-pulse` shimmer — no changes needed
+- Files changed: components/charts/chart-skeleton.tsx
 - **Learnings for future iterations:**
-  - Check card-level border radius consistency after design token migrations — inner elements (tooltips, icons, row items) keep rounded-lg
-  - Grid gap-6 for section spacing, gap-4 only for small internal layouts
+  - SVG `stroke` can use `currentColor` to inherit from Tailwind text colour classes — avoids hardcoded hex values
+  - ChartCard wraps content with consistent `rounded-2xl border border-border bg-card p-4 sm:p-6` + title + fadeIn animation
+  - When using ChartCard as container, avoid duplicating title rendering inside the skeleton content
+---
 
-## ALL 14 STORIES COMPLETE — UX-6 Dashboard Transformation finished
+## 2026-02-06 - US-009
+- Polished chart tooltips across all chart components for consistent design token usage
+- Updated 4 files: asset-allocation-pie-chart.tsx, assets-vs-debt-chart.tsx, holding-price-chart.tsx, super-balance-history-chart.tsx
+  - Changed `bg-background` → `bg-card` in all tooltip containers
+  - net-worth-chart.tsx TradingView tooltip already used `bg-card` — no change needed
+- All tooltips now consistently use: `bg-card border border-border rounded-lg p-3 shadow-lg`
+- Text colours already consistent: `text-foreground` for values, `text-muted-foreground` for labels
+- Positive/negative values already use `text-positive`/`text-destructive` where applicable (assets-vs-debt, super-balance-history)
+- Files changed: components/dashboard/asset-allocation-pie-chart.tsx, components/dashboard/assets-vs-debt-chart.tsx, components/holdings/holding-price-chart.tsx, components/holdings/super-balance-history-chart.tsx
+- **Learnings for future iterations:**
+  - `bg-card` is the correct surface colour for tooltips (elevated above page background) — `bg-background` is the page background
+  - All Recharts tooltips were already using correct text tokens; only the container background was inconsistent
+---
+
+## 2026-02-06 - US-010
+- Created `lib/chart-palette.ts` — centralised named hex constants for all Recharts/SVG chart colours
+  - Axis tokens: CHART_GRID (#374151), CHART_TEXT (#9CA3AF), CHART_AXIS (#4B5563)
+  - Semantic colours: POSITIVE (#22C55E), NEGATIVE (#EF4444), NET_WORTH (#FFFFFF), ACCENT (#8B5CF6)
+  - Category colours: STOCK, ETF, CRYPTO, SUPER, CASH, CATEGORY_FALLBACK
+  - Super breakdown: EMPLOYER, EMPLOYEE, RETURNS
+- Updated 7 chart component files to import from `@/lib/chart-palette` instead of hardcoded hex strings:
+  - `super-growth-chart.tsx` — axis tokens + COLORS object uses palette + tooltip bg-background → bg-card
+  - `assets-vs-debt-chart.tsx` — axis tokens + area/line colours use POSITIVE/NEGATIVE/NET_WORTH
+  - `holding-price-chart.tsx` — axis tokens + line colours use STOCK/ACCENT/NET_WORTH
+  - `super-balance-history-chart.tsx` — axis tokens + COLORS object uses palette + activeDot stroke
+  - `net-worth-hero.tsx` — sparkline colours use POSITIVE/NEGATIVE
+  - `sparkline.tsx` — trend colours use POSITIVE/NEGATIVE
+  - `asset-allocation-pie-chart.tsx` — getAssetHexColor uses palette constants
+- Preserved existing visual appearance — only extracted magic hex strings to named constants
+- Fixed `super-growth-chart.tsx` tooltip: `bg-background` → `bg-card` (missed in US-009)
+- Files changed: lib/chart-palette.ts (new), components/charts/sparkline.tsx, components/dashboard/asset-allocation-pie-chart.tsx, components/dashboard/assets-vs-debt-chart.tsx, components/dashboard/net-worth-hero.tsx, components/dashboard/super-growth-chart.tsx, components/holdings/holding-price-chart.tsx, components/holdings/super-balance-history-chart.tsx
+- **Learnings for future iterations:**
+  - All Recharts SVG hex colours now live in `lib/chart-palette.ts` — import from there, never hardcode hex in chart components
+  - TradingView hex constants remain in `tv-chart-wrapper.tsx` since they're specific to the Lightweight Charts API
+  - `bg-gray-500` fallback in category indicator functions (asset-allocation.tsx, currency-exposure.tsx) is intentional — do not migrate
+  - html2canvas `backgroundColor` requires raw hex (#18181b) — do not convert to palette constant
+  - Chart fadeIn pattern: `<motion.div {...(reducedMotion ? {} : fadeIn)}>` — spread fadeIn only when reduced motion is off
+  - AnimatePresence mode="wait" for view switching: wrap content with keyed motion.div children for crossfade between views
+---
+
+## 2026-02-06 - US-011
+- Added Framer Motion fadeIn entrance animations to all chart components
+- Added AnimatePresence crossfade for view-switching charts:
+  - `net-worth-chart.tsx`: networth ↔ assets vs debt views with `AnimatePresence mode="wait"` and keyed motion.div children
+  - `asset-allocation.tsx`: bars ↔ pie views with `AnimatePresence mode="wait"` and keyed motion.div children
+- Added fadeIn to non-switching chart components:
+  - `asset-allocation-pie-chart.tsx`: motion.div wrapper with fadeIn
+  - `currency-exposure.tsx`: motion.div wrapper with fadeIn
+  - `super-growth-chart.tsx`: motion.div wrapper with fadeIn
+  - `holding-price-chart.tsx`: motion.div wrapper with fadeIn
+  - `super-balance-history-chart.tsx`: motion.div wrapper with fadeIn
+- All animations respect `prefers-reduced-motion` via `useReducedMotion()` hook — animations skipped entirely when enabled
+- Fixed height containers prevent layout shift during animations:
+  - Net worth chart: `h-[264px]` on chartRef container
+  - All other charts already had `h-64` on chart content areas
+- Animation triggers only on data-loaded state — skeleton/loading states render without animation wrappers
+- Files changed: components/dashboard/net-worth-chart.tsx, components/dashboard/asset-allocation.tsx, components/dashboard/asset-allocation-pie-chart.tsx, components/dashboard/currency-exposure.tsx, components/dashboard/super-growth-chart.tsx, components/holdings/holding-price-chart.tsx, components/holdings/super-balance-history-chart.tsx
+- **Learnings for future iterations:**
+  - `AnimatePresence mode="wait"` waits for exit animation to complete before entering next child — use for view toggle transitions
+  - Key each child of AnimatePresence uniquely to trigger enter/exit — `key="networth"` vs `key="assetsvsdebt"`
+  - `{...(reducedMotion ? {} : fadeIn)}` pattern cleanly skips all animation props when reduced motion is preferred
+  - Dashboard sections already have stagger animation in `dashboard-content.tsx` — chart-level fadeIn adds a secondary layer after stagger completes
+---
+

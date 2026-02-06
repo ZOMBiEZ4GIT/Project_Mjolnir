@@ -13,7 +13,11 @@ import {
   Legend,
 } from "recharts";
 import { ChartSkeleton, ChartError } from "@/components/charts";
+import { NumberTicker } from "@/components/dashboard/number-ticker";
+import { STOCK, ETF, CRYPTO, SUPER, CASH, CATEGORY_FALLBACK } from "@/lib/chart-palette";
 import { useCallback } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { fadeIn } from "@/lib/animations";
 
 interface HoldingValue {
   id: string;
@@ -71,28 +75,22 @@ function getAssetDisplayName(type: string): string {
 }
 
 /**
- * Returns the hex color for an asset type (for Recharts).
- * These correspond to the Tailwind color palette used in progress bars:
- * - blue-500: #3B82F6
- * - purple-500: #8B5CF6
- * - orange-500: #F97316
- * - emerald-500: #10B981
- * - cyan-500: #06B6D4
+ * Returns the hex color for an asset type (for Recharts SVG rendering).
  */
 function getAssetHexColor(type: string): string {
   switch (type) {
     case "stock":
-      return "#3B82F6"; // blue-500
+      return STOCK;
     case "etf":
-      return "#8B5CF6"; // purple-500
+      return ETF;
     case "crypto":
-      return "#F97316"; // orange-500
+      return CRYPTO;
     case "super":
-      return "#10B981"; // emerald-500
+      return SUPER;
     case "cash":
-      return "#06B6D4"; // cyan-500
+      return CASH;
     default:
-      return "#6B7280"; // gray-500
+      return CATEGORY_FALLBACK;
   }
 }
 
@@ -123,7 +121,7 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
 
   const data = payload[0].payload;
   return (
-    <div className="bg-background border border-border rounded-lg p-3 shadow-lg">
+    <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
       <p className="text-foreground font-medium mb-1">{data.name}</p>
       <p className="text-muted-foreground text-sm">
         {formatCurrency(data.value, currency)}
@@ -191,6 +189,7 @@ export function AssetAllocationPieChart() {
   const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading } = useCurrency();
   const queryClient = useQueryClient();
+  const reducedMotion = useReducedMotion();
 
   const {
     data: netWorthData,
@@ -270,11 +269,14 @@ export function AssetAllocationPieChart() {
   }
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+    <motion.div
+      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      {...(reducedMotion ? {} : fadeIn)}
+    >
       <h3 className="text-label uppercase text-muted-foreground mb-6">
         Asset Allocation
       </h3>
-      <div className="h-64">
+      <div className="relative h-64">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -302,7 +304,22 @@ export function AssetAllocationPieChart() {
             />
           </PieChart>
         </ResponsiveContainer>
+        {/* Centre overlay — positioned over the donut hole */}
+        <div
+          className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          style={{ marginBottom: 40 }}
+        >
+          <div className="flex flex-col items-center">
+            <span className="text-xs text-muted-foreground">Total</span>
+            <NumberTicker
+              value={netWorthData.netWorth}
+              currency={displayCurrency}
+              compact
+              className="text-lg font-semibold text-foreground"
+            />
+          </div>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

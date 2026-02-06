@@ -12,6 +12,7 @@ import {
   Line,
   ComposedChart,
 } from "recharts";
+import { CHART_GRID, CHART_TEXT, CHART_AXIS, POSITIVE, NEGATIVE, NET_WORTH } from "@/lib/chart-palette";
 
 interface HistoryPoint {
   date: string;
@@ -70,7 +71,7 @@ function CustomTooltip({ active, payload, currency }: TooltipProps) {
 
   const data = payload[0].payload;
   return (
-    <div className="bg-background border border-border rounded-lg p-3 shadow-lg min-w-[180px]">
+    <div className="bg-card border border-border rounded-lg p-3 shadow-lg min-w-[180px]">
       <p className="text-muted-foreground text-sm mb-2">
         {formatMonthFull(data.date)}
       </p>
@@ -176,21 +177,21 @@ export function AssetsVsDebtChart({ data, isLoading }: AssetsVsDebtChartProps) {
         >
           <CartesianGrid
             strokeDasharray="3 3"
-            stroke="#374151"
+            stroke={CHART_GRID}
             vertical={false}
           />
           <XAxis
             dataKey="displayMonth"
-            stroke="#9CA3AF"
-            tick={{ fill: "#9CA3AF", fontSize: 12 }}
-            tickLine={{ stroke: "#4B5563" }}
-            axisLine={{ stroke: "#4B5563" }}
+            stroke={CHART_TEXT}
+            tick={{ fill: CHART_TEXT, fontSize: 12 }}
+            tickLine={{ stroke: CHART_AXIS }}
+            axisLine={{ stroke: CHART_AXIS }}
           />
           <YAxis
-            stroke="#9CA3AF"
-            tick={{ fill: "#9CA3AF", fontSize: 12 }}
-            tickLine={{ stroke: "#4B5563" }}
-            axisLine={{ stroke: "#4B5563" }}
+            stroke={CHART_TEXT}
+            tick={{ fill: CHART_TEXT, fontSize: 12 }}
+            tickLine={{ stroke: CHART_AXIS }}
+            axisLine={{ stroke: CHART_AXIS }}
             tickFormatter={formatCurrencyCompact}
             domain={[0, yMax]}
             width={70}
@@ -202,9 +203,9 @@ export function AssetsVsDebtChart({ data, isLoading }: AssetsVsDebtChartProps) {
             type="monotone"
             dataKey="totalAssets"
             stackId="1"
-            fill="#10B981"
+            fill={POSITIVE}
             fillOpacity={0.6}
-            stroke="#10B981"
+            stroke={POSITIVE}
             strokeWidth={1}
           />
 
@@ -213,9 +214,9 @@ export function AssetsVsDebtChart({ data, isLoading }: AssetsVsDebtChartProps) {
             type="monotone"
             dataKey="totalDebt"
             stackId="2"
-            fill="#EF4444"
+            fill={NEGATIVE}
             fillOpacity={0.6}
-            stroke="#EF4444"
+            stroke={NEGATIVE}
             strokeWidth={1}
           />
 
@@ -223,10 +224,10 @@ export function AssetsVsDebtChart({ data, isLoading }: AssetsVsDebtChartProps) {
           <Line
             type="monotone"
             dataKey="netWorth"
-            stroke="#FFFFFF"
+            stroke={NET_WORTH}
             strokeWidth={2}
-            dot={{ fill: "#FFFFFF", strokeWidth: 0, r: 3 }}
-            activeDot={{ r: 5, fill: "#FFFFFF", stroke: "#374151", strokeWidth: 2 }}
+            dot={{ fill: NET_WORTH, strokeWidth: 0, r: 3 }}
+            activeDot={{ r: 5, fill: NET_WORTH, stroke: CHART_GRID, strokeWidth: 2 }}
           />
         </ComposedChart>
       </ResponsiveContainer>
