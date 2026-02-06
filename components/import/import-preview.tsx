@@ -57,9 +57,9 @@ export function ImportPreview({
 
   return (
     <motion.div
-      initial={reducedMotion ? false : { opacity: 0, x: 30 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ duration: 0.25, ease: "easeOut" }}
+      initial={reducedMotion ? undefined : { opacity: 0, x: 30 }}
+      animate={reducedMotion ? undefined : { opacity: 1, x: 0 }}
+      transition={reducedMotion ? { duration: 0 } : { duration: 0.25, ease: "easeOut" as const }}
       className="space-y-4"
     >
       {/* Row count */}

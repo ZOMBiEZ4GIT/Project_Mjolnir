@@ -47,7 +47,7 @@ export function SettingsSection({
         <div className="flex items-center gap-3">
           <Icon className="h-5 w-5 text-muted-foreground" />
           <div className="text-left">
-            <span className="text-base font-semibold text-foreground">
+            <span className="text-heading-sm text-foreground">
               {title}
             </span>
             {description && (

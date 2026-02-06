@@ -38,7 +38,7 @@ export default async function UnsubscribedPage({
     message =
       "The unsubscribe link appears to be incomplete. Please use the full link from your email.";
     Icon = AlertTriangle;
-    iconColor = "text-yellow-500";
+    iconColor = "text-warning";
   } else if (error === "invalid_token") {
     title = "Invalid Link";
     message =
@@ -50,7 +50,7 @@ export default async function UnsubscribedPage({
     message =
       "We couldn't find your account. You may have already unsubscribed or the link may be outdated.";
     Icon = AlertTriangle;
-    iconColor = "text-yellow-500";
+    iconColor = "text-warning";
   } else {
     title = "Something Went Wrong";
     message =
@@ -61,14 +61,14 @@ export default async function UnsubscribedPage({
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-card rounded-lg border border-border p-8 text-center">
+      <div className="max-w-md w-full bg-card rounded-2xl border border-border p-8 text-center">
         {/* Icon */}
         <div className={`mb-6 ${iconColor}`}>
           <Icon className="h-16 w-16 mx-auto" />
         </div>
 
         {/* Title */}
-        <h1 className="text-2xl font-semibold text-foreground mb-4">{title}</h1>
+        <h1 className="text-heading-lg text-foreground mb-4">{title}</h1>
 
         {/* Message */}
         <p className="text-muted-foreground mb-8">{message}</p>

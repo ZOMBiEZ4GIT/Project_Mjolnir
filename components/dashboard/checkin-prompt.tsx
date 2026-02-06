@@ -82,7 +82,7 @@ export function CheckinPrompt() {
               <CalendarCheck className="h-5 w-5 text-accent-foreground" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-foreground">
+              <h3 className="text-heading-sm text-foreground">
                 Monthly Check-in Due
               </h3>
               <p className="mt-1 text-sm text-muted-foreground">

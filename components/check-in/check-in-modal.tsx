@@ -1065,7 +1065,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
 
                                   {/* Large change warning */}
                                   {isLargeChange && (
-                                    <div className="mt-2 flex items-center gap-1.5 text-xs text-yellow-500">
+                                    <div className="mt-2 flex items-center gap-1.5 text-xs text-warning">
                                       <AlertTriangle className="h-3 w-3" />
                                       <span>Large change detected ({Math.round(percentChange)}%)</span>
                                     </div>

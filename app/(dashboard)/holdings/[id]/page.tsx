@@ -353,7 +353,7 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
                 {priceData.fetchedAt && (
                   <div
                     className={`flex items-center gap-1 mt-2 text-xs ${
-                      priceData.isStale ? "text-yellow-400" : "text-muted-foreground"
+                      priceData.isStale ? "text-warning" : "text-muted-foreground"
                     }`}
                   >
                     {priceData.isStale ? (

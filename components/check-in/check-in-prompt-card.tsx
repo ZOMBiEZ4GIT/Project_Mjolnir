@@ -51,15 +51,15 @@ export function CheckInPromptCard() {
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
+    <div className="rounded-2xl border border-border bg-card/50 p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-foreground">
+          <h3 className="text-heading-md text-foreground">
             Monthly Check-in
           </h3>
           <p className="mt-2 text-muted-foreground">
             You have{" "}
-            <span className="font-semibold text-yellow-500">
+            <span className="font-semibold text-warning">
               {data.holdingsToUpdate} holding{data.holdingsToUpdate !== 1 ? "s" : ""}
             </span>{" "}
             to update for {data.currentMonth}

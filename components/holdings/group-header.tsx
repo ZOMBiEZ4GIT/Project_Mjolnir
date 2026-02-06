@@ -47,7 +47,7 @@ export function GroupHeader({
         >
           <ChevronRight className="h-4 w-4" />
         </motion.span>
-        <h2 className="text-lg font-semibold text-foreground">
+        <h2 className="text-heading-md text-foreground">
           {label}{" "}
           <span className="text-muted-foreground font-normal">({count})</span>
         </h2>
@@ -63,7 +63,7 @@ export function GroupHeader({
           />
         )}
         {portfolioPercent !== null && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-label bg-muted text-muted-foreground">
             {portfolioPercent.toFixed(1)}%
           </span>
         )}

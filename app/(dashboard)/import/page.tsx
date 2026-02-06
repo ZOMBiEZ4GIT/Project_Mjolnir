@@ -277,7 +277,7 @@ export default function ImportPage() {
         Import your historical data from CSV files. The import process is idempotent—re-running the same file won&apos;t create duplicates.
       </p>
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-2">
         {/* Transaction Import Section */}
         <Card className="border-border bg-card/50">
           <CardHeader>

@@ -186,8 +186,8 @@ export function DeleteTransactionDialog({
             </div>
 
             {/* Warning about cost basis */}
-            <div className="rounded-md border border-yellow-500/20 bg-yellow-500/10 p-3 mt-3">
-              <p className="text-sm text-yellow-400">
+            <div className="rounded-md border border-warning/20 bg-warning/10 p-3 mt-3">
+              <p className="text-sm text-warning">
                 <strong>Warning:</strong> Deleting this transaction will affect
                 cost basis calculations for this holding.
               </p>

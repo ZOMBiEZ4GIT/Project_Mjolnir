@@ -7,14 +7,14 @@ import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  AnimatedDialog,
+  AnimatedDialogContent,
+  AnimatedDialogDescription,
+  AnimatedDialogFooter,
+  AnimatedDialogHeader,
+  AnimatedDialogTitle,
+  AnimatedDialogTrigger,
+} from "@/components/ui/animated-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -286,19 +286,19 @@ export function AddTransactionDialog({
   // ---------------------------------------------------------------------------
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
+    <AnimatedDialog open={open} onOpenChange={handleOpenChange}>
+      <AnimatedDialogTrigger asChild>
         {children ?? <Button>Add Transaction</Button>}
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      </AnimatedDialogTrigger>
+      <AnimatedDialogContent className="sm:max-w-md">
         {step === 1 ? (
           <>
-            <DialogHeader>
-              <DialogTitle>Add Transaction</DialogTitle>
-              <DialogDescription>
+            <AnimatedDialogHeader>
+              <AnimatedDialogTitle>Add Transaction</AnimatedDialogTitle>
+              <AnimatedDialogDescription>
                 Select a holding and transaction type.
-              </DialogDescription>
-            </DialogHeader>
+              </AnimatedDialogDescription>
+            </AnimatedDialogHeader>
 
             <div className="grid gap-4 py-4">
               {/* Holding selector */}
@@ -359,14 +359,14 @@ export function AddTransactionDialog({
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <AnimatedDialogFooter className="gap-2 sm:gap-0">
               <Button variant="outline" onClick={handleClose}>
                 Cancel
               </Button>
               <Button onClick={handleContinue} disabled={!canContinue}>
                 Continue
               </Button>
-            </DialogFooter>
+            </AnimatedDialogFooter>
           </>
         ) : (
           <Form {...form}>
@@ -374,22 +374,22 @@ export function AddTransactionDialog({
               onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-0"
             >
-              <DialogHeader>
-                <DialogTitle>
+              <AnimatedDialogHeader>
+                <AnimatedDialogTitle>
                   {isSplit
                     ? `Stock Split - ${selectedHolding?.symbol || selectedHolding?.name}`
                     : isDividend
                       ? `Dividend - ${selectedHolding?.symbol || selectedHolding?.name}`
                       : `${selectedAction === "BUY" ? "Buy" : "Sell"} ${selectedHolding?.symbol || selectedHolding?.name}`}
-                </DialogTitle>
-                <DialogDescription>
+                </AnimatedDialogTitle>
+                <AnimatedDialogDescription>
                   {isSplit
                     ? "Record a stock split or reverse split."
                     : isDividend
                       ? "Record a dividend payment received."
                       : "Enter the transaction details."}
-                </DialogDescription>
-              </DialogHeader>
+                </AnimatedDialogDescription>
+              </AnimatedDialogHeader>
 
               <div className="grid gap-4 py-4">
                 {/* Currency display (read-only) */}
@@ -507,7 +507,7 @@ export function AddTransactionDialog({
                       {/* Sell-specific warnings */}
                       {isSellingAll &&
                         !form.formState.errors.quantity && (
-                          <p className="text-sm text-yellow-500">
+                          <p className="text-sm text-warning">
                             This will sell all your shares
                           </p>
                         )}
@@ -679,7 +679,7 @@ export function AddTransactionDialog({
                 )}
               </div>
 
-              <DialogFooter className="gap-2 sm:gap-0">
+              <AnimatedDialogFooter className="gap-2 sm:gap-0">
                 <Button type="button" variant="outline" onClick={handleBack}>
                   Back
                 </Button>
@@ -692,11 +692,11 @@ export function AddTransactionDialog({
                 >
                   {mutation.isPending ? "Saving..." : "Save"}
                 </Button>
-              </DialogFooter>
+              </AnimatedDialogFooter>
             </form>
           </Form>
         )}
-      </DialogContent>
-    </Dialog>
+      </AnimatedDialogContent>
+    </AnimatedDialog>
   );
 }

@@ -4,15 +4,15 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+  AnimatedAlertDialog,
+  AnimatedAlertDialogAction,
+  AnimatedAlertDialogCancel,
+  AnimatedAlertDialogContent,
+  AnimatedAlertDialogDescription,
+  AnimatedAlertDialogFooter,
+  AnimatedAlertDialogHeader,
+  AnimatedAlertDialogTitle,
+} from "@/components/ui/animated-alert-dialog";
 import type { Holding } from "@/lib/db/schema";
 
 // Display names for holding types
@@ -132,14 +132,14 @@ export function DeleteHoldingDialog({
   const isSnapshotType = ["super", "cash", "debt"].includes(holding.type);
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="bg-background border-border">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="text-foreground">Delete Holding</AlertDialogTitle>
-          <AlertDialogDescription className="text-muted-foreground">
+    <AnimatedAlertDialog open={open} onOpenChange={onOpenChange}>
+      <AnimatedAlertDialogContent className="bg-background border-border">
+        <AnimatedAlertDialogHeader>
+          <AnimatedAlertDialogTitle className="text-foreground">Delete Holding</AnimatedAlertDialogTitle>
+          <AnimatedAlertDialogDescription className="text-muted-foreground">
             Are you sure you want to delete this holding? This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+          </AnimatedAlertDialogDescription>
+        </AnimatedAlertDialogHeader>
 
         {/* Holding details */}
         <div className="my-4 p-4 bg-card rounded-lg border border-border space-y-2">
@@ -186,22 +186,22 @@ export function DeleteHoldingDialog({
         </div>
 
         {/* Warning about associated data */}
-        <div className="rounded-md border border-yellow-500/20 bg-yellow-500/10 p-3">
-          <p className="text-sm text-yellow-400">
+        <div className="rounded-md border border-warning/20 bg-warning/10 p-3">
+          <p className="text-sm text-warning">
             <strong>Warning:</strong> This will also delete all associated{" "}
             {isTradeable ? "transactions and price history" : "snapshots"}
             {holding.type === "super" ? " and contribution records" : ""} for this holding.
           </p>
         </div>
 
-        <AlertDialogFooter>
-          <AlertDialogCancel
+        <AnimatedAlertDialogFooter>
+          <AnimatedAlertDialogCancel
             className="bg-card border-border text-foreground hover:bg-muted"
             disabled={mutation.isPending}
           >
             Cancel
-          </AlertDialogCancel>
-          <AlertDialogAction
+          </AnimatedAlertDialogCancel>
+          <AnimatedAlertDialogAction
             onClick={handleDelete}
             disabled={mutation.isPending}
             className="bg-destructive hover:bg-destructive/90 text-foreground"
@@ -214,9 +214,9 @@ export function DeleteHoldingDialog({
             ) : (
               "Delete"
             )}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </AnimatedAlertDialogAction>
+        </AnimatedAlertDialogFooter>
+      </AnimatedAlertDialogContent>
+    </AnimatedAlertDialog>
   );
 }
