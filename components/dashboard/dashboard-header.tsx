@@ -10,11 +10,12 @@ import { FxRatesDisplay } from "@/components/ui/fx-rates-display";
 
 /**
  * Refreshes all tradeable holding prices via POST /api/prices.
- * Returns the number of prices refreshed and any errors.
+ * Returns the number of prices refreshed, errors, and total count.
  */
 async function refreshPrices(): Promise<{
   success: number;
   errors: number;
+  total: number;
 }> {
   const response = await fetch("/api/prices", {
     method: "POST",
@@ -38,7 +39,7 @@ async function refreshPrices(): Promise<{
     (r: { price: number | null }) => r.price === null
   ).length;
 
-  return { success, errors };
+  return { success, errors, total: results.length };
 }
 
 interface DashboardHeaderProps {
@@ -70,9 +71,9 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
       queryClient.invalidateQueries({ queryKey: ["holdings"] });
       queryClient.invalidateQueries({ queryKey: ["prices"] });
 
-      // Show success toast
+      // Show completion toast
       if (data.errors > 0) {
-        toast.success(`Refreshed ${data.success} prices`, {
+        toast.warning(`Refreshed ${data.success} prices, ${data.errors} failed`, {
           description: `${data.errors} price${data.errors !== 1 ? "s" : ""} could not be fetched`,
         });
       } else if (data.success > 0) {
@@ -114,8 +115,9 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
           <RefreshCw
             className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
           />
-          <span className="hidden sm:inline">{isRefreshing ? "Refreshing..." : "Refresh"}</span>
-          <span className="sm:hidden">{isRefreshing ? "..." : ""}</span>
+          <span className="hidden sm:inline">
+            {isRefreshing ? "Refreshing..." : "Refresh"}
+          </span>
         </Button>
       </div>
     </div>
