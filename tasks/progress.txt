@@ -17,6 +17,9 @@
 - `EmptyState` component: pass `icon`, `title`, `description`, optional `action` (ReactNode)
 - Navigation: add new items to `navItems` array in `lib/navigation.ts` with `{ href, label, icon, description }`
 - Format cents to AUD: `(cents / 100).toLocaleString("en-AU", { style: "currency", currency: "AUD" })`
+- Budget components directory: `components/budget/` — SankeyChart, SankeyChartContainer, etc.
+- Responsive chart pattern: Container component with ResizeObserver measures width, passes to SVG chart component
+- visx Sankey uses children render function: `{({ graph, createPath }) => <Group>...</Group>}`
 
 ## 2026-02-08 - B4-001
 - What was implemented: Budget summary calculation engine in lib/budget/summary.ts
@@ -56,4 +59,18 @@
   - Category card grid pattern: `grid-cols-2 md:grid-cols-3 lg:grid-cols-4` fits the Mjolnir dashboard style
   - Placeholder areas for future components should use descriptive divs (not empty) so layout is visible during development
   - `export const dynamic = "force-dynamic"` required on all dashboard pages
+---
+
+## 2026-02-08 - B4-005
+- What was implemented: Sankey chart component for desktop budget visualisation
+- Files changed: components/budget/SankeyChart.tsx (new), components/budget/SankeyChartContainer.tsx (new), app/(dashboard)/budget/page.tsx (integrated chart)
+- **Learnings for future iterations:**
+  - `@visx/sankey` Sankey component uses a children render function pattern: `{({ graph, createPath }) => ...}`
+  - Graph data shape: `{ nodes: NodeExtra[], links: { source: number, target: number, value: number }[] }` — source/target are node indices
+  - After d3-sankey layout, `link.source` and `link.target` become full node objects, not indices — cast accordingly
+  - ResizeObserver pattern for responsive SVG: container div + useEffect observer → pass measured width to chart
+  - `hidden md:block` on container for desktop-only; `md:hidden` for mobile fallback — both in same parent
+  - Tooltip positioning: get SVG bounding rect via ref, subtract from `e.clientX/Y` for relative coords
+  - Don't import unused types from summary — lint catches `CategoryBreakdown` if not used
+  - Don't assign intermediate variables you won't use (e.g. `sourceNode`) — lint catches these
 ---
