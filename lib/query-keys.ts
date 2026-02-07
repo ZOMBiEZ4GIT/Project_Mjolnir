@@ -84,6 +84,17 @@ export const queryKeys = {
     holdings: ["check-in-holdings"] as const,
   },
 
+  // ---- Budget ----
+  budget: {
+    payday: ["budget", "payday"] as const,
+    categories: ["budget", "categories"] as const,
+    templates: ["budget", "templates"] as const,
+    periods: {
+      all: ["budget", "periods"] as const,
+      detail: (id: string) => ["budget", "period", id] as const,
+    },
+  },
+
   // ---- Settings ----
   preferences: ["preferences"] as const,
   exchangeRates: ["exchange-rates"] as const,
