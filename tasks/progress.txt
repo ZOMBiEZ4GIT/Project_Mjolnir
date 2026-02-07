@@ -137,3 +137,25 @@ Started: 2026-02-07
   - `sql<string | null>` template for nullable aggregate results (max, min)
 
 ---
+
+## 2026-02-07 - B1-009
+- Created n8n webhook receiver workflow template at n8n/workflows/up-webhook-receiver.json
+- Valid importable n8n workflow JSON with 8 nodes:
+  1. Webhook trigger (POST /up-webhook, raw body enabled, response mode)
+  2. Code node: validates UP webhook HMAC-SHA256 signature (X-Up-Authenticity-Signature)
+  3. IF node: detects internal transfers (transferAccount relationship not null)
+  4. Two Code nodes: map UP JSON:API format to flat Mjolnir payload (transfer vs normal)
+  5. Code node: generates Mjolnir HMAC request signing headers (X-Mjolnir-API-Key, X-Mjolnir-Timestamp, X-Mjolnir-Signature)
+  6. HTTP Request node: POSTs mapped transaction to Mjolnir /api/up/transactions
+  7. Respond OK node: returns 200 to UP webhook
+- Uses n8n environment variables for all secrets (UP_WEBHOOK_SECRET, MJOLNIR_API_KEY, MJOLNIR_WEBHOOK_SECRET, MJOLNIR_BASE_URL)
+- Description field contains full setup instructions for Roland
+- Files changed: n8n/workflows/up-webhook-receiver.json (new)
+- **Learnings for future iterations:**
+  - n8n workflow JSON uses node names (not IDs) as connection keys
+  - IF node has two output arrays: index 0 = true branch, index 1 = false branch
+  - n8n Code nodes use `$input.first().json` to access input data and `$env.VAR_NAME` for env vars
+  - UP webhook signature is HMAC-SHA256 of raw body using UP_WEBHOOK_SECRET (different from Mjolnir's `${timestamp}.${body}` format)
+  - n8n responseMode: "responseNode" on webhook requires a respondToWebhook node downstream
+
+---

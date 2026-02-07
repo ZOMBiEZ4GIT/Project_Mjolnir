@@ -156,8 +156,8 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 9,
-      "passes": false,
-      "notes": "This is a JSON file outside the Next.js app. Build/lint should still pass as it doesn't affect the app."
+      "passes": true,
+      "notes": "Created n8n/workflows/up-webhook-receiver.json. Valid importable n8n workflow with: Webhook trigger, UP signature validation (HMAC-SHA256), IF node for transfer detection, two Code nodes mapping UP JSON:API to Mjolnir flat payload (transfer vs normal), Mjolnir HMAC request signing Code node, HTTP Request POST to /api/up/transactions, Respond OK node. Uses n8n environment variables for secrets (UP_WEBHOOK_SECRET, MJOLNIR_API_KEY, MJOLNIR_WEBHOOK_SECRET, MJOLNIR_BASE_URL). Description field contains full setup instructions."
     },
     {
       "id": "B1-010",
