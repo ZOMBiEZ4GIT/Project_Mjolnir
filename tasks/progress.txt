@@ -1,5 +1,44 @@
 # Ralph Progress Log
 
-No active epic. All UX epics (UX-1 through UX-12) completed.
+## Codebase Patterns
+- Schema is a single file at `lib/db/schema.ts` — drizzle config points to it directly, not a directory
+- Drizzle bigint with `mode: "bigint"` causes `BigInt(0)` serialization error in drizzle-kit generate — use `mode: "number"` instead
+- `npm run db:migrate` requires DATABASE_URL env var (Neon serverless) — will fail locally with placeholder. Migration files are verified by generate + build passing
+- Existing tables use `uuid` PKs with `defaultRandom()`, `timestamptz` for timestamps, and soft delete via `deletedAt`
+- Use `varchar` with explicit length for external IDs, `text` for unbounded strings
+- n8n middleware at `lib/api/up/middleware.ts` — use `withN8nAuth(request, handler)` helper for UP endpoints
+- UP API routes are public in Clerk middleware (use n8n signing instead of Clerk auth)
 
-Run `/ralph` on a PRD to start a new epic.
+## Epic: B-1 UP Bank Integration
+Branch: ralph/b1-up-bank-integration
+Started: 2026-02-07
+
+## 2026-02-07 - B1-001
+- Implemented UP integration database schema (up_accounts and up_transactions tables)
+- Added enums: up_account_type (TRANSACTIONAL, SAVER, HOME_LOAN), up_transaction_status (HELD, SETTLED)
+- Added indexes on up_transactions: transaction_date, mjolnir_category_id, status
+- Files changed: lib/db/schema.ts, drizzle/0010_lucky_madame_hydra.sql
+- **Learnings for future iterations:**
+  - Schema is in a single file, not a directory — add new tables to lib/db/schema.ts
+  - bigint `mode: "number"` avoids JSON serialization issues with drizzle-kit
+  - Migration can't run locally (no DATABASE_URL) — that's expected, verify via build + lint
+  - Import `bigint`, `varchar`, `index` from drizzle-orm/pg-core when needed
+
+---
+
+## 2026-02-07 - B1-002
+- Implemented n8n request signing middleware at lib/api/up/middleware.ts
+- Validates X-Mjolnir-API-Key against N8N_API_KEY env var (401 on failure)
+- Validates X-Mjolnir-Timestamp within 5-minute window (403 on expired)
+- Validates X-Mjolnir-Signature using HMAC-SHA256 of `${timestamp}.${body}` with N8N_WEBHOOK_SECRET (403 on invalid)
+- Uses crypto.timingSafeEqual for constant-time signature comparison
+- Added /api/up/(.*) to Clerk public routes in middleware.ts
+- Exports: validateN8nRequest (low-level), withN8nAuth (convenience wrapper), unauthorizedResponse, forbiddenResponse
+- Files changed: lib/api/up/middleware.ts (new), middleware.ts
+- **Learnings for future iterations:**
+  - n8n endpoints bypass Clerk auth — use withN8nAuth wrapper instead
+  - withN8nAuth reads body via request.text() then JSON.parse — body is consumed, passed to handler as parsed object
+  - Env vars needed: N8N_API_KEY, N8N_WEBHOOK_SECRET
+  - 401 = bad API key, 403 = bad/expired signature (mirrors existing codebase error semantics)
+
+---
