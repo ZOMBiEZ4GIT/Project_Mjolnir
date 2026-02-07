@@ -420,6 +420,30 @@ export const budgetCategories = pgTable("budget_categories", {
 });
 
 // =============================================================================
+// PAYDAY CONFIGURATION
+// =============================================================================
+
+/**
+ * Payday configuration for budget period alignment.
+ *
+ * Stores the user's pay cycle settings so budget periods can align with actual
+ * pay dates. Since Mjolnir is a single-user app, this table will typically
+ * contain one row.
+ *
+ * - `paydayDay` is the day of month (1-28) when pay arrives.
+ * - `adjustForWeekends` shifts Saturday paydays to Friday.
+ * - `incomeSourcePattern` is an optional regex/keyword to match income transactions.
+ */
+export const paydayConfig = pgTable("payday_config", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  paydayDay: integer("payday_day").notNull(), // 1-28
+  adjustForWeekends: boolean("adjust_for_weekends").default(true).notNull(),
+  incomeSourcePattern: varchar("income_source_pattern", { length: 255 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// =============================================================================
 // RELATIONS
 // =============================================================================
 
@@ -513,3 +537,6 @@ export type NewUpTransaction = typeof upTransactions.$inferInsert;
 
 export type BudgetCategory = typeof budgetCategories.$inferSelect;
 export type NewBudgetCategory = typeof budgetCategories.$inferInsert;
+
+export type PaydayConfig = typeof paydayConfig.$inferSelect;
+export type NewPaydayConfig = typeof paydayConfig.$inferInsert;
