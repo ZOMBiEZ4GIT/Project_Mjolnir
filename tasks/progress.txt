@@ -118,3 +118,20 @@
   - `queryKeys.budget.summary(periodId)` requires the specific periodId to invalidate correctly (not undefined)
   - Both `toast` helpers (`lib/toast-helpers.ts`) and direct `sonner` imports are used in the codebase — direct import is simpler for one-off calls
 ---
+
+## 2026-02-08 - B5-008
+- Created `components/budget/PaySplitConfig.tsx` — formatted Pay Split guide component
+- Shows each saver with name, percentage (1 decimal), and dollar amount in AUD
+- Spending account remainder row shown with italic styling and "remainder" label
+- Summary line shows total allocated percentage and what remains for spending
+- Copy button copies formatted text to clipboard: "UP Pay Split Config\nSaver: X% ($Y)\n..."
+- Uses `useState` for 2-second copied feedback (Check icon replaces Copy icon)
+- Integrated into `RecommendationModal.tsx` as Section 3 between Suggested Budget and Savings Projection
+- Conditionally rendered only when `paySplitConfig` array has items
+- Files changed: `components/budget/PaySplitConfig.tsx` (new), `components/budget/RecommendationModal.tsx`
+- **Learnings for future iterations:**
+  - `navigator.clipboard.writeText` is async — use `async function` handler
+  - The `paySplitConfig` data comes from `recommendation.recommendationData.paySplitConfig` (already typed in RecommendationData)
+  - Reusable sections in RecommendationModal can be extracted as separate components and imported — keeps the modal file manageable
+  - Table styling pattern: `rounded-lg border border-border overflow-hidden` for outer container, consistent with Suggested Budget table
+---
