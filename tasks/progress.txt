@@ -2,6 +2,9 @@
 # This file is reset at the start of each epic.
 
 ## Codebase Patterns
+- HMAC signing for outgoing n8n requests: `crypto.createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex")` — same pattern as incoming validation
+- `calculateBudgetSummary(periodId)` returns full BudgetSummary with income, categories (with spending), totals, and period dates
+- Fire-and-forget fetch pattern: call `fetch(...).catch(() => {})` without await for async webhook triggers
 - Schema uses `jsonb` from drizzle-orm/pg-core for JSON columns
 - Budget-related tables (budgetPeriods, budgetAllocations) use `bigint` with `mode: "number"` for cents
 - All tables follow the pattern: uuid PK with `defaultRandom()`, timestamptz columns with `defaultNow()`
@@ -35,4 +38,20 @@
   - Recommendation endpoints follow the same period resolution pattern as budget/summary (date range lookup)
   - The `[id]` dynamic route with nested `/status` works: `app/api/budget/recommendations/[id]/status/route.ts`
   - `desc()` import for ordering comes from `drizzle-orm`
+---
+
+## 2026-02-08 - B5-003
+- Added POST handler to existing `/api/budget/recommendations/route.ts`
+- Gathers current period summary via `calculateBudgetSummary`, 3-month historical spending averages, and payday config concurrently with `Promise.all`
+- Historical spending uses subquery to find up to 3 previous periods, then aggregates spending per category with OR'd date range conditions
+- Sends payload to `N8N_BASE_URL + '/webhook/budget-recommendation'` with HMAC signing headers (same pattern as incoming n8n validation in reverse)
+- Returns 202 Accepted immediately (fire-and-forget fetch)
+- Returns 503 if N8N env vars not configured
+- Protected by Clerk `withAuth`
+- Files changed: `app/api/budget/recommendations/route.ts`
+- **Learnings for future iterations:**
+  - Outgoing HMAC signing mirrors the incoming pattern: `timestamp.body` signed with `N8N_WEBHOOK_SECRET`
+  - Use fire-and-forget `fetch().catch(() => {})` for async webhook triggers — don't block the response
+  - `paydayConfig` table may be empty (user hasn't configured yet) — provide sensible defaults (day 15, adjust weekends true)
+  - Building OR conditions with drizzle `sql` template: `periodConditions.map(c => sql\`(\${c})\`).reduce((a, b) => sql\`\${a} OR \${b}\`)`
 ---
