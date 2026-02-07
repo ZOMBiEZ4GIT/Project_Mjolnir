@@ -1,0 +1,187 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/b4-budget-dashboard-sankey",
+  "description": "B-4: Budget Dashboard & Sankey — Budget vs actual tracking with interactive Sankey flow diagram, category progress cards, payday countdown, savings indicators, and mobile-friendly fallback.",
+  "userStories": [
+    {
+      "id": "B4-001",
+      "title": "Budget summary calculation engine",
+      "description": "As a developer, I need a calculation engine that computes budget vs actual for a given period so all dashboard components have accurate data.",
+      "acceptanceCriteria": [
+        "Create lib/budget/summary.ts with a calculateBudgetSummary(periodId: string) async function",
+        "Returns: period dates (startDate, endDate), income (expectedCents, actualCents), per-category breakdown array (categoryId, categoryName, colour, icon, budgetedCents, spentCents, remainingCents, percentUsed, status), totals (budgetedCents, spentCents, unallocatedCents, savingsCents, savingsRate), daysRemaining, daysElapsed, totalDays",
+        "Income actual = sum of transactions where mjolnir_category_id = 'income' within the period date range",
+        "Category spent = sum of absolute value of debit transactions (amount_cents < 0) for each category within period date range",
+        "Status per category: 'under' (<80% used), 'warning' (80-100%), 'over' (>100%)",
+        "Excludes internal transfers (is_transfer = true) and soft-deleted transactions (deleted_at IS NOT NULL)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B4-002",
+      "title": "Budget summary API endpoint",
+      "description": "As a developer, I need an API endpoint that returns the budget summary so the dashboard can fetch it.",
+      "acceptanceCriteria": [
+        "Create GET /api/budget/summary endpoint protected by Clerk auth (withAuth pattern)",
+        "Accepts optional period_id query param — if omitted, finds the current period by matching today's date against budget_periods start_date/end_date",
+        "Returns the full budget summary object from calculateBudgetSummary",
+        "If no budget period exists for the requested dates, returns 404 with { error: 'No budget period found', setupUrl: '/budget/setup' }",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B4-003",
+      "title": "Install visx and d3-sankey packages",
+      "description": "As a developer, I need the Sankey charting dependencies installed so the chart components can be built.",
+      "acceptanceCriteria": [
+        "Install packages: @visx/sankey, @visx/group, @visx/scale, @visx/tooltip, d3-sankey, @types/d3-sankey",
+        "All packages added to package.json dependencies (or devDependencies for types)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B4-004",
+      "title": "Budget dashboard page layout",
+      "description": "As a user, I want a budget dashboard page that gives me a complete picture of my spending vs plan at a glance.",
+      "acceptanceCriteria": [
+        "Create /app/(dashboard)/budget/page.tsx — main budget dashboard rendered at /budget",
+        "Layout: period selector area at top, hero chart area (placeholder div for now), category cards grid below, sidebar/header area for payday countdown and savings indicator",
+        "Fetches budget summary data via TanStack Query from GET /api/budget/summary",
+        "Loading skeleton while data loads (use shadcn Skeleton components)",
+        "Empty state with link to /budget/setup if no period exists (404 response)",
+        "Add 'Budget' link to the main navigation in lib/navigation.ts",
+        "Dark mode styling consistent with Mjolnir",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B4-005",
+      "title": "Sankey chart component (desktop)",
+      "description": "As a user, I want an interactive Sankey flow diagram showing how my income flows into spending categories and savings so I can visualise my budget.",
+      "acceptanceCriteria": [
+        "Create components/budget/SankeyChart.tsx using @visx/sankey and d3-sankey",
+        "Left node: Income (purple #8b5cf6) showing actual income amount",
+        "Middle nodes: Each spending category with its hex colour from budget_categories, showing amount spent",
+        "Right node: Savings (green #22c55e if positive, red #ef4444 if negative)",
+        "Flow widths proportional to amounts; over-budget category flows tinted red",
+        "Hover on flow: tooltip showing amount and percentage of income",
+        "Click on category flow: navigate to /budget/transactions?category={id}&from={periodStart}&to={periodEnd}",
+        "Labels on nodes showing name and formatted dollar amount",
+        "Responsive width (fills container), hidden on screens < 768px (md breakpoint)",
+        "Integrate into the budget dashboard page hero chart area",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B4-006",
+      "title": "Mobile budget chart (fallback)",
+      "description": "As a user on mobile, I want a simplified budget visualisation since Sankey is too complex for small screens.",
+      "acceptanceCriteria": [
+        "Create components/budget/MobileBudgetChart.tsx — horizontal progress bars per category",
+        "One bar per category showing: category name + icon, spent vs budgeted amounts, progress bar fill with percentage, status indicator (checkmark for under, warning icon for 80-100%, alert for over)",
+        "Income bar at top showing actual vs expected",
+        "Summary row at bottom: total spent, total budgeted, savings amount and rate",
+        "Tap on category bar navigates to /budget/transactions?category={id}&from={periodStart}&to={periodEnd}",
+        "Visible only on screens < 768px (md breakpoint), hidden on desktop",
+        "Integrate into the budget dashboard page hero chart area",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B4-007",
+      "title": "Category progress cards",
+      "description": "As a user, I want cards for each budget category showing my progress so I can quickly see which categories need attention.",
+      "acceptanceCriteria": [
+        "Create components/budget/CategoryCard.tsx — compact card per category",
+        "Shows: category icon + name, progress bar (spent/budgeted), dollar amounts ('$X / $Y'), percentage used",
+        "Progress bar colour: category colour when under 80%, warning amber when 80-100%, red when over 100%",
+        "Remaining amount shown (e.g. '$220 left' or '$50 over')",
+        "Click navigates to /budget/transactions?category={id}&from={periodStart}&to={periodEnd}",
+        "Grid layout: 2 columns on mobile (grid-cols-2), 3-4 on desktop (md:grid-cols-3 lg:grid-cols-4)",
+        "Integrate into the budget dashboard page below the chart area",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B4-008",
+      "title": "Payday countdown component",
+      "description": "As a user, I want to see how many days until my next payday so I can pace my spending.",
+      "acceptanceCriteria": [
+        "Create components/budget/PaydayCountdown.tsx",
+        "Displays: 'X days until payday' for normal days, 'Payday tomorrow!' for 1 day, 'Payday today!' for 0 days",
+        "Shows the actual payday date below the countdown text",
+        "Shows days elapsed / total days in period as context (e.g. 'Day 15 of 30')",
+        "Compact card design fitting in dashboard sidebar/header area",
+        "Uses getDaysUntilPayday from lib/budget/payday.ts and summary data for period info",
+        "Integrate into the budget dashboard page",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B4-009",
+      "title": "Savings indicator component",
+      "description": "As a user, I want to see my current savings rate and projection so I stay motivated to save.",
+      "acceptanceCriteria": [
+        "Create components/budget/SavingsIndicator.tsx",
+        "Shows: current savings amount (income - spending), savings rate as percentage, 30% target savings rate, on-track indicator",
+        "If mid-period: projects end-of-period savings using linear extrapolation (spent_so_far / days_elapsed * total_days)",
+        "Colour: green if above 30% target, amber if within 5% (25-30%), red if below 25%",
+        "Compact card design",
+        "Integrate into the budget dashboard page",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B4-010",
+      "title": "Period selector component",
+      "description": "As a user, I want to switch between budget periods so I can review past months.",
+      "acceptanceCriteria": [
+        "Create components/budget/PeriodSelector.tsx",
+        "Prev/next arrow navigation showing period date range (e.g. '14 Jan - 13 Feb 2026')",
+        "Current period selected by default",
+        "Switching periods updates the period_id used by the dashboard's TanStack Query, refreshing all data",
+        "Disabled forward arrow when on current period (can't view future)",
+        "Fetches list of available periods from GET /api/budget/periods",
+        "Integrate into the budget dashboard page at the top",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}
