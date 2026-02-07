@@ -39,12 +39,18 @@ export const GET = withAuth(async (request, _context, userId) => {
   const result = await calculateHistoricalNetWorth(userId, months);
 
   return NextResponse.json({
-    history: result.history.map((point) => ({
-      date: point.date.toISOString(),
-      netWorth: point.netWorth,
-      totalAssets: point.totalAssets,
-      totalDebt: point.totalDebt,
-    })),
+    history: result.history.map((point) => {
+      // Format as YYYY-MM-DD — TradingView Lightweight Charts requires this format
+      const year = point.date.getFullYear();
+      const month = String(point.date.getMonth() + 1).padStart(2, "0");
+      const day = String(point.date.getDate()).padStart(2, "0");
+      return {
+        date: `${year}-${month}-${day}`,
+        netWorth: point.netWorth,
+        totalAssets: point.totalAssets,
+        totalDebt: point.totalDebt,
+      };
+    }),
     generatedAt: result.generatedAt.toISOString(),
   });
 }, "calculating historical net worth");
