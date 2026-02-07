@@ -68,3 +68,20 @@
   - Callback pattern: destructure `budget_period_id` from parsed data, pass remaining fields as `recommendationData` JSONB
   - The Zod schema for the callback payload should match what the n8n workflow will send (defined in B5-009)
 ---
+
+## 2026-02-08 - B5-005
+- Created `components/budget/AIRecommendationButton.tsx` with full state management
+- States: idle (sparkles icon + "Get AI Recommendation"), loading (spinner + "Analysing your spending…"), error (retry with red styling), existing ("View Recommendation" with eye icon)
+- Uses TanStack Query to check for existing recommendation on mount
+- On click: POSTs to `/api/budget/recommendations`, then polls GET every 3s with 60s timeout
+- Tracks baseline recommendation id to detect new vs existing recommendations during polling
+- Added `recommendations.latest(periodId?)` query key to `lib/query-keys.ts`
+- Integrated button into budget dashboard header next to PeriodSelector
+- Added `onRecommendation` callback prop — dashboard stores recommendation in state (modal display is B5-006)
+- Files changed: `components/budget/AIRecommendationButton.tsx` (new), `lib/query-keys.ts`, `app/(dashboard)/budget/page.tsx`
+- **Learnings for future iterations:**
+  - Polling pattern: use `useRef` for interval/timeout IDs and track baseline IDs to distinguish new data from stale
+  - `queryClient.setQueryData()` can optimistically update query cache when polling detects a new result
+  - The budget dashboard header uses `flex items-center justify-between` — additional buttons fit in a wrapper div with `gap-3`
+  - The `useCallback` import is needed when passing stable callback refs to child components
+---
