@@ -17,6 +17,7 @@ import { SankeyChartContainer } from "@/components/budget/SankeyChartContainer";
 import { MobileBudgetChart } from "@/components/budget/MobileBudgetChart";
 import { CategoryCard } from "@/components/budget/CategoryCard";
 import { PaydayCountdown } from "@/components/budget/PaydayCountdown";
+import { SavingsIndicator } from "@/components/budget/SavingsIndicator";
 import Link from "next/link";
 import type { BudgetSummary } from "@/lib/budget/summary";
 
@@ -286,12 +287,21 @@ export default function BudgetDashboardPage() {
         </div>
       </div>
 
-      {/* Payday countdown — B4-008 */}
-      <PaydayCountdown
-        daysElapsed={summary.daysElapsed}
-        totalDays={summary.totalDays}
-      />
-      {/* Savings indicator placeholder — B4-009 */}
+      {/* Payday countdown & Savings indicator — B4-008 / B4-009 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <PaydayCountdown
+          daysElapsed={summary.daysElapsed}
+          totalDays={summary.totalDays}
+        />
+        <SavingsIndicator
+          savingsCents={summary.totals.savingsCents}
+          savingsRate={summary.totals.savingsRate}
+          spentCents={summary.totals.spentCents}
+          incomeCents={summary.income.actualCents}
+          daysElapsed={summary.daysElapsed}
+          totalDays={summary.totalDays}
+        />
+      </div>
     </div>
   );
 }
