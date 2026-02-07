@@ -85,3 +85,13 @@
   - `shrink-0` on icons prevents flex shrink when category names are long
   - Summary row at bottom uses `border-t border-border pt-1.5` to visually separate savings from totals
 ---
+
+## 2026-02-08 - B4-007
+- What was implemented: CategoryCard component extracted from inline rendering in budget dashboard
+- Files changed: components/budget/CategoryCard.tsx (new), app/(dashboard)/budget/page.tsx (replaced inline cards with CategoryCard)
+- **Learnings for future iterations:**
+  - Extract inline card rendering into dedicated component when it has multiple data-driven states (under/warning/over)
+  - CategoryCard accepts `category: CategoryBreakdown`, `periodStart`, `periodEnd` — keeps period context outside the component
+  - Remaining amount text pattern: `${formatCents(remainingCents)} left` or `${formatCents(abs)} over` with colour-coded status
+  - `min-w-0` on flex container with `truncate` child prevents text overflow in card layouts
+---
