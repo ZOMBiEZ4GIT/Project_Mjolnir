@@ -10,6 +10,8 @@
 - UP API routes are public in Clerk middleware (use n8n signing instead of Clerk auth)
 - UP API payload uses snake_case, Drizzle schema uses camelCase — map fields in route handler
 - Zod `z.string().optional()` + `?? null` for nullable DB columns in UP endpoints
+- neon-http driver doesn't support `db.transaction()` — validate all records first, then loop upserts
+- Drizzle `inArray()` from `drizzle-orm` for batch lookups of existing records
 
 ## Epic: B-1 UP Bank Integration
 Branch: ralph/b1-up-bank-integration
@@ -58,5 +60,22 @@ Started: 2026-02-07
   - Drizzle upsert pattern: check existence first with select, then update or insert (no native onConflictDoUpdate needed for complex upserts)
   - UP transaction fields use snake_case in API payload, camelCase in Drizzle schema — map in route handler
   - Zod `z.string().optional()` maps to `?? null` for nullable DB columns
+
+---
+
+## 2026-02-07 - B1-004
+- Implemented batch transaction ingestion endpoint at app/api/up/transactions/batch/route.ts
+- POST endpoint receives array of UP transactions from n8n (max 500 per batch)
+- Reuses same Zod transactionSchema from single endpoint, wrapped in batchSchema
+- Validates all transactions upfront before any DB writes
+- Looks up existing upTransactionIds in one query using inArray(), then loops insert/update
+- Returns 200 with { inserted, updated } counts
+- Returns 400 with index of first failing record for validation errors
+- Files changed: app/api/up/transactions/batch/route.ts (new)
+- **Learnings for future iterations:**
+  - neon-http driver doesn't support db.transaction() — can't do true all-or-nothing DB transactions
+  - Workaround: validate all records first, batch-lookup existing IDs, then loop upserts
+  - Drizzle inArray() from drizzle-orm works for batch lookups
+  - Zod nested array errors have path like ["transactions", 0, "field"] — check path[1] for index
 
 ---

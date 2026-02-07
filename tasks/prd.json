@@ -72,8 +72,8 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 4,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Endpoint at app/api/up/transactions/batch/route.ts. Uses withN8nAuth wrapper, Zod validation with batchSchema wrapping transactionSchema array. Max 500 transactions per batch. Looks up existing IDs in one query, then loops insert/update. Returns { inserted, updated } counts. Returns 400 with index for validation failures."
     },
     {
       "id": "B1-005",
