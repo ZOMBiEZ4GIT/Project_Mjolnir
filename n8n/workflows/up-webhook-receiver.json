@@ -1,0 +1,238 @@
+{
+  "name": "UP Webhook Receiver → Mjolnir",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "up-webhook",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "UP Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "up-webhook-receiver"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate UP webhook signature (HMAC-SHA256)\n// UP sends X-Up-Authenticity-Signature header with HMAC of raw body\nconst crypto = require('crypto');\n\n// TODO: Set this in n8n credentials or environment\nconst UP_WEBHOOK_SECRET = $env.UP_WEBHOOK_SECRET || 'TODO_SET_YOUR_UP_WEBHOOK_SECRET';\n\nconst rawBody = $input.first().binary?.data\n  ? Buffer.from($input.first().binary.data, 'base64').toString('utf-8')\n  : JSON.stringify($input.first().json);\n\nconst signature = $input.first().json.headers?.['x-up-authenticity-signature']\n  || $input.first().json.headers?.['X-Up-Authenticity-Signature']\n  || '';\n\nconst expectedSignature = crypto\n  .createHmac('sha256', UP_WEBHOOK_SECRET)\n  .update(rawBody)\n  .digest('hex');\n\nconst isValid = signature.length > 0 && crypto.timingSafeEqual(\n  Buffer.from(signature, 'hex'),\n  Buffer.from(expectedSignature, 'hex')\n);\n\nif (!isValid) {\n  throw new Error('Invalid UP webhook signature — check UP_WEBHOOK_SECRET');\n}\n\n// Parse the raw body and pass through\nconst payload = typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;\nreturn [{ json: payload }];"
+      },
+      "id": "validate-up-signature",
+      "name": "Validate UP Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "transfer-check",
+              "leftValue": "={{ $json.data.relationships.transferAccount.data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "check-transfer",
+      "name": "Is Transfer?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Map UP JSON:API transaction to flat Mjolnir payload\n// Input: UP webhook data with is_transfer = true (internal transfer)\nconst data = $input.first().json.data;\nconst attrs = data.attributes;\nconst category = data.relationships?.category?.data;\n\nconst mapped = {\n  up_transaction_id: data.id,\n  description: attrs.description,\n  raw_text: attrs.rawText || null,\n  amount_cents: parseInt(attrs.amount.valueInBaseUnits, 10),\n  status: attrs.status,  // HELD or SETTLED\n  up_category_id: category?.id || null,\n  up_category_name: null,  // Category name not in webhook payload — enrich later if needed\n  transaction_date: attrs.createdAt.split('T')[0],  // YYYY-MM-DD\n  settled_at: attrs.settledAt || null,\n  is_transfer: true\n};\n\nreturn [{ json: mapped }];"
+      },
+      "id": "map-transfer",
+      "name": "Map Transfer Transaction",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Map UP JSON:API transaction to flat Mjolnir payload\n// Input: UP webhook data with is_transfer = false (normal transaction)\nconst data = $input.first().json.data;\nconst attrs = data.attributes;\nconst category = data.relationships?.category?.data;\n\nconst mapped = {\n  up_transaction_id: data.id,\n  description: attrs.description,\n  raw_text: attrs.rawText || null,\n  amount_cents: parseInt(attrs.amount.valueInBaseUnits, 10),\n  status: attrs.status,  // HELD or SETTLED\n  up_category_id: category?.id || null,\n  up_category_name: null,  // Category name not in webhook payload — enrich later if needed\n  transaction_date: attrs.createdAt.split('T')[0],  // YYYY-MM-DD\n  settled_at: attrs.settledAt || null,\n  is_transfer: false\n};\n\nreturn [{ json: mapped }];"
+      },
+      "id": "map-normal",
+      "name": "Map Normal Transaction",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate Mjolnir request signing headers\n// Signs the payload with HMAC-SHA256 for Mjolnir API authentication\nconst crypto = require('crypto');\n\n// TODO: Set these in n8n credentials or environment\nconst MJOLNIR_API_KEY = $env.MJOLNIR_API_KEY || 'TODO_SET_YOUR_N8N_API_KEY';\nconst MJOLNIR_WEBHOOK_SECRET = $env.MJOLNIR_WEBHOOK_SECRET || 'TODO_SET_YOUR_N8N_WEBHOOK_SECRET';\nconst MJOLNIR_BASE_URL = $env.MJOLNIR_BASE_URL || 'TODO_SET_YOUR_MJOLNIR_URL';\n\nconst body = JSON.stringify($input.first().json);\nconst timestamp = Date.now().toString();\n\nconst signature = crypto\n  .createHmac('sha256', MJOLNIR_WEBHOOK_SECRET)\n  .update(`${timestamp}.${body}`)\n  .digest('hex');\n\nreturn [{\n  json: {\n    url: `${MJOLNIR_BASE_URL}/api/up/transactions`,\n    body: $input.first().json,\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Mjolnir-API-Key': MJOLNIR_API_KEY,\n      'X-Mjolnir-Timestamp': timestamp,\n      'X-Mjolnir-Signature': signature\n    }\n  }\n}];"
+      },
+      "id": "sign-request",
+      "name": "Sign Mjolnir Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "={{ $json.headers['Content-Type'] }}"
+            },
+            {
+              "name": "X-Mjolnir-API-Key",
+              "value": "={{ $json.headers['X-Mjolnir-API-Key'] }}"
+            },
+            {
+              "name": "X-Mjolnir-Timestamp",
+              "value": "={{ $json.headers['X-Mjolnir-Timestamp'] }}"
+            },
+            {
+              "name": "X-Mjolnir-Signature",
+              "value": "={{ $json.headers['X-Mjolnir-Signature'] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "post-to-mjolnir",
+      "name": "POST to Mjolnir",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-success",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1520, 300]
+    }
+  ],
+  "connections": {
+    "UP Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate UP Signature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate UP Signature": {
+      "main": [
+        [
+          {
+            "node": "Is Transfer?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Transfer?": {
+      "main": [
+        [
+          {
+            "node": "Map Transfer Transaction",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Map Normal Transaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Transfer Transaction": {
+      "main": [
+        [
+          {
+            "node": "Sign Mjolnir Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Normal Transaction": {
+      "main": [
+        [
+          {
+            "node": "Sign Mjolnir Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign Mjolnir Request": {
+      "main": [
+        [
+          {
+            "node": "POST to Mjolnir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST to Mjolnir": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": ""
+  },
+  "description": "## UP Webhook Receiver → Mjolnir\n\nReceives UP Bank webhook events and forwards transactions to Mjolnir.\n\n### Setup Instructions\n\n1. **UP Bank Webhook:** Register this workflow's webhook URL with UP Bank at https://api.up.com.au. The webhook URL will be shown after activating this workflow in n8n.\n\n2. **Environment Variables:** Set the following in n8n Settings → Variables:\n   - `UP_WEBHOOK_SECRET` — Your UP Bank webhook secret key (from UP API developer settings)\n   - `MJOLNIR_API_KEY` — The N8N_API_KEY value from your Mjolnir .env file\n   - `MJOLNIR_WEBHOOK_SECRET` — The N8N_WEBHOOK_SECRET value from your Mjolnir .env file\n   - `MJOLNIR_BASE_URL` — Your Mjolnir deployment URL (e.g. https://mjolnir.vercel.app)\n\n3. **Activate** this workflow to start receiving UP webhook events.\n\n### Flow\n\n1. UP sends a webhook event (TRANSACTION_CREATED, TRANSACTION_SETTLED, etc.)\n2. Validates UP's HMAC-SHA256 signature on the incoming webhook\n3. Detects if the transaction is an internal transfer (between UP accounts)\n4. Maps UP's JSON:API format to Mjolnir's flat transaction payload\n5. Signs the request with Mjolnir's HMAC scheme (X-Mjolnir-Signature)\n6. POSTs the transaction to Mjolnir's /api/up/transactions endpoint\n7. Responds 200 OK to UP"
+}

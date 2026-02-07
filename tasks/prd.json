@@ -1,6 +1,180 @@
 {
   "project": "Mjolnir",
-  "branchName": "",
-  "description": "",
-  "userStories": []
+  "branchName": "ralph/b1-up-bank-integration",
+  "description": "B-1: UP Bank Integration — Mjolnir-side infrastructure to receive banking data from UP Bank via n8n middleware. Database tables, API endpoints, request signing middleware, and n8n workflow templates.",
+  "userStories": [
+    {
+      "id": "B1-001",
+      "title": "UP integration database schema",
+      "description": "As a developer, I need database tables to store UP account data and transactions so the system can track banking activity.",
+      "acceptanceCriteria": [
+        "Create Drizzle schema at lib/db/schema/up.ts",
+        "up_accounts table with columns: id (uuid PK), up_account_id (varchar unique), display_name (varchar), account_type (varchar: TRANSACTIONAL | SAVER | HOME_LOAN), balance_cents (bigint default 0), last_synced_at (timestamptz), created_at (timestamptz), updated_at (timestamptz)",
+        "up_transactions table with columns: id (uuid PK), up_transaction_id (varchar unique), description (varchar), raw_text (varchar nullable), amount_cents (bigint, negative for debits), status (varchar: HELD | SETTLED), up_category_id (varchar nullable), up_category_name (varchar nullable), mjolnir_category_id (varchar nullable), transaction_date (date), settled_at (timestamptz nullable), is_transfer (boolean default false), deleted_at (timestamptz nullable), created_at (timestamptz), updated_at (timestamptz)",
+        "Add indexes on up_transactions: transaction_date, mjolnir_category_id, status",
+        "Generate migration with npm run db:generate",
+        "Run migration with npm run db:migrate",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Schema added to lib/db/schema.ts (single-file schema approach). Migration: drizzle/0010_lucky_madame_hydra.sql. bigint uses mode:'number' to avoid BigInt serialization issues with drizzle-kit."
+    },
+    {
+      "id": "B1-002",
+      "title": "n8n request signing middleware",
+      "description": "As a developer, I need middleware that validates incoming n8n requests so that only authenticated requests from n8n can write to UP endpoints.",
+      "acceptanceCriteria": [
+        "Create middleware at lib/api/up/middleware.ts",
+        "Validates X-Mjolnir-API-Key header against N8N_API_KEY env var",
+        "Validates X-Mjolnir-Timestamp header is within 5 minutes of current time",
+        "Validates X-Mjolnir-Signature header using HMAC-SHA256 of ${timestamp}.${body} with N8N_WEBHOOK_SECRET",
+        "Uses crypto.timingSafeEqual for signature comparison",
+        "Returns 401 JSON response for invalid API key",
+        "Returns 403 JSON response for invalid or expired signature",
+        "Exports a reusable validateN8nRequest(request: NextRequest) function that returns { valid: boolean, error?: string, body?: unknown }",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Middleware at lib/api/up/middleware.ts. Exports validateN8nRequest and withN8nAuth helper. Added /api/up/(.*) to Clerk public routes. Uses HMAC-SHA256 with crypto.timingSafeEqual, 5-minute timestamp window."
+    },
+    {
+      "id": "B1-003",
+      "title": "Transaction ingestion endpoint",
+      "description": "As a system, I need an API endpoint to receive individual transactions from n8n so that UP spending data flows into Mjolnir in real-time.",
+      "acceptanceCriteria": [
+        "Create POST /api/up/transactions/route.ts endpoint",
+        "Calls validateN8nRequest middleware before processing",
+        "Validates request body with Zod schema: up_transaction_id (string), description (string), raw_text (string optional), amount_cents (number), status (HELD | SETTLED), up_category_id (string optional), up_category_name (string optional), transaction_date (string date), settled_at (string optional), is_transfer (boolean)",
+        "Upserts on up_transaction_id — same ID updates existing record (handles HELD to SETTLED transition)",
+        "Returns 200 with the stored transaction on success",
+        "Returns 400 with descriptive error for validation failures",
+        "Returns 401/403 for auth failures (from middleware)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Endpoint at app/api/up/transactions/route.ts. Uses withN8nAuth wrapper, Zod validation, upserts on up_transaction_id. Returns 200 with stored transaction, 400 for validation errors, 401/403 for auth failures."
+    },
+    {
+      "id": "B1-004",
+      "title": "Batch transaction ingestion endpoint",
+      "description": "As a system, I need a batch endpoint so n8n can send multiple transactions at once efficiently.",
+      "acceptanceCriteria": [
+        "Create POST /api/up/transactions/batch/route.ts endpoint",
+        "Calls validateN8nRequest middleware before processing",
+        "Accepts { transactions: Array } body with same schema as single endpoint",
+        "Validates batch size is <= 500 transactions, returns 400 if exceeded",
+        "Upserts all transactions within a single database transaction (all-or-nothing)",
+        "Returns 200 with { inserted: number, updated: number } counts on success",
+        "Returns 400 with index of failing record if any transaction fails validation",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Endpoint at app/api/up/transactions/batch/route.ts. Uses withN8nAuth wrapper, Zod validation with batchSchema wrapping transactionSchema array. Max 500 transactions per batch. Looks up existing IDs in one query, then loops insert/update. Returns { inserted, updated } counts. Returns 400 with index for validation failures."
+    },
+    {
+      "id": "B1-005",
+      "title": "Balance sync endpoint",
+      "description": "As a system, I need an endpoint to receive account balance updates from n8n so Mjolnir has current cash position data.",
+      "acceptanceCriteria": [
+        "Create POST /api/up/balance/route.ts endpoint",
+        "Calls validateN8nRequest middleware before processing",
+        "Accepts { accounts: Array<{ up_account_id, display_name, account_type, balance_cents }> } body validated with Zod",
+        "Upserts each account on up_account_id",
+        "Updates last_synced_at timestamp on each upserted account",
+        "Returns 200 with { total_balance_cents, account_count } aggregated across all accounts",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Endpoint at app/api/up/balance/route.ts. Uses withN8nAuth wrapper, Zod validation for accounts array. Upserts on up_account_id, updates lastSyncedAt. Returns { total_balance_cents, account_count } aggregated across all UP accounts."
+    },
+    {
+      "id": "B1-006",
+      "title": "Cash holding auto-creation and net worth integration",
+      "description": "As a user, I want my total UP Bank balance to automatically appear as a Cash (UP) holding in my net worth so I see my full financial picture.",
+      "acceptanceCriteria": [
+        "Modify the POST /api/up/balance endpoint to also handle holding/snapshot creation",
+        "On balance sync, find or create a holding with name 'Cash (UP)', type 'cash', currency 'AUD'",
+        "On each balance sync, upsert a snapshot for today's date on the Cash (UP) holding with the aggregated balance across all UP accounts",
+        "Uses existing holdings and snapshots tables — no new tables needed",
+        "Respects existing snapshots unique constraint on (holding_id, date) for same-day updates",
+        "The Cash (UP) holding appears in net worth calculation automatically via existing snapshot logic",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Extended POST /api/up/balance to auto-create 'Cash (UP)' holding (type: cash, currency: AUD) for the single user. On each balance sync, upserts a snapshot for today's date with aggregated balance (cents→dollars). Uses existing holdings and snapshots tables — no new tables or migrations needed."
+    },
+    {
+      "id": "B1-007",
+      "title": "Transaction deletion/reversal endpoint",
+      "description": "As a system, I need to handle transaction deletions from UP so reversed charges don't remain in the budget.",
+      "acceptanceCriteria": [
+        "Create DELETE /api/up/transactions/route.ts endpoint (or add DELETE method to existing route)",
+        "Calls validateN8nRequest middleware before processing",
+        "Accepts { up_transaction_id: string } body validated with Zod",
+        "Soft-deletes by setting deleted_at timestamp on the matching transaction",
+        "Returns 200 with { deleted: true } on success",
+        "Returns 404 if no transaction found with that up_transaction_id",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": "Added DELETE method to existing app/api/up/transactions/route.ts. Uses withN8nAuth wrapper, Zod validation for up_transaction_id. Soft-deletes by setting deletedAt + updatedAt timestamps. Returns 200 with { deleted: true } on success, 404 if transaction not found."
+    },
+    {
+      "id": "B1-008",
+      "title": "UP connection status endpoint",
+      "description": "As a user, I want to see whether UP is connected and when the last sync happened so I know my data is fresh.",
+      "acceptanceCriteria": [
+        "Create GET /api/up/status/route.ts endpoint",
+        "Protected by Clerk auth (normal user auth, NOT n8n middleware)",
+        "Returns JSON: connected (boolean, true if any up_accounts exist), account_count (number), total_balance_cents (number), last_synced_at (string or null, most recent across all accounts), transaction_count (number), oldest_transaction_date (string or null), newest_transaction_date (string or null)",
+        "Returns 200 with all fields even when no accounts exist (connected: false, zeros/nulls)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "Endpoint at app/api/up/status/route.ts. Uses withAuth (Clerk auth) not n8n middleware. Two parallel queries: account stats (count, total balance, last synced) and transaction stats (count, oldest/newest date). Excludes soft-deleted transactions. Returns all fields with zeros/nulls when no accounts exist."
+    },
+    {
+      "id": "B1-009",
+      "title": "n8n webhook receiver workflow template",
+      "description": "As a developer, I need an n8n workflow JSON template for receiving UP webhook events so Roland can import it into n8n.",
+      "acceptanceCriteria": [
+        "Create directory n8n/workflows/ if it doesn't exist",
+        "Create n8n/workflows/up-webhook-receiver.json as a valid importable n8n workflow JSON",
+        "Workflow contains: Webhook trigger node, Code node for UP webhook signature validation (HMAC-SHA256 using X-Up-Authenticity-Signature header), IF node to detect internal transfers (transferAccount relationship not null sets is_transfer true), Code node to map UP JSON:API transaction format to flat Mjolnir payload (up_transaction_id, description, raw_text, amount_cents, status, up_category_id, up_category_name, transaction_date, settled_at, is_transfer), HTTP Request node to POST to Mjolnir /api/up/transactions with X-Mjolnir-API-Key, X-Mjolnir-Timestamp, and X-Mjolnir-Signature headers",
+        "Code node includes HMAC signature generation for Mjolnir request signing",
+        "Includes placeholder credential values marked with TODO comments",
+        "Workflow description field contains setup instructions",
+        "File is valid JSON (parseable with JSON.parse)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Created n8n/workflows/up-webhook-receiver.json. Valid importable n8n workflow with: Webhook trigger, UP signature validation (HMAC-SHA256), IF node for transfer detection, two Code nodes mapping UP JSON:API to Mjolnir flat payload (transfer vs normal), Mjolnir HMAC request signing Code node, HTTP Request POST to /api/up/transactions, Respond OK node. Uses n8n environment variables for secrets (UP_WEBHOOK_SECRET, MJOLNIR_API_KEY, MJOLNIR_WEBHOOK_SECRET, MJOLNIR_BASE_URL). Description field contains full setup instructions."
+    },
+    {
+      "id": "B1-010",
+      "title": "n8n balance sync workflow template",
+      "description": "As a developer, I need an n8n workflow JSON template for scheduled balance syncing so Roland can import it into n8n.",
+      "acceptanceCriteria": [
+        "Create n8n/workflows/up-balance-sync.json as a valid importable n8n workflow JSON",
+        "Workflow contains: Schedule Trigger node (every 15 minutes), HTTP Request node to GET https://api.up.com.au/api/v1/accounts with Authorization Bearer header, Code node to extract account data from JSON:API response (map each account to { up_account_id, display_name, account_type, balance_cents from valueInBaseUnits }), HTTP Request node to POST to Mjolnir /api/up/balance with signing headers and { accounts: [...] } body",
+        "Code node includes HMAC signature generation for Mjolnir request signing",
+        "Includes placeholder credential values marked with TODO comments",
+        "Workflow description field contains setup instructions",
+        "File is valid JSON (parseable with JSON.parse)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": "Created n8n/workflows/up-balance-sync.json. Valid importable n8n workflow with 5 nodes: Schedule Trigger (every 15 min), HTTP Request GET to UP /api/v1/accounts with Bearer token, Code node mapping JSON:API accounts to flat payload (up_account_id, display_name, account_type, balance_cents from valueInBaseUnits), Mjolnir HMAC request signing Code node, HTTP Request POST to /api/up/balance. Uses n8n environment variables (UP_PERSONAL_ACCESS_TOKEN, MJOLNIR_API_KEY, MJOLNIR_WEBHOOK_SECRET, MJOLNIR_BASE_URL). Description field contains full setup instructions."
+    }
+  ]
 }
