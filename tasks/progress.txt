@@ -1,2 +1,2 @@
-# Ralph Progress Log
+# Ralph Progress Log — B4: Budget Dashboard & Sankey
 # This file is reset at the start of each epic.
