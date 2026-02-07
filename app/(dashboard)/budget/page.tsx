@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { queryKeys } from "@/lib/query-keys";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -21,6 +21,10 @@ import { PaydayCountdown } from "@/components/budget/PaydayCountdown";
 import { SavingsIndicator } from "@/components/budget/SavingsIndicator";
 import { PeriodSelector } from "@/components/budget/PeriodSelector";
 import { AIRecommendationButton } from "@/components/budget/AIRecommendationButton";
+import {
+  RecommendationModal,
+  type AiRecommendation,
+} from "@/components/budget/RecommendationModal";
 import Link from "next/link";
 import type { BudgetSummary } from "@/lib/budget/summary";
 
@@ -120,15 +124,47 @@ function BudgetDashboardSkeleton() {
 
 export default function BudgetDashboardPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const queryClient = useQueryClient();
 
   const [periodId, setPeriodId] = useState<string | undefined>(undefined);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [, setRecommendation] = useState<any>(null);
+  const [activeRecommendation, setActiveRecommendation] =
+    useState<AiRecommendation | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const handleRecommendation = useCallback((rec: unknown) => {
-    setRecommendation(rec);
-    // Modal display handled by B5-006
+    setActiveRecommendation(rec as AiRecommendation);
+    setModalOpen(true);
   }, []);
+
+  const handleAccept = useCallback(
+    async (rec: AiRecommendation) => {
+      await fetch(`/api/budget/recommendations/${rec.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "accepted" }),
+      });
+      setModalOpen(false);
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.budget.recommendations.latest(rec.budgetPeriodId),
+      });
+    },
+    [queryClient]
+  );
+
+  const handleDismiss = useCallback(
+    async (rec: AiRecommendation) => {
+      await fetch(`/api/budget/recommendations/${rec.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "dismissed" }),
+      });
+      setModalOpen(false);
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.budget.recommendations.latest(rec.budgetPeriodId),
+      });
+    },
+    [queryClient]
+  );
 
   const {
     data: summary,
@@ -199,6 +235,12 @@ export default function BudgetDashboardPage() {
   }
 
   if (!summary) return null;
+
+  // Category ID → Name map for the recommendation modal
+  const categoryMap: Record<string, string> = {};
+  for (const cat of summary.categories) {
+    categoryMap[cat.categoryId] = cat.categoryName;
+  }
 
   // Derived values
   const incomePercent =
@@ -305,6 +347,18 @@ export default function BudgetDashboardPage() {
           totalDays={summary.totalDays}
         />
       </div>
+
+      {/* AI Recommendation Modal — B5-006 */}
+      {activeRecommendation && (
+        <RecommendationModal
+          recommendation={activeRecommendation}
+          categoryMap={categoryMap}
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          onAccept={handleAccept}
+          onDismiss={handleDismiss}
+        />
+      )}
     </div>
   );
 }
