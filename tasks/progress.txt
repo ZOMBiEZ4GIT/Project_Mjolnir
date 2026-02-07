@@ -159,3 +159,26 @@ Started: 2026-02-07
   - n8n responseMode: "responseNode" on webhook requires a respondToWebhook node downstream
 
 ---
+
+## 2026-02-07 - B1-010
+- Created n8n balance sync workflow template at n8n/workflows/up-balance-sync.json
+- Valid importable n8n workflow JSON with 5 nodes:
+  1. Schedule Trigger (every 15 minutes)
+  2. HTTP Request: GET https://api.up.com.au/api/v1/accounts with Bearer token
+  3. Code node: maps UP JSON:API account format to flat Mjolnir payload (up_account_id, display_name, account_type, balance_cents from valueInBaseUnits)
+  4. Code node: generates Mjolnir HMAC request signing headers (X-Mjolnir-API-Key, X-Mjolnir-Timestamp, X-Mjolnir-Signature)
+  5. HTTP Request: POSTs { accounts: [...] } to Mjolnir /api/up/balance
+- Uses n8n environment variables for secrets (UP_PERSONAL_ACCESS_TOKEN, MJOLNIR_API_KEY, MJOLNIR_WEBHOOK_SECRET, MJOLNIR_BASE_URL)
+- Description field contains full setup instructions for Roland
+- Files changed: n8n/workflows/up-balance-sync.json (new)
+- **Learnings for future iterations:**
+  - n8n scheduleTrigger uses `rule.interval[].minutesInterval` for minute-based scheduling
+  - UP API personal access token goes in Authorization Bearer header (different from webhook secret)
+  - Balance sync workflow is simpler than webhook receiver — no signature validation needed on UP side, just a scheduled poll
+  - Reuse the same Mjolnir HMAC signing pattern from the webhook receiver workflow
+
+---
+
+## EPIC B-1 COMPLETE
+All 10 stories (B1-001 through B1-010) pass. UP Bank Integration infrastructure is complete.
+Summary: Database schema, n8n auth middleware, transaction CRUD (single + batch + delete), balance sync with auto Cash (UP) holding, connection status endpoint, and two n8n workflow templates (webhook receiver + balance sync).

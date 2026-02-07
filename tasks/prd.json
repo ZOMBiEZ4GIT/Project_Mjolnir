@@ -173,8 +173,8 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 10,
-      "passes": false,
-      "notes": "This is a JSON file outside the Next.js app. Build/lint should still pass as it doesn't affect the app."
+      "passes": true,
+      "notes": "Created n8n/workflows/up-balance-sync.json. Valid importable n8n workflow with 5 nodes: Schedule Trigger (every 15 min), HTTP Request GET to UP /api/v1/accounts with Bearer token, Code node mapping JSON:API accounts to flat payload (up_account_id, display_name, account_type, balance_cents from valueInBaseUnits), Mjolnir HMAC request signing Code node, HTTP Request POST to /api/up/balance. Uses n8n environment variables (UP_PERSONAL_ACCESS_TOKEN, MJOLNIR_API_KEY, MJOLNIR_WEBHOOK_SECRET, MJOLNIR_BASE_URL). Description field contains full setup instructions."
     }
   ]
 }
