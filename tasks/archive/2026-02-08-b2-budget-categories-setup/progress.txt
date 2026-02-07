@@ -1,0 +1,128 @@
+# Ralph Progress Log — B2: Budget Categories & Setup
+# This file is reset at the start of each epic.
+
+## Codebase Patterns
+- Budget tables use varchar PK slugs (e.g. 'groceries') instead of UUIDs for readability
+- Seed scripts use `onConflictDoNothing()` for idempotent seeding
+- Schema follows existing pattern: `timestamp("name", { withTimezone: true }).defaultNow().notNull()` for created_at
+- Budget API routes use Zod for validation: `z.object({...}).safeParse(body)` with `parsed.error.flatten().fieldErrors`
+- Existing non-budget API routes use manual validation (no Zod)
+- `withAuth(async (request, context, userId) => { ... }, "context")` is the standard auth pattern
+- Budget utility functions live in `lib/budget/` — pure functions with no DB dependency
+- Single-row config tables (e.g. paydayConfig): GET returns first row or defaults, PUT uses select-then-update/insert upsert
+- PaydaySettings interface: `{ paydayDay: number; adjustForWeekends: boolean }` — reuse for API validation
+- Budget monetary values use `bigint("column", { mode: "number" })` for cents — same pattern as UP Bank tables
+- Cascade delete: `references(() => parent.id, { onDelete: "cascade" })` — used for allocations on period delete
+- Budget templates are static TypeScript data in `lib/budget/templates.ts` — use `applyTemplate(template, incomeCents)` to resolve allocations
+- TanStack Query v5: `onSuccess` removed from `useQuery` — use `useEffect` watching query `data` to sync into local state
+- Budget query keys live under `queryKeys.budget` in `lib/query-keys.ts`
+
+---
+
+## 2026-02-07 - B2-001
+- What was implemented: budget_categories table in schema.ts, seed-categories.ts with 9 default categories
+- Files changed: lib/db/schema.ts, lib/db/seed-categories.ts, drizzle/0011_breezy_william_stryker.sql
+- **Learnings for future iterations:**
+  - Schema uses varchar(255) for slug-based PKs, varchar(7) for hex colours
+  - Default categories: bills-fixed, groceries, transport, eating-out, shopping, health, fun, income, uncategorised
+  - Lucide icon names used: Home, ShoppingCart, Car, UtensilsCrossed, ShoppingBag, Heart, Gamepad2, DollarSign, HelpCircle
+  - Migration generated as 0011_breezy_william_stryker.sql
+---
+
+## 2026-02-07 - B2-002
+- What was implemented: payday_config table in schema.ts, lib/budget/payday.ts with pure date utility functions
+- Files changed: lib/db/schema.ts, lib/budget/payday.ts, drizzle/0012_aspiring_joshua_kane.sql
+- **Learnings for future iterations:**
+  - payday_config uses uuid PK (unlike budget_categories which uses varchar slugs) — single-user, single-row table
+  - Date utilities are pure functions with PaydaySettings interface (paydayDay, adjustForWeekends) — no DB dependency
+  - Weekend adjustment: Saturday→Friday, Sunday→Friday (both shift backwards to Friday)
+  - Budget period = payday to day-before-next-payday (inclusive both ends)
+  - createPaydayDate clamps to last day of month for February edge cases
+  - Migration generated as 0012_aspiring_joshua_kane.sql
+---
+
+## 2026-02-07 - B2-003
+- What was implemented: budget_periods and budget_allocations tables in schema.ts with relations and TypeScript types
+- Files changed: lib/db/schema.ts, drizzle/0013_smooth_overlord.sql
+- **Learnings for future iterations:**
+  - budget_periods uses uuid PK, unique constraint on start_date, indexes on start_date and end_date
+  - budget_allocations has cascade delete on budget_period_id FK — deleting a period removes its allocations
+  - budget_allocations uses unique constraint on (budget_period_id, category_id) for one allocation per category per period
+  - Money stored as bigint cents (mode: "number") — same pattern as upAccounts.balanceCents
+  - Relations: budgetPeriods → many allocations, budgetAllocations → one budgetPeriod + one category
+  - Migration generated as 0013_smooth_overlord.sql
+---
+
+## 2026-02-07 - B2-004
+- What was implemented: Budget categories API endpoints (GET list, POST create, PUT update, DELETE) with Zod validation
+- Files changed: app/api/budget/categories/route.ts, app/api/budget/categories/[id]/route.ts
+- **Learnings for future iterations:**
+  - GET auto-seeds default categories if table is empty via seedBudgetCategories()
+  - POST uses Zod schema: id (lowercase slug regex), name, icon, colour (hex regex), optional sortOrder/isIncome
+  - PUT on [id] route updates name, icon, colour, sortOrder — all optional fields
+  - DELETE prevents deletion of system categories (isSystem=true) with 400 error
+  - Custom categories always have isSystem=false — cannot create system categories via API
+  - Auto sort_order: if not provided on POST, places after last existing category
+  - Budget routes use Zod validation pattern (unlike older manual validation routes)
+---
+
+## 2026-02-07 - B2-005
+- What was implemented: Payday configuration API endpoints (GET with defaults, PUT with upsert) at /api/budget/payday
+- Files changed: app/api/budget/payday/route.ts
+- **Learnings for future iterations:**
+  - Payday config is a single-row table — GET fetches first row, PUT upserts via select+update/insert
+  - Default config (day 15, adjust_for_weekends true) returned from GET without persisting — user must explicitly save
+  - Response includes calculated currentPeriod (startDate, endDate, daysInPeriod) using payday.ts utilities
+  - buildResponse helper formats dates as ISO date strings (YYYY-MM-DD) for the currentPeriod
+  - Zod validates paydayDay 1-28, adjustForWeekends boolean, optional incomeSourcePattern
+---
+
+## 2026-02-07 - B2-006
+- What was implemented: Budget periods API endpoints (GET list with allocations, POST create with allocations, PUT update with allocation replacement, DELETE with cascade)
+- Files changed: app/api/budget/periods/route.ts, app/api/budget/periods/[id]/route.ts
+- **Learnings for future iterations:**
+  - GET fetches all periods then all allocations and groups them in-memory — no Drizzle `with` needed for this simple join
+  - POST creates period first, then inserts allocations referencing period.id — two-step insert
+  - PUT replaces allocations by delete-then-insert when allocations array provided; fetches existing if not provided
+  - Allocation over-income check is a warning in the response, not a blocking validation error
+  - DELETE relies on cascade delete in schema for allocations — no need to manually delete allocations
+  - Both route.ts and [id]/route.ts share the same allocationSchema Zod definition (could extract later if needed)
+---
+
+## 2026-02-07 - B2-007
+- What was implemented: Budget templates module (lib/budget/templates.ts) with three templates and applyTemplate function, plus GET /api/budget/templates endpoint
+- Files changed: lib/budget/templates.ts, app/api/budget/templates/route.ts
+- **Learnings for future iterations:**
+  - Templates use a mixed allocation model: fixedCents (for known amounts like rent) and percentage (for flexible splits)
+  - applyTemplate subtracts all fixed allocations from income first, then applies percentages to the remainder
+  - Templates are static data — no database storage needed, just a TypeScript module
+  - The API endpoint is read-only (GET only), no auth-gated mutations needed for templates
+  - Barefoot: $1200 fixed groceries + 60/10/8/7/5/10 split on remainder
+  - 50/30/20: all percentage-based (35/15/10/10/10/10/5 = 95%, leaving 5% savings)
+  - Roland's: $2129 fixed rent + $1200 fixed groceries + 8/6/8/4/8 split on remainder
+---
+
+## 2026-02-07 - B2-008
+- What was implemented: Budget setup page (Step 1: payday config, Step 2: income entry) with multi-step layout, steps indicator, query key infrastructure
+- Files changed: app/(dashboard)/budget/setup/page.tsx, lib/query-keys.ts
+- **Learnings for future iterations:**
+  - TanStack Query v5 removed `onSuccess` callback from `useQuery` — use `useEffect` to sync fetched data to local state instead
+  - Budget query keys added to lib/query-keys.ts under `queryKeys.budget` namespace (payday, categories, templates, periods)
+  - Multi-step form uses local `useState` for step tracking — no routing between steps, just conditional rendering
+  - Income stored in sessionStorage as cents for handoff to the allocations step (B2-009)
+  - Budget setup route lives at `/app/(dashboard)/budget/setup/page.tsx` — rendered at `/budget/setup`
+  - Select component for day picker uses String values (Radix requires string), parse with parseInt on change
+---
+
+## 2026-02-07 - B2-009
+- What was implemented: Step 3 of budget setup — template selection cards, editable allocation inputs per category, running total bar with savings/over-budget indicators, save to create budget period
+- Files changed: app/(dashboard)/budget/setup/page.tsx (extended existing page)
+- **Learnings for future iterations:**
+  - All 3 steps (payday, income, allocations) are in one page file — no sessionStorage needed, state flows naturally between steps
+  - ICON_MAP maps Lucide icon string names from DB to actual React components for rendering category icons
+  - `applyTemplateClient` mirrors server-side `applyTemplate` logic: subtract fixed costs from income, then apply percentages to remainder
+  - Spendable categories filter: exclude `isIncome=true` and `id=uncategorised` from allocation editor
+  - Category colour with "20" suffix (e.g. `#6366F120`) gives a 12% opacity background — works for icon containers
+  - Budget period dates come from paydayData.currentPeriod (fetched after Step 1 save)
+  - Over-budget is a warning (text-destructive + AlertTriangle icon) but doesn't block saving — matches API behavior
+---

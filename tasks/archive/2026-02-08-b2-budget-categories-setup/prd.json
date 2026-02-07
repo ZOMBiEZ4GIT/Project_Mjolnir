@@ -1,0 +1,157 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/b2-budget-categories-setup",
+  "description": "B-2: Budget Categories & Setup — Budget system foundation with categories, payday-aligned periods, allocation tracking, templates, and a setup UI.",
+  "userStories": [
+    {
+      "id": "B2-001",
+      "title": "Budget categories database schema and seed data",
+      "description": "As a developer, I need a budget categories table with seeded defaults so the system can organise spending into defined buckets.",
+      "acceptanceCriteria": [
+        "Create budget_categories table in lib/db/schema.ts with columns: id (varchar PK, e.g. 'groceries'), name (varchar), icon (varchar, Lucide icon name), colour (varchar, hex string), sort_order (integer), is_income (boolean default false), is_system (boolean default false), created_at (timestamptz)",
+        "Create a seed script at lib/db/seed-categories.ts that inserts default categories: bills-fixed, groceries, transport, eating-out, shopping, health, fun, income (is_income=true), uncategorised (is_system=true)",
+        "Each default category has an appropriate Lucide icon name and distinct hex colour",
+        "Generate migration with npm run db:generate",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B2-002",
+      "title": "Payday configuration schema and date utilities",
+      "description": "As a developer, I need payday configuration storage and date calculation utilities so budget periods align with actual pay cycles.",
+      "acceptanceCriteria": [
+        "Create payday_config table in lib/db/schema.ts with columns: id (uuid PK), payday_day (integer 1-28), adjust_for_weekends (boolean default true), income_source_pattern (varchar nullable), created_at (timestamptz), updated_at (timestamptz)",
+        "Create lib/budget/payday.ts with pure functions: calculateBudgetPeriod(config, targetDate) returns { startDate, endDate, daysInPeriod }, findPaydayOnOrBefore(date, config), findNextPayday(date, config), getDaysUntilPayday(config)",
+        "Weekend adjustment: Saturday payday uses Friday, Sunday payday uses Friday",
+        "Handles month boundaries correctly (e.g. payday 28th works for February)",
+        "Generate migration with npm run db:generate",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B2-003",
+      "title": "Budget periods and allocations schema",
+      "description": "As a developer, I need tables for budget periods and category allocations so the system can track planned spending per pay cycle.",
+      "acceptanceCriteria": [
+        "Create budget_periods table in lib/db/schema.ts with columns: id (uuid PK), start_date (date), end_date (date), expected_income_cents (bigint), notes (text nullable), created_at (timestamptz), updated_at (timestamptz). Unique constraint on start_date",
+        "Create budget_allocations table with columns: id (uuid PK), budget_period_id (uuid FK to budget_periods), category_id (varchar FK to budget_categories), allocated_cents (bigint), created_at (timestamptz), updated_at (timestamptz). Unique constraint on (budget_period_id, category_id)",
+        "Add indexes on budget_periods(start_date, end_date)",
+        "Cascade delete allocations when period is deleted",
+        "Generate migration with npm run db:generate",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B2-004",
+      "title": "Budget categories API endpoints",
+      "description": "As a developer, I need API endpoints to list and manage budget categories so the UI can display and configure them.",
+      "acceptanceCriteria": [
+        "Create GET /api/budget/categories — returns all categories sorted by sort_order",
+        "Create POST /api/budget/categories — create a custom category with id, name, icon, colour; validates with Zod",
+        "Create PUT /api/budget/categories/[id] — update category name, icon, colour, sort_order; validates with Zod",
+        "System categories (is_system=true) cannot be deleted",
+        "All endpoints protected by Clerk auth (withAuth pattern)",
+        "If no categories exist on GET, run the seed function to insert defaults",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B2-005",
+      "title": "Payday configuration API endpoints",
+      "description": "As a developer, I need API endpoints to get and set payday configuration so the user can configure their pay cycle.",
+      "acceptanceCriteria": [
+        "Create GET /api/budget/payday — returns current payday config, or defaults (day 15, adjust_for_weekends true) if none exists",
+        "Create PUT /api/budget/payday — update payday config (payday_day, adjust_for_weekends, income_source_pattern); validates with Zod",
+        "Validates payday_day is between 1 and 28",
+        "Response includes the calculated current budget period dates alongside the config",
+        "Protected by Clerk auth (withAuth pattern)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B2-006",
+      "title": "Budget periods API endpoints",
+      "description": "As a developer, I need API endpoints to create and manage budget periods so the user can set up monthly budgets.",
+      "acceptanceCriteria": [
+        "Create GET /api/budget/periods — list all budget periods with their allocations, ordered by start_date desc",
+        "Create POST /api/budget/periods — create a new period with expected_income_cents and allocations array; validates with Zod",
+        "Create PUT /api/budget/periods/[id] — update period income, notes, and allocations",
+        "Create DELETE /api/budget/periods/[id] — delete a period (allocations cascade)",
+        "Validates that sum of allocation cents does not exceed expected_income_cents (warn, not block)",
+        "Protected by Clerk auth (withAuth pattern)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B2-007",
+      "title": "Budget templates",
+      "description": "As a developer, I need pre-configured budget templates so the user can quickly set up a budget without starting from scratch.",
+      "acceptanceCriteria": [
+        "Create lib/budget/templates.ts with three templates: 'Barefoot Investor Buckets' (60/10/8/7/5/10 split + $1200 fixed groceries), '50/30/20 Rule' (35/15/10/10/10/10/5 split), 'Roland's Budget' ($2129 fixed rent as bills-fixed, $1200 fixed groceries, 8/6/8/4/8 split for remaining categories)",
+        "Each template has: name, description, allocations array with category_id and either percentage (0-100) or fixed_cents",
+        "Create GET /api/budget/templates — returns all available templates",
+        "Export a function applyTemplate(template, incomeCents) that calculates actual cent amounts from percentages and fixed values",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B2-008",
+      "title": "Budget setup page — payday and income step",
+      "description": "As a user, I want the first part of the budget setup flow where I configure my payday and income so the system knows my pay cycle.",
+      "acceptanceCriteria": [
+        "Create /app/budget/setup/page.tsx with a multi-step layout (steps indicator at top)",
+        "Step 1: Payday configuration — day picker (1-28 dropdown), weekend adjustment toggle",
+        "Step 2: Expected monthly income — currency input field in AUD",
+        "Next/Back buttons to navigate between steps",
+        "Saves payday config via PUT /api/budget/payday on step 1 completion",
+        "Dark mode styling consistent with rest of Mjolnir",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B2-009",
+      "title": "Budget setup page — template selection and allocation step",
+      "description": "As a user, I want to choose a budget template and adjust allocations so I have a working budget tailored to my income.",
+      "acceptanceCriteria": [
+        "Add Step 3 to the existing budget setup page: template selection cards (Barefoot, 50/30/20, Roland's, or Start from Scratch)",
+        "Selecting a template populates allocation inputs with calculated amounts based on income from Step 2",
+        "Each category row shows: icon, name, allocated amount input (editable), percentage of income (calculated live)",
+        "Running total bar shows: total allocated, unallocated remainder (savings), savings percentage",
+        "Warning displayed if allocations exceed income (but does not block saving)",
+        "Save button creates a budget period via POST /api/budget/periods with the configured allocations",
+        "On success, redirect to /dashboard or show completion message",
+        "Dark mode styling consistent with rest of Mjolnir",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}
