@@ -8,12 +8,12 @@ import { Button } from "@/components/ui/button";
 import {
   PieChart,
   AlertCircle,
-  Loader2,
   Calendar,
   TrendingUp,
   DollarSign,
   Wallet,
 } from "lucide-react";
+import { SankeyChartContainer } from "@/components/budget/SankeyChartContainer";
 import Link from "next/link";
 import type { BudgetSummary } from "@/lib/budget/summary";
 
@@ -257,14 +257,15 @@ export default function BudgetDashboardPage() {
         />
       </div>
 
-      {/* Hero chart area — placeholder for Sankey (B4-005) / mobile chart (B4-006) */}
+      {/* Hero chart area — Sankey (desktop) / mobile chart placeholder (B4-006) */}
       <div className="rounded-lg border border-border bg-card/50 p-6">
         <h2 className="text-sm font-medium text-muted-foreground mb-4">
           Budget Breakdown
         </h2>
-        <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Sankey chart coming soon
+        <SankeyChartContainer summary={summary} />
+        {/* Mobile fallback — B4-006 will replace this */}
+        <div className="flex items-center justify-center h-64 text-muted-foreground text-sm md:hidden">
+          Mobile chart coming soon
         </div>
       </div>
 
