@@ -28,7 +28,7 @@
  *   - Clerk provides the user ID (text PK, not UUID) as the single source of
  *     identity and authentication.
  */
-import { pgTable, text, timestamp, uuid, decimal, date, boolean, pgEnum, unique, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, decimal, date, boolean, pgEnum, unique, integer, bigint, varchar, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // =============================================================================
@@ -326,6 +326,75 @@ export const importHistory = pgTable("import_history", {
 });
 
 // =============================================================================
+// UP BANK INTEGRATION
+// =============================================================================
+
+export const upAccountTypeEnum = pgEnum("up_account_type", [
+  "TRANSACTIONAL",
+  "SAVER",
+  "HOME_LOAN",
+]);
+
+export const upTransactionStatusEnum = pgEnum("up_transaction_status", [
+  "HELD",
+  "SETTLED",
+]);
+
+/**
+ * UP Bank accounts synced via n8n middleware.
+ *
+ * Stores the current state of each UP account (transactional, saver, home loan).
+ * Balances are stored in cents as bigint to avoid floating point issues.
+ * The `lastSyncedAt` timestamp tracks data freshness.
+ */
+export const upAccounts = pgTable("up_accounts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  upAccountId: varchar("up_account_id", { length: 255 }).notNull().unique(),
+  displayName: varchar("display_name", { length: 255 }).notNull(),
+  accountType: upAccountTypeEnum("account_type").notNull(),
+  balanceCents: bigint("balance_cents", { mode: "number" }).default(0).notNull(),
+  lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+/**
+ * UP Bank transactions synced via n8n middleware.
+ *
+ * Stores individual transactions from UP Bank. Amounts are in cents as bigint
+ * (negative for debits, positive for credits). Supports HELD -> SETTLED status
+ * transitions via upsert on `upTransactionId`.
+ *
+ * The `mjolnirCategoryId` field allows future budget categorisation linking.
+ * Soft delete via `deletedAt` handles transaction reversals from UP.
+ */
+export const upTransactions = pgTable(
+  "up_transactions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    upTransactionId: varchar("up_transaction_id", { length: 255 }).notNull().unique(),
+    description: varchar("description", { length: 512 }).notNull(),
+    rawText: varchar("raw_text", { length: 512 }),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    status: upTransactionStatusEnum("status").notNull(),
+    upCategoryId: varchar("up_category_id", { length: 255 }),
+    upCategoryName: varchar("up_category_name", { length: 255 }),
+    mjolnirCategoryId: varchar("mjolnir_category_id", { length: 255 }),
+    transactionDate: date("transaction_date").notNull(),
+    settledAt: timestamp("settled_at", { withTimezone: true }),
+    isTransfer: boolean("is_transfer").default(false).notNull(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    transactionDateIdx: index("up_transactions_transaction_date_idx").on(table.transactionDate),
+    mjolnirCategoryIdIdx: index("up_transactions_mjolnir_category_id_idx").on(table.mjolnirCategoryId),
+    statusIdx: index("up_transactions_status_idx").on(table.status),
+  })
+);
+
+// =============================================================================
 // RELATIONS
 // =============================================================================
 
@@ -410,3 +479,9 @@ export type NewExchangeRate = typeof exchangeRates.$inferInsert;
 
 export type ImportHistory = typeof importHistory.$inferSelect;
 export type NewImportHistory = typeof importHistory.$inferInsert;
+
+export type UpAccount = typeof upAccounts.$inferSelect;
+export type NewUpAccount = typeof upAccounts.$inferInsert;
+
+export type UpTransaction = typeof upTransactions.$inferSelect;
+export type NewUpTransaction = typeof upTransactions.$inferInsert;

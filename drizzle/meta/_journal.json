@@ -71,6 +71,13 @@
       "when": 1770028116068,
       "tag": "0009_lethal_reaper",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1770445199426,
+      "tag": "0010_lucky_madame_hydra",
+      "breakpoints": true
     }
   ]
 }
