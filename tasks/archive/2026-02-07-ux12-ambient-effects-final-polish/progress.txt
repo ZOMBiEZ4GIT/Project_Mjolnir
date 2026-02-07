@@ -1,0 +1,404 @@
+## Codebase Patterns
+- Warning colours: always use `text-warning`, `bg-warning/10`, `border-warning/20` — never hardcode yellow-500, yellow-400, or amber-500
+- All dialogs must use AnimatedDialog/AnimatedAlertDialog (from animated-dialog.tsx / animated-alert-dialog.tsx) — only exception is command.tsx (base shadcn)
+- Badge contrast: use `bg-accent/10` and `bg-destructive/10` (not /20) for badge backgrounds with matching text-{color} to meet WCAG AA 4.5:1
+- Design token contrast: accent is 263 84% 70%, destructive is 0 84% 63% — both verified WCAG AA on background and card surfaces
+- useRovingTabIndex hook (hooks/use-roving-tabindex.ts): provides arrow key navigation + roving tabindex for tablist/radiogroup components — returns { containerRef, handleKeyDown, getTabIndex }
+- Radix UI primitives (Dialog, AlertDialog, Select, Switch, Accordion) handle ARIA automatically — no manual attributes needed
+- Touch targets: use `min-h-[44px] sm:min-h-0` pattern for mobile-only 44px touch targets; for table action buttons use `h-[44px] w-[44px] sm:h-8 sm:w-8`
+- Switch touch targets: use `before:` pseudo-element (`before:absolute before:-inset-3 before:content-[''] sm:before:hidden`) to expand tap area without changing visual size
+- Buttons with hidden text (`hidden sm:inline`) need `aria-label` for accessibility on mobile
+- Chart containers use `role="img" aria-label="..."` for screen reader accessibility
+- Exclusive-choice button groups use `role="radiogroup"` + `role="radio"` + `aria-checked` (not tablist)
+- Step indicators use `aria-current="step"` on the current step (not aria-selected)
+- GroupHeader has optional `contentId` prop for `aria-controls` linking to content region
+- Framer Motion inline Variants objects need `Variants` type annotation or `as const` on ease strings to satisfy TypeScript
+- Project uses Next.js 14+ App Router with TypeScript
+- Drizzle ORM is already installed (drizzle-orm, drizzle-kit, @neondatabase/serverless)
+- shadcn/ui components available in components/ui
+- Dark mode only - no light mode support
+- Quality checks: `npm run build` and `npm run lint`
+- ESLint 9 with flat config format (eslint.config.mjs) - do not use .eslintrc.json
+- Tailwind CSS with shadcn/ui CSS variable pattern using HSL format: hsl(var(--variable))
+- CSS variables stored without hsl() wrapper e.g. --background: 240 10% 3.9%
+- Glow shadows use rgba() since HSL variables can't express box-shadow alpha
+- Inter font loaded via next/font/google in app/layout.tsx (applied via inter.className on body)
+- Framer Motion components require "use client" directive
+- Toast notifications use Sonner - import toast from sonner
+- Dashboard navigation uses components/layout/sidebar.tsx and components/layout/mobile-nav.tsx
+- Tailwind has semantic tokens: text-positive/bg-positive (green), text-negative/bg-negative (red), shadow-glow-sm/md/lg, shadow-glow-positive, shadow-glow-negative, shadow-card, shadow-card-hover
+- Layout & spacing constants live in lib/theme.ts (sidebarWidth, cardRadius, spacing xs→2xl) — use instead of magic numbers
+- Animation presets live in lib/animations.ts — import and spread onto motion.div elements (e.g. `<motion.div {...fadeIn}>`)
+- Stagger presets (staggerContainer, staggerItem) use Variants type with "hidden"/"visible" keys — use with variants prop
+- numberSpring is a Transition object for animating numeric values (e.g. useSpring, useMotionValue)
+- Reduced motion: use `useReducedMotion()` from framer-motion directly — returns boolean for OS prefers-reduced-motion
+- Hooks live in hooks/ directory (not lib/) — follow this convention for custom React hooks
+- Recharts SVG props (stroke, fill) require raw hex values — CSS variables not supported in SVG rendering
+- Category indicator colours (asset types, currencies) use hardcoded Tailwind colours (bg-blue-500 etc.) — these are intentional and distinct from theme tokens
+- Card container pattern: `border-border bg-card/50` for bordered cards, `bg-muted` for skeleton placeholders
+- Error state pattern: `border-destructive bg-destructive/10` with `text-destructive` for error messages
+- Toggle pattern: active=`bg-muted text-foreground`, inactive=`text-muted-foreground hover:text-foreground`
+- Form validation pattern: `border-destructive focus-visible:ring-destructive` on inputs, `text-destructive` on error messages
+- Delete confirm button: `bg-destructive hover:bg-destructive/90 text-foreground`; cancel: `bg-card border-border text-foreground hover:bg-muted`
+- Select dropdowns: `bg-background border-border text-muted-foreground` for trigger, `focus:bg-card focus:text-foreground` for items
+- Warning colours use text-warning/bg-warning design tokens (--warning: 38 92% 50% ≈ amber-500) — added in UX-9 US-010
+- Info colours (blue-*) are semantic and intentionally NOT part of design token migration
+- Interactive toggle buttons (show/hide contributions): use `text-primary hover:text-primary/80` pattern
+- html2canvas backgroundColor requires raw hex — use `#18181b` to match --card token
+- Email templates (components/emails/) use inline hex values — email clients don't support CSS variables
+- Only legitimate remaining hardcoded grey: `bg-gray-500` fallback in category indicator functions (asset-allocation, currency-exposure)
+- TimeRangeSelector (components/charts/time-range-selector.tsx) exports TimeRange type and TIME_RANGE_OPTIONS — import from @/components/charts
+- lightweight-charts v5 API: `chart.addSeries(AreaSeries, options)` — not `chart.addAreaSeries(options)` (deprecated)
+- TradingView charts require `next/dynamic` with `ssr: false` — use TVChart from components/charts/tv-chart.tsx
+- TVChartWrapper supports `onCrosshairMove` callback for custom tooltips — returns TVCrosshairData { time, value, x, y } or null
+- TradingView custom tooltip: use absolute positioned div with pointer-events-none overlaying the chart container
+- TradingView Time type accepts YYYY-MM-DD date strings cast as `Time` — works for monthly data points
+- Navigation items defined in lib/navigation.ts — import navItems and NavItem type from there (sidebar, mobile nav, command menu)
+- New layout components live in components/layout/ — NavItemLink (nav-item.tsx) uses Framer Motion layoutId='active-nav' for animated active pill
+- TooltipProvider with delayDuration={0} wraps collapsed nav items for instant tooltip display
+- Sidebar collapse state persists in localStorage ('mjolnir-sidebar-collapsed') — use mounted state pattern to avoid hydration mismatch
+- Sidebar is fixed positioned; content area needs dynamic left margin matching sidebar width (240px or 64px)
+- AppShell (components/layout/app-shell.tsx) owns sidebar collapsed state — Sidebar receives isCollapsed/onToggleCollapsed as props
+- Content area uses CSS custom property --sidebar-width with responsive Tailwind class ml-0 lg:ml-[var(--sidebar-width)] for responsive dynamic margin
+- For responsive dynamic values, use CSS custom properties + Tailwind arbitrary value classes (inline styles can't be responsive)
+- PageWrapper (components/layout/page-wrapper.tsx) wraps page content with fade transition — placed inside DashboardErrorBoundary in dashboard layout
+- Mobile header (components/layout/mobile-nav.tsx) is fixed h-14 z-30 — content area needs pt-14 on mobile
+- Sheet drawer (shadcn/ui) handles focus trapping and Escape close via Radix Dialog primitive
+- Focus ring pattern: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background` — standard across all interactive elements
+- Use `ring-inset` for elements inside `overflow-hidden` containers (e.g., table rows) to prevent focus ring clipping
+- Always use `focus-visible:` (not `focus:`) for keyboard-only focus rings — avoids rings on mouse clicks
+- Shared UI components (e.g. SpeedDial) live in `components/shared/` directory
+- To open AddHoldingDialog/AddTransactionDialog programmatically: pass a hidden `<button ref={ref} />` as children, then call `ref.current?.click()`
+- CheckInModal uses controlled `open`/`onOpenChange` props — can be opened from any external trigger
+- HoldingsTable hybrid grouping: `typeFilter="all"` shows collapsible grouped sections, specific type shows flat list via `HoldingsFlatSection`
+- Shared table rendering: `HoldingsTableContent` component handles row rendering for both grouped and flat views
+- GroupHeader (components/holdings/group-header.tsx) shows label, count, total value, portfolio % badge — receives calculated values as props
+- `calculateGroupTotal()` in holdings-table.tsx converts holdings to display currency — use for any group-level value aggregation
+- `motion.create(TableRow)` creates a motion-enhanced `MotionTableRow` for stagger animations on table rows
+- Stagger rows use `motion.tbody` as container with `variants` + `initial="hidden" animate="visible"` pattern
+- Capped stagger: `Math.min(0.05, 0.5 / count)` ensures total stagger completes within 500ms regardless of row count
+- `useReducedMotion()` from framer-motion checks OS prefers-reduced-motion — skip animations entirely when true
+- Dormant holdings sorted to bottom of each group via `useMemo` sort in `HoldingsTableContent` and `HoldingsCurrencySection`
+- EmptyState component (`components/ui/empty-state.tsx`) is shared across holdings, snapshots, transactions — keep prop API stable
+- `AnimatePresence mode="popLayout"` on HoldingsTable wraps content keyed by typeFilter — handles enter/exit on tab change
+- Holdings table rows are clickable (navigate to `/holdings/[id]`) — action buttons use `stopPropagation` to prevent row click
+- Row hover: `hover:bg-accent/5 hover:scale-[1.005] active:bg-accent/10` with `transition-[background-color,transform] duration-150`
+- Filter tabs (components/holdings/filter-tabs.tsx) use Framer Motion layoutId for animated sliding indicator
+- scrollbar-hide utility class added to globals.css for hidden scrollbar on overflow-x-auto elements
+- TypeSelector (components/transactions/type-selector.tsx) uses layoutId="active-transaction-type" for animated tab indicator
+- react-hook-form + zod installed; shadcn/ui form.tsx component available in components/ui/form.tsx
+- z.coerce.number() with useForm requires casting resolver: `zodResolver(schema) as unknown as Resolver<FormValues>`
+- Zod v4 API difference: use `{ error: "..." }` for custom error messages on z.coerce.number(), not `{ required_error, invalid_type_error }` (Zod v3 API)
+- Zod v4 superRefine: use `code: "custom"` string literal instead of `z.ZodIssueCode.custom` enum
+- For numeric inputs with z.coerce: pass `field.value ?? ""` to prevent "undefined" showing
+- TransactionSummary cards use stagger animation with motion.div and variants pattern
+- Transaction table uses monthly grouping with sticky headers (sticky top-0 z-20 bg-background)
+- MotionTableRow with stagger variants + AnimatePresence mode="wait" keyed by filterKey for table animations
+- Transaction action colour mapping: BUY=positive/green, SELL=destructive/red, DIVIDEND=accent/purple, SPLIT=blue-400/blue-500
+- onTransactionSaved/onDeleted callbacks enable row highlight and fade-out animations from parent component
+- Check-in form uses react-hook-form + zod with useFieldArray for dynamic holdings list; showContributions is UI-only state (not in form schema)
+- useFieldArray `replace()` syncs form fields with API data; use a ref-based sync key to prevent re-replacing on every render
+- form.trigger(`holdings.${idx}.balance`) validates individual field array items for per-step validation in wizard flows
+- form.setValue with `{ shouldValidate: form.formState.isSubmitted }` re-validates on change only after first validation attempt
+- Check-in status API returns `previousBalances` keyed by holdingId — most recent snapshot balance before target month
+- CheckInModal is a 3-step wizard (Select Month → Update Holdings → Review & Save) with currentStep state (0-2)
+- animate-shake keyframes defined in tailwind.config.ts — use `animate-shake` class with useState toggle + setTimeout auto-clear
+- Type icon mapping: super=Landmark, cash=Wallet, debt=CreditCard (from lucide-react)
+- CheckinPrompt (components/dashboard/checkin-prompt.tsx) replaces CheckInPromptCard — moved to dashboard/ directory
+- sessionStorage dismissal pattern: use `mounted` state + useEffect to avoid hydration mismatch when reading sessionStorage
+- Accent glow prompt card: `border-accent/30 bg-card/50 shadow-glow-sm` for attention-grabbing cards
+- Directional step transitions: use variants with `custom` prop on AnimatePresence to pass direction to exiting components — enter slides from `100*d%`, exit slides to `-100*d%` (d=1 forward, d=-1 backward)
+- Step container needs `overflow-hidden` to clip sliding content during transitions
+- Accordion expand animation: `motion.div` with `height: 0` → `height: "auto"`, `overflow-hidden`, wrapped in `AnimatePresence initial={false}`
+- Check-in status API returns `latestContributions` for pre-populating super contribution fields
+- Success summary pattern: store mutation result in state + `showSuccess` boolean, render different content in same step (no extra wizard step)
+- CheckinStepper accepts currentStep=3 (beyond max) to mark all steps completed — no code change needed in stepper
+- NumberTicker component (components/dashboard/number-ticker.tsx) animates currency values using useSpring + useMotionValue; tabular-nums prevents layout shift
+- ChangeBadge component (components/dashboard/change-badge.tsx) shows positive/negative/zero with TrendingUp/TrendingDown/Minus icons; size="sm"|"md"
+- StaleIndicator component (components/dashboard/stale-indicator.tsx) shows amber warning with tooltip (icon variant) or inline text (badge variant)
+- framer-motion v12 `useSpring` subscribes via `.on("change", cb)` — use this to update textContent directly for performance
+- Dashboard sections stagger in via motion.div container (80ms delay) with fadeIn+slideUp (opacity 0→1, y 16→0, 300ms easeOut)
+- Progress bar animation: use useState(0) → useEffect setTimeout → setState(target) with CSS transition
+- Donut centre overlay: absolute positioned div with pointer-events-none, marginBottom to offset legend
+- Chart hex colours (#374151, #9CA3AF etc.) are required for SVG rendering — don't convert to CSS variables
+- Grid gap-6 for section spacing, gap-4 only for small internal layouts
+- All card-level elements use rounded-2xl; inner elements (tooltips, icons, row items) keep rounded-lg
+- Yahoo Finance `chart()` method: `yahooFinance.chart(symbol, { period1, period2, interval: "1d" })` returns `{ quotes: [{ close }] }`
+- CoinGecko market_chart: `/coins/{id}/market_chart?vs_currency=usd&days=30&interval=daily` returns `{ prices: [[timestamp, price]] }`
+- Sparkline data API: `GET /api/prices/sparkline` returns `{ holdingId, symbol, prices: number[] }[]` — staleTime 30min
+- SVG elements (non-Recharts) can use `stroke="currentColor"` with Tailwind `text-*` classes — avoids hardcoded hex
+- ChartSkeleton uses ChartCard wrapper when `withContainer=true` — consistent with all chart sections
+- All chart tooltips use `bg-card` (not `bg-background`) for consistent elevated surface styling
+- Chart hex colours centralised in `lib/chart-palette.ts` — import CHART_GRID, CHART_TEXT, CHART_AXIS, POSITIVE, NEGATIVE, etc. instead of hardcoding hex
+- Category asset type colours (STOCK, ETF, CRYPTO, SUPER, CASH) also in chart-palette.ts — use in getAssetHexColor() and similar functions
+- PriceFlash (components/holdings/price-flash.tsx) wraps children with green/red flash on value change — use `<PriceFlash value={num}>{children}</PriceFlash>`
+- PriceNumberTicker (components/holdings/price-number-ticker.tsx) animates price digits with spring animation — prefix prop stays static, only digits animate
+- PriceTimestamp (components/holdings/price-timestamp.tsx) shows relative time + tooltip with exact time — three states: fresh/stale/error
+- PriceSkeleton (components/holdings/price-skeleton.tsx) loading skeleton for price cells — variant="price" (3-bar) or variant="value" (single-bar)
+- TanStack Query: `isFetching && !isLoading` detects background refetches without triggering initial skeleton
+- Currency bar colours: AUD=`bg-positive` (green), NZD=`bg-blue-400` (blue), USD=`bg-amber-500` (amber) — use in progress bars and charts
+- AnimatedPercentage pattern: requestAnimationFrame loop with ease-out cubic for lightweight percentage transitions (no framer-motion dependency)
+- CurrencyToggle (components/ui/currency-toggle.tsx) is a horizontal pill toggle with Framer Motion layoutId='currency-indicator' — replaces CurrencySelector dropdown on dashboard
+- CURRENCY_SYMBOLS exported from lib/utils/currency.ts — use for displaying currency symbol separately from formatted number
+- CurrencyDisplay uses useSpring for animated number transitions; motionValue.jump() for instant, motionValue.set() for animated
+- Flash highlight pattern: bg-accent/15 with transitionDuration 0ms→400ms trick for instant-on, fade-off effect
+- CurrencyDisplay shows rich tooltip (conversion info + rate) only when showNative=true and currencies differ — no tooltip otherwise
+- Effective exchange rate: compute from amount/nativeAmount rather than passing rates as prop
+- NativeCurrencyToggle accepts `showDescription` prop for optional descriptive text; Switch override: `data-[state=checked]:bg-accent data-[state=unchecked]:bg-muted`
+- CurrencyDisplay flash also triggers on showNative change for components with different native currency
+- Radix + Framer Motion: use `asChild` + `motion.div` pattern (not `motion.create(Primitive)`) to avoid `onDrag` type conflict
+- AnimatedDialog/AnimatedAlertDialog: drop-in replacements for Dialog/AlertDialog — import from `@/components/ui/animated-dialog` or `animated-alert-dialog`
+- Framer Motion centering: use `style={{ x: "-50%", y: "-50%" }}` not CSS translate classes (FM overwrites transform)
+- FormField/FormTextareaField/FormSelectField: convenience wrappers in components/ui/ — use Controller + useFormContext, require FormProvider parent
+- FormField uses motion.input with focusGlow for purple glow on focus; FormSelectField uses Radix Select (no motion wrapper)
+- useFormShake hook (hooks/use-form-shake.ts): returns { formRef, triggerShake } — attach ref to form container, call triggerShake() in handleSubmit onInvalid callback; cast formRef to `React.RefObject<HTMLDivElement | null>` when attaching to a `<div>`
+- animate-shake CSS class defined in tailwind.config.ts — use for CSS-based shake animations (500ms ease-in-out)
+- Toast helpers: import { showSuccess, showError, showInfo } from "@/lib/toast-helpers" — success auto-dismiss 3s, error persists until dismissed, info 4s
+- showError accepts optional { onRetry } to render a Retry action button; use for retryable operations
+- check-in-modal.tsx: use aliased imports (toastSuccess/toastError) because local `showSuccess` state variable shadows the import
+- shadcn/ui Accordion requires `accordion-down`/`accordion-up` keyframes in tailwind.config.ts — add manually after `shadcn add accordion`
+- SettingsSection (components/settings/settings-section.tsx) wraps AccordionItem with icon+title+description trigger — use for settings-style pages
+- Global `prefers-reduced-motion: reduce` in globals.css disables all CSS animations/transitions (0.01ms duration)
+- ConfirmDialog (components/ui/confirm-dialog.tsx) is a ready-to-use confirmation dialog — wraps AnimatedAlertDialog with simple props API (title, description, variant, onConfirm, loading)
+- ImportPreview (components/import/import-preview.tsx) shows first 10 rows of parsed CSV with stagger animation and validation warnings
+- Import page flow: file upload → preview (with row count) → import → results — state machine with step: "upload" | "preview" | "importing" | "results"
+- ImportResults AnimatedCount uses useSpring + useMotionValue pattern for integer count animations (same as NumberTicker)
+- Error report download: client-side CSV generation using Blob + createObjectURL + click trick
+- Export button states tracked per-button via Map<ExportKey, ButtonState> — allows independent download progress
+- animate-shimmer keyframe (200%→-200% backgroundPosition) for indeterminate progress bar shimmer effect
+- Recent imports badges: Transactions=bg-accent/20 text-accent, Snapshots=bg-positive/20 text-positive
+
+---
+
+# UX-12 Ambient Effects & Final Polish Progress Log
+
+Started: 2026-02-07
+
+---
+
+## 2026-02-07 - US-001
+- Created `components/effects/animated-gradient.tsx` with `variant` prop ('auth' | 'error') and `className` prop
+- Auth variant uses purple-900/indigo-950/blue-950 gradient tints at 40% opacity
+- Error variant uses red-950/rose-950/red-900 gradient tints (ready for US-003)
+- Added `gradient-shift` keyframes and `animate-gradient-shift` (18s ease infinite loop) to tailwind.config.ts
+- Updated sign-in and sign-up pages with AnimatedGradient at z-0, content at z-10
+- Auth pages already used `bg-background` (not bg-gray-950) — no class replacement needed
+- `prefers-reduced-motion` handled by global CSS rule in globals.css (animation-duration: 0.01ms)
+- Files changed: components/effects/animated-gradient.tsx (new), tailwind.config.ts, app/(auth)/sign-in page, app/(auth)/sign-up page
+- **Learnings for future iterations:**
+  - AnimatedGradient uses `fixed inset-0` positioning — reusable as full-page background layer
+  - Error variant already defined — just use `variant="error"` for US-003 error page
+  - `pointer-events-none` and `aria-hidden="true"` on decorative background layers is important
+---
+
+## 2026-02-07 - US-002
+- Created `components/effects/hero-beams.tsx` — 5 thin semi-transparent purple beams that drift upward
+- Added `beam-drift` keyframe to tailwind.config.ts — translateY(100%) to translateY(-100%) with opacity fade
+- 5 animation variants (beam-drift-1 through beam-drift-5) with staggered delays (0-4s) and varied durations (10-14s)
+- Beams use `w-px` (1px) or `w-[2px]` with purple-400/10 to purple-500/15 gradient opacity (10-15% range)
+- Integrated HeroBeams into net-worth-hero.tsx — renders when `!shouldReduceMotion`
+- Beams contained via `overflow-hidden rounded-2xl` on container — no bleed outside card
+- GPU-accelerated: only transform (translateY, scaleY) and opacity animated
+- Files changed: components/effects/hero-beams.tsx (new), tailwind.config.ts, components/dashboard/net-worth-hero.tsx
+- **Learnings for future iterations:**
+  - Beam containment: `overflow-hidden rounded-2xl` on absolute container matches parent card's border radius
+  - Conditional rendering with `{!shouldReduceMotion && <Effect />}` is cleaner than CSS-only hide for pure decorative effects
+  - Staggered animation delays (2s, 3s, 4s) create more natural movement than synchronized beams
+  - `bg-gradient-to-t from-transparent via-color to-transparent` creates a nice beam line that fades at both ends
+---
+
+## 2026-02-07 - US-003
+- Redesigned `app/error.tsx` with AnimatedGradient 'error' variant (red/rose tints)
+- Added AlertTriangle icon (h-16 w-16 = 64px) in text-destructive
+- Title uses text-heading-lg, description uses text-body-md text-muted-foreground
+- Dev-only collapsible error details section with ChevronDown toggle and bg-muted rounded-lg font-mono container
+- Action buttons: 'Try Again' (primary, calls reset()) and 'Go to Dashboard' (secondary, links to /)
+- Entrance animation: stagger container with 80ms delay per child, each fades in + slides up (y:16→0, 300ms easeOut)
+- Card container: bg-card/80 backdrop-blur-sm border border-border rounded-2xl p-8
+- Centred via flex min-h-screen items-center justify-center
+- Content at z-10, AnimatedGradient at z-0
+- Files changed: app/error.tsx
+- **Learnings for future iterations:**
+  - Framer Motion Variants type requires `as const` on ease strings (e.g., `"easeOut" as const`) to satisfy strict typing
+  - `useReducedMotion()` + conditional `variants={shouldReduceMotion ? undefined : staggerItem}` cleanly skips animation
+  - Error pages are "use client" — can use Framer Motion directly
+---
+
+## 2026-02-07 - US-004
+- Redesigned `app/not-found.tsx` with AnimatedGradient 'auth' variant (purple tints)
+- Large decorative '404' text in text-display-xl text-accent/30 with scaleIn animation (0.8→1.0)
+- Title 'Page not found' in text-heading-lg, description in text-body-md text-muted-foreground
+- Three navigation links: Dashboard (primary, /), Holdings (secondary, /holdings), Transactions (secondary, /transactions)
+- Entrance animation: stagger container with 80ms delay, scaleIn for 404 text, fadeIn+slideUp for rest
+- Card container: bg-card/80 backdrop-blur-sm border border-border rounded-2xl p-8
+- Centred via flex min-h-screen items-center justify-center, content at z-10
+- Buttons stack vertically on mobile (flex-col), row on sm+ (sm:flex-row)
+- Files changed: app/not-found.tsx
+- **Learnings for future iterations:**
+  - not-found.tsx can be "use client" in Next.js App Router — Framer Motion works fine
+  - Same staggerContainer/staggerItem pattern from error.tsx reused — keep consistent across error/404 pages
+  - scaleIn variant (0.8→1.0) is a nice entrance for large decorative text — distinct from fadeIn+slideUp
+---
+
+## 2026-02-07 - US-005
+- Created `components/shared/skip-link.tsx` — visually hidden skip link that appears on focus
+- Added `id="main-content"` to `<main>` element in `components/layout/app-shell.tsx`
+- Added `<SkipLink />` to `app/layout.tsx` — renders before all other content in `<body>`
+- Skip link uses `-translate-y-full opacity-0` by default, `focus:translate-y-0 focus:opacity-100` when focused
+- Fixed position `top-4 left-4 z-[100]` ensures it appears above all content including sidebar
+- Uses `bg-accent text-accent-foreground` styling consistent with design tokens
+- Files changed: components/shared/skip-link.tsx (new), components/layout/app-shell.tsx, app/layout.tsx
+- **Learnings for future iterations:**
+  - `id="main-content"` is on the `<main>` element in AppShell, not the dashboard layout — skip link targets the actual content container
+  - SkipLink is in root layout (app/layout.tsx), so it works across both auth and dashboard pages
+  - CSS translate + opacity transition (not JS) for skip link visibility — simplest approach, no "use client" needed beyond the component itself
+---
+
+## 2026-02-07 - US-006
+- Audited and standardized focus-visible ring states across all interactive components
+- Global pattern documented in globals.css comment: `focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`
+- **Button, Input, Textarea**: Upgraded from `ring-1` to `ring-2`, added `ring-offset-2 ring-offset-background`
+- **SelectTrigger**: Changed from `focus:` to `focus-visible:`, upgraded to ring-2 with offset
+- **Dialog/AnimatedDialog close buttons**: Changed from `focus:` to `focus-visible:`, added `ring-offset-background`
+- **Nav items, sidebar toggle, mobile nav links**: Added `ring-offset-2 ring-offset-background`
+- **Filter tabs, TypeSelector, CurrencyToggle**: Added `ring-offset-2 ring-offset-background`
+- **TimeRangeSelector**: Added focus-visible styles (was completely missing)
+- **SpeedDial FAB + action buttons**: Added focus-visible styles (was completely missing)
+- **SkipLink**: Changed `focus:` to `focus-visible:`, added ring styles
+- **Holdings table clickable rows**: Added `focus-visible:ring-inset` (inset prevents clipping by overflow-hidden), `tabIndex={0}`, keyboard handler for Enter/Space
+- **GroupHeader button**: Added focus-visible styles with rounded-md
+- **Retry price button**: Added focus-visible styles
+- Files changed: 18 files (globals.css, button, input, textarea, select, dialog, animated-dialog, nav-item, sidebar, mobile-nav, filter-tabs, type-selector, currency-toggle, time-range-selector, speed-dial, skip-link, holdings-table, group-header)
+- **Learnings for future iterations:**
+  - Switch component already had correct `ring-2 ring-offset-2 ring-offset-background` — no change needed
+  - `--ring` CSS variable equals `--accent` (263 84% 66%) — `ring-ring` = `ring-accent`
+  - Use `ring-inset` for table rows inside `overflow-hidden` containers to prevent focus ring clipping
+  - Clickable table rows need `tabIndex={0}` + keyboard handler (Enter/Space) for keyboard accessibility
+  - `focus:` is wrong for keyboard-only focus — always use `focus-visible:` to avoid rings on mouse clicks
+---
+
+## 2026-02-07 - US-007
+- Comprehensive ARIA label audit across 17 files
+- **Icon-only buttons**: Added `aria-label` to SpeedDial FAB (`aria-expanded` + dynamic label), dashboard refresh button, chart export button
+- **Expandable sections**: Added `aria-expanded` + `aria-controls` to contributions expander (check-in-modal), error page details toggle, GroupHeader (new `contentId` prop + `id` on content region)
+- **MonthSelector**: Added `role="radiogroup"` on container + `role="radio"` and `aria-checked` on buttons
+- **ChartViewToggle**: Added `role="tablist"`, `role="tab"`, `aria-selected`, and `aria-label` (replacing `title`)
+- **CheckinStepper**: Added `aria-current="step"` on the current step `<li>` element
+- **Progress bars**: Added `role="progressbar"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-label` to currency exposure bars
+- **Charts**: Added `role="img"` with `aria-label` to all chart containers — net-worth-chart, asset-allocation-pie-chart, super-growth-chart, assets-vs-debt-chart, tv-chart-wrapper, sparkline (both shared and hero variant)
+- **Already correct** (no changes needed): FilterTabs, TypeSelector, TimeRangeSelector (all had role/tablist/tab/aria-selected), CurrencyToggle (radiogroup), all Radix dialogs (Dialog/AlertDialog/Animated variants), Switch components, sidebar/mobile-nav labels
+- Files changed: 17 files (app/error.tsx, chart-export-button, sparkline, tv-chart-wrapper, check-in-modal, checkin-stepper, month-selector, asset-allocation-pie-chart, assets-vs-debt-chart, currency-exposure, dashboard-header, net-worth-chart, net-worth-hero, super-growth-chart, group-header, holdings-table, speed-dial)
+- **Learnings for future iterations:**
+  - Radix UI primitives (Dialog, AlertDialog, Select, Switch, Accordion) handle ARIA automatically — no manual ARIA attributes needed
+  - Buttons with hidden text (sm:inline pattern) need `aria-label` for mobile where text is invisible
+  - Use `role="img" aria-label="..."` for chart containers since SVG charts aren't inherently accessible
+  - `role="radiogroup"` + `role="radio"` + `aria-checked` for exclusive-choice button groups (not tab-like)
+  - `aria-current="step"` is the correct attribute for step indicators (not aria-selected)
+  - GroupHeader's new optional `contentId` prop is backwards-compatible — callers that don't pass it get no `aria-controls`
+---
+
+## 2026-02-07 - US-008
+- Audited and fixed touch targets across 17 files for minimum 44×44px on mobile
+- **Base shadcn/ui components**: Added `min-h-[44px] sm:min-h-0` to Button (all 4 size variants), Input, SelectTrigger, SelectItem
+- **Switch**: Added invisible touch padding via `before:absolute before:-inset-3 before:content-[''] sm:before:hidden` — keeps visual size intact
+- **Dialog close buttons**: Added `flex h-6 w-6 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 items-center justify-center` to both Dialog and AnimatedDialog close buttons
+- **Tab-like selectors**: FilterTabs, TypeSelector, TimeRangeSelector, CurrencyToggle — all buttons now have `min-h-[44px] sm:min-h-0`
+- **Chart controls**: ChartViewToggle buttons and ChartExportButton — added `min-h-[44px] sm:min-h-0`
+- **SpeedDial action buttons**: Added `min-h-[44px]` (desktop-only component but ensures consistency)
+- **Mobile nav links**: Added `min-h-[44px]` (always mobile, no sm:min-h-0 needed)
+- **Table action buttons**: Holdings table `h-[44px] w-[44px] sm:h-8 sm:w-8`, Transactions `h-[44px] w-[44px] sm:h-8 sm:w-8`, Snapshots `min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0`
+- **Price retry button**: Added `min-h-[44px] sm:min-h-0`
+- Files changed: 17 files (button, input, select, switch, dialog, animated-dialog, filter-tabs, type-selector, time-range-selector, currency-toggle, net-worth-chart, chart-export-button, speed-dial, mobile-nav, holdings-table, transactions page, snapshots page)
+- **Learnings for future iterations:**
+  - `min-h-[44px] sm:min-h-0` is the standard responsive touch-target pattern — mobile gets 44px, desktop reverts to natural height
+  - For icon-only buttons with explicit `h-7 w-7`, use `h-[44px] w-[44px] sm:h-8 sm:w-8` since min-h gets overridden by explicit h-*
+  - Switch components can't just increase height (would look wrong) — use `before:` pseudo-element padding trick instead
+  - Mobile nav links in a Sheet drawer should always be 44px (no sm: breakpoint needed, they're always mobile)
+  - SpeedDial is `hidden sm:block` so desktop-only, but still benefits from consistent touch targets
+---
+
+## 2026-02-07 - US-009
+- Created `hooks/use-roving-tabindex.ts` — shared hook for WAI-ARIA roving tabindex pattern
+- Hook handles ArrowLeft/Right/Up/Down, Home, End keys with wrapping, returns containerRef + handleKeyDown + getTabIndex
+- Applied roving tabindex to 6 components: FilterTabs, TypeSelector, TimeRangeSelector, CurrencyToggle, MonthSelector, ChartViewToggle
+- Each component: added ref to container, onKeyDown handler, tabIndex via getTabIndex (active=0, inactive=-1)
+- Also added focus-visible ring styles to MonthSelector buttons and ChartViewToggle buttons (were missing)
+- Verified: Escape closes all Radix dialogs (automatic), Enter submits forms in add-holding/add-transaction dialogs (form wrapper present)
+- Verified: Focus trapping and focus restoration handled automatically by Radix Dialog primitives
+- Verified: Tab order follows visual layout — no positive tabIndex values disrupting natural flow
+- Verified: Holdings table rows use tabIndex={0} + keyboard handler (Enter/Space) for keyboard accessibility (from US-006)
+- Files changed: 7 files (use-roving-tabindex.ts new, filter-tabs.tsx, type-selector.tsx, time-range-selector.tsx, currency-toggle.tsx, month-selector.tsx, net-worth-chart.tsx)
+- **Learnings for future iterations:**
+  - `useRovingTabIndex` hook is generic — works with any value type (string, enum). Pass items array + active value + onChange callback
+  - WAI-ARIA tablist pattern: only active tab gets tabIndex={0}, all others get tabIndex={-1} — user Tabs into the group once, then arrows between items
+  - For disabled components (e.g., TypeSelector when disabled), pass `undefined` for onKeyDown to disable arrow navigation
+  - Radix Dialog handles Escape, focus trap, and focus restoration automatically — no custom code needed
+  - Multi-step wizard modals (CheckInModal) don't need form wrappers per step — per-step submit buttons with onClick are acceptable
+  - MonthSelector was missing focus-visible styles — always add focus-visible ring to new interactive elements
+---
+
+## 2026-02-07 - US-010
+- Verified all text/background colour contrast ratios against WCAG AA (4.5:1 threshold)
+- **Token adjustments:** `--accent/primary/ring` 66%→70% lightness, `--destructive/negative` 60%→63% lightness
+- Updated `--accent-glow` rgba(139,92,246)→rgba(164,114,243) and `--negative-glow` rgba(239,68,68)→rgba(240,81,81)
+- Badge backgrounds: `bg-accent/20`→`bg-accent/10` and `bg-destructive/20`→`bg-destructive/10` for badge contexts (text on tinted bg)
+- All 16 verified combinations pass: 12 text-on-solid + 4 badge text-on-tinted-bg
+- Documented all verified ratios in comment block in `app/globals.css`
+- Files changed: app/globals.css, app/(dashboard)/transactions/page.tsx, components/import/recent-imports.tsx
+- **Learnings for future iterations:**
+  - Token lightness bumps affect all usages — verify button contrast (white on solid bg) still passes large text threshold (3:1)
+  - Badge bg-{color}/20 + text-{color} is a contrast trap — the tinted bg eats into contrast. Use /10 for accent/destructive badges
+  - Positive (45% L) and warning (50% L) have high contrast on dark surfaces — no adjustment needed
+  - Chart hex colours in lib/chart-palette.ts are intentionally separate from CSS tokens — don't change them when adjusting design tokens
+  - Use Node.js script with WCAG relative luminance formula for accurate contrast calculation — don't eyeball it
+---
+
+## 2026-02-07 - US-011
+- Installed `@axe-core/react` as dev dependency
+- Created `components/providers/axe-provider.tsx` — client component that initializes axe-core in development mode only
+- Uses dynamic imports inside useEffect (guarded by `NODE_ENV !== 'development'`) so axe-core is tree-shaken in production
+- `@axe-core/react` called with 1000ms debounce — logs WCAG violations to browser console after each render
+- Added `<AxeProvider />` to root layout (`app/layout.tsx`) after Toaster — renders null, side-effect only
+- Setup documented in brief comment block at top of axe-provider.tsx
+- Build and lint pass cleanly
+- Files changed: components/providers/axe-provider.tsx (new), app/layout.tsx, package.json, package-lock.json
+- **Learnings for future iterations:**
+  - `@axe-core/react` requires React and ReactDOM passed as arguments — dynamic import both inside useEffect
+  - `axe.default(React.default, ReactDOM, delayMs)` is the call signature with dynamic imports (default export)
+  - Placing AxeProvider at end of body (after content) ensures it audits the full page
+  - axe-core is already a transitive dependency via eslint-plugin-jsx-a11y — `@axe-core/react` adds the React integration layer
+---
+
+## 2026-02-07 - US-012
+- Created `app/icon.svg` — SVG favicon with purple hammer + lightning bolt on dark background (#09090b)
+- Created `app/apple-icon.png` — 180×180px Apple touch icon (generated from SVG via sharp)
+- Created `public/icon-192.png` and `public/icon-512.png` — PWA icons (generated from SVG via sharp)
+- Created `public/manifest.json` — PWA manifest with name, short_name, start_url, display: standalone, background/theme colours, icons
+- Updated `app/layout.tsx` metadata: added manifest link, themeColor (#09090b), openGraph (title, description, type, siteName), twitter card (summary)
+- Next.js App Router automatically serves `app/icon.svg` as favicon and `app/apple-icon.png` as Apple touch icon via file conventions
+- Files changed: app/icon.svg (new), app/apple-icon.png (new), public/icon-192.png (new), public/icon-512.png (new), public/manifest.json (new), app/layout.tsx
+- **Learnings for future iterations:**
+  - Next.js App Router favicon convention: place `icon.svg` or `icon.png` in `app/` directory — automatically served as favicon without manual `<link>` tag
+  - Next.js apple-icon convention: `app/apple-icon.png` automatically generates Apple touch icon `<link>` tag
+  - `sharp` package (already available via Next.js image processing) can generate PNGs from SVG buffers — no need for ImageMagick/rsvg
+  - PWA manifest: `display: "standalone"` makes the app look native when added to home screen
+  - `themeColor` in Next.js Metadata sets the `<meta name="theme-color">` tag — matches browser chrome to app background
+---
+
+## 2026-02-07 - US-013
+- Comprehensive cross-page consistency audit and fix across 15 files
+- **Warning colours:** Migrated all hardcoded `text-yellow-500`, `text-yellow-400`, `text-amber-500`, `bg-yellow-500/10`, `bg-amber-500/10` to `text-warning`, `bg-warning/10`, `border-warning/20` design tokens (10 files: unsubscribed page, check-in modal, check-in prompt card, stale indicator, delete holding/snapshot/transaction dialogs, add/edit transaction dialogs, holding detail page)
+- **Dialog animations:** Converted 3 remaining plain Dialog/AlertDialog usages to AnimatedDialog/AnimatedAlertDialog — delete-holding-dialog, add-transaction-dialog, edit-transaction-dialog
+- **Typography:** Section headings standardized to text-heading-sm/text-heading-md (checkin-prompt, group-header, settings-section, unsubscribed page), portfolio % badge uses text-label
+- **Card rounding:** Fixed unsubscribed page (rounded-lg → rounded-2xl) and check-in-prompt-card (rounded-lg → rounded-2xl)
+- **Spacing:** Import page grid gap-8 → gap-6 for consistency with other pages
+- **Reduced motion:** Fixed ImportPreview outer motion.div to fully respect prefers-reduced-motion (animate and transition now conditional)
+- **Verified as already consistent (no changes needed):** Card styling across dashboard/holdings/charts, page transitions (fade 200ms via PageWrapper), section spacing (gap-6/space-y-6), card padding (p-4 sm:p-6), reduced motion handling in all other Framer Motion components
+- Files changed: 15 files
+- **Learnings for future iterations:**
+  - `text-warning` and `bg-warning` design tokens (--warning: 38 92% 50%) should be used for ALL warning states — no hardcoded yellow/amber
+  - When using `replace_all` with Edit tool, be careful with tag prefixes like `<Dialog ` → `<AnimatedDialog` — the trailing space matters for opening tags but closing tags like `</DialogTitle>` won't match `</Dialog>` replacement
+  - Command palette's Dialog import is intentionally plain (base shadcn component) — don't convert to AnimatedDialog
+  - For text-heading-sm/md: these include font-weight 600, so remove `font-semibold` when switching to avoid redundancy
+---
+

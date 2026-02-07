@@ -1,0 +1,253 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/ux12-ambient-effects-final-polish",
+  "description": "UX-12: Ambient Effects & Final Polish — Add animated gradient backgrounds to auth pages, beam effects behind hero card, redesign error/404 pages, comprehensive accessibility audit (skip link, focus-visible, ARIA, touch targets, keyboard nav, contrast), axe-core integration, and app metadata (favicon, OG, manifest). The final UX epic tying together all polish from UX-1 through UX-11.",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add animated gradient background to auth pages",
+      "description": "As a user, I want a premium ambient background on the sign-in and sign-up pages so the first impression of the app feels polished.",
+      "acceptanceCriteria": [
+        "Create components/effects/animated-gradient.tsx with props: variant ('auth' | 'error'), className",
+        "Auth variant: slow-moving gradient with accent purple (#8b5cf6) and background (#09090b), blue and indigo tints",
+        "Gradient animates slowly (15-20s loop) using CSS @keyframes on background-position",
+        "Gradient is behind content (z-0), content above (z-10), opacity ~30-40%",
+        "Update app/(auth)/sign-in/[[...sign-in]]/page.tsx to use AnimatedGradient",
+        "Update app/(auth)/sign-up/[[...sign-up]]/page.tsx to use AnimatedGradient",
+        "Replace bg-gray-950 with bg-background on auth pages",
+        "Respects prefers-reduced-motion — shows static gradient (no animation)",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Add beam/particle effect behind dashboard hero card",
+      "description": "As a user, I want a subtle ambient effect behind my net worth card so the hero section feels premium and alive.",
+      "acceptanceCriteria": [
+        "Create components/effects/hero-beams.tsx — subtle beam effect component",
+        "Effect renders behind hero net worth card as background layer",
+        "Visual: 3-5 thin semi-transparent beams of accent purple that slowly drift upward and fade (~10-15% opacity)",
+        "Implementation: CSS @keyframes with pseudo-elements or SVG lines (choose simplest)",
+        "Effect contained within hero card area, does not bleed into other sections",
+        "Effect uses pointer-events: none — does not interfere with card content",
+        "Performance: no jank, GPU-accelerated (transform and opacity only)",
+        "Respects prefers-reduced-motion — hides effect entirely",
+        "Update components/dashboard/net-worth-hero.tsx to include beam effect behind card",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Redesign error page with ambient gradient",
+      "description": "As a user, I want a helpful, branded error page so when something goes wrong I know what to do and the app still feels premium.",
+      "acceptanceCriteria": [
+        "Redesign app/error.tsx with AnimatedGradient 'error' variant (destructive red tints instead of purple)",
+        "Large icon: AlertTriangle or ServerCrash from Lucide, text-destructive, 64px",
+        "Title: 'Something went wrong' in text-heading-lg",
+        "Description: generic error message in text-muted-foreground",
+        "In development: collapsible details section with error message (bg-muted rounded-lg p-4 font-mono text-body-sm)",
+        "Action buttons: 'Try Again' (calls reset(), primary) and 'Go to Dashboard' (links to /, secondary)",
+        "Entrance animation: icon and text fade in + slide up (staggered 80ms)",
+        "Card container: bg-card/80 backdrop-blur-sm border border-border rounded-2xl p-8",
+        "Centred on page both horizontally and vertically",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Redesign 404 page with ambient gradient",
+      "description": "As a user, I want a helpful 404 page so when I land on a missing page I can easily navigate somewhere useful.",
+      "acceptanceCriteria": [
+        "Redesign app/not-found.tsx with AnimatedGradient 'auth' variant (purple tints)",
+        "Large decorative '404' text in text-display-xl text-accent/30",
+        "Title: 'Page not found' in text-heading-lg",
+        "Description: 'The page you're looking for doesn't exist or has been moved.' in text-muted-foreground",
+        "Helpful links: 'Go to Dashboard' (primary, /), 'View Holdings' (secondary, /holdings), 'View Transactions' (secondary, /transactions)",
+        "Entrance animation: 404 scales in 0.8→1.0, title and buttons stagger (80ms)",
+        "Card container: bg-card/80 backdrop-blur-sm border border-border rounded-2xl p-8",
+        "Centred on page both horizontally and vertically",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Add skip-to-content link",
+      "description": "As a keyboard user, I want a skip link so I can bypass the navigation and jump directly to the main content.",
+      "acceptanceCriteria": [
+        "Create components/shared/skip-link.tsx",
+        "Visually hidden by default (off-screen positioning)",
+        "Visible on focus: appears at top of page with bg-accent text-accent-foreground styling",
+        "Text: 'Skip to main content'",
+        "On click/Enter: moves focus to main content area (using id='main-content' anchor)",
+        "Add id='main-content' to main content container in app/(dashboard)/layout.tsx",
+        "Add SkipLink component to app/layout.tsx (renders before everything else)",
+        "Position: fixed top-4 left-4 z-[100] when visible",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Audit and fix focus-visible ring states",
+      "description": "As a developer, I want all interactive elements to have consistent, visible focus rings for keyboard accessibility.",
+      "acceptanceCriteria": [
+        "Add global focus-visible utility in app/globals.css: ring-2 ring-accent ring-offset-2 ring-offset-background",
+        "Audit custom interactive components: button.tsx, input.tsx, select.tsx, switch.tsx, dialog.tsx focus trap",
+        "Verify focus ring on: nav items, speed-dial FAB buttons, filter tabs, clickable table rows",
+        "Focus ring must not clip or be hidden by overflow: hidden containers",
+        "Focus ring colour uses --accent token",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Audit and add ARIA labels",
+      "description": "As a developer, I want all interactive elements to have appropriate ARIA labels for screen reader accessibility.",
+      "acceptanceCriteria": [
+        "Audit icon-only buttons: add aria-label describing action (e.g., refresh button → 'Refresh prices')",
+        "Toggle buttons: add aria-pressed state (dormant toggle, native currency toggle)",
+        "Expandable sections: add aria-expanded on trigger, aria-controls linking to content",
+        "Filter tabs: role='tablist' on container, role='tab' on tabs, aria-selected on active",
+        "Dialogs: verify role='dialog', aria-modal='true', aria-labelledby on title",
+        "Progress bars: role='progressbar', aria-valuenow, aria-valuemin, aria-valuemax",
+        "Charts: aria-label describing chart content",
+        "No interactive element missing an accessible name",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Verify and fix touch targets",
+      "description": "As a mobile user, I want all buttons and interactive elements to be large enough to tap accurately.",
+      "acceptanceCriteria": [
+        "Audit interactive elements for minimum 44×44px touch target on mobile",
+        "Buttons: add min-h-[44px] where needed on mobile",
+        "Icon buttons: verify min 44×44px (add padding if icon smaller)",
+        "Table row action buttons, filter tabs, toggle switches, nav items, dropdown triggers: verify adequate tap area",
+        "Touch targets must not overlap — adequate spacing between adjacent elements",
+        "Small buttons on desktop can use responsive sizing: min-h-[44px] sm:min-h-0",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Verify keyboard navigation across all pages",
+      "description": "As a keyboard user, I want to navigate the entire app using only my keyboard.",
+      "acceptanceCriteria": [
+        "Verify Tab navigation on: Dashboard, Holdings, Holding detail, Transactions, Snapshots, Import, Export, Settings",
+        "Arrow key navigation on tab components (filter tabs, type selector, time range selector, currency toggle)",
+        "Escape closes all modals and dialogs",
+        "Enter triggers primary action in modals",
+        "Tab order follows visual layout (no unexpected jumps)",
+        "Focus restored to trigger element when modals/dialogs close",
+        "Focus trapped within open modals",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Verify colour contrast meets WCAG AA",
+      "description": "As a developer, I want to verify that all text and UI elements meet WCAG AA colour contrast ratios.",
+      "acceptanceCriteria": [
+        "Verify contrast: text-foreground on bg-background >= 4.5:1",
+        "Verify contrast: text-foreground on bg-card >= 4.5:1",
+        "Verify contrast: text-muted-foreground on bg-background and bg-card >= 4.5:1 (or >= 3:1 for large text)",
+        "Verify contrast: text-positive, text-destructive, text-warning, text-accent on bg-background >= 4.5:1",
+        "Verify contrast: badge text on badge backgrounds >= 4.5:1",
+        "If any combination fails, adjust design token value to meet ratio",
+        "Document verified contrast ratios in comment block in app/globals.css",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Integrate axe-core for automated accessibility testing",
+      "description": "As a developer, I want automated accessibility testing so we catch regressions before they reach production.",
+      "acceptanceCriteria": [
+        "Install @axe-core/react or axe-core as dev dependency",
+        "Configure to run in development mode only (process.env.NODE_ENV === 'development')",
+        "Axe violations logged to browser console as warnings",
+        "Alternative: use axe-core directly with useEffect calling axe.run() on document body",
+        "Verify no critical or serious violations on Dashboard, Holdings, Transactions, Settings pages",
+        "Document axe-core setup in brief comment in integration file",
+        "Typecheck passes (npm run build)"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Add favicon, Open Graph meta tags, and manifest",
+      "description": "As a user, I want the app to have proper branding in browser tabs, social shares, and when added to my home screen.",
+      "acceptanceCriteria": [
+        "Create app/icon.svg — SVG favicon (purple hammer/lightning on dark background)",
+        "Create app/apple-icon.png — 180×180px Apple touch icon",
+        "Create public/icon-192.png and public/icon-512.png for PWA",
+        "Update app/layout.tsx metadata: title, description, themeColor (#09090b), openGraph, twitter, manifest link",
+        "Create public/manifest.json: name, short_name, start_url, display (standalone), background_color, theme_color, icons",
+        "Verify favicon appears in browser tab",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Final cross-page consistency check",
+      "description": "As a developer, I want to verify that all pages and components are cohesive after all 12 UX epics.",
+      "acceptanceCriteria": [
+        "Visual consistency: all cards use rounded-2xl, bg-card border border-border consistently",
+        "Typography consistency: section titles use text-label, body uses text-body-sm/md, muted uses text-muted-foreground",
+        "Colour consistency: positive=text-positive, negative=text-destructive, warning=text-warning",
+        "Animation consistency: page transitions fade 200ms, card entrances use fadeIn/staggerItem, expand/collapse ease-out 200ms",
+        "All modals use AnimatedDialog with consistent enter/exit",
+        "prefers-reduced-motion disables all animations consistently",
+        "Spacing: gap-6 between major sections, p-4 sm:p-6 on cards",
+        "Document any remaining inconsistencies found and fix them",
+        "Typecheck passes (npm run build)",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}
