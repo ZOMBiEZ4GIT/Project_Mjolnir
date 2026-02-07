@@ -1,0 +1,184 @@
+# Ralph Progress Log
+
+## Codebase Patterns
+- Schema is a single file at `lib/db/schema.ts` — drizzle config points to it directly, not a directory
+- Drizzle bigint with `mode: "bigint"` causes `BigInt(0)` serialization error in drizzle-kit generate — use `mode: "number"` instead
+- `npm run db:migrate` requires DATABASE_URL env var (Neon serverless) — will fail locally with placeholder. Migration files are verified by generate + build passing
+- Existing tables use `uuid` PKs with `defaultRandom()`, `timestamptz` for timestamps, and soft delete via `deletedAt`
+- Use `varchar` with explicit length for external IDs, `text` for unbounded strings
+- n8n middleware at `lib/api/up/middleware.ts` — use `withN8nAuth(request, handler)` helper for UP endpoints
+- UP API routes are public in Clerk middleware (use n8n signing instead of Clerk auth)
+- UP API payload uses snake_case, Drizzle schema uses camelCase — map fields in route handler
+- Zod `z.string().optional()` + `?? null` for nullable DB columns in UP endpoints
+- neon-http driver doesn't support `db.transaction()` — validate all records first, then loop upserts
+- Drizzle `inArray()` from `drizzle-orm` for batch lookups of existing records
+- n8n endpoints lack Clerk auth — get user via `db.select({id: users.id}).from(users).limit(1)` (single-user app)
+- Snapshot balance is decimal dollars (not cents) — convert from cents with `(cents / 100).toFixed(2)`
+
+## Epic: B-1 UP Bank Integration
+Branch: ralph/b1-up-bank-integration
+Started: 2026-02-07
+
+## 2026-02-07 - B1-001
+- Implemented UP integration database schema (up_accounts and up_transactions tables)
+- Added enums: up_account_type (TRANSACTIONAL, SAVER, HOME_LOAN), up_transaction_status (HELD, SETTLED)
+- Added indexes on up_transactions: transaction_date, mjolnir_category_id, status
+- Files changed: lib/db/schema.ts, drizzle/0010_lucky_madame_hydra.sql
+- **Learnings for future iterations:**
+  - Schema is in a single file, not a directory — add new tables to lib/db/schema.ts
+  - bigint `mode: "number"` avoids JSON serialization issues with drizzle-kit
+  - Migration can't run locally (no DATABASE_URL) — that's expected, verify via build + lint
+  - Import `bigint`, `varchar`, `index` from drizzle-orm/pg-core when needed
+
+---
+
+## 2026-02-07 - B1-002
+- Implemented n8n request signing middleware at lib/api/up/middleware.ts
+- Validates X-Mjolnir-API-Key against N8N_API_KEY env var (401 on failure)
+- Validates X-Mjolnir-Timestamp within 5-minute window (403 on expired)
+- Validates X-Mjolnir-Signature using HMAC-SHA256 of `${timestamp}.${body}` with N8N_WEBHOOK_SECRET (403 on invalid)
+- Uses crypto.timingSafeEqual for constant-time signature comparison
+- Added /api/up/(.*) to Clerk public routes in middleware.ts
+- Exports: validateN8nRequest (low-level), withN8nAuth (convenience wrapper), unauthorizedResponse, forbiddenResponse
+- Files changed: lib/api/up/middleware.ts (new), middleware.ts
+- **Learnings for future iterations:**
+  - n8n endpoints bypass Clerk auth — use withN8nAuth wrapper instead
+  - withN8nAuth reads body via request.text() then JSON.parse — body is consumed, passed to handler as parsed object
+  - Env vars needed: N8N_API_KEY, N8N_WEBHOOK_SECRET
+  - 401 = bad API key, 403 = bad/expired signature (mirrors existing codebase error semantics)
+
+---
+
+## 2026-02-07 - B1-003
+- Implemented transaction ingestion endpoint at app/api/up/transactions/route.ts
+- POST endpoint receives individual UP transactions from n8n
+- Uses withN8nAuth wrapper for request signing validation
+- Zod schema validates: up_transaction_id, description, raw_text, amount_cents, status (HELD|SETTLED), up_category_id, up_category_name, transaction_date (YYYY-MM-DD), settled_at, is_transfer
+- Upserts on up_transaction_id — existing records get updated (handles HELD->SETTLED transitions)
+- Returns 200 with stored transaction, 400 for validation errors, 401/403 for auth failures
+- Files changed: app/api/up/transactions/route.ts (new)
+- **Learnings for future iterations:**
+  - withN8nAuth passes parsed body as `unknown` — use Zod safeParse for type-safe validation
+  - Drizzle upsert pattern: check existence first with select, then update or insert (no native onConflictDoUpdate needed for complex upserts)
+  - UP transaction fields use snake_case in API payload, camelCase in Drizzle schema — map in route handler
+  - Zod `z.string().optional()` maps to `?? null` for nullable DB columns
+
+---
+
+## 2026-02-07 - B1-004
+- Implemented batch transaction ingestion endpoint at app/api/up/transactions/batch/route.ts
+- POST endpoint receives array of UP transactions from n8n (max 500 per batch)
+- Reuses same Zod transactionSchema from single endpoint, wrapped in batchSchema
+- Validates all transactions upfront before any DB writes
+- Looks up existing upTransactionIds in one query using inArray(), then loops insert/update
+- Returns 200 with { inserted, updated } counts
+- Returns 400 with index of first failing record for validation errors
+- Files changed: app/api/up/transactions/batch/route.ts (new)
+- **Learnings for future iterations:**
+  - neon-http driver doesn't support db.transaction() — can't do true all-or-nothing DB transactions
+  - Workaround: validate all records first, batch-lookup existing IDs, then loop upserts
+  - Drizzle inArray() from drizzle-orm works for batch lookups
+  - Zod nested array errors have path like ["transactions", 0, "field"] — check path[1] for index
+
+---
+
+## 2026-02-07 - B1-005
+- Implemented balance sync endpoint at app/api/up/balance/route.ts
+- POST endpoint receives array of UP account balances from n8n
+- Zod schema validates accounts array: up_account_id, display_name, account_type (TRANSACTIONAL|SAVER|HOME_LOAN), balance_cents
+- Upserts each account on up_account_id — existing accounts get balance and lastSyncedAt updated
+- Returns 200 with { total_balance_cents, account_count } aggregated across all UP accounts
+- Files changed: app/api/up/balance/route.ts (new)
+- **Learnings for future iterations:**
+  - Same upsert pattern as transactions: check existence with select, then update or insert
+  - Use `sql<number>` template with coalesce for aggregations (sum, count)
+  - Account types match the enum in schema: TRANSACTIONAL, SAVER, HOME_LOAN
+
+---
+
+## 2026-02-07 - B1-006
+- Extended POST /api/up/balance to auto-create "Cash (UP)" holding and upsert daily snapshots
+- On balance sync: finds first user from `users` table, finds or creates holding with name "Cash (UP)", type "cash", currency "AUD"
+- Upserts snapshot for today's date (YYYY-MM-DD) with aggregated balance converted from cents to dollars
+- Respects snapshots unique constraint on (holding_id, date) — same-day syncs update the existing snapshot
+- Files changed: app/api/up/balance/route.ts
+- **Learnings for future iterations:**
+  - n8n endpoints don't have Clerk auth — for single-user app, query first user from `users` table
+  - Snapshots balance is stored as decimal dollars (not cents) — convert with `(cents / 100).toFixed(2)`
+  - Snapshot date for automated syncs uses actual date (YYYY-MM-DD), not normalized to first-of-month
+  - The holding auto-creation is guarded by `if (user)` — gracefully handles empty users table
+
+---
+
+## 2026-02-07 - B1-007
+- Added DELETE method to existing app/api/up/transactions/route.ts
+- Soft-deletes transactions by setting deletedAt + updatedAt timestamps
+- Validates up_transaction_id via Zod, returns 404 if not found
+- Uses same withN8nAuth middleware pattern as POST
+- Files changed: app/api/up/transactions/route.ts
+- **Learnings for future iterations:**
+  - Next.js App Router supports multiple HTTP methods in a single route.ts — export named functions (GET, POST, DELETE, etc.)
+  - Soft delete pattern: set both deletedAt and updatedAt for consistency
+  - DELETE handler follows same withN8nAuth + Zod pattern as all other UP endpoints
+
+---
+
+## 2026-02-07 - B1-008
+- Implemented UP connection status endpoint at app/api/up/status/route.ts
+- GET endpoint protected by Clerk auth via `withAuth` wrapper (not n8n middleware)
+- Queries upAccounts for: account_count, total_balance_cents, last_synced_at (max across accounts)
+- Queries upTransactions (excluding soft-deleted) for: transaction_count, oldest/newest transaction_date
+- Returns connected: true if any up_accounts exist, with zeros/nulls for empty state
+- Files changed: app/api/up/status/route.ts (new)
+- **Learnings for future iterations:**
+  - Use `withAuth` from lib/utils/with-auth.ts for Clerk-protected endpoints — different from withN8nAuth
+  - `withAuth` handler receives (request, context, userId) but unused params can be omitted
+  - SQL aggregates with ::int cast for count to ensure number type in Drizzle
+  - `sql<string | null>` template for nullable aggregate results (max, min)
+
+---
+
+## 2026-02-07 - B1-009
+- Created n8n webhook receiver workflow template at n8n/workflows/up-webhook-receiver.json
+- Valid importable n8n workflow JSON with 8 nodes:
+  1. Webhook trigger (POST /up-webhook, raw body enabled, response mode)
+  2. Code node: validates UP webhook HMAC-SHA256 signature (X-Up-Authenticity-Signature)
+  3. IF node: detects internal transfers (transferAccount relationship not null)
+  4. Two Code nodes: map UP JSON:API format to flat Mjolnir payload (transfer vs normal)
+  5. Code node: generates Mjolnir HMAC request signing headers (X-Mjolnir-API-Key, X-Mjolnir-Timestamp, X-Mjolnir-Signature)
+  6. HTTP Request node: POSTs mapped transaction to Mjolnir /api/up/transactions
+  7. Respond OK node: returns 200 to UP webhook
+- Uses n8n environment variables for all secrets (UP_WEBHOOK_SECRET, MJOLNIR_API_KEY, MJOLNIR_WEBHOOK_SECRET, MJOLNIR_BASE_URL)
+- Description field contains full setup instructions for Roland
+- Files changed: n8n/workflows/up-webhook-receiver.json (new)
+- **Learnings for future iterations:**
+  - n8n workflow JSON uses node names (not IDs) as connection keys
+  - IF node has two output arrays: index 0 = true branch, index 1 = false branch
+  - n8n Code nodes use `$input.first().json` to access input data and `$env.VAR_NAME` for env vars
+  - UP webhook signature is HMAC-SHA256 of raw body using UP_WEBHOOK_SECRET (different from Mjolnir's `${timestamp}.${body}` format)
+  - n8n responseMode: "responseNode" on webhook requires a respondToWebhook node downstream
+
+---
+
+## 2026-02-07 - B1-010
+- Created n8n balance sync workflow template at n8n/workflows/up-balance-sync.json
+- Valid importable n8n workflow JSON with 5 nodes:
+  1. Schedule Trigger (every 15 minutes)
+  2. HTTP Request: GET https://api.up.com.au/api/v1/accounts with Bearer token
+  3. Code node: maps UP JSON:API account format to flat Mjolnir payload (up_account_id, display_name, account_type, balance_cents from valueInBaseUnits)
+  4. Code node: generates Mjolnir HMAC request signing headers (X-Mjolnir-API-Key, X-Mjolnir-Timestamp, X-Mjolnir-Signature)
+  5. HTTP Request: POSTs { accounts: [...] } to Mjolnir /api/up/balance
+- Uses n8n environment variables for secrets (UP_PERSONAL_ACCESS_TOKEN, MJOLNIR_API_KEY, MJOLNIR_WEBHOOK_SECRET, MJOLNIR_BASE_URL)
+- Description field contains full setup instructions for Roland
+- Files changed: n8n/workflows/up-balance-sync.json (new)
+- **Learnings for future iterations:**
+  - n8n scheduleTrigger uses `rule.interval[].minutesInterval` for minute-based scheduling
+  - UP API personal access token goes in Authorization Bearer header (different from webhook secret)
+  - Balance sync workflow is simpler than webhook receiver — no signature validation needed on UP side, just a scheduled poll
+  - Reuse the same Mjolnir HMAC signing pattern from the webhook receiver workflow
+
+---
+
+## EPIC B-1 COMPLETE
+All 10 stories (B1-001 through B1-010) pass. UP Bank Integration infrastructure is complete.
+Summary: Database schema, n8n auth middleware, transaction CRUD (single + batch + delete), balance sync with auto Cash (UP) holding, connection status endpoint, and two n8n workflow templates (webhook receiver + balance sync).
