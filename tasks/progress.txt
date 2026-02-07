@@ -8,6 +8,8 @@
 - Use `varchar` with explicit length for external IDs, `text` for unbounded strings
 - n8n middleware at `lib/api/up/middleware.ts` — use `withN8nAuth(request, handler)` helper for UP endpoints
 - UP API routes are public in Clerk middleware (use n8n signing instead of Clerk auth)
+- UP API payload uses snake_case, Drizzle schema uses camelCase — map fields in route handler
+- Zod `z.string().optional()` + `?? null` for nullable DB columns in UP endpoints
 
 ## Epic: B-1 UP Bank Integration
 Branch: ralph/b1-up-bank-integration
@@ -40,5 +42,21 @@ Started: 2026-02-07
   - withN8nAuth reads body via request.text() then JSON.parse — body is consumed, passed to handler as parsed object
   - Env vars needed: N8N_API_KEY, N8N_WEBHOOK_SECRET
   - 401 = bad API key, 403 = bad/expired signature (mirrors existing codebase error semantics)
+
+---
+
+## 2026-02-07 - B1-003
+- Implemented transaction ingestion endpoint at app/api/up/transactions/route.ts
+- POST endpoint receives individual UP transactions from n8n
+- Uses withN8nAuth wrapper for request signing validation
+- Zod schema validates: up_transaction_id, description, raw_text, amount_cents, status (HELD|SETTLED), up_category_id, up_category_name, transaction_date (YYYY-MM-DD), settled_at, is_transfer
+- Upserts on up_transaction_id — existing records get updated (handles HELD->SETTLED transitions)
+- Returns 200 with stored transaction, 400 for validation errors, 401/403 for auth failures
+- Files changed: app/api/up/transactions/route.ts (new)
+- **Learnings for future iterations:**
+  - withN8nAuth passes parsed body as `unknown` — use Zod safeParse for type-safe validation
+  - Drizzle upsert pattern: check existence first with select, then update or insert (no native onConflictDoUpdate needed for complex upserts)
+  - UP transaction fields use snake_case in API payload, camelCase in Drizzle schema — map in route handler
+  - Zod `z.string().optional()` maps to `?? null` for nullable DB columns
 
 ---

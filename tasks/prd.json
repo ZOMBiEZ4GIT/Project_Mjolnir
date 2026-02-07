@@ -54,8 +54,8 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Endpoint at app/api/up/transactions/route.ts. Uses withN8nAuth wrapper, Zod validation, upserts on up_transaction_id. Returns 200 with stored transaction, 400 for validation errors, 401/403 for auth failures."
     },
     {
       "id": "B1-004",
