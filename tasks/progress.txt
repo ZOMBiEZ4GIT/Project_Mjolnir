@@ -2,6 +2,7 @@
 # This file is reset at the start of each epic.
 
 ## Codebase Patterns
+- visx packages require alpha v4.0.1-alpha.0 for React 19 compat — stable v3 only supports React 16-18
 - Budget tables: budgetPeriods, budgetAllocations, budgetCategories, upTransactions in lib/db/schema.ts
 - DB import: `import { db } from "@/lib/db"` with Drizzle ORM
 - Budget categories use string slug IDs (e.g. "groceries", "income")
@@ -30,4 +31,13 @@
   - `withAuth` catches thrown errors, but handle specific error cases (like 404) before they reach the wrapper to return custom response shapes (e.g. including `setupUrl`)
   - For "find current period" queries: use `lte(startDate, today)` + `gte(endDate, today)` to match today against the date range
   - Query params use snake_case convention (e.g. `period_id`)
+---
+
+## 2026-02-08 - B4-003
+- What was implemented: Installed visx and d3-sankey charting dependencies
+- Files changed: package.json, package-lock.json
+- **Learnings for future iterations:**
+  - visx stable (v3.12.0) only supports React 16-18 peer deps — use alpha v4.0.1-alpha.0 for React 19
+  - d3-sankey and @types/d3-sankey have no React peer deps, install at latest stable
+  - @types/d3-sankey was already present as a transitive dependency
 ---
