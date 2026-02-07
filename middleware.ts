@@ -3,6 +3,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 // Define public routes that don't require authentication.
 // /api/cron/* uses its own CRON_SECRET Bearer token auth.
 // /api/email/unsubscribe uses HMAC-signed tokens for verification.
+// /api/up/* uses n8n HMAC request signing (see lib/api/up/middleware.ts).
 const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
@@ -10,6 +11,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/health",
   "/api/cron/(.*)",
   "/api/email/unsubscribe",
+  "/api/up/(.*)",
   "/unsubscribed",
 ]);
 
