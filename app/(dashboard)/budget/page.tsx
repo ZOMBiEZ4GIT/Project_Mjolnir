@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { SankeyChartContainer } from "@/components/budget/SankeyChartContainer";
 import { MobileBudgetChart } from "@/components/budget/MobileBudgetChart";
+import { CategoryCard } from "@/components/budget/CategoryCard";
 import Link from "next/link";
 import type { BudgetSummary } from "@/lib/budget/summary";
 
@@ -267,48 +268,20 @@ export default function BudgetDashboardPage() {
         <MobileBudgetChart summary={summary} />
       </div>
 
-      {/* Category cards grid — placeholder for B4-007 */}
+      {/* Category cards grid — B4-007 */}
       <div>
         <h2 className="text-sm font-medium text-muted-foreground mb-4">
           Categories
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {summary.categories.map((cat) => {
-            const barPercent = Math.min(cat.percentUsed, 100);
-            const barColour =
-              cat.status === "over"
-                ? "bg-red-500"
-                : cat.status === "warning"
-                  ? "bg-amber-500"
-                  : "bg-emerald-500";
-
-            return (
-              <Link
-                key={cat.categoryId}
-                href={`/budget/transactions?category=${cat.categoryId}&from=${summary.startDate}&to=${summary.endDate}`}
-                className="rounded-lg border border-border bg-card/50 p-4 hover:bg-card/80 transition-colors"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-foreground truncate">
-                    {cat.categoryName}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {Math.round(cat.percentUsed)}%
-                  </span>
-                </div>
-                <div className="h-1.5 w-full rounded-full bg-muted mb-2">
-                  <div
-                    className={`h-1.5 rounded-full ${barColour} transition-all`}
-                    style={{ width: `${barPercent}%` }}
-                  />
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{formatCents(cat.spentCents)}</span>
-                  <span>of {formatCents(cat.budgetedCents)}</span>
-                </div>
-              </Link>
-            );
-          })}
+          {summary.categories.map((cat) => (
+            <CategoryCard
+              key={cat.categoryId}
+              category={cat}
+              periodStart={summary.startDate}
+              periodEnd={summary.endDate}
+            />
+          ))}
         </div>
       </div>
 
