@@ -1,2 +1,23 @@
 # Ralph Progress Log — B4: Budget Dashboard & Sankey
 # This file is reset at the start of each epic.
+
+## Codebase Patterns
+- Budget tables: budgetPeriods, budgetAllocations, budgetCategories, upTransactions in lib/db/schema.ts
+- DB import: `import { db } from "@/lib/db"` with Drizzle ORM
+- Budget categories use string slug IDs (e.g. "groceries", "income")
+- Income category ID is "income" with isIncome=true
+- Amounts stored in cents as bigint (mode: "number")
+- Transactions: negative amountCents = debit, positive = credit
+- Exclude transfers: `eq(upTransactions.isTransfer, false)`, soft-deletes: `isNull(upTransactions.deletedAt)`
+- Calculation functions return rich typed objects (see lib/calculations/net-worth.ts for pattern)
+- Use Promise.all for concurrent DB queries where possible
+
+## 2026-02-08 - B4-001
+- What was implemented: Budget summary calculation engine in lib/budget/summary.ts
+- Files changed: lib/budget/summary.ts (new)
+- **Learnings for future iterations:**
+  - Don't destructure placeholder values from Promise.all — causes unused variable lint errors
+  - Two-phase fetch needed: first get period dates, then fetch income/spending with those dates
+  - SQL aggregation pattern: `sql<number>\`COALESCE(SUM(col), 0)\`` for safe nulls
+  - Category status thresholds: under (<80%), warning (80-100%), over (>100%)
+---
