@@ -13,6 +13,7 @@
 - PaydaySettings interface: `{ paydayDay: number; adjustForWeekends: boolean }` — reuse for API validation
 - Budget monetary values use `bigint("column", { mode: "number" })` for cents — same pattern as UP Bank tables
 - Cascade delete: `references(() => parent.id, { onDelete: "cascade" })` — used for allocations on period delete
+- Budget templates are static TypeScript data in `lib/budget/templates.ts` — use `applyTemplate(template, incomeCents)` to resolve allocations
 
 ---
 
@@ -84,4 +85,17 @@
   - Allocation over-income check is a warning in the response, not a blocking validation error
   - DELETE relies on cascade delete in schema for allocations — no need to manually delete allocations
   - Both route.ts and [id]/route.ts share the same allocationSchema Zod definition (could extract later if needed)
+---
+
+## 2026-02-07 - B2-007
+- What was implemented: Budget templates module (lib/budget/templates.ts) with three templates and applyTemplate function, plus GET /api/budget/templates endpoint
+- Files changed: lib/budget/templates.ts, app/api/budget/templates/route.ts
+- **Learnings for future iterations:**
+  - Templates use a mixed allocation model: fixedCents (for known amounts like rent) and percentage (for flexible splits)
+  - applyTemplate subtracts all fixed allocations from income first, then applies percentages to the remainder
+  - Templates are static data — no database storage needed, just a TypeScript module
+  - The API endpoint is read-only (GET only), no auth-gated mutations needed for templates
+  - Barefoot: $1200 fixed groceries + 60/10/8/7/5/10 split on remainder
+  - 50/30/20: all percentage-based (35/15/10/10/10/10/5 = 95%, leaving 5% savings)
+  - Roland's: $2129 fixed rent + $1200 fixed groceries + 8/6/8/4/8 split on remainder
 ---
