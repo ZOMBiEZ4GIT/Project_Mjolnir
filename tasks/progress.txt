@@ -5,7 +5,8 @@
 - Budget tables use varchar PK slugs (e.g. 'groceries') instead of UUIDs for readability
 - Seed scripts use `onConflictDoNothing()` for idempotent seeding
 - Schema follows existing pattern: `timestamp("name", { withTimezone: true }).defaultNow().notNull()` for created_at
-- Existing API routes use manual validation (no Zod), but PRD requests Zod for budget routes
+- Budget API routes use Zod for validation: `z.object({...}).safeParse(body)` with `parsed.error.flatten().fieldErrors`
+- Existing non-budget API routes use manual validation (no Zod)
 - `withAuth(async (request, context, userId) => { ... }, "context")` is the standard auth pattern
 - Budget utility functions live in `lib/budget/` — pure functions with no DB dependency
 - PaydaySettings interface: `{ paydayDay: number; adjustForWeekends: boolean }` — reuse for API validation
@@ -46,4 +47,17 @@
   - Money stored as bigint cents (mode: "number") — same pattern as upAccounts.balanceCents
   - Relations: budgetPeriods → many allocations, budgetAllocations → one budgetPeriod + one category
   - Migration generated as 0013_smooth_overlord.sql
+---
+
+## 2026-02-07 - B2-004
+- What was implemented: Budget categories API endpoints (GET list, POST create, PUT update, DELETE) with Zod validation
+- Files changed: app/api/budget/categories/route.ts, app/api/budget/categories/[id]/route.ts
+- **Learnings for future iterations:**
+  - GET auto-seeds default categories if table is empty via seedBudgetCategories()
+  - POST uses Zod schema: id (lowercase slug regex), name, icon, colour (hex regex), optional sortOrder/isIncome
+  - PUT on [id] route updates name, icon, colour, sortOrder — all optional fields
+  - DELETE prevents deletion of system categories (isSystem=true) with 400 error
+  - Custom categories always have isSystem=false — cannot create system categories via API
+  - Auto sort_order: if not provided on POST, places after last existing category
+  - Budget routes use Zod validation pattern (unlike older manual validation routes)
 ---
