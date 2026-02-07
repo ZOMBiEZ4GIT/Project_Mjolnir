@@ -14,7 +14,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -30,8 +30,8 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Implemented alongside B3-001 in lib/budget/categorisation.ts"
     },
     {
       "id": "B3-003",

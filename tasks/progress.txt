@@ -1,2 +1,21 @@
 # Ralph Progress Log — B3: Transaction Categorisation
 # This file is reset at the start of each epic.
+
+## Codebase Patterns
+- Budget utilities live in `lib/budget/` (payday.ts, templates.ts, categorisation.ts)
+- Default budget category IDs: bills-fixed, groceries, transport, eating-out, shopping, health, fun, income, uncategorised
+- UP Bank categories are flat slugs like "restaurants-and-cafes" — mapped to Mjolnir's smaller category set
+- n8n auth uses HMAC signature validation via `withN8nAuth`; user endpoints use Clerk via `withAuth`
+- API validation pattern: `schema.safeParse(body)` → 400 with flattened field errors on failure
+
+---
+
+## 2026-02-08 - B3-001 & B3-002
+- Implemented UP-to-Mjolnir category mapping and income detection
+- Files changed: `lib/budget/categorisation.ts` (new)
+- **Learnings for future iterations:**
+  - All 31 UP categories mapped to 9 Mjolnir categories
+  - `mapUpCategory()` returns "uncategorised" for null or unknown UP categories
+  - `isIncomeTransaction()` checks: positive amount AND (pattern match OR > $2000)
+  - B3-002 was small enough to implement in the same file as B3-001
+---
