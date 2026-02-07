@@ -73,3 +73,15 @@
   - buildResponse helper formats dates as ISO date strings (YYYY-MM-DD) for the currentPeriod
   - Zod validates paydayDay 1-28, adjustForWeekends boolean, optional incomeSourcePattern
 ---
+
+## 2026-02-07 - B2-006
+- What was implemented: Budget periods API endpoints (GET list with allocations, POST create with allocations, PUT update with allocation replacement, DELETE with cascade)
+- Files changed: app/api/budget/periods/route.ts, app/api/budget/periods/[id]/route.ts
+- **Learnings for future iterations:**
+  - GET fetches all periods then all allocations and groups them in-memory — no Drizzle `with` needed for this simple join
+  - POST creates period first, then inserts allocations referencing period.id — two-step insert
+  - PUT replaces allocations by delete-then-insert when allocations array provided; fetches existing if not provided
+  - Allocation over-income check is a warning in the response, not a blocking validation error
+  - DELETE relies on cascade delete in schema for allocations — no need to manually delete allocations
+  - Both route.ts and [id]/route.ts share the same allocationSchema Zod definition (could extract later if needed)
+---
