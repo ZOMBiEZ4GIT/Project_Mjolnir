@@ -89,6 +89,8 @@ export const queryKeys = {
     payday: ["budget", "payday"] as const,
     categories: ["budget", "categories"] as const,
     templates: ["budget", "templates"] as const,
+    summary: (periodId?: string) =>
+      ["budget", "summary", periodId ?? "current"] as const,
     periods: {
       all: ["budget", "periods"] as const,
       detail: (id: string) => ["budget", "period", id] as const,
