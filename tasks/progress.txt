@@ -9,6 +9,8 @@
 - `withAuth(async (request, context, userId) => { ... }, "context")` is the standard auth pattern
 - Budget utility functions live in `lib/budget/` — pure functions with no DB dependency
 - PaydaySettings interface: `{ paydayDay: number; adjustForWeekends: boolean }` — reuse for API validation
+- Budget monetary values use `bigint("column", { mode: "number" })` for cents — same pattern as UP Bank tables
+- Cascade delete: `references(() => parent.id, { onDelete: "cascade" })` — used for allocations on period delete
 
 ---
 
@@ -32,4 +34,16 @@
   - Budget period = payday to day-before-next-payday (inclusive both ends)
   - createPaydayDate clamps to last day of month for February edge cases
   - Migration generated as 0012_aspiring_joshua_kane.sql
+---
+
+## 2026-02-07 - B2-003
+- What was implemented: budget_periods and budget_allocations tables in schema.ts with relations and TypeScript types
+- Files changed: lib/db/schema.ts, drizzle/0013_smooth_overlord.sql
+- **Learnings for future iterations:**
+  - budget_periods uses uuid PK, unique constraint on start_date, indexes on start_date and end_date
+  - budget_allocations has cascade delete on budget_period_id FK — deleting a period removes its allocations
+  - budget_allocations uses unique constraint on (budget_period_id, category_id) for one allocation per category per period
+  - Money stored as bigint cents (mode: "number") — same pattern as upAccounts.balanceCents
+  - Relations: budgetPeriods → many allocations, budgetAllocations → one budgetPeriod + one category
+  - Migration generated as 0013_smooth_overlord.sql
 ---
