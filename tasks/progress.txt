@@ -7,6 +7,8 @@
 - Schema follows existing pattern: `timestamp("name", { withTimezone: true }).defaultNow().notNull()` for created_at
 - Existing API routes use manual validation (no Zod), but PRD requests Zod for budget routes
 - `withAuth(async (request, context, userId) => { ... }, "context")` is the standard auth pattern
+- Budget utility functions live in `lib/budget/` — pure functions with no DB dependency
+- PaydaySettings interface: `{ paydayDay: number; adjustForWeekends: boolean }` — reuse for API validation
 
 ---
 
@@ -18,4 +20,16 @@
   - Default categories: bills-fixed, groceries, transport, eating-out, shopping, health, fun, income, uncategorised
   - Lucide icon names used: Home, ShoppingCart, Car, UtensilsCrossed, ShoppingBag, Heart, Gamepad2, DollarSign, HelpCircle
   - Migration generated as 0011_breezy_william_stryker.sql
+---
+
+## 2026-02-07 - B2-002
+- What was implemented: payday_config table in schema.ts, lib/budget/payday.ts with pure date utility functions
+- Files changed: lib/db/schema.ts, lib/budget/payday.ts, drizzle/0012_aspiring_joshua_kane.sql
+- **Learnings for future iterations:**
+  - payday_config uses uuid PK (unlike budget_categories which uses varchar slugs) — single-user, single-row table
+  - Date utilities are pure functions with PaydaySettings interface (paydayDay, adjustForWeekends) — no DB dependency
+  - Weekend adjustment: Saturday→Friday, Sunday→Friday (both shift backwards to Friday)
+  - Budget period = payday to day-before-next-payday (inclusive both ends)
+  - createPaydayDate clamps to last day of month for February edge cases
+  - Migration generated as 0012_aspiring_joshua_kane.sql
 ---
