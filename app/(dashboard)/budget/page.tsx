@@ -26,6 +26,7 @@ import {
   type AiRecommendation,
 } from "@/components/budget/RecommendationModal";
 import Link from "next/link";
+import { toast } from "sonner";
 import type { BudgetSummary } from "@/lib/budget/summary";
 
 export const dynamic = "force-dynamic";
@@ -138,12 +139,40 @@ export default function BudgetDashboardPage() {
 
   const handleAccept = useCallback(
     async (rec: AiRecommendation) => {
-      await fetch(`/api/budget/recommendations/${rec.id}/status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "accepted" }),
-      });
+      // Build allocations array from the suggested budget
+      const allocations = rec.recommendationData.suggestedBudget.map(
+        (item) => ({
+          categoryId: item.categoryId,
+          allocatedCents: item.suggestedCents,
+        })
+      );
+
+      // Apply allocations and update status atomically (both must succeed)
+      const [allocRes, statusRes] = await Promise.all([
+        fetch(`/api/budget/periods/${rec.budgetPeriodId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ allocations }),
+        }),
+        fetch(`/api/budget/recommendations/${rec.id}/status`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "accepted" }),
+        }),
+      ]);
+
+      if (!allocRes.ok || !statusRes.ok) {
+        toast.error("Failed to apply recommendations");
+        return;
+      }
+
       setModalOpen(false);
+      toast.success("Budget updated with AI recommendations");
+
+      // Refresh both the summary (new allocations) and recommendation (new status)
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.budget.summary(rec.budgetPeriodId),
+      });
       queryClient.invalidateQueries({
         queryKey: queryKeys.budget.recommendations.latest(rec.budgetPeriodId),
       });
