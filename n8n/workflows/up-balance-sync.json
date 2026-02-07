@@ -1,0 +1,156 @@
+{
+  "name": "UP Balance Sync → Mjolnir",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 15 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.up.com.au/api/v1/accounts",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.UP_PERSONAL_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-up-accounts",
+      "name": "Fetch UP Accounts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract account data from UP JSON:API response\n// Maps each account to Mjolnir's flat balance payload format\nconst response = $input.first().json;\nconst accounts = (response.data || []).map(account => ({\n  up_account_id: account.id,\n  display_name: account.attributes.displayName,\n  account_type: account.attributes.accountType,\n  balance_cents: parseInt(account.attributes.balance.valueInBaseUnits, 10)\n}));\n\nreturn [{ json: { accounts } }];"
+      },
+      "id": "map-accounts",
+      "name": "Map Account Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate Mjolnir request signing headers\n// Signs the payload with HMAC-SHA256 for Mjolnir API authentication\nconst crypto = require('crypto');\n\n// TODO: Set these in n8n Settings → Variables\nconst MJOLNIR_API_KEY = $env.MJOLNIR_API_KEY || 'TODO_SET_YOUR_N8N_API_KEY';\nconst MJOLNIR_WEBHOOK_SECRET = $env.MJOLNIR_WEBHOOK_SECRET || 'TODO_SET_YOUR_N8N_WEBHOOK_SECRET';\nconst MJOLNIR_BASE_URL = $env.MJOLNIR_BASE_URL || 'TODO_SET_YOUR_MJOLNIR_URL';\n\nconst body = JSON.stringify($input.first().json);\nconst timestamp = Date.now().toString();\n\nconst signature = crypto\n  .createHmac('sha256', MJOLNIR_WEBHOOK_SECRET)\n  .update(`${timestamp}.${body}`)\n  .digest('hex');\n\nreturn [{\n  json: {\n    url: `${MJOLNIR_BASE_URL}/api/up/balance`,\n    body: $input.first().json,\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Mjolnir-API-Key': MJOLNIR_API_KEY,\n      'X-Mjolnir-Timestamp': timestamp,\n      'X-Mjolnir-Signature': signature\n    }\n  }\n}];"
+      },
+      "id": "sign-request",
+      "name": "Sign Mjolnir Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "={{ $json.headers['Content-Type'] }}"
+            },
+            {
+              "name": "X-Mjolnir-API-Key",
+              "value": "={{ $json.headers['X-Mjolnir-API-Key'] }}"
+            },
+            {
+              "name": "X-Mjolnir-Timestamp",
+              "value": "={{ $json.headers['X-Mjolnir-Timestamp'] }}"
+            },
+            {
+              "name": "X-Mjolnir-Signature",
+              "value": "={{ $json.headers['X-Mjolnir-Signature'] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "post-to-mjolnir",
+      "name": "POST to Mjolnir",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 300]
+    }
+  ],
+  "connections": {
+    "Every 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Fetch UP Accounts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch UP Accounts": {
+      "main": [
+        [
+          {
+            "node": "Map Account Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Account Data": {
+      "main": [
+        [
+          {
+            "node": "Sign Mjolnir Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign Mjolnir Request": {
+      "main": [
+        [
+          {
+            "node": "POST to Mjolnir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": ""
+  },
+  "description": "## UP Balance Sync → Mjolnir\n\nFetches UP Bank account balances every 15 minutes and syncs them to Mjolnir.\n\n### Setup Instructions\n\n1. **UP Personal Access Token:** Get your token from https://api.up.com.au (Developer → Personal Access Tokens).\n\n2. **Environment Variables:** Set the following in n8n Settings → Variables:\n   - `UP_PERSONAL_ACCESS_TOKEN` — Your UP Bank personal access token\n   - `MJOLNIR_API_KEY` — The N8N_API_KEY value from your Mjolnir .env file\n   - `MJOLNIR_WEBHOOK_SECRET` — The N8N_WEBHOOK_SECRET value from your Mjolnir .env file\n   - `MJOLNIR_BASE_URL` — Your Mjolnir deployment URL (e.g. https://mjolnir.vercel.app)\n\n3. **Activate** this workflow to start syncing balances every 15 minutes.\n\n### Flow\n\n1. Schedule trigger fires every 15 minutes\n2. Fetches all accounts from UP Bank API (GET /api/v1/accounts)\n3. Maps UP's JSON:API account format to Mjolnir's flat payload (up_account_id, display_name, account_type, balance_cents from valueInBaseUnits)\n4. Signs the request with Mjolnir's HMAC scheme (X-Mjolnir-Signature)\n5. POSTs the account balances to Mjolnir's /api/up/balance endpoint\n6. Mjolnir updates account records and auto-creates/updates a Cash (UP) holding snapshot"
+}
