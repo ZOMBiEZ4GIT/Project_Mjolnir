@@ -12,6 +12,8 @@
 - Zod `z.string().optional()` + `?? null` for nullable DB columns in UP endpoints
 - neon-http driver doesn't support `db.transaction()` — validate all records first, then loop upserts
 - Drizzle `inArray()` from `drizzle-orm` for batch lookups of existing records
+- n8n endpoints lack Clerk auth — get user via `db.select({id: users.id}).from(users).limit(1)` (single-user app)
+- Snapshot balance is decimal dollars (not cents) — convert from cents with `(cents / 100).toFixed(2)`
 
 ## Epic: B-1 UP Bank Integration
 Branch: ralph/b1-up-bank-integration
@@ -91,5 +93,19 @@ Started: 2026-02-07
   - Same upsert pattern as transactions: check existence with select, then update or insert
   - Use `sql<number>` template with coalesce for aggregations (sum, count)
   - Account types match the enum in schema: TRANSACTIONAL, SAVER, HOME_LOAN
+
+---
+
+## 2026-02-07 - B1-006
+- Extended POST /api/up/balance to auto-create "Cash (UP)" holding and upsert daily snapshots
+- On balance sync: finds first user from `users` table, finds or creates holding with name "Cash (UP)", type "cash", currency "AUD"
+- Upserts snapshot for today's date (YYYY-MM-DD) with aggregated balance converted from cents to dollars
+- Respects snapshots unique constraint on (holding_id, date) — same-day syncs update the existing snapshot
+- Files changed: app/api/up/balance/route.ts
+- **Learnings for future iterations:**
+  - n8n endpoints don't have Clerk auth — for single-user app, query first user from `users` table
+  - Snapshots balance is stored as decimal dollars (not cents) — convert with `(cents / 100).toFixed(2)`
+  - Snapshot date for automated syncs uses actual date (YYYY-MM-DD), not normalized to first-of-month
+  - The holding auto-creation is guarded by `if (user)` — gracefully handles empty users table
 
 ---

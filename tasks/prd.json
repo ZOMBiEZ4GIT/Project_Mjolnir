@@ -106,8 +106,8 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 6,
-      "passes": false,
-      "notes": "Depends on B1-005. The balance endpoint is extended to also create/update the holding and snapshot."
+      "passes": true,
+      "notes": "Extended POST /api/up/balance to auto-create 'Cash (UP)' holding (type: cash, currency: AUD) for the single user. On each balance sync, upserts a snapshot for today's date with aggregated balance (cents→dollars). Uses existing holdings and snapshots tables — no new tables or migrations needed."
     },
     {
       "id": "B1-007",
