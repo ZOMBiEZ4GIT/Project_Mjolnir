@@ -14,6 +14,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { SankeyChartContainer } from "@/components/budget/SankeyChartContainer";
+import { MobileBudgetChart } from "@/components/budget/MobileBudgetChart";
 import Link from "next/link";
 import type { BudgetSummary } from "@/lib/budget/summary";
 
@@ -263,10 +264,7 @@ export default function BudgetDashboardPage() {
           Budget Breakdown
         </h2>
         <SankeyChartContainer summary={summary} />
-        {/* Mobile fallback — B4-006 will replace this */}
-        <div className="flex items-center justify-center h-64 text-muted-foreground text-sm md:hidden">
-          Mobile chart coming soon
-        </div>
+        <MobileBudgetChart summary={summary} />
       </div>
 
       {/* Category cards grid — placeholder for B4-007 */}
