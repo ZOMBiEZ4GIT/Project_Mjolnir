@@ -12,6 +12,11 @@
 - Exclude transfers: `eq(upTransactions.isTransfer, false)`, soft-deletes: `isNull(upTransactions.deletedAt)`
 - Calculation functions return rich typed objects (see lib/calculations/net-worth.ts for pattern)
 - Use Promise.all for concurrent DB queries where possible
+- Dashboard pages: use `useAuthSafe()` + `useQuery` pattern with `enabled: isLoaded && isSignedIn`
+- Query key for budget summary: `queryKeys.budget.summary(periodId)` — accepts optional periodId
+- `EmptyState` component: pass `icon`, `title`, `description`, optional `action` (ReactNode)
+- Navigation: add new items to `navItems` array in `lib/navigation.ts` with `{ href, label, icon, description }`
+- Format cents to AUD: `(cents / 100).toLocaleString("en-AU", { style: "currency", currency: "AUD" })`
 
 ## 2026-02-08 - B4-001
 - What was implemented: Budget summary calculation engine in lib/budget/summary.ts
@@ -40,4 +45,15 @@
   - visx stable (v3.12.0) only supports React 16-18 peer deps — use alpha v4.0.1-alpha.0 for React 19
   - d3-sankey and @types/d3-sankey have no React peer deps, install at latest stable
   - @types/d3-sankey was already present as a transitive dependency
+---
+
+## 2026-02-08 - B4-004
+- What was implemented: Budget dashboard page layout at app/(dashboard)/budget/page.tsx
+- Files changed: app/(dashboard)/budget/page.tsx (new), lib/navigation.ts (added Budget link), lib/query-keys.ts (added summary key)
+- **Learnings for future iterations:**
+  - Avoid `useState` for values that won't be set in the current story — use `const` with a comment noting which story will replace it
+  - Lint catches unused `setPeriodId` from `useState` — if you don't use the setter yet, use a plain variable instead
+  - Category card grid pattern: `grid-cols-2 md:grid-cols-3 lg:grid-cols-4` fits the Mjolnir dashboard style
+  - Placeholder areas for future components should use descriptive divs (not empty) so layout is visible during development
+  - `export const dynamic = "force-dynamic"` required on all dashboard pages
 ---
