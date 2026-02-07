@@ -105,3 +105,13 @@
   - Use long staleTime (30min) for config data that rarely changes
   - Component returns null while config is loading — prevents flash of skeleton for secondary info cards
 ---
+
+## 2026-02-08 - B4-009
+- What was implemented: SavingsIndicator component with current savings, rate, projection, and on-track indicator
+- Files changed: components/budget/SavingsIndicator.tsx (new), app/(dashboard)/budget/page.tsx (integrated in 2-col grid with PaydayCountdown)
+- **Learnings for future iterations:**
+  - Linear extrapolation: `projectedSpent = (spentCents / daysElapsed) * totalDays` — only compute when daysElapsed > 0
+  - Colour thresholds for savings: green ≥30%, amber 25-30%, red <25%
+  - Use projected rate mid-period but actual rate when period is complete (daysElapsed < totalDays check)
+  - PaydayCountdown and SavingsIndicator pair well in `grid grid-cols-1 md:grid-cols-2` layout
+---
