@@ -7,6 +7,10 @@
 - UP Bank categories are flat slugs like "restaurants-and-cafes" — mapped to Mjolnir's smaller category set
 - n8n auth uses HMAC signature validation via `withN8nAuth`; user endpoints use Clerk via `withAuth`
 - API validation pattern: `schema.safeParse(body)` → 400 with flattened field errors on failure
+- NavItemLink accepts optional `badge` prop for inline badge rendering in sidebar
+- Query keys for budget transactions: `queryKeys.budget.transactions.all`, `.list(filters)`, `.uncategorisedCount`
+- Dynamic Lucide icon rendering: use a const ICON_MAP Record<string, ComponentType> instead of dynamic imports
+- n8n workflow templates live in `n8n/workflows/` as importable JSON files
 
 ---
 
@@ -29,4 +33,49 @@
   - On update: only sets category if existing record has no `mjolnirCategoryId` (preserves manual overrides)
   - On insert: always resolves and sets the category
   - n8n payload can now include `mjolnir_category_id` — takes priority over all auto-detection
+---
+
+## 2026-02-08 - B3-004
+- Created PUT /api/budget/transactions/[id]/category endpoint for manual overrides
+- Files changed: `app/api/budget/transactions/[id]/category/route.ts` (new)
+- **Learnings for future iterations:**
+  - Validates category_id exists in budget_categories before updating
+  - Uses Clerk `withAuth` pattern for user authentication
+---
+
+## 2026-02-08 - B3-005
+- Created GET /api/budget/transactions with filtering, search, and pagination
+- Files changed: `app/api/budget/transactions/route.ts` (new)
+- **Learnings for future iterations:**
+  - Excludes soft-deleted and transfer transactions by default
+  - Uses `ilike` + `or()` for search across description and raw_text
+  - Returns `{ transactions, total }` for pagination UI
+---
+
+## 2026-02-08 - B3-006
+- Built budget transactions list page with category override dropdowns
+- Files changed: `app/(dashboard)/budget/transactions/page.tsx` (new), `lib/query-keys.ts`
+- **Learnings for future iterations:**
+  - Dynamic Lucide icon rendering via ICON_MAP constant (maps string → component)
+  - Category badge uses Select dropdown for inline category override
+  - Filter state stored in URL search params for shareability
+  - Added budget.transactions query keys to query-keys.ts
+---
+
+## 2026-02-08 - B3-007
+- Added uncategorised count badge to navigation and Budget Txns nav item
+- Files changed: `app/api/budget/transactions/uncategorised-count/route.ts` (new), `components/layout/uncategorised-badge.tsx` (new), `components/layout/nav-item.tsx`, `components/layout/sidebar.tsx`, `components/layout/mobile-nav.tsx`, `lib/navigation.ts`
+- **Learnings for future iterations:**
+  - NavItemLink now accepts optional `badge` prop for inline badge rendering
+  - UncategorisedBadge auto-refreshes every 5 minutes via TanStack Query refetchInterval
+  - Badge added to both desktop sidebar and mobile nav drawer
+---
+
+## 2026-02-08 - B3-008
+- Created n8n categorisation rules workflow template
+- Files changed: `n8n/workflows/categorisation-rules.json` (new)
+- **Learnings for future iterations:**
+  - n8n workflow Code nodes use escaped JS strings in jsCode parameter
+  - Rules engine checks: income patterns → merchant overrides → UP category → fallback
+  - Template includes Roland's merchants: THE WORKWEARGRO (income), REAL ESTATE (bills-fixed)
 ---
