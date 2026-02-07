@@ -79,3 +79,17 @@ Started: 2026-02-07
   - Zod nested array errors have path like ["transactions", 0, "field"] — check path[1] for index
 
 ---
+
+## 2026-02-07 - B1-005
+- Implemented balance sync endpoint at app/api/up/balance/route.ts
+- POST endpoint receives array of UP account balances from n8n
+- Zod schema validates accounts array: up_account_id, display_name, account_type (TRANSACTIONAL|SAVER|HOME_LOAN), balance_cents
+- Upserts each account on up_account_id — existing accounts get balance and lastSyncedAt updated
+- Returns 200 with { total_balance_cents, account_count } aggregated across all UP accounts
+- Files changed: app/api/up/balance/route.ts (new)
+- **Learnings for future iterations:**
+  - Same upsert pattern as transactions: check existence with select, then update or insert
+  - Use `sql<number>` template with coalesce for aggregations (sum, count)
+  - Account types match the enum in schema: TRANSACTIONAL, SAVER, HOME_LOAN
+
+---

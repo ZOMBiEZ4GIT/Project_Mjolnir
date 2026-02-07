@@ -89,8 +89,8 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 5,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Endpoint at app/api/up/balance/route.ts. Uses withN8nAuth wrapper, Zod validation for accounts array. Upserts on up_account_id, updates lastSyncedAt. Returns { total_balance_cents, account_count } aggregated across all UP accounts."
     },
     {
       "id": "B1-006",
