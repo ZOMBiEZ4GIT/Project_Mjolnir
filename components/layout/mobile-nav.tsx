@@ -9,6 +9,7 @@ import { UserButton } from "@clerk/nextjs";
 import { cn } from "@/lib/utils";
 import { navItems } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
+import { UncategorisedBadge } from "@/components/layout/uncategorised-badge";
 import {
   Sheet,
   SheetContent,
@@ -89,6 +90,7 @@ export function MobileNav() {
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   <span>{item.label}</span>
+                  {item.href === "/budget/transactions" && <UncategorisedBadge />}
                 </Link>
               );
             })}

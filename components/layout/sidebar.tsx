@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { layout } from "@/lib/theme";
 import { navItems } from "@/lib/navigation";
 import { NavItemLink } from "@/components/layout/nav-item";
+import { UncategorisedBadge } from "@/components/layout/uncategorised-badge";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -54,6 +55,7 @@ export function Sidebar({ isCollapsed, onToggleCollapsed }: SidebarProps) {
             item={item}
             isCollapsed={isCollapsed}
             isActive={pathname === item.href || pathname.startsWith(item.href + "/")}
+            badge={item.href === "/budget/transactions" ? <UncategorisedBadge /> : undefined}
           />
         ))}
       </nav>

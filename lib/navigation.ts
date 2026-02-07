@@ -6,6 +6,7 @@ import {
   Upload,
   Download,
   Settings,
+  Receipt,
   type LucideIcon,
 } from "lucide-react";
 
@@ -40,6 +41,12 @@ export const navItems: NavItem[] = [
     label: "Snapshots",
     icon: Camera,
     description: "Track balances over time",
+  },
+  {
+    href: "/budget/transactions",
+    label: "Budget Txns",
+    icon: Receipt,
+    description: "View categorised transactions",
   },
   {
     href: "/import",
