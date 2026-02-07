@@ -17,6 +17,7 @@ import {
   ArrowDownRight,
   Loader2,
 } from "lucide-react";
+import { PaySplitConfig } from "@/components/budget/PaySplitConfig";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -229,7 +230,12 @@ export function RecommendationModal({
             </div>
           </section>
 
-          {/* Section 3 — Savings Projection */}
+          {/* Section 3 — Pay Split Config */}
+          {data.paySplitConfig && data.paySplitConfig.length > 0 && (
+            <PaySplitConfig paySplitConfig={data.paySplitConfig} />
+          )}
+
+          {/* Section 4 — Savings Projection */}
           <section>
             <h3 className="text-sm font-medium text-muted-foreground mb-2">
               Savings Projection
@@ -266,7 +272,7 @@ export function RecommendationModal({
             </div>
           </section>
 
-          {/* Section 4 — Actionable Tip */}
+          {/* Section 5 — Actionable Tip */}
           <section>
             <div className="rounded-lg border border-border bg-card p-4 flex gap-3">
               <Lightbulb className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
