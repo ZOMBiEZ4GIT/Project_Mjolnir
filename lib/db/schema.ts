@@ -395,6 +395,31 @@ export const upTransactions = pgTable(
 );
 
 // =============================================================================
+// BUDGET CATEGORIES
+// =============================================================================
+
+/**
+ * Budget spending categories for organising transactions into defined buckets.
+ *
+ * Each category has a human-readable ID (e.g. 'groceries'), a Lucide icon name,
+ * a distinct hex colour for UI display, and a sort order for consistent ordering.
+ *
+ * - `isIncome` marks the category as an income source (e.g. salary).
+ * - `isSystem` marks system-managed categories that cannot be deleted (e.g. 'uncategorised').
+ * - The `id` is a short varchar slug used as the primary key for readability.
+ */
+export const budgetCategories = pgTable("budget_categories", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  icon: varchar("icon", { length: 255 }).notNull(), // Lucide icon name
+  colour: varchar("colour", { length: 7 }).notNull(), // Hex colour e.g. #FF5733
+  sortOrder: integer("sort_order").notNull(),
+  isIncome: boolean("is_income").default(false).notNull(),
+  isSystem: boolean("is_system").default(false).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// =============================================================================
 // RELATIONS
 // =============================================================================
 
@@ -485,3 +510,6 @@ export type NewUpAccount = typeof upAccounts.$inferInsert;
 
 export type UpTransaction = typeof upTransactions.$inferSelect;
 export type NewUpTransaction = typeof upTransactions.$inferInsert;
+
+export type BudgetCategory = typeof budgetCategories.$inferSelect;
+export type NewBudgetCategory = typeof budgetCategories.$inferInsert;
