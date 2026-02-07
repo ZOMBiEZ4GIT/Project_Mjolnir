@@ -138,8 +138,8 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 8,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Endpoint at app/api/up/status/route.ts. Uses withAuth (Clerk auth) not n8n middleware. Two parallel queries: account stats (count, total balance, last synced) and transaction stats (count, oldest/newest date). Excludes soft-deleted transactions. Returns all fields with zeros/nulls when no accounts exist."
     },
     {
       "id": "B1-009",

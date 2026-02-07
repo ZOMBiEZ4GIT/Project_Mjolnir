@@ -122,3 +122,18 @@ Started: 2026-02-07
   - DELETE handler follows same withN8nAuth + Zod pattern as all other UP endpoints
 
 ---
+
+## 2026-02-07 - B1-008
+- Implemented UP connection status endpoint at app/api/up/status/route.ts
+- GET endpoint protected by Clerk auth via `withAuth` wrapper (not n8n middleware)
+- Queries upAccounts for: account_count, total_balance_cents, last_synced_at (max across accounts)
+- Queries upTransactions (excluding soft-deleted) for: transaction_count, oldest/newest transaction_date
+- Returns connected: true if any up_accounts exist, with zeros/nulls for empty state
+- Files changed: app/api/up/status/route.ts (new)
+- **Learnings for future iterations:**
+  - Use `withAuth` from lib/utils/with-auth.ts for Clerk-protected endpoints — different from withN8nAuth
+  - `withAuth` handler receives (request, context, userId) but unused params can be omitted
+  - SQL aggregates with ::int cast for count to ensure number type in Drizzle
+  - `sql<string | null>` template for nullable aggregate results (max, min)
+
+---
