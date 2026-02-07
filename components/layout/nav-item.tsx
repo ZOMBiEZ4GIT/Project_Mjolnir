@@ -16,9 +16,10 @@ interface NavItemProps {
   item: NavItem;
   isCollapsed: boolean;
   isActive: boolean;
+  badge?: React.ReactNode;
 }
 
-export function NavItemLink({ item, isCollapsed, isActive }: NavItemProps) {
+export function NavItemLink({ item, isCollapsed, isActive, badge }: NavItemProps) {
   const Icon = item.icon;
 
   const link = (
@@ -41,7 +42,10 @@ export function NavItemLink({ item, isCollapsed, isActive }: NavItemProps) {
       )}
       <Icon className="relative z-10 h-4 w-4 shrink-0" />
       {!isCollapsed && (
-        <span className="relative z-10 truncate">{item.label}</span>
+        <>
+          <span className="relative z-10 truncate">{item.label}</span>
+          {badge && <span className="relative z-10">{badge}</span>}
+        </>
       )}
     </Link>
   );

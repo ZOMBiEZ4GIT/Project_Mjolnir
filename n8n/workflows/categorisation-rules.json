@@ -1,0 +1,49 @@
+{
+  "name": "Transaction Categorisation Rules",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "input-trigger",
+      "name": "Input Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Transaction Categorisation Rules Engine\n *\n * This Code node applies categorisation rules to a transaction before\n * forwarding it to Mjolnir. Rules are checked in priority order:\n *\n * 1. Income detection (by description pattern)\n * 2. Merchant-specific overrides\n * 3. UP category mapping\n * 4. Fallback to 'uncategorised'\n *\n * Edit the RULES array below to customise for your merchants.\n * Each rule has:\n *   - type: 'income' | 'merchant' | 'up-category'\n *   - pattern: string to match (case-insensitive, partial match)\n *   - category: Mjolnir category ID to assign\n *   - field: which field to match against ('description', 'up_category_id')\n */\n\nconst RULES = [\n  // --- Income Detection ---\n  // Match known employer payment descriptions\n  { type: 'income', pattern: 'THE WORKWEARGRO', field: 'description', category: 'income' },\n\n  // --- Merchant-Specific Overrides ---\n  // These take priority over UP category mapping\n  { type: 'merchant', pattern: 'REAL ESTATE', field: 'description', category: 'bills-fixed' },\n  { type: 'merchant', pattern: 'ORIGIN ENERGY', field: 'description', category: 'bills-fixed' },\n  { type: 'merchant', pattern: 'TELSTRA', field: 'description', category: 'bills-fixed' },\n\n  // --- UP Category Mapping ---\n  // Maps UP Bank category IDs to Mjolnir budget categories\n  { type: 'up-category', pattern: 'groceries', field: 'up_category_id', category: 'groceries' },\n  { type: 'up-category', pattern: 'restaurants-and-cafes', field: 'up_category_id', category: 'eating-out' },\n  { type: 'up-category', pattern: 'takeaway', field: 'up_category_id', category: 'eating-out' },\n  { type: 'up-category', pattern: 'pubs-and-bars', field: 'up_category_id', category: 'eating-out' },\n  { type: 'up-category', pattern: 'coffee', field: 'up_category_id', category: 'eating-out' },\n  { type: 'up-category', pattern: 'fuel', field: 'up_category_id', category: 'transport' },\n  { type: 'up-category', pattern: 'public-transport', field: 'up_category_id', category: 'transport' },\n  { type: 'up-category', pattern: 'parking', field: 'up_category_id', category: 'transport' },\n  { type: 'up-category', pattern: 'tolls', field: 'up_category_id', category: 'transport' },\n  { type: 'up-category', pattern: 'car-insurance-and-maintenance', field: 'up_category_id', category: 'transport' },\n  { type: 'up-category', pattern: 'rideshare', field: 'up_category_id', category: 'transport' },\n  { type: 'up-category', pattern: 'rent', field: 'up_category_id', category: 'bills-fixed' },\n  { type: 'up-category', pattern: 'utilities', field: 'up_category_id', category: 'bills-fixed' },\n  { type: 'up-category', pattern: 'internet', field: 'up_category_id', category: 'bills-fixed' },\n  { type: 'up-category', pattern: 'mobile-phone', field: 'up_category_id', category: 'bills-fixed' },\n  { type: 'up-category', pattern: 'home-insurance', field: 'up_category_id', category: 'bills-fixed' },\n  { type: 'up-category', pattern: 'clothing-and-accessories', field: 'up_category_id', category: 'shopping' },\n  { type: 'up-category', pattern: 'electronics', field: 'up_category_id', category: 'shopping' },\n  { type: 'up-category', pattern: 'home-and-garden', field: 'up_category_id', category: 'shopping' },\n  { type: 'up-category', pattern: 'health-and-fitness', field: 'up_category_id', category: 'health' },\n  { type: 'up-category', pattern: 'pharmacy', field: 'up_category_id', category: 'health' },\n  { type: 'up-category', pattern: 'medical', field: 'up_category_id', category: 'health' },\n  { type: 'up-category', pattern: 'personal-care', field: 'up_category_id', category: 'health' },\n  { type: 'up-category', pattern: 'entertainment', field: 'up_category_id', category: 'fun' },\n  { type: 'up-category', pattern: 'games-and-software', field: 'up_category_id', category: 'fun' },\n  { type: 'up-category', pattern: 'music-and-streaming', field: 'up_category_id', category: 'fun' },\n  { type: 'up-category', pattern: 'events-and-gigs', field: 'up_category_id', category: 'fun' },\n  { type: 'up-category', pattern: 'hobbies', field: 'up_category_id', category: 'fun' }\n];\n\nconst transaction = $input.first().json;\nconst description = (transaction.description || '').toUpperCase();\nconst upCategoryId = transaction.up_category_id || '';\nconst amountCents = transaction.amount_cents || 0;\n\nlet mjolnirCategoryId = 'uncategorised';\n\n// Check rules in priority order\nfor (const rule of RULES) {\n  const fieldValue = rule.field === 'description' ? description : upCategoryId;\n  const pattern = rule.pattern.toUpperCase();\n\n  if (rule.type === 'income') {\n    // Income: must be a credit (positive amount) and match pattern\n    if (amountCents > 0 && fieldValue.includes(pattern)) {\n      mjolnirCategoryId = rule.category;\n      break;\n    }\n  } else if (rule.type === 'merchant') {\n    // Merchant override: partial match on description\n    if (fieldValue.includes(pattern)) {\n      mjolnirCategoryId = rule.category;\n      break;\n    }\n  } else if (rule.type === 'up-category') {\n    // UP category: exact match on up_category_id\n    if (upCategoryId === rule.pattern) {\n      mjolnirCategoryId = rule.category;\n      break;\n    }\n  }\n}\n\n// Also check for large credits as income (> $2000)\nif (mjolnirCategoryId === 'uncategorised' && amountCents > 200000) {\n  mjolnirCategoryId = 'income';\n}\n\n// Add the category to the transaction payload\nreturn [{\n  json: {\n    ...transaction,\n    mjolnir_category_id: mjolnirCategoryId\n  }\n}];"
+      },
+      "id": "categorisation-rules",
+      "name": "Categorisation Rules Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    }
+  ],
+  "connections": {
+    "Input Trigger": {
+      "main": [
+        [
+          {
+            "node": "Categorisation Rules Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "mjolnir-categorisation-rules"
+  },
+  "tags": [
+    {
+      "name": "mjolnir",
+      "id": "mjolnir-tag"
+    }
+  ]
+}

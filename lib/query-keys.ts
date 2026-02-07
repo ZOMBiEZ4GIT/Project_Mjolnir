@@ -93,6 +93,12 @@ export const queryKeys = {
       all: ["budget", "periods"] as const,
       detail: (id: string) => ["budget", "period", id] as const,
     },
+    transactions: {
+      all: ["budget", "transactions"] as const,
+      list: (filters: Record<string, string | undefined>) =>
+        ["budget", "transactions", filters] as const,
+      uncategorisedCount: ["budget", "transactions", "uncategorised-count"] as const,
+    },
   },
 
   // ---- Settings ----
