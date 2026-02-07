@@ -19,3 +19,14 @@
   - `isIncomeTransaction()` checks: positive amount AND (pattern match OR > $2000)
   - B3-002 was small enough to implement in the same file as B3-001
 ---
+
+## 2026-02-08 - B3-003
+- Applied auto-categorisation to both single and batch UP transaction endpoints
+- Files changed: `app/api/up/transactions/route.ts`, `app/api/up/transactions/batch/route.ts`
+- **Learnings for future iterations:**
+  - Single endpoint uses async `resolveCategory()` (fetches payday_config per request)
+  - Batch endpoint loads payday_config once at batch start, uses sync `resolveCategory()`
+  - On update: only sets category if existing record has no `mjolnirCategoryId` (preserves manual overrides)
+  - On insert: always resolves and sets the category
+  - n8n payload can now include `mjolnir_category_id` — takes priority over all auto-detection
+---
