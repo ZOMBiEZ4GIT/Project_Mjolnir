@@ -18,6 +18,42 @@ const transactionSchema = z.object({
   is_transfer: z.boolean(),
 });
 
+const deleteSchema = z.object({
+  up_transaction_id: z.string().min(1),
+});
+
+export async function DELETE(request: NextRequest) {
+  return withN8nAuth(request, async (body) => {
+    const parsed = deleteSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const existing = await db
+      .select({ id: upTransactions.id })
+      .from(upTransactions)
+      .where(eq(upTransactions.upTransactionId, parsed.data.up_transaction_id))
+      .limit(1);
+
+    if (existing.length === 0) {
+      return NextResponse.json(
+        { error: "Transaction not found" },
+        { status: 404 }
+      );
+    }
+
+    await db
+      .update(upTransactions)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(upTransactions.upTransactionId, parsed.data.up_transaction_id));
+
+    return NextResponse.json({ deleted: true }, { status: 200 });
+  });
+}
+
 export async function POST(request: NextRequest) {
   return withN8nAuth(request, async (body) => {
     const parsed = transactionSchema.safeParse(body);
