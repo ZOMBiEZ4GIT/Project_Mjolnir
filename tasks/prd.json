@@ -1,180 +1,157 @@
 {
   "project": "Mjolnir",
-  "branchName": "ralph/b1-up-bank-integration",
-  "description": "B-1: UP Bank Integration — Mjolnir-side infrastructure to receive banking data from UP Bank via n8n middleware. Database tables, API endpoints, request signing middleware, and n8n workflow templates.",
+  "branchName": "ralph/b2-budget-categories-setup",
+  "description": "B-2: Budget Categories & Setup — Budget system foundation with categories, payday-aligned periods, allocation tracking, templates, and a setup UI.",
   "userStories": [
     {
-      "id": "B1-001",
-      "title": "UP integration database schema",
-      "description": "As a developer, I need database tables to store UP account data and transactions so the system can track banking activity.",
+      "id": "B2-001",
+      "title": "Budget categories database schema and seed data",
+      "description": "As a developer, I need a budget categories table with seeded defaults so the system can organise spending into defined buckets.",
       "acceptanceCriteria": [
-        "Create Drizzle schema at lib/db/schema/up.ts",
-        "up_accounts table with columns: id (uuid PK), up_account_id (varchar unique), display_name (varchar), account_type (varchar: TRANSACTIONAL | SAVER | HOME_LOAN), balance_cents (bigint default 0), last_synced_at (timestamptz), created_at (timestamptz), updated_at (timestamptz)",
-        "up_transactions table with columns: id (uuid PK), up_transaction_id (varchar unique), description (varchar), raw_text (varchar nullable), amount_cents (bigint, negative for debits), status (varchar: HELD | SETTLED), up_category_id (varchar nullable), up_category_name (varchar nullable), mjolnir_category_id (varchar nullable), transaction_date (date), settled_at (timestamptz nullable), is_transfer (boolean default false), deleted_at (timestamptz nullable), created_at (timestamptz), updated_at (timestamptz)",
-        "Add indexes on up_transactions: transaction_date, mjolnir_category_id, status",
+        "Create budget_categories table in lib/db/schema.ts with columns: id (varchar PK, e.g. 'groceries'), name (varchar), icon (varchar, Lucide icon name), colour (varchar, hex string), sort_order (integer), is_income (boolean default false), is_system (boolean default false), created_at (timestamptz)",
+        "Create a seed script at lib/db/seed-categories.ts that inserts default categories: bills-fixed, groceries, transport, eating-out, shopping, health, fun, income (is_income=true), uncategorised (is_system=true)",
+        "Each default category has an appropriate Lucide icon name and distinct hex colour",
         "Generate migration with npm run db:generate",
-        "Run migration with npm run db:migrate",
         "npm run build && npm run lint passes"
       ],
       "priority": 1,
-      "passes": true,
-      "notes": "Schema added to lib/db/schema.ts (single-file schema approach). Migration: drizzle/0010_lucky_madame_hydra.sql. bigint uses mode:'number' to avoid BigInt serialization issues with drizzle-kit."
+      "passes": false,
+      "notes": ""
     },
     {
-      "id": "B1-002",
-      "title": "n8n request signing middleware",
-      "description": "As a developer, I need middleware that validates incoming n8n requests so that only authenticated requests from n8n can write to UP endpoints.",
+      "id": "B2-002",
+      "title": "Payday configuration schema and date utilities",
+      "description": "As a developer, I need payday configuration storage and date calculation utilities so budget periods align with actual pay cycles.",
       "acceptanceCriteria": [
-        "Create middleware at lib/api/up/middleware.ts",
-        "Validates X-Mjolnir-API-Key header against N8N_API_KEY env var",
-        "Validates X-Mjolnir-Timestamp header is within 5 minutes of current time",
-        "Validates X-Mjolnir-Signature header using HMAC-SHA256 of ${timestamp}.${body} with N8N_WEBHOOK_SECRET",
-        "Uses crypto.timingSafeEqual for signature comparison",
-        "Returns 401 JSON response for invalid API key",
-        "Returns 403 JSON response for invalid or expired signature",
-        "Exports a reusable validateN8nRequest(request: NextRequest) function that returns { valid: boolean, error?: string, body?: unknown }",
+        "Create payday_config table in lib/db/schema.ts with columns: id (uuid PK), payday_day (integer 1-28), adjust_for_weekends (boolean default true), income_source_pattern (varchar nullable), created_at (timestamptz), updated_at (timestamptz)",
+        "Create lib/budget/payday.ts with pure functions: calculateBudgetPeriod(config, targetDate) returns { startDate, endDate, daysInPeriod }, findPaydayOnOrBefore(date, config), findNextPayday(date, config), getDaysUntilPayday(config)",
+        "Weekend adjustment: Saturday payday uses Friday, Sunday payday uses Friday",
+        "Handles month boundaries correctly (e.g. payday 28th works for February)",
+        "Generate migration with npm run db:generate",
         "npm run build && npm run lint passes"
       ],
       "priority": 2,
-      "passes": true,
-      "notes": "Middleware at lib/api/up/middleware.ts. Exports validateN8nRequest and withN8nAuth helper. Added /api/up/(.*) to Clerk public routes. Uses HMAC-SHA256 with crypto.timingSafeEqual, 5-minute timestamp window."
+      "passes": false,
+      "notes": ""
     },
     {
-      "id": "B1-003",
-      "title": "Transaction ingestion endpoint",
-      "description": "As a system, I need an API endpoint to receive individual transactions from n8n so that UP spending data flows into Mjolnir in real-time.",
+      "id": "B2-003",
+      "title": "Budget periods and allocations schema",
+      "description": "As a developer, I need tables for budget periods and category allocations so the system can track planned spending per pay cycle.",
       "acceptanceCriteria": [
-        "Create POST /api/up/transactions/route.ts endpoint",
-        "Calls validateN8nRequest middleware before processing",
-        "Validates request body with Zod schema: up_transaction_id (string), description (string), raw_text (string optional), amount_cents (number), status (HELD | SETTLED), up_category_id (string optional), up_category_name (string optional), transaction_date (string date), settled_at (string optional), is_transfer (boolean)",
-        "Upserts on up_transaction_id — same ID updates existing record (handles HELD to SETTLED transition)",
-        "Returns 200 with the stored transaction on success",
-        "Returns 400 with descriptive error for validation failures",
-        "Returns 401/403 for auth failures (from middleware)",
+        "Create budget_periods table in lib/db/schema.ts with columns: id (uuid PK), start_date (date), end_date (date), expected_income_cents (bigint), notes (text nullable), created_at (timestamptz), updated_at (timestamptz). Unique constraint on start_date",
+        "Create budget_allocations table with columns: id (uuid PK), budget_period_id (uuid FK to budget_periods), category_id (varchar FK to budget_categories), allocated_cents (bigint), created_at (timestamptz), updated_at (timestamptz). Unique constraint on (budget_period_id, category_id)",
+        "Add indexes on budget_periods(start_date, end_date)",
+        "Cascade delete allocations when period is deleted",
+        "Generate migration with npm run db:generate",
         "npm run build && npm run lint passes"
       ],
       "priority": 3,
-      "passes": true,
-      "notes": "Endpoint at app/api/up/transactions/route.ts. Uses withN8nAuth wrapper, Zod validation, upserts on up_transaction_id. Returns 200 with stored transaction, 400 for validation errors, 401/403 for auth failures."
+      "passes": false,
+      "notes": ""
     },
     {
-      "id": "B1-004",
-      "title": "Batch transaction ingestion endpoint",
-      "description": "As a system, I need a batch endpoint so n8n can send multiple transactions at once efficiently.",
+      "id": "B2-004",
+      "title": "Budget categories API endpoints",
+      "description": "As a developer, I need API endpoints to list and manage budget categories so the UI can display and configure them.",
       "acceptanceCriteria": [
-        "Create POST /api/up/transactions/batch/route.ts endpoint",
-        "Calls validateN8nRequest middleware before processing",
-        "Accepts { transactions: Array } body with same schema as single endpoint",
-        "Validates batch size is <= 500 transactions, returns 400 if exceeded",
-        "Upserts all transactions within a single database transaction (all-or-nothing)",
-        "Returns 200 with { inserted: number, updated: number } counts on success",
-        "Returns 400 with index of failing record if any transaction fails validation",
+        "Create GET /api/budget/categories — returns all categories sorted by sort_order",
+        "Create POST /api/budget/categories — create a custom category with id, name, icon, colour; validates with Zod",
+        "Create PUT /api/budget/categories/[id] — update category name, icon, colour, sort_order; validates with Zod",
+        "System categories (is_system=true) cannot be deleted",
+        "All endpoints protected by Clerk auth (withAuth pattern)",
+        "If no categories exist on GET, run the seed function to insert defaults",
         "npm run build && npm run lint passes"
       ],
       "priority": 4,
-      "passes": true,
-      "notes": "Endpoint at app/api/up/transactions/batch/route.ts. Uses withN8nAuth wrapper, Zod validation with batchSchema wrapping transactionSchema array. Max 500 transactions per batch. Looks up existing IDs in one query, then loops insert/update. Returns { inserted, updated } counts. Returns 400 with index for validation failures."
+      "passes": false,
+      "notes": ""
     },
     {
-      "id": "B1-005",
-      "title": "Balance sync endpoint",
-      "description": "As a system, I need an endpoint to receive account balance updates from n8n so Mjolnir has current cash position data.",
+      "id": "B2-005",
+      "title": "Payday configuration API endpoints",
+      "description": "As a developer, I need API endpoints to get and set payday configuration so the user can configure their pay cycle.",
       "acceptanceCriteria": [
-        "Create POST /api/up/balance/route.ts endpoint",
-        "Calls validateN8nRequest middleware before processing",
-        "Accepts { accounts: Array<{ up_account_id, display_name, account_type, balance_cents }> } body validated with Zod",
-        "Upserts each account on up_account_id",
-        "Updates last_synced_at timestamp on each upserted account",
-        "Returns 200 with { total_balance_cents, account_count } aggregated across all accounts",
+        "Create GET /api/budget/payday — returns current payday config, or defaults (day 15, adjust_for_weekends true) if none exists",
+        "Create PUT /api/budget/payday — update payday config (payday_day, adjust_for_weekends, income_source_pattern); validates with Zod",
+        "Validates payday_day is between 1 and 28",
+        "Response includes the calculated current budget period dates alongside the config",
+        "Protected by Clerk auth (withAuth pattern)",
         "npm run build && npm run lint passes"
       ],
       "priority": 5,
-      "passes": true,
-      "notes": "Endpoint at app/api/up/balance/route.ts. Uses withN8nAuth wrapper, Zod validation for accounts array. Upserts on up_account_id, updates lastSyncedAt. Returns { total_balance_cents, account_count } aggregated across all UP accounts."
+      "passes": false,
+      "notes": ""
     },
     {
-      "id": "B1-006",
-      "title": "Cash holding auto-creation and net worth integration",
-      "description": "As a user, I want my total UP Bank balance to automatically appear as a Cash (UP) holding in my net worth so I see my full financial picture.",
+      "id": "B2-006",
+      "title": "Budget periods API endpoints",
+      "description": "As a developer, I need API endpoints to create and manage budget periods so the user can set up monthly budgets.",
       "acceptanceCriteria": [
-        "Modify the POST /api/up/balance endpoint to also handle holding/snapshot creation",
-        "On balance sync, find or create a holding with name 'Cash (UP)', type 'cash', currency 'AUD'",
-        "On each balance sync, upsert a snapshot for today's date on the Cash (UP) holding with the aggregated balance across all UP accounts",
-        "Uses existing holdings and snapshots tables — no new tables needed",
-        "Respects existing snapshots unique constraint on (holding_id, date) for same-day updates",
-        "The Cash (UP) holding appears in net worth calculation automatically via existing snapshot logic",
+        "Create GET /api/budget/periods — list all budget periods with their allocations, ordered by start_date desc",
+        "Create POST /api/budget/periods — create a new period with expected_income_cents and allocations array; validates with Zod",
+        "Create PUT /api/budget/periods/[id] — update period income, notes, and allocations",
+        "Create DELETE /api/budget/periods/[id] — delete a period (allocations cascade)",
+        "Validates that sum of allocation cents does not exceed expected_income_cents (warn, not block)",
+        "Protected by Clerk auth (withAuth pattern)",
         "npm run build && npm run lint passes"
       ],
       "priority": 6,
-      "passes": true,
-      "notes": "Extended POST /api/up/balance to auto-create 'Cash (UP)' holding (type: cash, currency: AUD) for the single user. On each balance sync, upserts a snapshot for today's date with aggregated balance (cents→dollars). Uses existing holdings and snapshots tables — no new tables or migrations needed."
+      "passes": false,
+      "notes": ""
     },
     {
-      "id": "B1-007",
-      "title": "Transaction deletion/reversal endpoint",
-      "description": "As a system, I need to handle transaction deletions from UP so reversed charges don't remain in the budget.",
+      "id": "B2-007",
+      "title": "Budget templates",
+      "description": "As a developer, I need pre-configured budget templates so the user can quickly set up a budget without starting from scratch.",
       "acceptanceCriteria": [
-        "Create DELETE /api/up/transactions/route.ts endpoint (or add DELETE method to existing route)",
-        "Calls validateN8nRequest middleware before processing",
-        "Accepts { up_transaction_id: string } body validated with Zod",
-        "Soft-deletes by setting deleted_at timestamp on the matching transaction",
-        "Returns 200 with { deleted: true } on success",
-        "Returns 404 if no transaction found with that up_transaction_id",
+        "Create lib/budget/templates.ts with three templates: 'Barefoot Investor Buckets' (60/10/8/7/5/10 split + $1200 fixed groceries), '50/30/20 Rule' (35/15/10/10/10/10/5 split), 'Roland's Budget' ($2129 fixed rent as bills-fixed, $1200 fixed groceries, 8/6/8/4/8 split for remaining categories)",
+        "Each template has: name, description, allocations array with category_id and either percentage (0-100) or fixed_cents",
+        "Create GET /api/budget/templates — returns all available templates",
+        "Export a function applyTemplate(template, incomeCents) that calculates actual cent amounts from percentages and fixed values",
         "npm run build && npm run lint passes"
       ],
       "priority": 7,
-      "passes": true,
-      "notes": "Added DELETE method to existing app/api/up/transactions/route.ts. Uses withN8nAuth wrapper, Zod validation for up_transaction_id. Soft-deletes by setting deletedAt + updatedAt timestamps. Returns 200 with { deleted: true } on success, 404 if transaction not found."
+      "passes": false,
+      "notes": ""
     },
     {
-      "id": "B1-008",
-      "title": "UP connection status endpoint",
-      "description": "As a user, I want to see whether UP is connected and when the last sync happened so I know my data is fresh.",
+      "id": "B2-008",
+      "title": "Budget setup page — payday and income step",
+      "description": "As a user, I want the first part of the budget setup flow where I configure my payday and income so the system knows my pay cycle.",
       "acceptanceCriteria": [
-        "Create GET /api/up/status/route.ts endpoint",
-        "Protected by Clerk auth (normal user auth, NOT n8n middleware)",
-        "Returns JSON: connected (boolean, true if any up_accounts exist), account_count (number), total_balance_cents (number), last_synced_at (string or null, most recent across all accounts), transaction_count (number), oldest_transaction_date (string or null), newest_transaction_date (string or null)",
-        "Returns 200 with all fields even when no accounts exist (connected: false, zeros/nulls)",
-        "npm run build && npm run lint passes"
+        "Create /app/budget/setup/page.tsx with a multi-step layout (steps indicator at top)",
+        "Step 1: Payday configuration — day picker (1-28 dropdown), weekend adjustment toggle",
+        "Step 2: Expected monthly income — currency input field in AUD",
+        "Next/Back buttons to navigate between steps",
+        "Saves payday config via PUT /api/budget/payday on step 1 completion",
+        "Dark mode styling consistent with rest of Mjolnir",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 8,
-      "passes": true,
-      "notes": "Endpoint at app/api/up/status/route.ts. Uses withAuth (Clerk auth) not n8n middleware. Two parallel queries: account stats (count, total balance, last synced) and transaction stats (count, oldest/newest date). Excludes soft-deleted transactions. Returns all fields with zeros/nulls when no accounts exist."
+      "passes": false,
+      "notes": ""
     },
     {
-      "id": "B1-009",
-      "title": "n8n webhook receiver workflow template",
-      "description": "As a developer, I need an n8n workflow JSON template for receiving UP webhook events so Roland can import it into n8n.",
+      "id": "B2-009",
+      "title": "Budget setup page — template selection and allocation step",
+      "description": "As a user, I want to choose a budget template and adjust allocations so I have a working budget tailored to my income.",
       "acceptanceCriteria": [
-        "Create directory n8n/workflows/ if it doesn't exist",
-        "Create n8n/workflows/up-webhook-receiver.json as a valid importable n8n workflow JSON",
-        "Workflow contains: Webhook trigger node, Code node for UP webhook signature validation (HMAC-SHA256 using X-Up-Authenticity-Signature header), IF node to detect internal transfers (transferAccount relationship not null sets is_transfer true), Code node to map UP JSON:API transaction format to flat Mjolnir payload (up_transaction_id, description, raw_text, amount_cents, status, up_category_id, up_category_name, transaction_date, settled_at, is_transfer), HTTP Request node to POST to Mjolnir /api/up/transactions with X-Mjolnir-API-Key, X-Mjolnir-Timestamp, and X-Mjolnir-Signature headers",
-        "Code node includes HMAC signature generation for Mjolnir request signing",
-        "Includes placeholder credential values marked with TODO comments",
-        "Workflow description field contains setup instructions",
-        "File is valid JSON (parseable with JSON.parse)",
-        "npm run build && npm run lint passes"
+        "Add Step 3 to the existing budget setup page: template selection cards (Barefoot, 50/30/20, Roland's, or Start from Scratch)",
+        "Selecting a template populates allocation inputs with calculated amounts based on income from Step 2",
+        "Each category row shows: icon, name, allocated amount input (editable), percentage of income (calculated live)",
+        "Running total bar shows: total allocated, unallocated remainder (savings), savings percentage",
+        "Warning displayed if allocations exceed income (but does not block saving)",
+        "Save button creates a budget period via POST /api/budget/periods with the configured allocations",
+        "On success, redirect to /dashboard or show completion message",
+        "Dark mode styling consistent with rest of Mjolnir",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
       ],
       "priority": 9,
-      "passes": true,
-      "notes": "Created n8n/workflows/up-webhook-receiver.json. Valid importable n8n workflow with: Webhook trigger, UP signature validation (HMAC-SHA256), IF node for transfer detection, two Code nodes mapping UP JSON:API to Mjolnir flat payload (transfer vs normal), Mjolnir HMAC request signing Code node, HTTP Request POST to /api/up/transactions, Respond OK node. Uses n8n environment variables for secrets (UP_WEBHOOK_SECRET, MJOLNIR_API_KEY, MJOLNIR_WEBHOOK_SECRET, MJOLNIR_BASE_URL). Description field contains full setup instructions."
-    },
-    {
-      "id": "B1-010",
-      "title": "n8n balance sync workflow template",
-      "description": "As a developer, I need an n8n workflow JSON template for scheduled balance syncing so Roland can import it into n8n.",
-      "acceptanceCriteria": [
-        "Create n8n/workflows/up-balance-sync.json as a valid importable n8n workflow JSON",
-        "Workflow contains: Schedule Trigger node (every 15 minutes), HTTP Request node to GET https://api.up.com.au/api/v1/accounts with Authorization Bearer header, Code node to extract account data from JSON:API response (map each account to { up_account_id, display_name, account_type, balance_cents from valueInBaseUnits }), HTTP Request node to POST to Mjolnir /api/up/balance with signing headers and { accounts: [...] } body",
-        "Code node includes HMAC signature generation for Mjolnir request signing",
-        "Includes placeholder credential values marked with TODO comments",
-        "Workflow description field contains setup instructions",
-        "File is valid JSON (parseable with JSON.parse)",
-        "npm run build && npm run lint passes"
-      ],
-      "priority": 10,
-      "passes": true,
-      "notes": "Created n8n/workflows/up-balance-sync.json. Valid importable n8n workflow with 5 nodes: Schedule Trigger (every 15 min), HTTP Request GET to UP /api/v1/accounts with Bearer token, Code node mapping JSON:API accounts to flat payload (up_account_id, display_name, account_type, balance_cents from valueInBaseUnits), Mjolnir HMAC request signing Code node, HTTP Request POST to /api/up/balance. Uses n8n environment variables (UP_PERSONAL_ACCESS_TOKEN, MJOLNIR_API_KEY, MJOLNIR_WEBHOOK_SECRET, MJOLNIR_BASE_URL). Description field contains full setup instructions."
+      "passes": false,
+      "notes": ""
     }
   ]
 }

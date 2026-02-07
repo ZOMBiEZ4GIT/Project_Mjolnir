@@ -1,2 +1,2 @@
-# Ralph Progress Log
+# Ralph Progress Log — B2: Budget Categories & Setup
 # This file is reset at the start of each epic.
