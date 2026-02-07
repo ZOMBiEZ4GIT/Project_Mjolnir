@@ -1,2 +1,21 @@
 # Ralph Progress Log — B2: Budget Categories & Setup
 # This file is reset at the start of each epic.
+
+## Codebase Patterns
+- Budget tables use varchar PK slugs (e.g. 'groceries') instead of UUIDs for readability
+- Seed scripts use `onConflictDoNothing()` for idempotent seeding
+- Schema follows existing pattern: `timestamp("name", { withTimezone: true }).defaultNow().notNull()` for created_at
+- Existing API routes use manual validation (no Zod), but PRD requests Zod for budget routes
+- `withAuth(async (request, context, userId) => { ... }, "context")` is the standard auth pattern
+
+---
+
+## 2026-02-07 - B2-001
+- What was implemented: budget_categories table in schema.ts, seed-categories.ts with 9 default categories
+- Files changed: lib/db/schema.ts, lib/db/seed-categories.ts, drizzle/0011_breezy_william_stryker.sql
+- **Learnings for future iterations:**
+  - Schema uses varchar(255) for slug-based PKs, varchar(7) for hex colours
+  - Default categories: bills-fixed, groceries, transport, eating-out, shopping, health, fun, income, uncategorised
+  - Lucide icon names used: Home, ShoppingCart, Car, UtensilsCrossed, ShoppingBag, Heart, Gamepad2, DollarSign, HelpCircle
+  - Migration generated as 0011_breezy_william_stryker.sql
+---
