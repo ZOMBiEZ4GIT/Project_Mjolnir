@@ -7,6 +7,7 @@ import {
   Download,
   Settings,
   Receipt,
+  PieChart,
   type LucideIcon,
 } from "lucide-react";
 
@@ -41,6 +42,12 @@ export const navItems: NavItem[] = [
     label: "Snapshots",
     icon: Camera,
     description: "Track balances over time",
+  },
+  {
+    href: "/budget",
+    label: "Budget",
+    icon: PieChart,
+    description: "Budget vs actual dashboard",
   },
   {
     href: "/budget/transactions",
