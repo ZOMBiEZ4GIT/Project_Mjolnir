@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { queryKeys } from "@/lib/query-keys";
@@ -20,6 +20,7 @@ import { CategoryCard } from "@/components/budget/CategoryCard";
 import { PaydayCountdown } from "@/components/budget/PaydayCountdown";
 import { SavingsIndicator } from "@/components/budget/SavingsIndicator";
 import { PeriodSelector } from "@/components/budget/PeriodSelector";
+import { AIRecommendationButton } from "@/components/budget/AIRecommendationButton";
 import Link from "next/link";
 import type { BudgetSummary } from "@/lib/budget/summary";
 
@@ -121,6 +122,13 @@ export default function BudgetDashboardPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
 
   const [periodId, setPeriodId] = useState<string | undefined>(undefined);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [, setRecommendation] = useState<any>(null);
+
+  const handleRecommendation = useCallback((rec: unknown) => {
+    setRecommendation(rec);
+    // Modal display handled by B5-006
+  }, []);
 
   const {
     data: summary,
@@ -211,10 +219,16 @@ export default function BudgetDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Budget</h1>
-        <PeriodSelector
-          currentPeriodId={summary.periodId}
-          onPeriodChange={setPeriodId}
-        />
+        <div className="flex items-center gap-3">
+          <AIRecommendationButton
+            periodId={summary.periodId}
+            onRecommendation={handleRecommendation}
+          />
+          <PeriodSelector
+            currentPeriodId={summary.periodId}
+            onPeriodChange={setPeriodId}
+          />
+        </div>
       </div>
 
       {/* Stats row */}
