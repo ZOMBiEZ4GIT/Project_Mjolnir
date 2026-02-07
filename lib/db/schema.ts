@@ -420,6 +420,67 @@ export const budgetCategories = pgTable("budget_categories", {
 });
 
 // =============================================================================
+// BUDGET PERIODS
+// =============================================================================
+
+/**
+ * Budget periods aligned to pay cycles.
+ *
+ * Each period represents one pay-cycle window (payday to day-before-next-payday).
+ * Stores the expected income for that period and links to category allocations
+ * via the `budgetAllocations` relation. A unique constraint on `start_date`
+ * prevents duplicate periods for the same pay cycle.
+ */
+export const budgetPeriods = pgTable(
+  "budget_periods",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    startDate: date("start_date").notNull(),
+    endDate: date("end_date").notNull(),
+    expectedIncomeCents: bigint("expected_income_cents", { mode: "number" }).notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueStartDate: unique().on(table.startDate),
+    startDateIdx: index("budget_periods_start_date_idx").on(table.startDate),
+    endDateIdx: index("budget_periods_end_date_idx").on(table.endDate),
+  })
+);
+
+// =============================================================================
+// BUDGET ALLOCATIONS
+// =============================================================================
+
+/**
+ * Per-category spending allocations within a budget period.
+ *
+ * Each row assigns an amount (in cents) to a specific category for a specific
+ * budget period. A unique constraint on (budget_period_id, category_id) ensures
+ * one allocation per category per period. Allocations cascade-delete when their
+ * parent budget period is deleted.
+ */
+export const budgetAllocations = pgTable(
+  "budget_allocations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    budgetPeriodId: uuid("budget_period_id")
+      .references(() => budgetPeriods.id, { onDelete: "cascade" })
+      .notNull(),
+    categoryId: varchar("category_id", { length: 255 })
+      .references(() => budgetCategories.id)
+      .notNull(),
+    allocatedCents: bigint("allocated_cents", { mode: "number" }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    uniquePeriodCategory: unique().on(table.budgetPeriodId, table.categoryId),
+  })
+);
+
+// =============================================================================
 // PAYDAY CONFIGURATION
 // =============================================================================
 
@@ -498,6 +559,21 @@ export const importHistoryRelations = relations(importHistory, ({ one }) => ({
   }),
 }));
 
+export const budgetPeriodsRelations = relations(budgetPeriods, ({ many }) => ({
+  allocations: many(budgetAllocations),
+}));
+
+export const budgetAllocationsRelations = relations(budgetAllocations, ({ one }) => ({
+  budgetPeriod: one(budgetPeriods, {
+    fields: [budgetAllocations.budgetPeriodId],
+    references: [budgetPeriods.id],
+  }),
+  category: one(budgetCategories, {
+    fields: [budgetAllocations.categoryId],
+    references: [budgetCategories.id],
+  }),
+}));
+
 // =============================================================================
 // TYPES (for TypeScript inference)
 // =============================================================================
@@ -540,3 +616,9 @@ export type NewBudgetCategory = typeof budgetCategories.$inferInsert;
 
 export type PaydayConfig = typeof paydayConfig.$inferSelect;
 export type NewPaydayConfig = typeof paydayConfig.$inferInsert;
+
+export type BudgetPeriod = typeof budgetPeriods.$inferSelect;
+export type NewBudgetPeriod = typeof budgetPeriods.$inferInsert;
+
+export type BudgetAllocation = typeof budgetAllocations.$inferSelect;
+export type NewBudgetAllocation = typeof budgetAllocations.$inferInsert;
