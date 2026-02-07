@@ -1,0 +1,140 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/b3-transaction-categorisation",
+  "description": "B-3: Transaction Categorisation — Auto-categorise UP transactions against budget categories, detect income, provide transaction list UI with category overrides, and surface uncategorised items.",
+  "userStories": [
+    {
+      "id": "B3-001",
+      "title": "UP to Mjolnir category mapping logic",
+      "description": "As a developer, I need a mapping from UP category IDs to Mjolnir budget category IDs so transactions are auto-categorised when they arrive.",
+      "acceptanceCriteria": [
+        "Create lib/budget/categorisation.ts with a UP_TO_MJOLNIR_CATEGORY_MAP constant mapping UP category IDs to Mjolnir category IDs",
+        "Cover all major UP categories: groceries, restaurants-and-cafes, takeaway, pubs-and-bars, coffee, fuel, public-transport, parking, tolls, car-insurance-and-maintenance, rideshare, rent, utilities, internet, mobile-phone, home-insurance, clothing-and-accessories, electronics, home-and-garden, health-and-fitness, pharmacy, medical, personal-care, entertainment, games-and-software, music-and-streaming, events-and-gigs, hobbies, gifts-and-charity, education, professional-services, government-and-tax",
+        "Export a mapUpCategory(upCategoryId: string | null): string function that returns the Mjolnir category ID or 'uncategorised' if no mapping exists",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B3-002",
+      "title": "Income detection logic",
+      "description": "As a developer, I need to identify salary deposits automatically so income transactions are categorised correctly.",
+      "acceptanceCriteria": [
+        "Add income detection to lib/budget/categorisation.ts",
+        "Export isIncomeTransaction(description: string, amountCents: number, incomePattern: string | null): boolean",
+        "Detects income when: amount is positive AND (description matches the configured income_source_pattern case-insensitively, OR amount exceeds 200000 cents / $2000)",
+        "Income transactions should be categorised as 'income' regardless of UP category",
+        "Pattern matching is case-insensitive and uses partial matching (includes, not exact)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Implemented alongside B3-001 in lib/budget/categorisation.ts"
+    },
+    {
+      "id": "B3-003",
+      "title": "Apply categorisation on transaction ingestion",
+      "description": "As a developer, I need incoming transactions to be auto-categorised when they arrive from n8n so they're immediately useful for budget tracking.",
+      "acceptanceCriteria": [
+        "Modify POST /api/up/transactions endpoint to apply categorisation when mjolnir_category_id is not already set on the existing record (preserves manual overrides on re-sync)",
+        "If n8n provides mjolnir_category_id in the payload, use it (n8n rules engine takes priority)",
+        "If no mjolnir_category_id from n8n: check income detection first (reads income_source_pattern from payday_config), then UP category mapping via mapUpCategory, then fall back to 'uncategorised'",
+        "Also apply the same categorisation logic in the batch endpoint at /api/up/transactions/batch",
+        "Store the mapped category in the mjolnir_category_id column on up_transactions",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B3-004",
+      "title": "Category override API endpoint",
+      "description": "As a developer, I need an endpoint to change a transaction's category so the user can fix incorrect auto-categorisations.",
+      "acceptanceCriteria": [
+        "Create PUT /api/budget/transactions/[id]/category endpoint",
+        "Accepts { category_id: string } body validated with Zod",
+        "Validates category_id exists in budget_categories table before updating",
+        "Updates the transaction's mjolnir_category_id in up_transactions table",
+        "Returns updated transaction on success, 404 if transaction not found",
+        "Protected by Clerk auth (withAuth pattern)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B3-005",
+      "title": "Transaction list API endpoint",
+      "description": "As a developer, I need an endpoint to list transactions with filtering so the UI can display and search them.",
+      "acceptanceCriteria": [
+        "Create GET /api/budget/transactions endpoint protected by Clerk auth",
+        "Supports query params: category (filter by mjolnir_category_id), status (HELD/SETTLED), from (start date), to (end date), search (case-insensitive ILIKE on description and raw_text), uncategorised (boolean, filters to mjolnir_category_id = 'uncategorised')",
+        "Returns transactions ordered by transaction_date desc with pagination via limit (default 50) and offset query params",
+        "Excludes soft-deleted transactions (deleted_at is not null) and transfers (is_transfer = true) by default",
+        "Each transaction in response includes: id, up_transaction_id, description, raw_text, amount_cents, status, mjolnir_category_id, transaction_date, settled_at",
+        "Also returns total count for pagination UI",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B3-006",
+      "title": "Transaction list page",
+      "description": "As a user, I want to see my UP transactions in a list so I can review what's been categorised and fix any mistakes.",
+      "acceptanceCriteria": [
+        "Create /app/(dashboard)/budget/transactions/page.tsx — paginated transaction list",
+        "Each row shows: date, description, amount (formatted as currency, red for debits, green for credits), category badge with icon and colour from budget_categories",
+        "Category badge is clickable — opens a dropdown/popover to select a new category, calls PUT /api/budget/transactions/[id]/category on selection",
+        "Filter bar at top with: category dropdown, status toggle (All/Held/Settled), date range inputs, search text input",
+        "Quick-action button to filter to uncategorised only",
+        "Pagination controls at bottom (previous/next with page info)",
+        "Dark mode styling consistent with Mjolnir",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B3-007",
+      "title": "Uncategorised transaction badge in navigation",
+      "description": "As a user, I want to see a count of uncategorised transactions in the navigation so I know when items need my attention.",
+      "acceptanceCriteria": [
+        "Create GET /api/budget/transactions/uncategorised-count endpoint — returns { count: number } where mjolnir_category_id = 'uncategorised' AND is_transfer = false AND deleted_at IS NULL",
+        "Create a UncategorisedBadge component that fetches this count via TanStack Query",
+        "Badge shows the count number with warning styling (amber/yellow) if count > 0",
+        "Badge renders nothing if count is 0",
+        "Add the badge to the sidebar/navigation next to a 'Transactions' link pointing to /budget/transactions",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B3-008",
+      "title": "n8n categorisation rules workflow template",
+      "description": "As a developer, I need an n8n workflow template for the categorisation rules engine so n8n can pre-categorise transactions before sending to Mjolnir.",
+      "acceptanceCriteria": [
+        "Create n8n/workflows/categorisation-rules.json as a valid importable n8n workflow JSON",
+        "Rules engine in a Code node checks in priority order: income detection by description pattern, merchant-specific overrides (e.g. 'REAL ESTATE' -> 'bills-fixed'), UP category mapping, fallback to 'uncategorised'",
+        "Rules are defined as a JSON array in the Code node for easy editing by the user",
+        "Workflow adds mjolnir_category_id to the transaction payload before forwarding to Mjolnir",
+        "Includes example rules for Roland's known merchants: THE WORKWEARGRO for income, REAL ESTATE for rent/bills-fixed",
+        "File is valid JSON (parseable with JSON.parse)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}
