@@ -15,6 +15,8 @@ interface GroupHeaderProps {
   isDebt?: boolean;
   isExpanded: boolean;
   onToggle: () => void;
+  /** ID of the controlled content region for aria-controls */
+  contentId?: string;
 }
 
 export function GroupHeader({
@@ -27,13 +29,15 @@ export function GroupHeader({
   isDebt = false,
   isExpanded,
   onToggle,
+  contentId,
 }: GroupHeaderProps) {
   return (
     <button
       type="button"
       onClick={onToggle}
-      className="flex items-center justify-between w-full mb-3 group cursor-pointer"
+      className="flex items-center justify-between w-full mb-3 group cursor-pointer rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
       aria-expanded={isExpanded}
+      aria-controls={contentId}
     >
       <div className="flex items-center gap-2">
         <motion.span
@@ -43,7 +47,7 @@ export function GroupHeader({
         >
           <ChevronRight className="h-4 w-4" />
         </motion.span>
-        <h2 className="text-lg font-semibold text-foreground">
+        <h2 className="text-heading-md text-foreground">
           {label}{" "}
           <span className="text-muted-foreground font-normal">({count})</span>
         </h2>
@@ -59,7 +63,7 @@ export function GroupHeader({
           />
         )}
         {portfolioPercent !== null && (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-muted text-muted-foreground">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-label bg-muted text-muted-foreground">
             {portfolioPercent.toFixed(1)}%
           </span>
         )}

@@ -27,6 +27,7 @@ export function CheckinStepper({
             <li
               key={label}
               className="flex flex-1 items-center last:flex-none"
+              aria-current={isCurrent ? "step" : undefined}
             >
               <div className="flex flex-col items-center gap-1.5">
                 {/* Step circle */}

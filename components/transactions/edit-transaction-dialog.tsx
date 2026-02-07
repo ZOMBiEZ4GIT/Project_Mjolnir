@@ -7,13 +7,13 @@ import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AnimatedDialog,
+  AnimatedDialogContent,
+  AnimatedDialogDescription,
+  AnimatedDialogFooter,
+  AnimatedDialogHeader,
+  AnimatedDialogTitle,
+} from "@/components/ui/animated-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -270,20 +270,20 @@ export function EditTransactionDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+    <AnimatedDialog open={open} onOpenChange={onOpenChange}>
+      <AnimatedDialogContent className="sm:max-w-md">
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
             className="space-y-0"
           >
-            <DialogHeader>
-              <DialogTitle>{getDialogTitle()}</DialogTitle>
-              <DialogDescription>
+            <AnimatedDialogHeader>
+              <AnimatedDialogTitle>{getDialogTitle()}</AnimatedDialogTitle>
+              <AnimatedDialogDescription>
                 Edit the transaction details. Holding and action type cannot be
                 changed.
-              </DialogDescription>
-            </DialogHeader>
+              </AnimatedDialogDescription>
+            </AnimatedDialogHeader>
 
             <div className="grid gap-4 py-4">
               {/* Read-only info: Holding */}
@@ -392,7 +392,7 @@ export function EditTransactionDialog({
                     <FormMessage />
                     {/* Sell-specific warnings */}
                     {isSellingAll && !form.formState.errors.quantity && (
-                      <p className="text-sm text-yellow-500">
+                      <p className="text-sm text-warning">
                         This will sell all your shares
                       </p>
                     )}
@@ -550,7 +550,7 @@ export function EditTransactionDialog({
               )}
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <AnimatedDialogFooter className="gap-2 sm:gap-0">
               <Button
                 type="button"
                 variant="outline"
@@ -567,10 +567,10 @@ export function EditTransactionDialog({
               >
                 {mutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
-            </DialogFooter>
+            </AnimatedDialogFooter>
           </form>
         </Form>
-      </DialogContent>
-    </Dialog>
+      </AnimatedDialogContent>
+    </AnimatedDialog>
   );
 }

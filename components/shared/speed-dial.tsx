@@ -67,7 +67,7 @@ export function SpeedDial({ actions }: SpeedDialProps) {
             displayActions.map((action, index) => (
               <motion.button
                 key={action.id}
-                className="flex items-center gap-3 rounded-full bg-card border border-border pl-4 pr-3 py-2.5 shadow-lg hover:bg-muted transition-colors cursor-pointer"
+                className="flex items-center gap-3 rounded-full bg-card border border-border pl-4 pr-3 py-2.5 min-h-[44px] shadow-lg hover:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 initial={{ opacity: 0, y: 10, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.9 }}
@@ -93,10 +93,12 @@ export function SpeedDial({ actions }: SpeedDialProps) {
 
       {/* Main FAB button */}
       <motion.button
-        className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg hover:shadow-glow-sm transition-shadow cursor-pointer"
+        className="relative z-10 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-foreground shadow-lg hover:shadow-glow-sm transition-shadow cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         onClick={toggle}
         animate={{ rotate: isOpen ? 45 : 0 }}
         transition={{ duration }}
+        aria-label={isOpen ? "Close quick actions" : "Open quick actions"}
+        aria-expanded={isOpen}
       >
         <Plus className="h-6 w-6" />
       </motion.button>

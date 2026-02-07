@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { useRovingTabIndex } from "@/hooks/use-roving-tabindex";
 
 /**
  * Time range options for chart filtering.
@@ -18,6 +19,8 @@ export const TIME_RANGE_OPTIONS: {
   { value: "all", label: "All", months: 60 },
 ];
 
+const RANGE_VALUES = TIME_RANGE_OPTIONS.map((o) => o.value);
+
 interface TimeRangeSelectorProps {
   value: TimeRange;
   onChange: (range: TimeRange) => void;
@@ -29,12 +32,19 @@ interface TimeRangeSelectorProps {
  */
 export function TimeRangeSelector({ value, onChange }: TimeRangeSelectorProps) {
   const reducedMotion = useReducedMotion();
+  const { containerRef, handleKeyDown, getTabIndex } = useRovingTabIndex(
+    RANGE_VALUES,
+    value,
+    onChange
+  );
 
   return (
     <div
+      ref={containerRef}
       className="flex items-center gap-1 bg-muted/50 rounded-lg p-1"
       role="tablist"
       aria-label="Select time range"
+      onKeyDown={handleKeyDown}
     >
       {TIME_RANGE_OPTIONS.map((option) => {
         const isActive = option.value === value;
@@ -43,8 +53,9 @@ export function TimeRangeSelector({ value, onChange }: TimeRangeSelectorProps) {
             key={option.value}
             role="tab"
             aria-selected={isActive}
+            tabIndex={getTabIndex(option.value)}
             onClick={() => onChange(option.value)}
-            className={`relative px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+            className={`relative px-3 py-1 min-h-[44px] sm:min-h-0 text-sm font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
               isActive
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground"

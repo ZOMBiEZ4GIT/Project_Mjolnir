@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { type Currency } from "@/lib/utils/currency";
 import { useCurrency } from "@/components/providers/currency-provider";
+import { useRovingTabIndex } from "@/hooks/use-roving-tabindex";
 
 const CURRENCY_OPTIONS: Array<{
   value: Currency;
@@ -31,9 +32,16 @@ function CurrencyToggleSkeleton({ className }: { className?: string }) {
   );
 }
 
+const CURRENCY_VALUES = CURRENCY_OPTIONS.map((o) => o.value);
+
 export function CurrencyToggle({ className }: CurrencyToggleProps) {
   const { displayCurrency, setDisplayCurrency, isLoading } = useCurrency();
   const prefersReducedMotion = useReducedMotion();
+  const { containerRef, handleKeyDown, getTabIndex } = useRovingTabIndex(
+    CURRENCY_VALUES,
+    displayCurrency,
+    setDisplayCurrency
+  );
 
   if (isLoading) {
     return <CurrencyToggleSkeleton className={className} />;
@@ -41,12 +49,14 @@ export function CurrencyToggle({ className }: CurrencyToggleProps) {
 
   return (
     <div
+      ref={containerRef}
       className={cn(
         "inline-flex items-center rounded-full bg-muted p-1 gap-0.5",
         className
       )}
       role="radiogroup"
       aria-label="Display currency"
+      onKeyDown={handleKeyDown}
     >
       {CURRENCY_OPTIONS.map((option) => {
         const isActive = displayCurrency === option.value;
@@ -56,10 +66,11 @@ export function CurrencyToggle({ className }: CurrencyToggleProps) {
             role="radio"
             aria-checked={isActive}
             aria-label={`${option.label} (${option.value})`}
+            tabIndex={getTabIndex(option.value)}
             onClick={() => setDisplayCurrency(option.value)}
             className={cn(
-              "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-body-sm font-medium transition-colors duration-150",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "relative z-10 flex items-center gap-1.5 rounded-full px-3 py-1.5 min-h-[44px] sm:min-h-0 text-body-sm font-medium transition-colors duration-150",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               isActive
                 ? "text-foreground"
                 : "text-muted-foreground hover:text-foreground"

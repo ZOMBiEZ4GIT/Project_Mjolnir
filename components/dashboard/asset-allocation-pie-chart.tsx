@@ -276,7 +276,7 @@ export function AssetAllocationPieChart() {
       <h3 className="text-label uppercase text-muted-foreground mb-6">
         Asset Allocation
       </h3>
-      <div className="relative h-64">
+      <div className="relative h-64" role="img" aria-label="Asset allocation pie chart showing portfolio breakdown by asset type">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie

@@ -122,7 +122,7 @@ export function DeleteSnapshotDialog({
         </div>
 
         {isSuper && (
-          <p className="text-sm text-yellow-400 bg-yellow-400/10 p-3 rounded-lg border border-yellow-400/20">
+          <p className="text-sm text-warning bg-warning/10 p-3 rounded-lg border border-warning/20">
             This will also delete any associated contribution record for this month.
           </p>
         )}

@@ -11,6 +11,7 @@ import { ChangeBadge } from "@/components/dashboard/change-badge";
 import { StaleIndicator } from "@/components/dashboard/stale-indicator";
 import { slideUp } from "@/lib/animations";
 import { POSITIVE, NEGATIVE } from "@/lib/chart-palette";
+import { HeroBeams } from "@/components/effects/hero-beams";
 
 interface HoldingValue {
   id: string;
@@ -88,7 +89,7 @@ function Sparkline({ data }: SparklineProps) {
   const strokeColor = isPositive ? POSITIVE : NEGATIVE;
 
   return (
-    <div className="h-12 w-28">
+    <div className="h-12 w-28" role="img" aria-label={`Net worth trend: ${isPositive ? "up" : "down"}`}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 2, right: 2, bottom: 2, left: 2 }}>
           <Line
@@ -206,6 +207,9 @@ export function NetWorthHero() {
       animate={slideUp.animate}
       transition={shouldReduceMotion ? { duration: 0 } : slideUp.transition}
     >
+      {/* Ambient beam effect behind content */}
+      {!shouldReduceMotion && <HeroBeams />}
+
       {/* Stale data warning — top-right corner */}
       <div className="absolute top-4 right-4 sm:top-6 sm:right-6">
         <StaleIndicator

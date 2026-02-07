@@ -204,9 +204,9 @@ function getActionColorClass(action: TransactionWithHolding["action"]): string {
     case "BUY":
       return "bg-positive/20 text-positive";
     case "SELL":
-      return "bg-destructive/20 text-destructive";
+      return "bg-destructive/10 text-destructive";
     case "DIVIDEND":
-      return "bg-accent/20 text-accent";
+      return "bg-accent/10 text-accent";
     case "SPLIT":
       return "bg-blue-500/20 text-blue-400";
     default:
@@ -756,7 +756,7 @@ export default function TransactionsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-foreground"
+                              className="h-[44px] w-[44px] sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-foreground"
                               onClick={() => setEditTransaction(transaction)}
                             >
                               <span className="sr-only">Edit</span>
@@ -779,7 +779,7 @@ export default function TransactionsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 w-7 sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-destructive"
+                              className="h-[44px] w-[44px] sm:h-8 sm:w-8 p-0 text-muted-foreground hover:text-destructive"
                               onClick={() => setDeleteTransaction(transaction)}
                             >
                               <span className="sr-only">Delete</span>

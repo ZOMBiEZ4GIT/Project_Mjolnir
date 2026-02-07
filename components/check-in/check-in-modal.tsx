@@ -237,6 +237,8 @@ function SuperHoldingEntry({
             type="button"
             onClick={onToggleContributions}
             className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
+            aria-expanded={showContributions}
+            aria-controls={`contributions-${holding.id}`}
           >
             {showContributions ? (
               <ChevronDown className="w-4 h-4" />
@@ -252,6 +254,7 @@ function SuperHoldingEntry({
             {showContributions && (
               <motion.div
                 key="contributions"
+                id={`contributions-${holding.id}`}
                 initial={reducedMotion ? false : { height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={reducedMotion ? undefined : { height: 0, opacity: 0 }}
@@ -1062,7 +1065,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
 
                                   {/* Large change warning */}
                                   {isLargeChange && (
-                                    <div className="mt-2 flex items-center gap-1.5 text-xs text-yellow-500">
+                                    <div className="mt-2 flex items-center gap-1.5 text-xs text-warning">
                                       <AlertTriangle className="h-3 w-3" />
                                       <span>Large change detected ({Math.round(percentChange)}%)</span>
                                     </div>

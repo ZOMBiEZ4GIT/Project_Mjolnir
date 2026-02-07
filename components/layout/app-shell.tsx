@@ -45,6 +45,7 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* Main content area */}
       <main
+        id="main-content"
         style={
           {
             "--sidebar-width": `${mounted ? sidebarWidth : layout.sidebarWidth}px`,

@@ -25,7 +25,7 @@ export function Sparkline({
   const chartData = data.map((value, index) => ({ index, value }));
 
   return (
-    <div style={{ width, height }}>
+    <div style={{ width, height }} role="img" aria-label={`Price trend: ${trend ? "up" : "down"}`}>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={chartData}>
           <Line
