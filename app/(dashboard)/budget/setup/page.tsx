@@ -1,13 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { queryKeys } from "@/lib/query-keys";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -18,9 +24,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, ArrowRight, Calendar, DollarSign, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Calendar,
+  DollarSign,
+  Check,
+  AlertTriangle,
+  Sparkles,
+  Home,
+  ShoppingCart,
+  Car,
+  UtensilsCrossed,
+  ShoppingBag,
+  Heart,
+  Gamepad2,
+  HelpCircle,
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 interface PaydayConfig {
   id: string;
@@ -34,11 +60,56 @@ interface PaydayConfig {
   };
 }
 
+interface BudgetCategory {
+  id: string;
+  name: string;
+  icon: string;
+  colour: string;
+  sortOrder: number;
+  isIncome: boolean;
+  isSystem: boolean;
+}
+
+interface BudgetTemplate {
+  id: string;
+  name: string;
+  description: string;
+  allocations: {
+    categoryId: string;
+    percentage?: number;
+    fixedCents?: number;
+  }[];
+}
+
+// ---------------------------------------------------------------------------
+// Lucide icon lookup (matches seed-categories icon names)
+// ---------------------------------------------------------------------------
+
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
+  Home,
+  ShoppingCart,
+  Car,
+  UtensilsCrossed,
+  ShoppingBag,
+  Heart,
+  Gamepad2,
+  DollarSign,
+  HelpCircle,
+};
+
+// ---------------------------------------------------------------------------
+// Steps definition
+// ---------------------------------------------------------------------------
+
 const STEPS = [
   { label: "Payday", icon: Calendar },
   { label: "Income", icon: DollarSign },
   { label: "Budget", icon: Check },
 ];
+
+// ---------------------------------------------------------------------------
+// API helpers
+// ---------------------------------------------------------------------------
 
 async function fetchPaydayConfig(): Promise<PaydayConfig> {
   const res = await fetch("/api/budget/payday");
@@ -59,17 +130,90 @@ async function updatePaydayConfig(data: {
   return res.json();
 }
 
+async function fetchCategories(): Promise<BudgetCategory[]> {
+  const res = await fetch("/api/budget/categories");
+  if (!res.ok) throw new Error("Failed to fetch categories");
+  return res.json();
+}
+
+async function fetchTemplates(): Promise<BudgetTemplate[]> {
+  const res = await fetch("/api/budget/templates");
+  if (!res.ok) throw new Error("Failed to fetch templates");
+  return res.json();
+}
+
+async function createBudgetPeriod(data: {
+  startDate: string;
+  endDate: string;
+  expectedIncomeCents: number;
+  allocations: { categoryId: string; allocatedCents: number }[];
+}) {
+  const res = await fetch("/api/budget/periods", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("Failed to create budget period");
+  return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Template helper (client-side version of applyTemplate)
+// ---------------------------------------------------------------------------
+
+function applyTemplateClient(
+  template: BudgetTemplate,
+  incomeCents: number
+): Map<string, number> {
+  const totalFixed = template.allocations.reduce(
+    (sum, a) => sum + (a.fixedCents ?? 0),
+    0
+  );
+  const remaining = Math.max(0, incomeCents - totalFixed);
+
+  const result = new Map<string, number>();
+  for (const alloc of template.allocations) {
+    if (alloc.fixedCents !== undefined) {
+      result.set(alloc.categoryId, alloc.fixedCents);
+    } else {
+      result.set(
+        alloc.categoryId,
+        Math.round((remaining * (alloc.percentage ?? 0)) / 100)
+      );
+    }
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function BudgetSetupPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { isLoaded, isSignedIn } = useAuthSafe();
 
+  // Multi-step state
   const [currentStep, setCurrentStep] = useState(0);
+
+  // Step 1
   const [paydayDay, setPaydayDay] = useState<number | null>(null);
   const [adjustForWeekends, setAdjustForWeekends] = useState(true);
+
+  // Step 2
   const [expectedIncome, setExpectedIncome] = useState("");
 
-  // Load existing payday config
+  // Step 3
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    null
+  );
+  const [allocations, setAllocations] = useState<Map<string, number>>(
+    new Map()
+  );
+
+  // ---- Queries ---------------------------------------------------------
+
   const { data: paydayData, isLoading: isLoadingConfig } = useQuery({
     queryKey: queryKeys.budget.payday,
     queryFn: fetchPaydayConfig,
@@ -77,13 +221,29 @@ export default function BudgetSetupPage() {
     staleTime: 1000 * 60 * 5,
   });
 
-  // Sync fetched config into local state (only on first load)
+  const { data: categories } = useQuery({
+    queryKey: queryKeys.budget.categories,
+    queryFn: fetchCategories,
+    enabled: isLoaded && isSignedIn,
+    staleTime: 1000 * 60 * 5,
+  });
+
+  const { data: templates } = useQuery({
+    queryKey: queryKeys.budget.templates,
+    queryFn: fetchTemplates,
+    enabled: isLoaded && isSignedIn,
+    staleTime: 1000 * 60 * 10,
+  });
+
+  // Sync payday config into local state on first load
   useEffect(() => {
     if (paydayData && paydayDay === null) {
       setPaydayDay(paydayData.paydayDay);
       setAdjustForWeekends(paydayData.adjustForWeekends);
     }
   }, [paydayData, paydayDay]);
+
+  // ---- Mutations -------------------------------------------------------
 
   const paydayMutation = useMutation({
     mutationFn: updatePaydayConfig,
@@ -96,6 +256,124 @@ export default function BudgetSetupPage() {
       toast.error(err.message);
     },
   });
+
+  const periodMutation = useMutation({
+    mutationFn: createBudgetPeriod,
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.budget.periods.all,
+      });
+      toast.success("Budget created successfully!");
+      router.push("/dashboard");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message);
+    },
+  });
+
+  // ---- Derived values --------------------------------------------------
+
+  const effectivePaydayDay = paydayDay ?? 15;
+
+  const incomeCents = useMemo(() => {
+    const val = Math.round(parseFloat(expectedIncome) * 100);
+    return isNaN(val) ? 0 : val;
+  }, [expectedIncome]);
+
+  const isValidIncome = incomeCents > 0;
+
+  // Filter to spendable categories (no income, no uncategorised)
+  const spendableCategories = useMemo(
+    () =>
+      (categories ?? []).filter((c) => !c.isIncome && c.id !== "uncategorised"),
+    [categories]
+  );
+
+  const totalAllocated = useMemo(() => {
+    let sum = 0;
+    allocations.forEach((v) => (sum += v));
+    return sum;
+  }, [allocations]);
+
+  const unallocatedCents = incomeCents - totalAllocated;
+  const savingsPercentage =
+    incomeCents > 0 ? ((unallocatedCents / incomeCents) * 100).toFixed(1) : "0";
+  const isOverBudget = totalAllocated > incomeCents;
+
+  // ---- Handlers --------------------------------------------------------
+
+  function handleStep1Save() {
+    paydayMutation.mutate({
+      paydayDay: effectivePaydayDay,
+      adjustForWeekends,
+    });
+  }
+
+  function handleStep2Next() {
+    if (!isValidIncome) {
+      toast.error("Please enter a valid income amount");
+      return;
+    }
+    setCurrentStep(2);
+  }
+
+  function handleSelectTemplate(templateId: string | null) {
+    setSelectedTemplateId(templateId);
+
+    if (templateId === null) {
+      // Start from scratch — zero out allocations
+      const empty = new Map<string, number>();
+      for (const cat of spendableCategories) {
+        empty.set(cat.id, 0);
+      }
+      setAllocations(empty);
+      return;
+    }
+
+    const template = templates?.find((t) => t.id === templateId);
+    if (!template) return;
+
+    const resolved = applyTemplateClient(template, incomeCents);
+    // Ensure all spendable categories are represented
+    const full = new Map<string, number>();
+    for (const cat of spendableCategories) {
+      full.set(cat.id, resolved.get(cat.id) ?? 0);
+    }
+    setAllocations(full);
+  }
+
+  function updateAllocation(categoryId: string, value: string) {
+    const cents = Math.round(parseFloat(value) * 100);
+    setAllocations((prev) => {
+      const next = new Map(prev);
+      next.set(categoryId, isNaN(cents) || cents < 0 ? 0 : cents);
+      return next;
+    });
+  }
+
+  function handleSaveBudget() {
+    if (!paydayData) {
+      toast.error("Payday configuration not loaded");
+      return;
+    }
+
+    const allocationEntries: { categoryId: string; allocatedCents: number }[] =
+      [];
+    allocations.forEach((cents, categoryId) => {
+      if (cents > 0) {
+        allocationEntries.push({ categoryId, allocatedCents: cents });
+      }
+    });
+
+    periodMutation.mutate({
+      startDate: paydayData.currentPeriod.startDate,
+      endDate: paydayData.currentPeriod.endDate,
+      expectedIncomeCents: incomeCents,
+      allocations: allocationEntries,
+    });
+  }
+
+  // ---- Early returns ---------------------------------------------------
 
   if (!isLoaded) {
     return (
@@ -113,28 +391,7 @@ export default function BudgetSetupPage() {
     );
   }
 
-  const effectivePaydayDay = paydayDay ?? 15;
-
-  function handleStep1Save() {
-    paydayMutation.mutate({
-      paydayDay: effectivePaydayDay,
-      adjustForWeekends,
-    });
-  }
-
-  function handleStep2Next() {
-    const cents = Math.round(parseFloat(expectedIncome) * 100);
-    if (isNaN(cents) || cents <= 0) {
-      toast.error("Please enter a valid income amount");
-      return;
-    }
-    // Store income in session for the next step (template selection page)
-    sessionStorage.setItem("budget_setup_income_cents", String(cents));
-    router.push("/budget/setup/allocations");
-  }
-
-  const incomeCents = Math.round(parseFloat(expectedIncome) * 100);
-  const isValidIncome = !isNaN(incomeCents) && incomeCents > 0;
+  // ---- Render ----------------------------------------------------------
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
@@ -279,7 +536,8 @@ export default function BudgetSetupPage() {
               </div>
               {expectedIncome && isValidIncome && (
                 <p className="text-xs text-muted-foreground">
-                  ${(incomeCents / 100).toLocaleString("en-AU", {
+                  $
+                  {(incomeCents / 100).toLocaleString("en-AU", {
                     minimumFractionDigits: 2,
                   })}{" "}
                   per pay period
@@ -299,6 +557,201 @@ export default function BudgetSetupPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Step 3: Template Selection & Allocations */}
+      {currentStep === 2 && (
+        <div className="space-y-6">
+          {/* Template selection cards */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Choose a template</CardTitle>
+              <CardDescription>
+                Pick a starting template or start from scratch. You can adjust
+                amounts after selecting.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(templates ?? []).map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => handleSelectTemplate(t.id)}
+                    className={`rounded-lg border p-4 text-left transition-colors ${
+                      selectedTemplateId === t.id
+                        ? "border-primary bg-primary/10"
+                        : "border-border hover:border-muted-foreground/50"
+                    }`}
+                  >
+                    <p className="font-medium text-foreground text-sm">
+                      {t.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                      {t.description}
+                    </p>
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => handleSelectTemplate(null)}
+                  className={`rounded-lg border p-4 text-left transition-colors ${
+                    selectedTemplateId === null && allocations.size > 0
+                      ? "border-primary bg-primary/10"
+                      : "border-border hover:border-muted-foreground/50"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-muted-foreground" />
+                    <p className="font-medium text-foreground text-sm">
+                      Start from Scratch
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Set each category amount manually.
+                  </p>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Allocation editor */}
+          {allocations.size > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Allocations</CardTitle>
+                <CardDescription>
+                  Adjust how much you want to allocate to each category. Any
+                  unallocated amount becomes savings.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {spendableCategories.map((cat) => {
+                  const cents = allocations.get(cat.id) ?? 0;
+                  const percentage =
+                    incomeCents > 0
+                      ? ((cents / incomeCents) * 100).toFixed(1)
+                      : "0";
+                  const IconComp = ICON_MAP[cat.icon];
+
+                  return (
+                    <div key={cat.id} className="flex items-center gap-3">
+                      <div
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
+                        style={{ backgroundColor: cat.colour + "20" }}
+                      >
+                        {IconComp ? (
+                          <IconComp className="h-4 w-4" />
+                        ) : (
+                          <span
+                            className="h-3 w-3 rounded-full"
+                            style={{ backgroundColor: cat.colour }}
+                          />
+                        )}
+                      </div>
+                      <span className="text-sm font-medium text-foreground w-28 truncate">
+                        {cat.name}
+                      </span>
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                          $
+                        </span>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={cents > 0 ? (cents / 100).toFixed(2) : ""}
+                          placeholder="0.00"
+                          onChange={(e) =>
+                            updateAllocation(cat.id, e.target.value)
+                          }
+                          className="pl-7 h-9"
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground w-14 text-right tabular-nums">
+                        {percentage}%
+                      </span>
+                    </div>
+                  );
+                })}
+
+                {/* Running total bar */}
+                <div className="border-t border-border pt-4 mt-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Total allocated
+                    </span>
+                    <span className="font-medium text-foreground tabular-nums">
+                      $
+                      {(totalAllocated / 100).toLocaleString("en-AU", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Unallocated (savings)
+                    </span>
+                    <span
+                      className={`font-medium tabular-nums ${
+                        isOverBudget ? "text-destructive" : "text-emerald-400"
+                      }`}
+                    >
+                      {isOverBudget ? "-" : ""}$
+                      {(Math.abs(unallocatedCents) / 100).toLocaleString(
+                        "en-AU",
+                        { minimumFractionDigits: 2 }
+                      )}{" "}
+                      ({savingsPercentage}%)
+                    </span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        isOverBudget ? "bg-destructive" : "bg-primary"
+                      }`}
+                      style={{
+                        width: `${Math.min(100, (totalAllocated / Math.max(1, incomeCents)) * 100)}%`,
+                      }}
+                    />
+                  </div>
+
+                  {isOverBudget && (
+                    <div className="flex items-center gap-2 text-sm text-destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>
+                        Allocations exceed income by $
+                        {(Math.abs(unallocatedCents) / 100).toLocaleString(
+                          "en-AU",
+                          { minimumFractionDigits: 2 }
+                        )}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Navigation */}
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setCurrentStep(1)}>
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+            <Button
+              onClick={handleSaveBudget}
+              disabled={
+                allocations.size === 0 || periodMutation.isPending
+              }
+            >
+              {periodMutation.isPending ? "Saving..." : "Create Budget"}
+              <Check className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
       )}
     </div>
   );
