@@ -14,7 +14,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

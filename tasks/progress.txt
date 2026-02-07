@@ -1,2 +1,25 @@
 # Ralph Progress Log — B5: AI Pay Split Recommendations
 # This file is reset at the start of each epic.
+
+## Codebase Patterns
+- Schema uses `jsonb` from drizzle-orm/pg-core for JSON columns
+- Budget-related tables (budgetPeriods, budgetAllocations) use `bigint` with `mode: "number"` for cents
+- All tables follow the pattern: uuid PK with `defaultRandom()`, timestamptz columns with `defaultNow()`
+- Relations defined separately using `relations()` from drizzle-orm
+- Migration generated with `npm run db:generate`, files in `drizzle/` directory
+- Type inference exports at bottom of schema.ts: `$inferSelect` and `$inferInsert`
+
+## 2026-02-08 - B5-001
+- Implemented `ai_recommendations` table in `lib/db/schema.ts`
+- Columns: id (uuid PK), budget_period_id (uuid FK), recommendation_data (jsonb), status (varchar default 'pending'), created_at (timestamptz)
+- Added index on `budget_period_id`
+- Added relation from `budgetPeriods` → `aiRecommendations` (one-to-many)
+- Added `aiRecommendationsRelations` for the reverse relation
+- Added `AiRecommendation` and `NewAiRecommendation` type exports
+- Generated migration: `drizzle/0014_square_songbird.sql`
+- Files changed: `lib/db/schema.ts`, `drizzle/0014_square_songbird.sql`, `drizzle/meta/`
+- **Learnings for future iterations:**
+  - `jsonb` import was not in the existing drizzle import list — had to add it
+  - Index definition uses the third argument to `pgTable` (callback returning object)
+  - yahoo-finance2 Node version warning is expected and safe to ignore
+---
