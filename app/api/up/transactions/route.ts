@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { upTransactions } from "@/lib/db/schema";
+import { upTransactions, paydayConfig } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { withN8nAuth } from "@/lib/api/up/middleware";
+import { mapUpCategory, isIncomeTransaction } from "@/lib/budget/categorisation";
 
 const transactionSchema = z.object({
   up_transaction_id: z.string().min(1),
@@ -16,6 +17,7 @@ const transactionSchema = z.object({
   transaction_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD format"),
   settled_at: z.string().optional(),
   is_transfer: z.boolean(),
+  mjolnir_category_id: z.string().optional(),
 });
 
 const deleteSchema = z.object({
@@ -54,6 +56,29 @@ export async function DELETE(request: NextRequest) {
   });
 }
 
+/**
+ * Resolves the Mjolnir category for a transaction.
+ * Priority: n8n-provided > income detection > UP category mapping > uncategorised
+ */
+async function resolveCategory(
+  data: z.infer<typeof transactionSchema>
+): Promise<string> {
+  if (data.mjolnir_category_id) return data.mjolnir_category_id;
+
+  // Load income source pattern from payday config
+  const config = await db
+    .select({ incomeSourcePattern: paydayConfig.incomeSourcePattern })
+    .from(paydayConfig)
+    .limit(1);
+  const incomePattern = config[0]?.incomeSourcePattern ?? null;
+
+  if (isIncomeTransaction(data.description, data.amount_cents, incomePattern)) {
+    return "income";
+  }
+
+  return mapUpCategory(data.up_category_id ?? null);
+}
+
 export async function POST(request: NextRequest) {
   return withN8nAuth(request, async (body) => {
     const parsed = transactionSchema.safeParse(body);
@@ -68,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     // Check if transaction already exists for upsert
     const existing = await db
-      .select({ id: upTransactions.id })
+      .select({ id: upTransactions.id, mjolnirCategoryId: upTransactions.mjolnirCategoryId })
       .from(upTransactions)
       .where(eq(upTransactions.upTransactionId, data.up_transaction_id))
       .limit(1);
@@ -76,7 +101,11 @@ export async function POST(request: NextRequest) {
     let result;
 
     if (existing.length > 0) {
-      // Update existing transaction (handles HELD -> SETTLED transition)
+      // Only set category if the existing record doesn't already have one (preserves manual overrides)
+      const categoryId = existing[0].mjolnirCategoryId
+        ? undefined
+        : await resolveCategory(data);
+
       const [updated] = await db
         .update(upTransactions)
         .set({
@@ -89,6 +118,7 @@ export async function POST(request: NextRequest) {
           transactionDate: data.transaction_date,
           settledAt: data.settled_at ? new Date(data.settled_at) : null,
           isTransfer: data.is_transfer,
+          ...(categoryId !== undefined && { mjolnirCategoryId: categoryId }),
           updatedAt: new Date(),
         })
         .where(eq(upTransactions.upTransactionId, data.up_transaction_id))
@@ -96,7 +126,8 @@ export async function POST(request: NextRequest) {
 
       result = updated;
     } else {
-      // Insert new transaction
+      const categoryId = await resolveCategory(data);
+
       const [inserted] = await db
         .insert(upTransactions)
         .values({
@@ -107,6 +138,7 @@ export async function POST(request: NextRequest) {
           status: data.status,
           upCategoryId: data.up_category_id ?? null,
           upCategoryName: data.up_category_name ?? null,
+          mjolnirCategoryId: categoryId,
           transactionDate: data.transaction_date,
           settledAt: data.settled_at ? new Date(data.settled_at) : null,
           isTransfer: data.is_transfer,

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { upTransactions } from "@/lib/db/schema";
+import { upTransactions, paydayConfig } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { withN8nAuth } from "@/lib/api/up/middleware";
+import { mapUpCategory, isIncomeTransaction } from "@/lib/budget/categorisation";
 
 const transactionSchema = z.object({
   up_transaction_id: z.string().min(1),
@@ -16,6 +17,7 @@ const transactionSchema = z.object({
   transaction_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD format"),
   settled_at: z.string().optional(),
   is_transfer: z.boolean(),
+  mjolnir_category_id: z.string().optional(),
 });
 
 const batchSchema = z.object({
@@ -62,14 +64,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ inserted: 0, updated: 0 }, { status: 200 });
     }
 
-    // Look up which transaction IDs already exist
+    // Look up which transaction IDs already exist (including their current category)
     const upTxnIds = txns.map((t) => t.up_transaction_id);
     const existing = await db
-      .select({ upTransactionId: upTransactions.upTransactionId })
+      .select({
+        upTransactionId: upTransactions.upTransactionId,
+        mjolnirCategoryId: upTransactions.mjolnirCategoryId,
+      })
       .from(upTransactions)
       .where(inArray(upTransactions.upTransactionId, upTxnIds));
 
-    const existingIds = new Set(existing.map((e) => e.upTransactionId));
+    const existingMap = new Map(
+      existing.map((e) => [e.upTransactionId, e.mjolnirCategoryId])
+    );
+
+    // Load income source pattern once for the batch
+    const config = await db
+      .select({ incomeSourcePattern: paydayConfig.incomeSourcePattern })
+      .from(paydayConfig)
+      .limit(1);
+    const incomePattern = config[0]?.incomeSourcePattern ?? null;
+
+    function resolveCategory(data: (typeof txns)[number]): string {
+      if (data.mjolnir_category_id) return data.mjolnir_category_id;
+      if (isIncomeTransaction(data.description, data.amount_cents, incomePattern)) {
+        return "income";
+      }
+      return mapUpCategory(data.up_category_id ?? null);
+    }
 
     let inserted = 0;
     let updated = 0;
@@ -88,15 +110,22 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       };
 
-      if (existingIds.has(data.up_transaction_id)) {
+      if (existingMap.has(data.up_transaction_id)) {
+        // Only set category if the existing record doesn't already have one
+        const existingCategory = existingMap.get(data.up_transaction_id);
+        const categoryUpdate = existingCategory
+          ? {}
+          : { mjolnirCategoryId: resolveCategory(data) };
+
         await db
           .update(upTransactions)
-          .set(values)
+          .set({ ...values, ...categoryUpdate })
           .where(eq(upTransactions.upTransactionId, data.up_transaction_id));
         updated++;
       } else {
         await db.insert(upTransactions).values({
           upTransactionId: data.up_transaction_id,
+          mjolnirCategoryId: resolveCategory(data),
           ...values,
         });
         inserted++;
