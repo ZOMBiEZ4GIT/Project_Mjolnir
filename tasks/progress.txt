@@ -85,3 +85,21 @@
   - The budget dashboard header uses `flex items-center justify-between` — additional buttons fit in a wrapper div with `gap-3`
   - The `useCallback` import is needed when passing stable callback refs to child components
 ---
+
+## 2026-02-08 - B5-006
+- Created `components/budget/RecommendationModal.tsx` using shadcn Dialog
+- Section 1 — Insights: bullet list of spending observations
+- Section 2 — Suggested Budget: table with Category, Current, Suggested, Diff, Reason columns. Green for increases, red for decreases
+- Section 3 — Savings Projection: current vs projected rate with monthly savings increase
+- Section 4 — Actionable Tip: callout card with lightbulb icon
+- Footer: "Accept All" (primary) and "Dismiss" (ghost) buttons. Hides when already actioned
+- Accept/Dismiss call PUT `/api/budget/recommendations/[id]/status` then invalidate TanStack Query cache
+- Integrated into budget dashboard — `handleRecommendation` now opens modal, `categoryMap` built from `summary.categories`
+- Exports `AiRecommendation` type for use by other components (B5-007, B5-008)
+- Files changed: `components/budget/RecommendationModal.tsx` (new), `app/(dashboard)/budget/page.tsx`
+- **Learnings for future iterations:**
+  - `recommendation.recommendationData` is the JSONB payload (without `budget_period_id`); `budget_period_id` is a top-level column
+  - Category ID → name mapping: build from `summary.categories` array which has `categoryId` and `categoryName`
+  - Dialog `max-h-[85vh] overflow-y-auto` on DialogContent handles long recommendation lists
+  - The `AiRecommendation` type is re-exported from the modal component to avoid duplicating the type definition
+---
