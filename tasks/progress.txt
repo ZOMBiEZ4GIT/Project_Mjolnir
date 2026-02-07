@@ -135,3 +135,20 @@
   - Reusable sections in RecommendationModal can be extracted as separate components and imported — keeps the modal file manageable
   - Table styling pattern: `rounded-lg border border-border overflow-hidden` for outer container, consistent with Suggested Budget table
 ---
+
+## 2026-02-08 - B5-009
+- Created `n8n/workflows/claude-recommendation.json` — valid importable n8n workflow JSON
+- Workflow nodes: Webhook trigger → Format Claude Prompt (Code) → Call Claude API (HTTP Request) → Parse Claude Response (Code) → Sign Mjolnir Callback (Code) → POST to Mjolnir Callback (HTTP Request)
+- Error path: Handle Error (Code) → POST Error to Mjolnir (HTTP Request) — sends minimal valid payload with error insight
+- Claude prompt: instructs analysis of Australian spending patterns, budget adjustments, Pay Split percentages, insights, and actionable tip — all as structured JSON matching the callback Zod schema
+- Response parser strips markdown code fences, validates required fields, rounds cents to integers
+- Uses n8n `$env` variables for `ANTHROPIC_API_KEY`, `MJOLNIR_API_KEY`, `MJOLNIR_WEBHOOK_SECRET`, `MJOLNIR_BASE_URL`
+- HMAC signing matches existing pattern: `crypto.createHmac("sha256", secret).update(\`${timestamp}.${body}\`).digest("hex")`
+- Files changed: `n8n/workflows/claude-recommendation.json` (new)
+- **Learnings for future iterations:**
+  - n8n webhook node uses `httpMethod` and `path` params — the path becomes the webhook URL suffix
+  - n8n `$()` syntax references other nodes by name: `$('Format Claude Prompt').first().json.budgetPeriodId`
+  - Claude may wrap JSON responses in markdown code fences — always strip `\`\`\`json` and `\`\`\`` before parsing
+  - Error handler nodes in n8n should send a valid payload shape so the callback endpoint doesn't reject it
+  - n8n error connections are configured in the UI, not in the JSON connections — note in workflow description
+---
