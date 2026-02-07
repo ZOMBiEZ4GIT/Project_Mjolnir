@@ -9,6 +9,7 @@
 - Existing non-budget API routes use manual validation (no Zod)
 - `withAuth(async (request, context, userId) => { ... }, "context")` is the standard auth pattern
 - Budget utility functions live in `lib/budget/` — pure functions with no DB dependency
+- Single-row config tables (e.g. paydayConfig): GET returns first row or defaults, PUT uses select-then-update/insert upsert
 - PaydaySettings interface: `{ paydayDay: number; adjustForWeekends: boolean }` — reuse for API validation
 - Budget monetary values use `bigint("column", { mode: "number" })` for cents — same pattern as UP Bank tables
 - Cascade delete: `references(() => parent.id, { onDelete: "cascade" })` — used for allocations on period delete
@@ -60,4 +61,15 @@
   - Custom categories always have isSystem=false — cannot create system categories via API
   - Auto sort_order: if not provided on POST, places after last existing category
   - Budget routes use Zod validation pattern (unlike older manual validation routes)
+---
+
+## 2026-02-07 - B2-005
+- What was implemented: Payday configuration API endpoints (GET with defaults, PUT with upsert) at /api/budget/payday
+- Files changed: app/api/budget/payday/route.ts
+- **Learnings for future iterations:**
+  - Payday config is a single-row table — GET fetches first row, PUT upserts via select+update/insert
+  - Default config (day 15, adjust_for_weekends true) returned from GET without persisting — user must explicitly save
+  - Response includes calculated currentPeriod (startDate, endDate, daysInPeriod) using payday.ts utilities
+  - buildResponse helper formats dates as ISO date strings (YYYY-MM-DD) for the currentPeriod
+  - Zod validates paydayDay 1-28, adjustForWeekends boolean, optional incomeSourcePattern
 ---
