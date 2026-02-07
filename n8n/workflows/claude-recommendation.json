@@ -1,0 +1,244 @@
+{
+  "name": "Claude Budget Recommendation → Mjolnir",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "budget-recommendation",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Receive Spending Data",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "webhookId": "budget-recommendation"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build the Claude prompt from the incoming spending data\n// Instructs Claude to analyse Australian spending patterns and return structured JSON\nconst data = $input.first().json.body;\n\nconst allocations = data.allocations || [];\nconst historicalAverages = data.historicalAverages || [];\nconst periodDates = data.periodDates || {};\nconst income = data.income || 0;\nconst savingsGoal = data.savingsGoalPercentage || 30;\n\n// Build human-readable spending summary\nconst currentSpending = allocations.map(a =>\n  `- ${a.categoryName}: budgeted $${(a.allocatedCents / 100).toFixed(2)}, spent $${(a.spentCents / 100).toFixed(2)}`\n).join('\\n');\n\nconst historicalSummary = historicalAverages.length > 0\n  ? historicalAverages.map(h =>\n      `- ${h.categoryName}: 3-month avg $${(h.averageSpentCents / 100).toFixed(2)}/period`\n    ).join('\\n')\n  : 'No historical data available yet.';\n\n// Category ID mapping for the structured response\nconst categoryIds = allocations.map(a => ({\n  categoryId: a.categoryId,\n  categoryName: a.categoryName,\n  currentAllocatedCents: a.allocatedCents\n}));\n\nconst prompt = `You are a personal finance advisor for an Australian user. Analyse their budget and spending data, then provide optimised budget recommendations.\n\n## Current Budget Period\n- Income: $${(income / 100).toFixed(2)} per period\n- Period: ${periodDates.startDate || 'unknown'} to ${periodDates.endDate || 'unknown'}\n- Days elapsed: ${periodDates.daysElapsed || 'unknown'} of ${periodDates.totalDays || 'unknown'}\n- Days remaining: ${periodDates.daysRemaining || 'unknown'}\n- Savings goal: ${savingsGoal}% of income\n\n## Current Allocations & Spending\n${currentSpending}\n\n## Historical Averages (3-month)\n${historicalSummary}\n\n## Category IDs (use these exact IDs in your response)\n${JSON.stringify(categoryIds, null, 2)}\n\n## Instructions\nAnalyse the spending patterns and provide recommendations as a JSON object with this EXACT structure (no markdown, no explanation, ONLY valid JSON):\n\n{\n  \"suggestedBudget\": [\n    {\n      \"categoryId\": \"<exact category UUID from above>\",\n      \"currentCents\": <current allocated amount in cents>,\n      \"suggestedCents\": <your recommended amount in cents>,\n      \"reason\": \"<brief explanation for the change>\"\n    }\n  ],\n  \"paySplitConfig\": [\n    {\n      \"saverName\": \"<name for this saver, e.g. Rent, Bills, Groceries>\",\n      \"percentage\": <percentage of income as a number with up to 1 decimal>,\n      \"amountCents\": <dollar amount in cents>\n    }\n  ],\n  \"insights\": [\n    \"<spending observation 1>\",\n    \"<spending observation 2>\",\n    \"<spending observation 3>\"\n  ],\n  \"savingsProjection\": {\n    \"currentRate\": <current savings rate as decimal, e.g. 0.15 for 15%>,\n    \"projectedRate\": <projected savings rate after recommendations>,\n    \"monthlyIncreaseCents\": <additional cents saved per month with recommendations>\n  },\n  \"actionableTip\": \"<one specific, actionable tip for improving their finances>\"\n}\n\nRules:\n- All monetary values are in Australian cents (integer)\n- suggestedBudget MUST include ALL categories from the category IDs list above\n- paySplitConfig should group related categories into UP Bank savers (e.g. combine utilities into \"Bills\")\n- Percentages in paySplitConfig should sum to less than 100% (remainder goes to spending account)\n- Aim for the ${savingsGoal}% savings goal but be realistic based on actual spending patterns\n- Provide 3-5 insights about their spending\n- The actionable tip should be specific and relevant to their situation\n- Return ONLY the JSON object, no other text`;\n\nreturn [{\n  json: {\n    budgetPeriodId: data.budgetPeriodId,\n    prompt,\n    categoryIds\n  }\n}];"
+      },
+      "id": "format-prompt",
+      "name": "Format Claude Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'claude-sonnet-4-5-20250929', max_tokens: 2048, messages: [{ role: 'user', content: $json.prompt }] }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "call-claude",
+      "name": "Call Claude API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Claude's JSON response into the structured recommendation payload\nconst response = $input.first().json;\nconst budgetPeriodId = $('Format Claude Prompt').first().json.budgetPeriodId;\n\n// Extract text content from Claude's response\nconst content = response.content;\nif (!content || content.length === 0) {\n  throw new Error('Empty response from Claude');\n}\n\nconst textBlock = content.find(block => block.type === 'text');\nif (!textBlock || !textBlock.text) {\n  throw new Error('No text content in Claude response');\n}\n\n// Parse the JSON from Claude's response\n// Claude may wrap it in markdown code fences, so strip those\nlet jsonText = textBlock.text.trim();\nif (jsonText.startsWith('```json')) {\n  jsonText = jsonText.slice(7);\n}\nif (jsonText.startsWith('```')) {\n  jsonText = jsonText.slice(3);\n}\nif (jsonText.endsWith('```')) {\n  jsonText = jsonText.slice(0, -3);\n}\njsonText = jsonText.trim();\n\nlet recommendation;\ntry {\n  recommendation = JSON.parse(jsonText);\n} catch (e) {\n  throw new Error(`Failed to parse Claude JSON response: ${e.message}\\nRaw: ${jsonText.substring(0, 500)}`);\n}\n\n// Validate required fields exist\nconst required = ['suggestedBudget', 'paySplitConfig', 'insights', 'savingsProjection', 'actionableTip'];\nfor (const field of required) {\n  if (!recommendation[field]) {\n    throw new Error(`Missing required field: ${field}`);\n  }\n}\n\n// Ensure integer cents values\nrecommendation.suggestedBudget = recommendation.suggestedBudget.map(item => ({\n  ...item,\n  currentCents: Math.round(item.currentCents),\n  suggestedCents: Math.round(item.suggestedCents)\n}));\n\nrecommendation.paySplitConfig = recommendation.paySplitConfig.map(item => ({\n  ...item,\n  amountCents: Math.round(item.amountCents)\n}));\n\nrecommendation.savingsProjection.monthlyIncreaseCents = Math.round(\n  recommendation.savingsProjection.monthlyIncreaseCents\n);\n\n// Build the callback payload\nconst payload = {\n  budget_period_id: budgetPeriodId,\n  suggestedBudget: recommendation.suggestedBudget,\n  paySplitConfig: recommendation.paySplitConfig,\n  insights: recommendation.insights,\n  savingsProjection: recommendation.savingsProjection,\n  actionableTip: recommendation.actionableTip,\n  generatedAt: new Date().toISOString()\n};\n\nreturn [{ json: payload }];"
+      },
+      "id": "parse-response",
+      "name": "Parse Claude Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate HMAC signing headers for the Mjolnir callback\nconst crypto = require('crypto');\n\nconst MJOLNIR_API_KEY = $env.MJOLNIR_API_KEY || 'TODO_SET_YOUR_N8N_API_KEY';\nconst MJOLNIR_WEBHOOK_SECRET = $env.MJOLNIR_WEBHOOK_SECRET || 'TODO_SET_YOUR_N8N_WEBHOOK_SECRET';\nconst MJOLNIR_BASE_URL = $env.MJOLNIR_BASE_URL || 'TODO_SET_YOUR_MJOLNIR_URL';\n\nconst body = JSON.stringify($input.first().json);\nconst timestamp = Date.now().toString();\n\nconst signature = crypto\n  .createHmac('sha256', MJOLNIR_WEBHOOK_SECRET)\n  .update(`${timestamp}.${body}`)\n  .digest('hex');\n\nreturn [{\n  json: {\n    url: `${MJOLNIR_BASE_URL}/api/budget/recommendations/callback`,\n    body: $input.first().json,\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Mjolnir-API-Key': MJOLNIR_API_KEY,\n      'X-Mjolnir-Timestamp': timestamp,\n      'X-Mjolnir-Signature': signature\n    }\n  }\n}];"
+      },
+      "id": "sign-callback",
+      "name": "Sign Mjolnir Callback",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "={{ $json.headers['Content-Type'] }}"
+            },
+            {
+              "name": "X-Mjolnir-API-Key",
+              "value": "={{ $json.headers['X-Mjolnir-API-Key'] }}"
+            },
+            {
+              "name": "X-Mjolnir-Timestamp",
+              "value": "={{ $json.headers['X-Mjolnir-Timestamp'] }}"
+            },
+            {
+              "name": "X-Mjolnir-Signature",
+              "value": "={{ $json.headers['X-Mjolnir-Signature'] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "post-callback",
+      "name": "POST to Mjolnir Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error handler: sends error payload to Mjolnir callback\n// This runs when the Claude API call or response parsing fails\nconst crypto = require('crypto');\n\nconst MJOLNIR_API_KEY = $env.MJOLNIR_API_KEY || 'TODO_SET_YOUR_N8N_API_KEY';\nconst MJOLNIR_WEBHOOK_SECRET = $env.MJOLNIR_WEBHOOK_SECRET || 'TODO_SET_YOUR_N8N_WEBHOOK_SECRET';\nconst MJOLNIR_BASE_URL = $env.MJOLNIR_BASE_URL || 'TODO_SET_YOUR_MJOLNIR_URL';\n\n// Try to recover the budgetPeriodId from the workflow data\nlet budgetPeriodId = 'unknown';\ntry {\n  budgetPeriodId = $('Format Claude Prompt').first().json.budgetPeriodId || 'unknown';\n} catch (e) {\n  // If we can't get it, use unknown\n}\n\nconst errorMessage = $input.first().json.message || $input.first().json.error || 'Unknown error during AI recommendation generation';\n\n// Build a minimal valid payload so the callback endpoint can store the error\nconst errorPayload = {\n  budget_period_id: budgetPeriodId,\n  suggestedBudget: [],\n  paySplitConfig: [],\n  insights: [`Error generating recommendation: ${errorMessage}`],\n  savingsProjection: { currentRate: 0, projectedRate: 0, monthlyIncreaseCents: 0 },\n  actionableTip: 'An error occurred while generating your recommendation. Please try again later.',\n  generatedAt: new Date().toISOString()\n};\n\nconst body = JSON.stringify(errorPayload);\nconst timestamp = Date.now().toString();\n\nconst signature = crypto\n  .createHmac('sha256', MJOLNIR_WEBHOOK_SECRET)\n  .update(`${timestamp}.${body}`)\n  .digest('hex');\n\nreturn [{\n  json: {\n    url: `${MJOLNIR_BASE_URL}/api/budget/recommendations/callback`,\n    body: errorPayload,\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Mjolnir-API-Key': MJOLNIR_API_KEY,\n      'X-Mjolnir-Timestamp': timestamp,\n      'X-Mjolnir-Signature': signature\n    }\n  }\n}];"
+      },
+      "id": "error-handler",
+      "name": "Handle Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 520]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "={{ $json.headers['Content-Type'] }}"
+            },
+            {
+              "name": "X-Mjolnir-API-Key",
+              "value": "={{ $json.headers['X-Mjolnir-API-Key'] }}"
+            },
+            {
+              "name": "X-Mjolnir-Timestamp",
+              "value": "={{ $json.headers['X-Mjolnir-Timestamp'] }}"
+            },
+            {
+              "name": "X-Mjolnir-Signature",
+              "value": "={{ $json.headers['X-Mjolnir-Signature'] }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {}
+      },
+      "id": "post-error-callback",
+      "name": "POST Error to Mjolnir",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 520]
+    }
+  ],
+  "connections": {
+    "Receive Spending Data": {
+      "main": [
+        [
+          {
+            "node": "Format Claude Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Claude Prompt": {
+      "main": [
+        [
+          {
+            "node": "Call Claude API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Claude API": {
+      "main": [
+        [
+          {
+            "node": "Parse Claude Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Claude Response": {
+      "main": [
+        [
+          {
+            "node": "Sign Mjolnir Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sign Mjolnir Callback": {
+      "main": [
+        [
+          {
+            "node": "POST to Mjolnir Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Error": {
+      "main": [
+        [
+          {
+            "node": "POST Error to Mjolnir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "errorWorkflow": ""
+  },
+  "staticData": null,
+  "tags": [],
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": ""
+  },
+  "description": "## Claude Budget Recommendation → Mjolnir\n\nReceives spending data from Mjolnir, sends it to Claude for AI-powered budget analysis, and returns structured recommendations back to Mjolnir.\n\n### Setup Instructions\n\n1. **Anthropic API Key:** Get your key from https://console.anthropic.com/\n\n2. **Environment Variables:** Set the following in n8n Settings → Variables:\n   - `ANTHROPIC_API_KEY` — Your Anthropic API key for Claude\n   - `MJOLNIR_API_KEY` — The N8N_API_KEY value from your Mjolnir .env file\n   - `MJOLNIR_WEBHOOK_SECRET` — The N8N_WEBHOOK_SECRET value from your Mjolnir .env file\n   - `MJOLNIR_BASE_URL` — Your Mjolnir deployment URL (e.g. https://mjolnir.vercel.app)\n\n3. **Error Handling:** Connect the error outputs of 'Call Claude API' and 'Parse Claude Response' nodes to the 'Handle Error' node to ensure Mjolnir receives feedback when something goes wrong.\n\n4. **Activate** this workflow to enable AI budget recommendations.\n\n### Flow\n\n1. Webhook trigger receives spending data from Mjolnir (POST /webhook/budget-recommendation)\n2. Code node formats the data into a Claude prompt with spending analysis instructions\n3. HTTP Request calls Claude API (claude-sonnet-4-5-20250929) with the formatted prompt\n4. Code node parses Claude's JSON response into the structured recommendation payload\n5. Code node generates HMAC signing headers for Mjolnir authentication\n6. HTTP Request POSTs the signed recommendations back to Mjolnir's callback endpoint\n\n### Error Path\n\nIf Claude API fails or response parsing fails, the error handler sends a minimal valid payload to Mjolnir's callback with an error insight message, so the UI can display that something went wrong."
+}
