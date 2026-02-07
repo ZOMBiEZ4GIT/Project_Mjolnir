@@ -14,6 +14,8 @@
 - Budget monetary values use `bigint("column", { mode: "number" })` for cents — same pattern as UP Bank tables
 - Cascade delete: `references(() => parent.id, { onDelete: "cascade" })` — used for allocations on period delete
 - Budget templates are static TypeScript data in `lib/budget/templates.ts` — use `applyTemplate(template, incomeCents)` to resolve allocations
+- TanStack Query v5: `onSuccess` removed from `useQuery` — use `useEffect` watching query `data` to sync into local state
+- Budget query keys live under `queryKeys.budget` in `lib/query-keys.ts`
 
 ---
 
@@ -98,4 +100,16 @@
   - Barefoot: $1200 fixed groceries + 60/10/8/7/5/10 split on remainder
   - 50/30/20: all percentage-based (35/15/10/10/10/10/5 = 95%, leaving 5% savings)
   - Roland's: $2129 fixed rent + $1200 fixed groceries + 8/6/8/4/8 split on remainder
+---
+
+## 2026-02-07 - B2-008
+- What was implemented: Budget setup page (Step 1: payday config, Step 2: income entry) with multi-step layout, steps indicator, query key infrastructure
+- Files changed: app/(dashboard)/budget/setup/page.tsx, lib/query-keys.ts
+- **Learnings for future iterations:**
+  - TanStack Query v5 removed `onSuccess` callback from `useQuery` — use `useEffect` to sync fetched data to local state instead
+  - Budget query keys added to lib/query-keys.ts under `queryKeys.budget` namespace (payday, categories, templates, periods)
+  - Multi-step form uses local `useState` for step tracking — no routing between steps, just conditional rendering
+  - Income stored in sessionStorage as cents for handoff to the allocations step (B2-009)
+  - Budget setup route lives at `/app/(dashboard)/budget/setup/page.tsx` — rendered at `/budget/setup`
+  - Select component for day picker uses String values (Radix requires string), parse with parseInt on change
 ---
