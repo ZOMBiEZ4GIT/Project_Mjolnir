@@ -74,3 +74,14 @@
   - Don't import unused types from summary — lint catches `CategoryBreakdown` if not used
   - Don't assign intermediate variables you won't use (e.g. `sourceNode`) — lint catches these
 ---
+
+## 2026-02-08 - B4-006
+- What was implemented: Mobile budget chart fallback with horizontal progress bars per category
+- Files changed: components/budget/MobileBudgetChart.tsx (new), app/(dashboard)/budget/page.tsx (integrated)
+- **Learnings for future iterations:**
+  - Mobile-only component uses `md:hidden` class on root div; desktop chart container uses `hidden md:block` — both coexist in same parent
+  - Use `active:bg-card/50` instead of `hover:` for touch interactions on mobile
+  - StatusIcon pattern: small function component with switch on status string for clean icon rendering
+  - `shrink-0` on icons prevents flex shrink when category names are long
+  - Summary row at bottom uses `border-t border-border pt-1.5` to visually separate savings from totals
+---
