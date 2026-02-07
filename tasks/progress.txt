@@ -55,3 +55,16 @@
   - `paydayConfig` table may be empty (user hasn't configured yet) — provide sensible defaults (day 15, adjust weekends true)
   - Building OR conditions with drizzle `sql` template: `periodConditions.map(c => sql\`(\${c})\`).reduce((a, b) => sql\`\${a} OR \${b}\`)`
 ---
+
+## 2026-02-08 - B5-004
+- Created POST /api/budget/recommendations/callback endpoint for n8n to deliver AI recommendations
+- Uses `withN8nAuth` middleware from `lib/api/up/middleware.ts` for HMAC signature validation
+- Zod schema validates the full recommendation payload: suggestedBudget, paySplitConfig, insights, savingsProjection, actionableTip, generatedAt
+- Stores validated payload in `ai_recommendations` table with `budget_period_id` as FK and `recommendation_data` as JSONB
+- Returns `{ stored: true }` with status 200 on success, 400 on validation failure
+- Files changed: `app/api/budget/recommendations/callback/route.ts`
+- **Learnings for future iterations:**
+  - `withN8nAuth` middleware lives at `lib/api/up/middleware.ts` — reusable for any n8n callback, not just UP
+  - Callback pattern: destructure `budget_period_id` from parsed data, pass remaining fields as `recommendationData` JSONB
+  - The Zod schema for the callback payload should match what the n8n workflow will send (defined in B5-009)
+---
