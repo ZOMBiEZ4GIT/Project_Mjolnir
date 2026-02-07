@@ -23,3 +23,16 @@
   - Index definition uses the third argument to `pgTable` (callback returning object)
   - yahoo-finance2 Node version warning is expected and safe to ignore
 ---
+
+## 2026-02-08 - B5-002
+- Implemented GET /api/budget/recommendations endpoint — returns latest recommendation for a period
+- Implemented PUT /api/budget/recommendations/[id]/status endpoint — updates recommendation status (accepted/dismissed)
+- GET supports optional `period_id` query param with fallback to current period (same pattern as summary route)
+- PUT uses Zod validation with `z.enum(["accepted", "dismissed"])` for status field
+- Both endpoints protected by `withAuth` Clerk middleware
+- Files changed: `app/api/budget/recommendations/route.ts`, `app/api/budget/recommendations/[id]/status/route.ts`
+- **Learnings for future iterations:**
+  - Recommendation endpoints follow the same period resolution pattern as budget/summary (date range lookup)
+  - The `[id]` dynamic route with nested `/status` works: `app/api/budget/recommendations/[id]/status/route.ts`
+  - `desc()` import for ordering comes from `drizzle-orm`
+---
