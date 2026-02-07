@@ -113,3 +113,16 @@
   - Budget setup route lives at `/app/(dashboard)/budget/setup/page.tsx` — rendered at `/budget/setup`
   - Select component for day picker uses String values (Radix requires string), parse with parseInt on change
 ---
+
+## 2026-02-07 - B2-009
+- What was implemented: Step 3 of budget setup — template selection cards, editable allocation inputs per category, running total bar with savings/over-budget indicators, save to create budget period
+- Files changed: app/(dashboard)/budget/setup/page.tsx (extended existing page)
+- **Learnings for future iterations:**
+  - All 3 steps (payday, income, allocations) are in one page file — no sessionStorage needed, state flows naturally between steps
+  - ICON_MAP maps Lucide icon string names from DB to actual React components for rendering category icons
+  - `applyTemplateClient` mirrors server-side `applyTemplate` logic: subtract fixed costs from income, then apply percentages to remainder
+  - Spendable categories filter: exclude `isIncome=true` and `id=uncategorised` from allocation editor
+  - Category colour with "20" suffix (e.g. `#6366F120`) gives a 12% opacity background — works for icon containers
+  - Budget period dates come from paydayData.currentPeriod (fetched after Step 1 save)
+  - Over-budget is a warning (text-destructive + AlertTriangle icon) but doesn't block saving — matches API behavior
+---
