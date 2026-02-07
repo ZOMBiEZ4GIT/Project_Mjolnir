@@ -123,8 +123,8 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 7,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Added DELETE method to existing app/api/up/transactions/route.ts. Uses withN8nAuth wrapper, Zod validation for up_transaction_id. Soft-deletes by setting deletedAt + updatedAt timestamps. Returns 200 with { deleted: true } on success, 404 if transaction not found."
     },
     {
       "id": "B1-008",

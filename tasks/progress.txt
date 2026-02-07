@@ -109,3 +109,16 @@ Started: 2026-02-07
   - The holding auto-creation is guarded by `if (user)` — gracefully handles empty users table
 
 ---
+
+## 2026-02-07 - B1-007
+- Added DELETE method to existing app/api/up/transactions/route.ts
+- Soft-deletes transactions by setting deletedAt + updatedAt timestamps
+- Validates up_transaction_id via Zod, returns 404 if not found
+- Uses same withN8nAuth middleware pattern as POST
+- Files changed: app/api/up/transactions/route.ts
+- **Learnings for future iterations:**
+  - Next.js App Router supports multiple HTTP methods in a single route.ts — export named functions (GET, POST, DELETE, etc.)
+  - Soft delete pattern: set both deletedAt and updatedAt for consistency
+  - DELETE handler follows same withN8nAuth + Zod pattern as all other UP endpoints
+
+---
