@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { queryKeys } from "@/lib/query-keys";
@@ -18,6 +19,7 @@ import { MobileBudgetChart } from "@/components/budget/MobileBudgetChart";
 import { CategoryCard } from "@/components/budget/CategoryCard";
 import { PaydayCountdown } from "@/components/budget/PaydayCountdown";
 import { SavingsIndicator } from "@/components/budget/SavingsIndicator";
+import { PeriodSelector } from "@/components/budget/PeriodSelector";
 import Link from "next/link";
 import type { BudgetSummary } from "@/lib/budget/summary";
 
@@ -60,12 +62,6 @@ function formatCents(cents: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
-}
-
-function formatDateRange(start: string, end: string): string {
-  const s = new Date(start + "T00:00:00");
-  const e = new Date(end + "T00:00:00");
-  return `${s.toLocaleDateString("en-AU", { day: "numeric", month: "short" })} – ${e.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -124,8 +120,7 @@ function BudgetDashboardSkeleton() {
 export default function BudgetDashboardPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
 
-  // periodId will be controlled by PeriodSelector in B4-010
-  const periodId: string | undefined = undefined;
+  const [periodId, setPeriodId] = useState<string | undefined>(undefined);
 
   const {
     data: summary,
@@ -215,17 +210,11 @@ export default function BudgetDashboardPage() {
     <div className="container mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Budget</h1>
-          <p className="text-sm text-muted-foreground">
-            {formatDateRange(summary.startDate, summary.endDate)}
-          </p>
-        </div>
-        {/* Period selector placeholder — B4-010 will replace this */}
-        <div className="text-sm text-muted-foreground flex items-center gap-1.5">
-          <Calendar className="h-4 w-4" />
-          Day {summary.daysElapsed} of {summary.totalDays}
-        </div>
+        <h1 className="text-2xl font-bold text-foreground">Budget</h1>
+        <PeriodSelector
+          currentPeriodId={summary.periodId}
+          onPeriodChange={setPeriodId}
+        />
       </div>
 
       {/* Stats row */}
