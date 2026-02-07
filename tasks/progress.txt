@@ -103,3 +103,18 @@
   - Dialog `max-h-[85vh] overflow-y-auto` on DialogContent handles long recommendation lists
   - The `AiRecommendation` type is re-exported from the modal component to avoid duplicating the type definition
 ---
+
+## 2026-02-08 - B5-007
+- Updated `handleAccept` in budget dashboard to apply AI recommendations to budget allocations
+- On "Accept All": sends parallel requests — PUT `/api/budget/periods/[id]` with suggested allocations + PUT status to 'accepted'
+- Maps `suggestedBudget` items to `{ categoryId, allocatedCents: suggestedCents }` for the period update API
+- Error handling: if either request fails, shows error toast and aborts
+- Success: closes modal, shows `toast.success("Budget updated with AI recommendations")`, invalidates both budget summary and recommendations queries
+- Added `sonner` toast import to budget page (direct import pattern, consistent with other dashboard pages)
+- Files changed: `app/(dashboard)/budget/page.tsx`
+- **Learnings for future iterations:**
+  - PUT `/api/budget/periods/[id]` does full allocation replacement — pass the complete allocations array, not a diff
+  - `Promise.all` for parallel API calls is safe here since both are idempotent PUTs
+  - `queryKeys.budget.summary(periodId)` requires the specific periodId to invalidate correctly (not undefined)
+  - Both `toast` helpers (`lib/toast-helpers.ts`) and direct `sonner` imports are used in the codebase — direct import is simpler for one-off calls
+---
