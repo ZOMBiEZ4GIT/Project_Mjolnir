@@ -20,6 +20,8 @@
 - Budget components directory: `components/budget/` — SankeyChart, SankeyChartContainer, etc.
 - Responsive chart pattern: Container component with ResizeObserver measures width, passes to SVG chart component
 - visx Sankey uses children render function: `{({ graph, createPath }) => <Group>...</Group>}`
+- Budget dashboard components: CategoryCard, PaydayCountdown, SavingsIndicator, PeriodSelector in `components/budget/`
+- PeriodSelector: fetches from `/api/budget/periods`, sorts ascending, uses index-based prev/next navigation
 
 ## 2026-02-08 - B4-001
 - What was implemented: Budget summary calculation engine in lib/budget/summary.ts
@@ -114,4 +116,14 @@
   - Colour thresholds for savings: green ≥30%, amber 25-30%, red <25%
   - Use projected rate mid-period but actual rate when period is complete (daysElapsed < totalDays check)
   - PaydayCountdown and SavingsIndicator pair well in `grid grid-cols-1 md:grid-cols-2` layout
+---
+
+## 2026-02-08 - B4-010
+- What was implemented: PeriodSelector component with prev/next navigation, integrated into budget dashboard with useState for periodId
+- Files changed: components/budget/PeriodSelector.tsx (new), app/(dashboard)/budget/page.tsx (replaced const periodId with useState, added PeriodSelector, removed formatDateRange)
+- **Learnings for future iterations:**
+  - Periods from API come in `startDate desc` order — sort ascending for chronological prev/next navigation
+  - When removing header date range in favour of PeriodSelector, also remove the unused `formatDateRange` function
+  - Be careful when editing imports — don't accidentally remove icons still used elsewhere (Calendar was still needed for StatCard)
+  - PeriodSelector takes `currentPeriodId` from summary.periodId and `onPeriodChange` setter — decoupled from parent state management
 ---
