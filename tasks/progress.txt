@@ -95,3 +95,13 @@
   - Remaining amount text pattern: `${formatCents(remainingCents)} left` or `${formatCents(abs)} over` with colour-coded status
   - `min-w-0` on flex container with `truncate` child prevents text overflow in card layouts
 ---
+
+## 2026-02-08 - B4-008
+- What was implemented: PaydayCountdown component that fetches payday config and shows countdown
+- Files changed: components/budget/PaydayCountdown.tsx (new), app/(dashboard)/budget/page.tsx (integrated)
+- **Learnings for future iterations:**
+  - `getDaysUntilPayday` and `findNextPayday` from lib/budget/payday.ts are pure functions — safe to call client-side without DB
+  - PaydayCountdown fetches its own payday config from /api/budget/payday — self-contained, only needs daysElapsed/totalDays from parent
+  - Use long staleTime (30min) for config data that rarely changes
+  - Component returns null while config is loading — prevents flash of skeleton for secondary info cards
+---
