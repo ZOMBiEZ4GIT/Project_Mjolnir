@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { transactions, holdings } from "@/lib/db/schema";
 import { eq, and, isNull, ne } from "drizzle-orm";
+import { withAuth } from "@/lib/utils/with-auth";
 
 interface UpdateTransactionBody {
   date?: string;
@@ -12,17 +12,22 @@ interface UpdateTransactionBody {
   notes?: string;
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+/**
+ * GET /api/transactions/:id
+ *
+ * Returns a single transaction by ID with nested holding info.
+ * Ownership is validated via the parent holding's userId.
+ *
+ * Response: Transaction object with nested holding
+ *   { id, holdingId, date, action, quantity, unitPrice, fees, currency,
+ *     notes, createdAt, updatedAt, holding: { id, name, symbol, type, currency, exchange } }
+ *
+ * Errors:
+ *   - 401 if not authenticated
+ *   - 404 if transaction not found or doesn't belong to user
+ */
+export const GET = withAuth(async (_request, context, userId) => {
+  const { id } = await context.params;
 
   // Query transaction with holding join to verify user ownership
   const result = await db
@@ -63,19 +68,34 @@ export async function GET(
   }
 
   return NextResponse.json(result[0]);
-}
+}, "fetching transaction");
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+/**
+ * PATCH /api/transactions/:id
+ *
+ * Partially updates a transaction. Only provided fields are changed.
+ * Action and holding_id cannot be changed after creation.
+ *
+ * Request body (all optional):
+ *   - date: YYYY-MM-DD format
+ *   - quantity: Positive number
+ *   - unit_price: Non-negative number
+ *   - fees: Non-negative number
+ *   - notes: Free-text notes
+ *
+ * Validation:
+ *   - For SELL transactions: updated quantity must not exceed available holdings
+ *     (calculated excluding the current transaction)
+ *
+ * Response: Updated Transaction object
+ *
+ * Errors:
+ *   - 400 with { errors } for validation failures or invalid JSON
+ *   - 401 if not authenticated
+ *   - 404 if transaction not found or doesn't belong to user
+ */
+export const PATCH = withAuth(async (request, context, userId) => {
+  const { id } = await context.params;
 
   // First, get the existing transaction to verify ownership and get current data
   const [existingTransaction] = await db
@@ -231,19 +251,21 @@ export async function PATCH(
     .returning();
 
   return NextResponse.json(updated);
-}
+}, "updating transaction");
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+/**
+ * DELETE /api/transactions/:id
+ *
+ * Soft-deletes a transaction by setting `deletedAt` timestamp.
+ *
+ * Response: The soft-deleted Transaction object (with deletedAt set)
+ *
+ * Errors:
+ *   - 401 if not authenticated
+ *   - 404 if transaction not found or doesn't belong to user
+ */
+export const DELETE = withAuth(async (_request, context, userId) => {
+  const { id } = await context.params;
 
   // Verify the transaction exists and belongs to the user
   const [existingTransaction] = await db
@@ -276,4 +298,4 @@ export async function DELETE(
     .returning();
 
   return NextResponse.json(deleted);
-}
+}, "deleting transaction");

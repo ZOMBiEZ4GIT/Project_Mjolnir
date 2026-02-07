@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { holdings, snapshots, type NewHolding, type Holding } from "@/lib/db/schema";
 import { eq, isNull, and, sql } from "drizzle-orm";
 import { calculateCostBasis } from "@/lib/calculations/cost-basis";
+import { withAuth } from "@/lib/utils/with-auth";
 
 // Valid holding types
 const holdingTypes = ["stock", "etf", "crypto", "super", "cash", "debt"] as const;
@@ -46,13 +46,26 @@ interface CreateHoldingBody {
   notes?: string;
 }
 
-export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+/**
+ * GET /api/holdings
+ *
+ * Returns all non-deleted holdings for the authenticated user.
+ *
+ * Query parameters:
+ *   - include_dormant: If "true", includes dormant holdings (default: false)
+ *   - include_cost_basis: If "true", calculates and returns quantity, costBasis,
+ *     and avgCost for tradeable holdings (stock, etf, crypto)
+ *   - include_latest_snapshot: If "true", returns the most recent snapshot for
+ *     snapshot-type holdings (super, cash, debt)
+ *
+ * Response: Array of Holding objects, optionally extended with:
+ *   - quantity, costBasis, avgCost (tradeable types, when include_cost_basis=true)
+ *   - latestSnapshot { id, holdingId, date, balance, currency } (snapshot types)
+ *
+ * Errors:
+ *   - 401 if not authenticated
+ */
+export const GET = withAuth(async (request, _context, userId) => {
   const searchParams = request.nextUrl.searchParams;
   const includeDormant = searchParams.get("include_dormant") === "true";
   const includeCostBasis = searchParams.get("include_cost_basis") === "true";
@@ -166,15 +179,29 @@ export async function GET(request: NextRequest) {
   );
 
   return NextResponse.json(holdingsWithData);
-}
+}, "fetching holdings");
 
-export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+/**
+ * POST /api/holdings
+ *
+ * Creates a new holding for the authenticated user.
+ *
+ * Request body:
+ *   - type: (required) "stock" | "etf" | "crypto" | "super" | "cash" | "debt"
+ *   - name: (required) Display name for the holding
+ *   - currency: (required) "AUD" | "NZD" | "USD"
+ *   - symbol: (required for stock/etf/crypto) Ticker symbol (e.g. "VAS.AX")
+ *   - exchange: (required for stock/etf) "ASX" | "NZX" | "NYSE" | "NASDAQ"
+ *   - isDormant: (optional) Boolean, marks super fund as dormant (default: false)
+ *   - notes: (optional) Free-text notes
+ *
+ * Response: 201 with the created Holding object
+ *
+ * Errors:
+ *   - 400 with { errors } object for validation failures
+ *   - 401 if not authenticated
+ */
+export const POST = withAuth(async (request, _context, userId) => {
   let body: CreateHoldingBody;
   try {
     body = await request.json();
@@ -240,4 +267,4 @@ export async function POST(request: NextRequest) {
   const [created] = await db.insert(holdings).values(newHolding).returning();
 
   return NextResponse.json(created, { status: 201 });
-}
+}, "creating holding");

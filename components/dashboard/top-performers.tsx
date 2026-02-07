@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { motion, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -133,7 +134,7 @@ export function TopPerformers() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["top-performers"],
+    queryKey: queryKeys.topPerformers,
     queryFn: fetchPerformers,
     enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,

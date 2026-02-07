@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { holdings, snapshots, type Holding } from "@/lib/db/schema";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { calculateCostBasis } from "@/lib/calculations/cost-basis";
+import { withAuth } from "@/lib/utils/with-auth";
 
 // Valid values for validation
 const currencies = ["AUD", "NZD", "USD"] as const;
@@ -41,17 +41,25 @@ interface UpdateHoldingBody {
   notes?: string;
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+/**
+ * GET /api/holdings/:id
+ *
+ * Returns a single holding by ID, scoped to the authenticated user.
+ *
+ * Query parameters:
+ *   - include_cost_basis: If "true", returns quantity, costBasis, avgCost
+ *     for tradeable holdings (stock, etf, crypto)
+ *   - include_latest_snapshot: If "true", returns the most recent snapshot
+ *     for snapshot-type holdings (super, cash, debt)
+ *
+ * Response: Holding object, optionally extended with cost basis / snapshot data
+ *
+ * Errors:
+ *   - 401 if not authenticated
+ *   - 404 if holding not found or doesn't belong to user
+ */
+export const GET = withAuth(async (request, context, userId) => {
+  const { id } = await context.params;
   const searchParams = request.nextUrl.searchParams;
   const includeCostBasis = searchParams.get("include_cost_basis") === "true";
   const includeLatestSnapshot = searchParams.get("include_latest_snapshot") === "true";
@@ -128,19 +136,30 @@ export async function GET(
   };
 
   return NextResponse.json(holdingWithData);
-}
+}, "fetching holding");
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+/**
+ * PATCH /api/holdings/:id
+ *
+ * Partially updates a holding. Only provided fields are changed.
+ *
+ * Request body (all optional):
+ *   - name: New display name
+ *   - symbol: New ticker symbol
+ *   - currency: "AUD" | "NZD" | "USD"
+ *   - exchange: "ASX" | "NZX" | "NYSE" | "NASDAQ" (or null to clear)
+ *   - isDormant: Boolean
+ *   - notes: Free-text notes (or null to clear)
+ *
+ * Response: Updated Holding object
+ *
+ * Errors:
+ *   - 400 with { errors } for validation failures or invalid JSON
+ *   - 401 if not authenticated
+ *   - 404 if holding not found or doesn't belong to user
+ */
+export const PATCH = withAuth(async (request, context, userId) => {
+  const { id } = await context.params;
 
   // First, check if the holding exists and belongs to the user
   const existing = await db
@@ -234,19 +253,23 @@ export async function PATCH(
     .returning();
 
   return NextResponse.json(updated);
-}
+}, "updating holding");
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+/**
+ * DELETE /api/holdings/:id
+ *
+ * Soft-deletes a holding by setting `deletedAt` timestamp. The holding
+ * and its associated data remain in the database but are excluded from
+ * all queries.
+ *
+ * Response: { success: true }
+ *
+ * Errors:
+ *   - 401 if not authenticated
+ *   - 404 if holding not found or doesn't belong to user
+ */
+export const DELETE = withAuth(async (_request, context, userId) => {
+  const { id } = await context.params;
 
   // First, check if the holding exists and belongs to the user
   const existing = await db
@@ -279,4 +302,4 @@ export async function DELETE(
     );
 
   return NextResponse.json({ success: true });
-}
+}, "deleting holding");

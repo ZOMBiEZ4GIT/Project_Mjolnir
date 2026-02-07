@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import {
   AlertTriangle,
@@ -143,7 +144,7 @@ export function StaleDataWarning() {
   const { isLoaded, isSignedIn } = useAuthSafe();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["net-worth"],
+    queryKey: queryKeys.netWorth.all,
     queryFn: fetchNetWorth,
     enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,

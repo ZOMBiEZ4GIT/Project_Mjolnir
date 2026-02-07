@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { getTopPerformers } from "@/lib/calculations/performers";
+import { withAuth } from "@/lib/utils/with-auth";
 
 /**
  * GET /api/net-worth/performers
@@ -18,13 +18,7 @@ import { getTopPerformers } from "@/lib/calculations/performers";
  * Note: Only tradeable holdings (stocks, ETFs, crypto) with a position,
  * price, and cost basis are included in the results.
  */
-export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (request, _context, userId) => {
   // Parse limit parameter with validation
   const searchParams = request.nextUrl.searchParams;
   const limitParam = searchParams.get("limit");
@@ -42,19 +36,11 @@ export async function GET(request: NextRequest) {
     limit = Math.min(parsed, 20);
   }
 
-  try {
-    const result = await getTopPerformers(userId, limit);
+  const result = await getTopPerformers(userId, limit);
 
-    return NextResponse.json({
-      gainers: result.gainers,
-      losers: result.losers,
-      calculatedAt: result.calculatedAt.toISOString(),
-    });
-  } catch (error) {
-    console.error("Error calculating top performers:", error);
-    return NextResponse.json(
-      { error: "Failed to calculate top performers" },
-      { status: 500 }
-    );
-  }
-}
+  return NextResponse.json({
+    gainers: result.gainers,
+    losers: result.losers,
+    calculatedAt: result.calculatedAt.toISOString(),
+  });
+}, "calculating top performers");

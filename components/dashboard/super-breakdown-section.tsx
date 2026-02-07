@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { SuperGrowthChart } from "./super-growth-chart";
 
@@ -69,7 +70,7 @@ export function SuperBreakdownSection() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["super-holdings-check"],
+    queryKey: queryKeys.super.holdingsCheck,
     queryFn: fetchSuperHoldings,
     enabled: isLoaded && isSignedIn,
     staleTime: 5 * 60 * 1000, // 5 minutes - holdings don't change often

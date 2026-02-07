@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { snapshots, holdings, type NewSnapshot } from "@/lib/db/schema";
 import { eq, isNull, and, desc } from "drizzle-orm";
+import { withAuth } from "@/lib/utils/with-auth";
 
 // Valid snapshot types (non-tradeable holdings)
 const snapshotTypes = ["super", "cash", "debt"] as const;
@@ -37,13 +37,23 @@ function isValidSnapshotMonth(dateStr: string): boolean {
          snapshotMonth.getTime() === previousMonth.getTime();
 }
 
-export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+/**
+ * GET /api/snapshots
+ *
+ * Returns snapshots for the authenticated user, ordered by date descending.
+ * Joins with holdings to include holding name/type and enforce user ownership.
+ *
+ * Query parameters:
+ *   - holding_id: Filter to a specific holding's snapshots
+ *
+ * Response: Array of snapshot objects
+ *   { id, holdingId, date, balance, currency, notes, createdAt, updatedAt,
+ *     holdingName, holdingType }
+ *
+ * Errors:
+ *   - 401 if not authenticated
+ */
+export const GET = withAuth(async (request, _context, userId) => {
   const searchParams = request.nextUrl.searchParams;
   const holdingId = searchParams.get("holding_id");
 
@@ -78,15 +88,34 @@ export async function GET(request: NextRequest) {
     .orderBy(desc(snapshots.date));
 
   return NextResponse.json(result);
-}
+}, "fetching snapshots");
 
-export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+/**
+ * POST /api/snapshots
+ *
+ * Creates a point-in-time balance snapshot for a non-tradeable holding.
+ * Dates are normalized to the first of the month (YYYY-MM-01).
+ *
+ * Request body:
+ *   - holding_id: (required) UUID of the parent holding
+ *   - date: (required) Date string (normalized to YYYY-MM-01)
+ *   - balance: (required) Numeric balance value
+ *   - currency: (required) "AUD" | "NZD" | "USD"
+ *   - notes: (optional) Free-text notes
+ *
+ * Validation:
+ *   - Holding must exist, belong to user, and be a snapshot type (super/cash/debt)
+ *   - Date must be current or previous month
+ *   - No duplicate snapshot for the same holding + month (returns 409)
+ *
+ * Response: 201 with created snapshot + holdingName, holdingType
+ *
+ * Errors:
+ *   - 400 with { errors } for validation failures
+ *   - 401 if not authenticated
+ *   - 409 if snapshot already exists for this holding and month
+ */
+export const POST = withAuth(async (request, _context, userId) => {
   let body: CreateSnapshotBody;
   try {
     body = await request.json();
@@ -198,4 +227,4 @@ export async function POST(request: NextRequest) {
     },
     { status: 201 }
   );
-}
+}, "creating snapshot");

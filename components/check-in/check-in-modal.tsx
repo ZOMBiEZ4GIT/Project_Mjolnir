@@ -34,6 +34,8 @@ import {
 import { CheckinStepper } from "@/components/check-in/checkin-stepper";
 import { MonthSelector } from "@/components/check-in/month-selector";
 import { useFormShake } from "@/hooks/use-form-shake";
+import { CURRENCY_SYMBOLS, type Currency } from "@/lib/constants";
+import { queryKeys } from "@/lib/query-keys";
 
 // Holding data from check-in status API
 interface HoldingToUpdate {
@@ -43,13 +45,6 @@ interface HoldingToUpdate {
   currency: string;
   isDormant: boolean;
 }
-
-// Currency symbols for display
-const currencySymbols: Record<string, string> = {
-  AUD: "A$",
-  NZD: "NZ$",
-  USD: "US$",
-};
 
 interface CheckInModalProps {
   open: boolean;
@@ -195,7 +190,7 @@ function SuperHoldingEntry({
   onToggleContributions,
   error,
 }: HoldingEntryProps) {
-  const currencySymbol = currencySymbols[holding.currency] || holding.currency;
+  const currencySymbol = CURRENCY_SYMBOLS[holding.currency as Currency] || holding.currency;
   const reducedMotion = useReducedMotion();
 
   return (
@@ -319,7 +314,7 @@ function BalanceHoldingEntry({
   onBalanceChange,
   error,
 }: BalanceEntryProps) {
-  const currencySymbol = currencySymbols[holding.currency] || holding.currency;
+  const currencySymbol = CURRENCY_SYMBOLS[holding.currency as Currency] || holding.currency;
 
   return (
     <div className={`p-3 rounded-lg bg-card border ${error ? "border-destructive" : "border-border"}`}>
@@ -352,7 +347,7 @@ function BalanceHoldingEntry({
 
 // Format currency amount for review display
 function formatCurrency(amount: string, currency: string): string {
-  const symbol = currencySymbols[currency] || currency;
+  const symbol = CURRENCY_SYMBOLS[currency as Currency] || currency;
   const num = parseFloat(amount);
   if (isNaN(num)) return `${symbol}0.00`;
   return `${symbol}${num.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -406,7 +401,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
 
   // Fetch holdings needing updates for selected month
   const { data, isLoading, error } = useQuery({
-    queryKey: ["check-in-holdings", watchedMonth],
+    queryKey: [...queryKeys.checkIn.holdings, watchedMonth],
     queryFn: () => fetchHoldingsForMonth(watchedMonth),
     enabled: isLoaded && isSignedIn && open,
   });
@@ -520,8 +515,8 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     if (!newOpen) {
       // Invalidate net-worth queries on close (covers both success and cancel)
       if (showSuccess) {
-        queryClient.invalidateQueries({ queryKey: ["net-worth"] });
-        queryClient.invalidateQueries({ queryKey: ["net-worth-history"] });
+        queryClient.invalidateQueries({ queryKey: queryKeys.netWorth.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.netWorth.allHistory });
       }
       // Reset on close
       setCurrentStep(0);
@@ -578,11 +573,11 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
     mutationFn: saveCheckIn,
     onSuccess: (result) => {
       // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ["check-in-holdings"] });
-      queryClient.invalidateQueries({ queryKey: ["check-in-status"] });
-      queryClient.invalidateQueries({ queryKey: ["snapshots"] });
-      queryClient.invalidateQueries({ queryKey: ["contributions"] });
-      queryClient.invalidateQueries({ queryKey: ["holdings"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkIn.holdings });
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkIn.status });
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapshots.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contributions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.holdings.all });
 
       // Show success toast
       const count = result.snapshotsCreated;

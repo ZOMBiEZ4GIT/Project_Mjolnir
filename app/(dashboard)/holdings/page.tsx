@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { RefreshCw, Briefcase, Filter, Wallet, ArrowRightLeft, Camera, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
+import { queryKeys } from "@/lib/query-keys";
 import { HoldingsTable, type HoldingWithData, type PriceData } from "@/components/holdings/holdings-table";
 
 /**
@@ -201,7 +202,7 @@ export default function HoldingsPage() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["holdings", { showDormant }],
+    queryKey: queryKeys.holdings.list({ showDormant }),
     queryFn: () => fetchHoldings(showDormant),
     enabled: isLoaded && isSignedIn,
   });
@@ -210,7 +211,7 @@ export default function HoldingsPage() {
   const {
     data: allHoldings,
   } = useQuery({
-    queryKey: ["holdings", { showDormant: true }],
+    queryKey: queryKeys.holdings.list({ showDormant: true }),
     queryFn: () => fetchHoldings(true),
     enabled: isLoaded && isSignedIn && !showDormant && !isLoading && !!holdings && holdings.length === 0,
   });
@@ -223,7 +224,7 @@ export default function HoldingsPage() {
     isLoading: pricesLoading,
     isFetching: pricesFetching,
   } = useQuery({
-    queryKey: ["prices"],
+    queryKey: queryKeys.prices.all,
     queryFn: fetchPrices,
     enabled: isLoaded && isSignedIn,
     // Prices can refetch independently without blocking holdings display
@@ -235,7 +236,7 @@ export default function HoldingsPage() {
     data: sparklineMap,
     isLoading: sparklineLoading,
   } = useQuery({
-    queryKey: ["sparkline"],
+    queryKey: queryKeys.prices.sparkline,
     queryFn: fetchSparklineData,
     enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 30, // 30 minutes — historical data doesn't change often
@@ -250,7 +251,7 @@ export default function HoldingsPage() {
       const successes = results.filter((r) => !r.error && r.price !== null);
 
       // Invalidate prices query to refetch updated cached prices
-      queryClient.invalidateQueries({ queryKey: ["prices"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.prices.all });
 
       // Show appropriate toast
       if (failures.length === 0 && successes.length > 0) {
@@ -275,7 +276,7 @@ export default function HoldingsPage() {
     mutationFn: () => refreshPrices(),
     onSuccess: () => {
       // Silently invalidate prices query to refetch updated cached prices
-      queryClient.invalidateQueries({ queryKey: ["prices"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.prices.all });
     },
     // Silent error handling - no toast for background refresh failures
   });
@@ -322,7 +323,7 @@ export default function HoldingsPage() {
       const result = results[0];
 
       // Invalidate prices query to refetch updated cached prices
-      queryClient.invalidateQueries({ queryKey: ["prices"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.prices.all });
 
       // Show toast based on result
       if (result?.error) {

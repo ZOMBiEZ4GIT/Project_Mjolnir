@@ -7,19 +7,13 @@
  *   - limit: number of records to return (default: 5, max: 20)
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { importHistory } from "@/lib/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { withAuth } from "@/lib/utils/with-auth";
 
-export async function GET(request: NextRequest): Promise<NextResponse> {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (request, _context, userId) => {
   // Parse limit from query params
   const { searchParams } = new URL(request.url);
   const limitParam = searchParams.get("limit");
@@ -53,4 +47,4 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
   }));
 
   return NextResponse.json({ imports });
-}
+}, "fetching import history");

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
+import { queryKeys } from "@/lib/query-keys";
 import { Button } from "@/components/ui/button";
 import { CheckInModal } from "./check-in-modal";
 
@@ -33,7 +34,7 @@ export function CheckInPromptCard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["check-in-status"],
+    queryKey: queryKeys.checkIn.status,
     queryFn: fetchCheckInStatus,
     enabled: isLoaded && isSignedIn,
     // Refetch every minute to stay up to date

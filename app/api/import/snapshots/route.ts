@@ -7,13 +7,13 @@
  * Returns summary: { total, imported, skipped, errors }
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { parseCSV } from "@/lib/import/csv-parser";
 import { validateSnapshotRows } from "@/lib/import/validators/snapshot-validator";
 import { importSnapshots, type ImportError } from "@/lib/import/snapshot-importer";
 import { db } from "@/lib/db";
 import { importHistory } from "@/lib/db/schema";
+import { withAuth } from "@/lib/utils/with-auth";
 
 interface ImportSummary {
   total: number;
@@ -22,13 +22,7 @@ interface ImportSummary {
   errors: ImportError[];
 }
 
-export async function POST(request: NextRequest): Promise<NextResponse> {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (request, _context, userId) => {
   // Parse multipart form data
   let formData: FormData;
   try {
@@ -128,4 +122,4 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   });
 
   return NextResponse.json(summary);
-}
+}, "importing snapshots");

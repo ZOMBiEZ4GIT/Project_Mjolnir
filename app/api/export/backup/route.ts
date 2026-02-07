@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { holdings, transactions, snapshots, contributions } from "@/lib/db/schema";
 import { eq, isNull, and } from "drizzle-orm";
@@ -9,14 +8,9 @@ import {
 } from "@/lib/export/backup-exporter";
 import type { TransactionWithSymbol } from "@/lib/export/transactions-exporter";
 import type { SnapshotWithDetails } from "@/lib/export/snapshots-exporter";
+import { withAuth } from "@/lib/utils/with-auth";
 
-export async function GET() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (_request, _context, userId) => {
   // Fetch all holdings for the user (excluding deleted)
   const userHoldings = await db
     .select()
@@ -157,10 +151,10 @@ export async function GET() {
 
   const timestamp = new Date().toISOString().split("T")[0];
 
-  return new Response(content, {
+  return new NextResponse(content, {
     headers: {
       "Content-Type": "application/json",
       "Content-Disposition": `attachment; filename="mjolnir-backup-${timestamp}.json"`,
     },
   });
-}
+}, "exporting backup");

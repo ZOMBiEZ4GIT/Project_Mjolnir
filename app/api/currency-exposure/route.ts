@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { calculateCurrencyExposure } from "@/lib/calculations/net-worth";
 import type { Currency } from "@/lib/utils/currency";
+import { withAuth } from "@/lib/utils/with-auth";
 
 const VALID_CURRENCIES = ["AUD", "NZD", "USD"] as const;
 
@@ -21,13 +21,7 @@ const VALID_CURRENCIES = ["AUD", "NZD", "USD"] as const;
  *   - ratesUsed: Exchange rates used for conversion
  *   - calculatedAt: Timestamp when calculation was performed
  */
-export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (request, _context, userId) => {
   const searchParams = request.nextUrl.searchParams;
 
   // Parse display currency parameter
@@ -40,21 +34,13 @@ export async function GET(request: NextRequest) {
     // Invalid currency silently falls back to AUD
   }
 
-  try {
-    const result = await calculateCurrencyExposure(userId, { displayCurrency });
+  const result = await calculateCurrencyExposure(userId, { displayCurrency });
 
-    return NextResponse.json({
-      exposure: result.exposure,
-      totalAssets: result.totalAssets,
-      displayCurrency: result.displayCurrency,
-      ratesUsed: result.ratesUsed,
-      calculatedAt: result.calculatedAt.toISOString(),
-    });
-  } catch (error) {
-    console.error("Error calculating currency exposure:", error);
-    return NextResponse.json(
-      { error: "Failed to calculate currency exposure" },
-      { status: 500 }
-    );
-  }
-}
+  return NextResponse.json({
+    exposure: result.exposure,
+    totalAssets: result.totalAssets,
+    displayCurrency: result.displayCurrency,
+    ratesUsed: result.ratesUsed,
+    calculatedAt: result.calculatedAt.toISOString(),
+  });
+}, "calculating currency exposure");

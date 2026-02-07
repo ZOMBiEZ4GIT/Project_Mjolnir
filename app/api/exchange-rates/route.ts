@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import {
   getAllCachedRates,
   getExchangeRate,
   isExchangeRateCacheValid,
   DEFAULT_EXCHANGE_RATE_TTL_MINUTES,
 } from "@/lib/services/exchange-rates";
+import { withAuth } from "@/lib/utils/with-auth";
 
 /**
  * Currency pairs to refresh when `?refresh=true` is requested.
@@ -33,13 +33,7 @@ interface ExchangeRatesResponse {
  *
  * @returns { rates: { 'USD/AUD': 1.53, 'NZD/AUD': 0.92 }, fetchedAt, isStale }
  */
-export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (request, _context, _userId) => {
   // Check for refresh flag
   const searchParams = request.nextUrl.searchParams;
   const shouldRefresh = searchParams.get("refresh") === "true";
@@ -86,4 +80,4 @@ export async function GET(request: NextRequest) {
   };
 
   return NextResponse.json(response);
-}
+}, "fetching exchange rates");

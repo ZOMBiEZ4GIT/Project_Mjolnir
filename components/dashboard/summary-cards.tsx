@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { motion, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -164,14 +165,14 @@ export function SummaryCards() {
     isLoading: isLoadingNetWorth,
     error: netWorthError,
   } = useQuery({
-    queryKey: ["net-worth", displayCurrency],
+    queryKey: queryKeys.netWorth.current(displayCurrency),
     queryFn: () => fetchNetWorth(displayCurrency),
     enabled: isLoaded && isSignedIn && !currencyLoading,
     refetchInterval: 60 * 1000,
   });
 
   const { data: historyData, isLoading: isLoadingHistory } = useQuery({
-    queryKey: ["net-worth-history", 2],
+    queryKey: queryKeys.netWorth.history(2),
     queryFn: fetchHistory,
     enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,

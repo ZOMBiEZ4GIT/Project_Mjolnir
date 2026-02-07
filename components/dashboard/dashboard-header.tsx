@@ -7,6 +7,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CurrencyToggle } from "@/components/ui/currency-toggle";
 import { FxRatesDisplay } from "@/components/ui/fx-rates-display";
+import { queryKeys } from "@/lib/query-keys";
 
 /**
  * Refreshes all tradeable holding prices via POST /api/prices.
@@ -65,11 +66,11 @@ export function DashboardHeader({ userName }: DashboardHeaderProps) {
     },
     onSuccess: (data) => {
       // Invalidate all dashboard-related queries to refetch with new prices
-      queryClient.invalidateQueries({ queryKey: ["net-worth"] });
-      queryClient.invalidateQueries({ queryKey: ["net-worth-history"] });
-      queryClient.invalidateQueries({ queryKey: ["top-performers"] });
-      queryClient.invalidateQueries({ queryKey: ["holdings"] });
-      queryClient.invalidateQueries({ queryKey: ["prices"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.netWorth.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.netWorth.allHistory });
+      queryClient.invalidateQueries({ queryKey: queryKeys.topPerformers });
+      queryClient.invalidateQueries({ queryKey: queryKeys.holdings.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.prices.all });
 
       // Show completion toast
       if (data.errors > 0) {

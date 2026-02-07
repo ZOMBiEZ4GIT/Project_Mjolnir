@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
@@ -362,7 +363,7 @@ export function AssetAllocation() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["net-worth", displayCurrency],
+    queryKey: queryKeys.netWorth.current(displayCurrency),
     queryFn: () => fetchNetWorth(displayCurrency),
     enabled: isLoaded && isSignedIn && !currencyLoading,
     refetchInterval: 60 * 1000,

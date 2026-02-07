@@ -1,21 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { holdings } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { calculateQuantityHeld } from "@/lib/calculations/quantity";
+import { withAuth } from "@/lib/utils/with-auth";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+export const GET = withAuth(async (_request, context, userId) => {
+  const { id } = await context.params;
 
   // Verify the holding exists and belongs to the user
   const [holding] = await db
@@ -36,4 +27,4 @@ export async function GET(
   const quantity = await calculateQuantityHeld(id);
 
   return NextResponse.json({ quantity });
-}
+}, "fetching holding quantity");

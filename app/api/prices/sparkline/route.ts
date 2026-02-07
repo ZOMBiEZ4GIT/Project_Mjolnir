@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { holdings } from "@/lib/db/schema";
 import { eq, isNull, and } from "drizzle-orm";
 import { fetchSparklineData } from "@/lib/services/sparkline-data";
+import { withAuth } from "@/lib/utils/with-auth";
 
 const tradeableTypes = ["stock", "etf", "crypto"] as const;
 
@@ -22,13 +22,7 @@ interface SparklineResponse {
  * Batch-fetches 30-day historical prices for all tradeable holdings.
  * Returns an array of { holdingId, symbol, prices: number[] }.
  */
-export async function GET() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (_request, _context, userId) => {
   // Fetch all active tradeable holdings
   const userHoldings = await db
     .select()
@@ -69,4 +63,4 @@ export async function GET() {
   );
 
   return NextResponse.json(results);
-}
+}, "fetching sparkline data");

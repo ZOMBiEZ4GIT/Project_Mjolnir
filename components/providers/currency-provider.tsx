@@ -9,6 +9,7 @@ import {
   ReactNode,
 } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import {
   Currency,
@@ -224,7 +225,7 @@ export function CurrencyProvider({
     data: preferencesData,
     isLoading: preferencesLoading,
   } = useQuery({
-    queryKey: ["preferences"],
+    queryKey: queryKeys.preferences,
     queryFn: fetchPreferences,
     enabled: isLoaded && isSignedIn,
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -237,7 +238,7 @@ export function CurrencyProvider({
     isLoading: ratesLoading,
     refetch: refetchRates,
   } = useQuery({
-    queryKey: ["exchange-rates"],
+    queryKey: queryKeys.exchangeRates,
     queryFn: () => fetchExchangeRates(false),
     enabled: isLoaded && isSignedIn,
     staleTime: 5 * 60 * 1000, // 5 minutes

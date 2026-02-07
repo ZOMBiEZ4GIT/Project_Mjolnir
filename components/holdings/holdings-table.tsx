@@ -11,6 +11,15 @@ import { PriceSkeleton } from "./price-skeleton";
 import type { Holding } from "@/lib/db/schema";
 import type { HoldingTypeFilter } from "./filter-tabs";
 import {
+  HOLDING_TYPE_LABELS,
+  HOLDING_TYPE_ORDER,
+  CURRENCY_SYMBOLS,
+  isTradeable as isTradeableType,
+  isSnapshotType as isSnapshotTypeCheck,
+  type Currency,
+  type HoldingWithData,
+} from "@/lib/constants";
+import {
   Table,
   TableBody,
   TableCell,
@@ -25,59 +34,9 @@ import { DeleteHoldingDialog } from "./delete-holding-dialog";
 import { CurrencyDisplay } from "@/components/ui/currency-display";
 import { Sparkline } from "@/components/charts";
 import { useCurrency } from "@/components/providers/currency-provider";
-import type { Currency } from "@/lib/utils/currency";
 
-// Display names for holding types
-const HOLDING_TYPE_LABELS: Record<Holding["type"], string> = {
-  stock: "Stocks",
-  etf: "ETFs",
-  crypto: "Crypto",
-  super: "Superannuation",
-  cash: "Cash",
-  debt: "Debt",
-};
-
-// Order in which types should be displayed
-const HOLDING_TYPE_ORDER: Holding["type"][] = [
-  "stock",
-  "etf",
-  "crypto",
-  "super",
-  "cash",
-  "debt",
-];
-
-// Types that are tradeable (show quantity, cost basis)
-const TRADEABLE_TYPES = ["stock", "etf", "crypto"] as const;
-
-// Types that use snapshot-based balance tracking
-const SNAPSHOT_TYPES = ["super", "cash", "debt"] as const;
-
-// Currency symbol mapping
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  AUD: "A$",
-  NZD: "NZ$",
-  USD: "US$",
-};
-
-// Latest snapshot data shape from API
-interface LatestSnapshot {
-  id: string;
-  holdingId: string;
-  date: string;
-  balance: string;
-  currency: string;
-}
-
-// Holding with both cost basis and snapshot data
-export interface HoldingWithData extends Holding {
-  // Cost basis data (for tradeable holdings)
-  quantity: number | null;
-  costBasis: number | null;
-  avgCost: number | null;
-  // Snapshot data (for snapshot holdings)
-  latestSnapshot: LatestSnapshot | null;
-}
+// Re-export for backwards compatibility
+export type { HoldingWithData } from "@/lib/constants";
 
 // Price data for a holding
 export interface PriceData {
@@ -155,7 +114,7 @@ function isSnapshotStale(dateString: string): boolean {
  * Format balance as currency
  */
 function formatBalance(balance: string, currency: string): string {
-  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  const symbol = CURRENCY_SYMBOLS[currency as Currency] || currency;
   const num = Number(balance);
   return `${symbol}${num.toLocaleString("en-AU", {
     minimumFractionDigits: 2,
@@ -207,7 +166,7 @@ function formatChangePercent(percent: number): { text: string; isPositive: boole
  * Format change absolute value with sign
  */
 function formatChangeAbsolute(value: number, currency: string): string {
-  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  const symbol = CURRENCY_SYMBOLS[currency as Currency] || currency;
   const absValue = Math.abs(value).toLocaleString("en-AU", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -263,8 +222,8 @@ export function HoldingsTable({ holdings, prices, pricesLoading, pricesRefreshin
 
   // For flat view, determine the holding type to decide which columns to show
   const flatType = typeFilter !== "all" ? typeFilter : undefined;
-  const flatIsTradeable = flatType ? TRADEABLE_TYPES.includes(flatType as (typeof TRADEABLE_TYPES)[number]) : false;
-  const flatIsSnapshot = flatType ? SNAPSHOT_TYPES.includes(flatType as (typeof SNAPSHOT_TYPES)[number]) : false;
+  const flatIsTradeable = flatType ? isTradeableType(flatType) : false;
+  const flatIsSnapshot = flatType ? isSnapshotTypeCheck(flatType) : false;
 
   // Calculate total portfolio value (absolute sum of assets, used for percentage calculation)
   const portfolioTotal = useMemo(() => {
@@ -445,7 +404,7 @@ function PriceCell({ holdingId, holdingCurrency, prices, pricesLoading, pricesRe
 
   const { price, currency, changePercent, changeAbsolute, fetchedAt, isStale, error } = priceData;
   const displayCurrency = currency || holdingCurrency;
-  const currencyPrefix = CURRENCY_SYMBOLS[displayCurrency] || displayCurrency;
+  const currencyPrefix = CURRENCY_SYMBOLS[displayCurrency as Currency] || displayCurrency;
 
   // Show retry button for errors or if currently retrying
   const showRetry = (error || isRetrying) && onRetry;
@@ -786,8 +745,8 @@ function HoldingsTypeSection({
 }: HoldingsTypeSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const label = HOLDING_TYPE_LABELS[type];
-  const isTradeable = TRADEABLE_TYPES.includes(type as (typeof TRADEABLE_TYPES)[number]);
-  const isSnapshotType = SNAPSHOT_TYPES.includes(type as (typeof SNAPSHOT_TYPES)[number]);
+  const isTradeable = isTradeableType(type);
+  const isSnapshotType = isSnapshotTypeCheck(type);
   const isDebt = type === "debt";
 
   // Calculate group total in display currency
@@ -1211,17 +1170,17 @@ function calculateSectionSubtotal(
   let subtotal = 0;
 
   for (const holding of holdings) {
-    const isTradeable = TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number]);
-    const isSnapshotType = SNAPSHOT_TYPES.includes(holding.type as (typeof SNAPSHOT_TYPES)[number]);
+    const holdingIsTradeable = isTradeableType(holding.type);
+    const holdingIsSnapshot = isSnapshotTypeCheck(holding.type);
 
-    if (isTradeable) {
+    if (holdingIsTradeable) {
       // Tradeable holding: quantity x price
       const priceData = prices?.get(holding.id);
       if (holding.quantity && priceData?.price) {
         // Debt should be subtracted, but debt is snapshot-based so won't appear here
         subtotal += holding.quantity * priceData.price;
       }
-    } else if (isSnapshotType && holding.latestSnapshot) {
+    } else if (holdingIsSnapshot && holding.latestSnapshot) {
       // Snapshot holding: latest balance
       const balance = Number(holding.latestSnapshot.balance);
       if (holding.type === "debt") {
@@ -1248,17 +1207,17 @@ function calculateGroupTotal(
   let total = 0;
 
   for (const holding of holdings) {
-    const isTradeable = TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number]);
-    const isSnapshotType = SNAPSHOT_TYPES.includes(holding.type as (typeof SNAPSHOT_TYPES)[number]);
+    const holdingIsTradeable = isTradeableType(holding.type);
+    const holdingIsSnapshot = isSnapshotTypeCheck(holding.type);
     const nativeCurrency = holding.currency as Currency;
 
-    if (isTradeable) {
+    if (holdingIsTradeable) {
       const priceData = prices?.get(holding.id);
       if (holding.quantity && priceData?.price) {
         const nativeValue = holding.quantity * priceData.price;
         total += convert(nativeValue, nativeCurrency);
       }
-    } else if (isSnapshotType && holding.latestSnapshot) {
+    } else if (holdingIsSnapshot && holding.latestSnapshot) {
       const balance = Number(holding.latestSnapshot.balance);
       if (holding.type === "debt") {
         total -= convert(balance, nativeCurrency);
@@ -1314,14 +1273,10 @@ function HoldingsCurrencySection({
   const subtotal = calculateSectionSubtotal(holdings, prices);
 
   // Check if any holding in this section is tradeable (to show tradeable columns)
-  const hasTradeableHoldings = holdings.some((h) =>
-    TRADEABLE_TYPES.includes(h.type as (typeof TRADEABLE_TYPES)[number])
-  );
+  const hasTradeableHoldings = holdings.some((h) => isTradeableType(h.type));
 
   // Check if any holding in this section uses snapshots (to show balance column)
-  const hasSnapshotHoldings = holdings.some((h) =>
-    SNAPSHOT_TYPES.includes(h.type as (typeof SNAPSHOT_TYPES)[number])
-  );
+  const hasSnapshotHoldings = holdings.some((h) => isSnapshotTypeCheck(h.type));
 
   return (
     <section>
@@ -1373,8 +1328,8 @@ function HoldingsCurrencySection({
             {sortedHoldings.map((holding) => {
               const snapshot = holding.latestSnapshot;
               const isStale = snapshot ? isSnapshotStale(snapshot.date) : false;
-              const isTradeable = TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number]);
-              const isSnapshotType = SNAPSHOT_TYPES.includes(holding.type as (typeof SNAPSHOT_TYPES)[number]);
+              const isTradeable = isTradeableType(holding.type);
+              const isSnapshotType = isSnapshotTypeCheck(holding.type);
 
               return (
                 <TableRow

@@ -26,6 +26,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { TypeSelector } from "./type-selector";
+import { queryKeys } from "@/lib/query-keys";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -152,7 +153,7 @@ export function EditTransactionDialog({
 
   // Fetch current quantity for SELL validation
   const { data: currentQuantity, isLoading: quantityLoading } = useQuery({
-    queryKey: ["holdings", transaction.holdingId, "quantity"],
+    queryKey: queryKeys.holdings.quantity(transaction.holdingId),
     queryFn: () => fetchHoldingQuantity(transaction.holdingId),
     enabled: open && transaction.action === "SELL",
   });
@@ -201,9 +202,9 @@ export function EditTransactionDialog({
     mutationFn: (data: UpdateTransactionData) =>
       updateTransaction(transaction.id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
       queryClient.invalidateQueries({
-        queryKey: ["holdings", transaction.holdingId, "quantity"],
+        queryKey: queryKeys.holdings.quantity(transaction.holdingId),
       });
       toast.success("Transaction updated successfully");
       onTransactionSaved?.(transaction.id);

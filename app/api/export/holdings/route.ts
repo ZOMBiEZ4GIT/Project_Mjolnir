@@ -1,17 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { holdings } from "@/lib/db/schema";
 import { eq, isNull, and } from "drizzle-orm";
 import { exportHoldingsCSV, exportHoldingsJSON } from "@/lib/export/holdings-exporter";
+import { withAuth } from "@/lib/utils/with-auth";
 
-export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (request, _context, userId) => {
   const searchParams = request.nextUrl.searchParams;
   const format = searchParams.get("format") || "csv";
 
@@ -37,7 +31,7 @@ export async function GET(request: NextRequest) {
 
   if (format === "json") {
     const content = exportHoldingsJSON(userHoldings);
-    return new Response(content, {
+    return new NextResponse(content, {
       headers: {
         "Content-Type": "application/json",
         "Content-Disposition": `attachment; filename="holdings-${timestamp}.json"`,
@@ -47,10 +41,10 @@ export async function GET(request: NextRequest) {
 
   // CSV format
   const content = exportHoldingsCSV(userHoldings);
-  return new Response(content, {
+  return new NextResponse(content, {
     headers: {
       "Content-Type": "text/csv;charset=utf-8",
       "Content-Disposition": `attachment; filename="holdings-${timestamp}.csv"`,
     },
   });
-}
+}, "exporting holdings");

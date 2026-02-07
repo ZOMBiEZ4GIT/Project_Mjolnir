@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { transactions, holdings, type NewTransaction } from "@/lib/db/schema";
 import { eq, isNull, and, desc } from "drizzle-orm";
 import { calculateQuantityHeld } from "@/lib/calculations/quantity";
+import { withAuth } from "@/lib/utils/with-auth";
 
 // Valid values for validation
 const transactionActions = ["BUY", "SELL", "DIVIDEND", "SPLIT"] as const;
@@ -24,13 +24,25 @@ interface CreateTransactionBody {
   notes?: string;
 }
 
-export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+/**
+ * GET /api/transactions
+ *
+ * Returns transactions for the authenticated user, ordered by date descending.
+ * Joins with holdings to include holding info and enforce user ownership.
+ *
+ * Query parameters:
+ *   - holding_id: Filter to a specific holding's transactions
+ *   - action: Filter by action type ("BUY" | "SELL" | "DIVIDEND" | "SPLIT")
+ *   - currency: Filter by currency ("AUD" | "NZD" | "USD")
+ *
+ * Response: Array of transaction objects with nested holding info
+ *   { id, holdingId, date, action, quantity, unitPrice, fees, currency,
+ *     notes, createdAt, updatedAt, holding: { id, name, symbol, type, currency, exchange } }
+ *
+ * Errors:
+ *   - 401 if not authenticated
+ */
+export const GET = withAuth(async (request, _context, userId) => {
   const searchParams = request.nextUrl.searchParams;
   const holdingId = searchParams.get("holding_id");
   const action = searchParams.get("action");
@@ -86,15 +98,34 @@ export async function GET(request: NextRequest) {
     .orderBy(desc(transactions.date));
 
   return NextResponse.json(result);
-}
+}, "fetching transactions");
 
-export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+/**
+ * POST /api/transactions
+ *
+ * Creates a new BUY/SELL/DIVIDEND/SPLIT transaction for a tradeable holding.
+ *
+ * Request body:
+ *   - holding_id: (required) UUID of the parent holding
+ *   - date: (required) YYYY-MM-DD format
+ *   - action: (required) "BUY" | "SELL" | "DIVIDEND" | "SPLIT"
+ *   - quantity: (required) Positive number
+ *   - unit_price: (required) Non-negative number
+ *   - currency: (required) "AUD" | "NZD" | "USD"
+ *   - fees: (optional) Non-negative number (defaults to 0)
+ *   - notes: (optional) Free-text notes
+ *
+ * Validation:
+ *   - Holding must exist, belong to user, and be a tradeable type
+ *   - For SELL: quantity must not exceed current quantity held
+ *
+ * Response: 201 with the created Transaction object
+ *
+ * Errors:
+ *   - 400 with { errors } for validation failures or invalid JSON
+ *   - 401 if not authenticated
+ */
+export const POST = withAuth(async (request, _context, userId) => {
   let body: CreateTransactionBody;
   try {
     body = await request.json();
@@ -222,4 +253,4 @@ export async function POST(request: NextRequest) {
   const [created] = await db.insert(transactions).values(newTransaction).returning();
 
   return NextResponse.json(created, { status: 201 });
-}
+}, "creating transaction");

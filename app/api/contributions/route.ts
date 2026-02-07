@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { contributions, holdings, type NewContribution } from "@/lib/db/schema";
 import { eq, isNull, and, desc } from "drizzle-orm";
+import { withAuth } from "@/lib/utils/with-auth";
 
 interface CreateContributionBody {
   holding_id?: string;
@@ -18,13 +18,23 @@ function normalizeToFirstOfMonth(dateStr: string): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
-export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+/**
+ * GET /api/contributions
+ *
+ * Returns contributions for the authenticated user, ordered by date descending.
+ * Joins with holdings to include holding name and enforce user ownership.
+ *
+ * Query parameters:
+ *   - holding_id: Filter to a specific super holding's contributions
+ *
+ * Response: Array of contribution objects
+ *   { id, holdingId, date, employerContrib, employeeContrib, notes,
+ *     createdAt, updatedAt, holdingName }
+ *
+ * Errors:
+ *   - 401 if not authenticated
+ */
+export const GET = withAuth(async (request, _context, userId) => {
   const searchParams = request.nextUrl.searchParams;
   const holdingId = searchParams.get("holding_id");
 
@@ -58,15 +68,33 @@ export async function GET(request: NextRequest) {
     .orderBy(desc(contributions.date));
 
   return NextResponse.json(result);
-}
+}, "fetching contributions");
 
-export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+/**
+ * POST /api/contributions
+ *
+ * Creates a contribution record for a super holding. Dates are normalized
+ * to the first of the month (YYYY-MM-01).
+ *
+ * Request body:
+ *   - holding_id: (required) UUID of the parent super holding
+ *   - date: (required) Date string (normalized to YYYY-MM-01)
+ *   - employer_contribution: (optional) Numeric amount (defaults to "0")
+ *   - employee_contribution: (optional) Numeric amount (defaults to "0")
+ *   - notes: (optional) Free-text notes
+ *
+ * Validation:
+ *   - Holding must exist, belong to user, and be of type "super"
+ *   - No duplicate contribution for the same holding + month (returns 409)
+ *
+ * Response: 201 with created contribution + holdingName
+ *
+ * Errors:
+ *   - 400 with { errors } for validation failures
+ *   - 401 if not authenticated
+ *   - 409 if contribution already exists for this holding and month
+ */
+export const POST = withAuth(async (request, _context, userId) => {
   let body: CreateContributionBody;
   try {
     body = await request.json();
@@ -176,4 +204,4 @@ export async function POST(request: NextRequest) {
     },
     { status: 201 }
   );
-}
+}, "creating contribution");

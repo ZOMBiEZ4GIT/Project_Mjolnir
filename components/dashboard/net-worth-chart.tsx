@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency } from "@/lib/utils/currency";
@@ -195,7 +196,7 @@ export function NetWorthChart() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["net-worth-history", months],
+    queryKey: queryKeys.netWorth.history(months),
     queryFn: () => fetchHistory(months),
     enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,
@@ -203,7 +204,7 @@ export function NetWorthChart() {
 
   // Retry handler
   const handleRetry = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["net-worth-history", months] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.netWorth.history(months) });
   }, [queryClient, months]);
 
   // Transform data for TradingView — sorted by date ascending, time as YYYY-MM-DD string

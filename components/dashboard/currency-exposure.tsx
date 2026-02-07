@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { type Currency, type ExchangeRates } from "@/lib/utils/currency";
@@ -305,7 +306,7 @@ export function CurrencyExposure() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["currency-exposure", displayCurrency],
+    queryKey: queryKeys.currencyExposure(displayCurrency),
     queryFn: () => fetchCurrencyExposure(displayCurrency),
     enabled: isLoaded && isSignedIn && !currencyLoading,
     refetchInterval: 60 * 1000,

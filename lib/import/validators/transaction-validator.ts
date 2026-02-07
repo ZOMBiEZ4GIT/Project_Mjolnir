@@ -8,7 +8,7 @@ import { type CSVRow } from '../csv-parser';
 export interface TransactionRow {
   date: string;
   symbol: string;
-  action: 'BUY' | 'SELL' | 'DIVIDEND';
+  action: 'BUY' | 'SELL' | 'DIVIDEND' | 'SPLIT';
   quantity: number;
   unitPrice: number;
   fees: number | null;
@@ -23,7 +23,7 @@ export interface ValidationResult {
   data: TransactionRow | null;
 }
 
-const VALID_ACTIONS = ['BUY', 'SELL', 'DIVIDEND'] as const;
+const VALID_ACTIONS = ['BUY', 'SELL', 'DIVIDEND', 'SPLIT'] as const;
 
 /**
  * Validates a CSV row for transaction import.
@@ -62,7 +62,7 @@ export function validateTransactionRow(row: CSVRow, rowNumber?: number): Validat
   if (!action) {
     errors.push(`${rowPrefix}action is required`);
   } else if (!isValidAction(action)) {
-    errors.push(`${rowPrefix}action "${action}" is invalid (must be BUY, SELL, or DIVIDEND)`);
+    errors.push(`${rowPrefix}action "${action}" is invalid (must be BUY, SELL, DIVIDEND, or SPLIT)`);
   }
 
   // Validate quantity
@@ -116,7 +116,7 @@ export function validateTransactionRow(row: CSVRow, rowNumber?: number): Validat
   const data: TransactionRow = {
     date: date!,
     symbol: symbol!,
-    action: action!.toUpperCase() as 'BUY' | 'SELL' | 'DIVIDEND',
+    action: action!.toUpperCase() as 'BUY' | 'SELL' | 'DIVIDEND' | 'SPLIT',
     quantity: parseNumber(quantityStr!)!,
     unitPrice: parseNumber(unitPriceStr!)!,
     fees,

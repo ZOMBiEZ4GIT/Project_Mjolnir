@@ -21,8 +21,11 @@ import { FormField } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { useFormShake } from "@/hooks/use-form-shake";
 import type { Holding } from "@/lib/db/schema";
+import { CURRENCIES, EXCHANGES, TRADEABLE_TYPES } from "@/lib/constants";
+import { queryKeys } from "@/lib/query-keys";
 
-const HOLDING_TYPE_LABELS: Record<Holding["type"], string> = {
+// Singular labels used in this dialog context
+const HOLDING_TYPE_LABELS_SINGULAR: Record<Holding["type"], string> = {
   stock: "Stock",
   etf: "ETF",
   crypto: "Crypto",
@@ -30,12 +33,6 @@ const HOLDING_TYPE_LABELS: Record<Holding["type"], string> = {
   cash: "Cash",
   debt: "Debt",
 };
-
-const CURRENCIES = ["AUD", "NZD", "USD"] as const;
-const EXCHANGES = ["ASX", "NZX", "NYSE", "NASDAQ"] as const;
-
-// Types that require tradeable form (symbol required)
-const TRADEABLE_TYPES = ["stock", "etf", "crypto"] as const;
 // Types that require exchange
 const EXCHANGE_REQUIRED_TYPES = ["stock", "etf"] as const;
 
@@ -168,7 +165,7 @@ export function EditHoldingDialog({
     mutationFn: (data: Parameters<typeof updateHolding>[1]) =>
       updateHolding(holding.id, data),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["holdings"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.holdings.all });
       if (variables.isDormant !== undefined) {
         const statusText = variables.isDormant ? "marked as dormant" : "marked as active";
         showSuccess(`Holding ${statusText}`);
@@ -243,7 +240,7 @@ export function EditHoldingDialog({
               <div className="space-y-2">
                 <Label>Type</Label>
                 <div className="flex h-9 w-full rounded-md border border-input bg-muted px-3 py-1 text-sm text-muted-foreground items-center">
-                  {HOLDING_TYPE_LABELS[holding.type]}
+                  {HOLDING_TYPE_LABELS_SINGULAR[holding.type]}
                 </div>
               </div>
 

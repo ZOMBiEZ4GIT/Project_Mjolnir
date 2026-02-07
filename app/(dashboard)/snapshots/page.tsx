@@ -27,7 +27,8 @@ import Link from "next/link";
 import { EditSnapshotModal } from "@/components/snapshots/edit-snapshot-modal";
 import { DeleteSnapshotDialog } from "@/components/snapshots/delete-snapshot-dialog";
 import { CurrencyDisplay } from "@/components/ui/currency-display";
-import type { Currency } from "@/lib/utils/currency";
+import { SNAPSHOT_TYPES, type Currency } from "@/lib/constants";
+import { queryKeys } from "@/lib/query-keys";
 import type { Holding } from "@/lib/db/schema";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +47,7 @@ interface SnapshotWithHolding {
   holdingType: string;
 }
 
-const snapshotTypes = ["super", "cash", "debt"] as const;
+const snapshotTypes = SNAPSHOT_TYPES;
 
 async function fetchSnapshots(holdingId?: string): Promise<SnapshotWithHolding[]> {
   const url = holdingId
@@ -147,7 +148,7 @@ export default function SnapshotsPage() {
 
   // Fetch holdings for the dropdown filter
   const { data: holdings } = useQuery({
-    queryKey: ["holdings", { showDormant: true }],
+    queryKey: queryKeys.holdings.list({ showDormant: true }),
     queryFn: fetchHoldings,
     enabled: isLoaded && isSignedIn,
   });
@@ -163,7 +164,7 @@ export default function SnapshotsPage() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["snapshots", { holdingId: holdingFilter }],
+    queryKey: queryKeys.snapshots.list({ holdingId: holdingFilter || undefined }),
     queryFn: () => fetchSnapshots(holdingFilter || undefined),
     enabled: isLoaded && isSignedIn,
   });

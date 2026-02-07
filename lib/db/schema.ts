@@ -1,3 +1,33 @@
+/**
+ * Mjolnir Database Schema
+ *
+ * Defines all tables for the personal net worth tracking dashboard. The schema
+ * supports two distinct tracking paradigms:
+ *
+ * 1. **Transaction-based** (stock, etf, crypto): Value is derived from logged
+ *    BUY/SELL events. Current value = quantity held x live market price.
+ *    Cost basis uses FIFO (first in, first out).
+ *
+ * 2. **Snapshot-based** (super, cash, debt): Value is a point-in-time balance
+ *    recorded during monthly check-ins. One snapshot per holding per month.
+ *
+ * Entity relationships:
+ *   users  -->  holdings  -->  transactions   (tradeable assets)
+ *                         -->  snapshots      (non-tradeable assets/liabilities)
+ *                         -->  contributions  (super-specific)
+ *   users  -->  userPreferences (1:1)
+ *   users  -->  importHistory
+ *
+ * Key design decisions:
+ *   - Soft delete via `deletedAt` timestamp on holdings, transactions, snapshots,
+ *     and contributions. Queries filter with `isNull(deletedAt)`.
+ *   - Snapshot granularity is monthly. Dates are normalized to the first of the
+ *     month (YYYY-MM-01) with a unique constraint on (holdingId, date).
+ *   - All monetary values stored in native currency (AUD/NZD/USD). Conversion
+ *     to the user's display currency happens at query/display time.
+ *   - Clerk provides the user ID (text PK, not UUID) as the single source of
+ *     identity and authentication.
+ */
 import { pgTable, text, timestamp, uuid, decimal, date, boolean, pgEnum, unique, integer } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -24,6 +54,14 @@ export const exchangeEnum = pgEnum("exchange", ["ASX", "NZX", "NYSE", "NASDAQ"])
 // USERS
 // =============================================================================
 
+/**
+ * Users table -- synced from Clerk.
+ *
+ * The `id` column stores the Clerk user ID (e.g. "user_2abc...") as the
+ * single source of identity. Rows are created/updated via Clerk webhooks
+ * or on first authenticated API request. Because Mjolnir is a single-user
+ * app, this table will typically contain one row.
+ */
 export const users = pgTable("users", {
   id: text("id").primaryKey(), // Clerk user ID
   email: text("email").notNull(),
@@ -35,6 +73,14 @@ export const users = pgTable("users", {
 // USER PREFERENCES
 // =============================================================================
 
+/**
+ * Per-user display and notification settings.
+ *
+ * One record per user (enforced by unique constraint on `userId`). Stores
+ * the preferred display currency, whether to show native currency alongside
+ * converted values, and email reminder configuration (enabled flag, day of
+ * month, last sent timestamp).
+ */
 export const userPreferences = pgTable("user_preferences", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id")
@@ -55,6 +101,20 @@ export const userPreferences = pgTable("user_preferences", {
 // HOLDINGS
 // =============================================================================
 
+/**
+ * Central registry of all tracked assets and liabilities.
+ *
+ * Every item the user tracks -- stocks, ETFs, crypto, super funds, cash
+ * accounts, and debt -- is a row in this table. The `type` enum determines
+ * which tracking paradigm applies (transaction-based for stock/etf/crypto,
+ * snapshot-based for super/cash/debt).
+ *
+ * - `symbol` is required for tradeable types and nullable for super/cash/debt.
+ * - `exchange` is free text (not an enum) for flexibility with custom tickers.
+ * - `isDormant` flags super funds that no longer receive contributions
+ *   (e.g. Kiwisaver), so the check-in modal can skip contribution fields.
+ * - `deletedAt` supports soft delete; all queries must filter on `isNull(deletedAt)`.
+ */
 export const holdings = pgTable("holdings", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id")
@@ -77,6 +137,17 @@ export const holdings = pgTable("holdings", {
 // TRANSACTIONS
 // =============================================================================
 
+/**
+ * BUY, SELL, DIVIDEND, and SPLIT events for tradeable assets (stock, etf, crypto).
+ *
+ * Each row represents a single trade or corporate action. The `quantity` and
+ * `unitPrice` columns use decimal(18,8) to accommodate sub-cent precision for
+ * crypto assets (e.g. 0.00000001 BTC). Fees default to 0 when not provided.
+ *
+ * Sell transactions are validated to ensure the sell quantity does not exceed
+ * the current quantity held (calculated via FIFO from all prior BUY/SELL events).
+ * Soft delete supported via `deletedAt`.
+ */
 export const transactions = pgTable("transactions", {
   id: uuid("id").defaultRandom().primaryKey(),
   holdingId: uuid("holding_id")
@@ -98,6 +169,19 @@ export const transactions = pgTable("transactions", {
 // SNAPSHOTS
 // =============================================================================
 
+/**
+ * Point-in-time balances for non-tradeable holdings (super, cash, debt).
+ *
+ * Recorded during the monthly check-in flow. The `balance` column uses
+ * decimal(18,2) since these are whole-cent amounts (no sub-cent precision
+ * needed, unlike transactions). Dates are normalized to the first of the
+ * month (YYYY-MM-01).
+ *
+ * A unique constraint on (holdingId, date) enforces one snapshot per holding
+ * per month. Duplicate submissions for the same month return HTTP 409.
+ * For months with missing snapshots, the net worth calculation uses
+ * carry-forward logic (most recent snapshot before the target date).
+ */
 export const snapshots = pgTable(
   "snapshots",
   {
@@ -123,6 +207,19 @@ export const snapshots = pgTable(
 // CONTRIBUTIONS
 // =============================================================================
 
+/**
+ * Super-specific employer and employee contributions.
+ *
+ * Tracks the breakdown of how a super fund's balance changes each month:
+ *   - `employerContrib`: Superannuation Guarantee payments from employer
+ *   - `employeeContrib`: Salary sacrifice + voluntary personal contributions
+ *   - **Investment returns** are derived (not stored):
+ *       new_balance - old_balance - employer_contrib - employee_contrib
+ *
+ * Only linked to holdings of type "super". Dormant super funds skip
+ * contribution tracking. A unique constraint on (holdingId, date) enforces
+ * one contribution record per holding per month. Soft delete supported.
+ */
 export const contributions = pgTable(
   "contributions",
   {
@@ -152,6 +249,17 @@ export const priceCacheSourceEnum = pgEnum("price_cache_source", ["yahoo", "coin
 
 export const importTypeEnum = pgEnum("import_type", ["transactions", "snapshots"]);
 
+/**
+ * Cached live prices for tradeable assets with a 15-minute TTL.
+ *
+ * One row per symbol (unique constraint). Prices are fetched from Yahoo
+ * Finance (stocks/ETFs with `.AX` suffix for ASX) or CoinGecko (crypto).
+ * The `fetchedAt` timestamp is used to determine staleness -- prices older
+ * than 15 minutes are refreshed on the next manual price refresh.
+ *
+ * Also stores daily change data (`changePercent`, `changeAbsolute`) for
+ * display in the dashboard price badges.
+ */
 export const priceCache = pgTable("price_cache", {
   id: uuid("id").defaultRandom().primaryKey(),
   symbol: text("symbol").notNull().unique(),
@@ -167,6 +275,14 @@ export const priceCache = pgTable("price_cache", {
 // EXCHANGE RATES
 // =============================================================================
 
+/**
+ * Cached foreign exchange rates with a 1-hour TTL.
+ *
+ * Stores currency pair conversion rates (e.g. USD->AUD, NZD->AUD) used to
+ * convert native-currency values to the user's display currency at query time.
+ * A unique constraint on (fromCurrency, toCurrency) ensures one cached rate
+ * per pair. Rates older than 1 hour are refreshed on the next calculation.
+ */
 export const exchangeRates = pgTable(
   "exchange_rates",
   {
@@ -186,6 +302,15 @@ export const exchangeRates = pgTable(
 // IMPORT HISTORY
 // =============================================================================
 
+/**
+ * Audit trail for CSV import operations.
+ *
+ * Records each import attempt with the file name, import type (transactions
+ * or snapshots), and outcome counts (total rows, successfully imported,
+ * skipped duplicates). Errors are stored as a JSON text blob for debugging.
+ * Imports are designed to be idempotent -- re-running the same CSV file
+ * should not create duplicate records.
+ */
 export const importHistory = pgTable("import_history", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: text("user_id")

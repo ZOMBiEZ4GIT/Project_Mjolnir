@@ -34,6 +34,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { TypeSelector, type TransactionType } from "./type-selector";
+import { isTradeable as isTradeableType } from "@/lib/constants";
+import { queryKeys } from "@/lib/query-keys";
 import type { Holding } from "@/lib/db/schema";
 
 // Re-export for backwards compat
@@ -70,7 +72,7 @@ async function fetchTradeableHoldings(): Promise<Holding[]> {
     throw new Error("Failed to fetch holdings");
   }
   const holdings: Holding[] = await response.json();
-  return holdings.filter((h) => ["stock", "etf", "crypto"].includes(h.type));
+  return holdings.filter((h) => isTradeableType(h.type));
 }
 
 async function fetchHoldingQuantity(holdingId: string): Promise<number> {
@@ -132,7 +134,7 @@ export function AddTransactionDialog({
 
   // Fetch tradeable holdings for the dropdown
   const { data: holdings, isLoading: holdingsLoading } = useQuery({
-    queryKey: ["holdings", "tradeable"],
+    queryKey: queryKeys.holdings.tradeable,
     queryFn: fetchTradeableHoldings,
     enabled: open,
   });
@@ -141,7 +143,7 @@ export function AddTransactionDialog({
 
   // Fetch current quantity for SELL validation
   const { data: currentQuantity, isLoading: quantityLoading } = useQuery({
-    queryKey: ["holdings", selectedHoldingId, "quantity"],
+    queryKey: queryKeys.holdings.quantity(selectedHoldingId),
     queryFn: () => fetchHoldingQuantity(selectedHoldingId),
     enabled:
       open && step === 2 && selectedAction === "SELL" && !!selectedHoldingId,
@@ -190,9 +192,9 @@ export function AddTransactionDialog({
   const mutation = useMutation({
     mutationFn: createTransaction,
     onSuccess: (data: { id?: string }) => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
       queryClient.invalidateQueries({
-        queryKey: ["holdings", selectedHoldingId, "quantity"],
+        queryKey: queryKeys.holdings.quantity(selectedHoldingId),
       });
       toast.success("Transaction added successfully");
       if (data?.id) onTransactionSaved?.(data.id);

@@ -3,6 +3,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/lib/toast-helpers";
 import { Loader2 } from "lucide-react";
+import { CURRENCY_SYMBOLS, type Currency } from "@/lib/constants";
+import { queryKeys } from "@/lib/query-keys";
 import {
   AnimatedAlertDialog,
   AnimatedAlertDialogAction,
@@ -39,12 +41,7 @@ function formatMonthYear(dateStr: string): string {
 // Format balance with currency symbol
 function formatBalance(balance: string, currency: string): string {
   const num = Number(balance);
-  const symbols: Record<string, string> = {
-    AUD: "A$",
-    NZD: "NZ$",
-    USD: "US$",
-  };
-  const symbol = symbols[currency] || currency;
+  const symbol = CURRENCY_SYMBOLS[currency as Currency] || currency;
   return `${symbol}${num.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
@@ -70,11 +67,11 @@ export function DeleteSnapshotDialog({
     mutationFn: deleteSnapshot,
     onSuccess: () => {
       // Invalidate all relevant queries
-      queryClient.invalidateQueries({ queryKey: ["snapshots"] });
-      queryClient.invalidateQueries({ queryKey: ["contributions"] });
-      queryClient.invalidateQueries({ queryKey: ["check-in-status"] });
-      queryClient.invalidateQueries({ queryKey: ["check-in-holdings"] });
-      queryClient.invalidateQueries({ queryKey: ["holdings"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapshots.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contributions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkIn.status });
+      queryClient.invalidateQueries({ queryKey: queryKeys.checkIn.holdings });
+      queryClient.invalidateQueries({ queryKey: queryKeys.holdings.all });
 
       showSuccess("Snapshot deleted successfully");
       onOpenChange(false);

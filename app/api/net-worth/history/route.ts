@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { calculateHistoricalNetWorth } from "@/lib/calculations/net-worth-history";
+import { withAuth } from "@/lib/utils/with-auth";
 
 /**
  * GET /api/net-worth/history
@@ -18,13 +18,7 @@ import { calculateHistoricalNetWorth } from "@/lib/calculations/net-worth-histor
  * historical prices are not stored. This means values are estimates based
  * on current prices multiplied by quantity held at that time.
  */
-export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (request, _context, userId) => {
   // Parse months parameter with validation
   const searchParams = request.nextUrl.searchParams;
   const monthsParam = searchParams.get("months");
@@ -42,23 +36,15 @@ export async function GET(request: NextRequest) {
     months = Math.min(parsed, 60);
   }
 
-  try {
-    const result = await calculateHistoricalNetWorth(userId, months);
+  const result = await calculateHistoricalNetWorth(userId, months);
 
-    return NextResponse.json({
-      history: result.history.map((point) => ({
-        date: point.date.toISOString(),
-        netWorth: point.netWorth,
-        totalAssets: point.totalAssets,
-        totalDebt: point.totalDebt,
-      })),
-      generatedAt: result.generatedAt.toISOString(),
-    });
-  } catch (error) {
-    console.error("Error calculating historical net worth:", error);
-    return NextResponse.json(
-      { error: "Failed to calculate historical net worth" },
-      { status: 500 }
-    );
-  }
-}
+  return NextResponse.json({
+    history: result.history.map((point) => ({
+      date: point.date.toISOString(),
+      netWorth: point.netWorth,
+      totalAssets: point.totalAssets,
+      totalDebt: point.totalDebt,
+    })),
+    generatedAt: result.generatedAt.toISOString(),
+  });
+}, "calculating historical net worth");

@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { holdings } from "@/lib/db/schema";
 import { eq, isNull, and, inArray } from "drizzle-orm";
@@ -10,6 +9,7 @@ import {
   DEFAULT_PRICE_CACHE_TTL_MINUTES,
 } from "@/lib/services/price-cache";
 import { normalizeSymbol } from "@/lib/services/yahoo-finance";
+import { withAuth } from "@/lib/utils/with-auth";
 
 // Types that can have live prices
 const tradeableTypes = ["stock", "etf", "crypto"] as const;
@@ -50,13 +50,7 @@ interface PriceRefreshResult {
  *
  * @returns Array of price refresh results
  */
-export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (request, _context, userId) => {
   // Parse request body for optional holding IDs
   let holdingIds: string[] | undefined;
   try {
@@ -147,7 +141,7 @@ export async function POST(request: NextRequest) {
   );
 
   return NextResponse.json(results);
-}
+}, "refreshing prices");
 
 /**
  * GET /api/prices
@@ -157,13 +151,7 @@ export async function POST(request: NextRequest) {
  *
  * @returns Array of cached price results with staleness indicators
  */
-export async function GET() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (_request, _context, userId) => {
   // Fetch all active tradeable holdings for the user
   const userHoldings = await db
     .select()
@@ -238,4 +226,4 @@ export async function GET() {
   );
 
   return NextResponse.json(results);
-}
+}, "fetching cached prices");

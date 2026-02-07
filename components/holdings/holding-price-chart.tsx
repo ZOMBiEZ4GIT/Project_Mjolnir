@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency } from "@/lib/utils/currency";
@@ -143,14 +144,14 @@ export function HoldingPriceChart({
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["transactions", holdingId],
+    queryKey: queryKeys.transactions.byHolding(holdingId),
     queryFn: () => fetchTransactions(holdingId),
     enabled: isLoaded && isSignedIn && !!holdingId,
   });
 
   // Retry handler
   const handleRetry = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["transactions", holdingId] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.transactions.byHolding(holdingId) });
   }, [queryClient, holdingId]);
 
   // Show skeleton while loading

@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { type Currency, type ExchangeRates } from "@/lib/utils/currency";
+import { queryKeys } from "@/lib/query-keys";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { NumberTicker } from "@/components/dashboard/number-ticker";
 import { ChangeBadge } from "@/components/dashboard/change-badge";
@@ -148,14 +149,14 @@ export function NetWorthHero() {
     isLoading: isLoadingNetWorth,
     error: netWorthError,
   } = useQuery({
-    queryKey: ["net-worth", displayCurrency],
+    queryKey: queryKeys.netWorth.current(displayCurrency),
     queryFn: () => fetchNetWorth(displayCurrency),
     enabled: isLoaded && isSignedIn && !currencyLoading,
     refetchInterval: 60 * 1000,
   });
 
   const { data: historyData, isLoading: isLoadingHistory } = useQuery({
-    queryKey: ["net-worth-history", SPARKLINE_MONTHS],
+    queryKey: queryKeys.netWorth.history(SPARKLINE_MONTHS),
     queryFn: () => fetchHistory(SPARKLINE_MONTHS),
     enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,

@@ -13,10 +13,17 @@ import {
   AnimatedAlertDialogHeader,
   AnimatedAlertDialogTitle,
 } from "@/components/ui/animated-alert-dialog";
-import type { Holding } from "@/lib/db/schema";
+import {
+  CURRENCY_SYMBOLS,
+  type Currency,
+  isTradeable as isTradeableType,
+  isSnapshotType as isSnapshotTypeCheck,
+  type HoldingWithData,
+} from "@/lib/constants";
+import { queryKeys } from "@/lib/query-keys";
 
-// Display names for holding types
-const HOLDING_TYPE_LABELS: Record<Holding["type"], string> = {
+// Singular labels used in this dialog context
+const HOLDING_TYPE_LABELS_SINGULAR: Record<string, string> = {
   stock: "Stock",
   etf: "ETF",
   crypto: "Crypto",
@@ -24,30 +31,6 @@ const HOLDING_TYPE_LABELS: Record<Holding["type"], string> = {
   cash: "Cash",
   debt: "Debt",
 };
-
-// Currency symbol mapping
-const CURRENCY_SYMBOLS: Record<string, string> = {
-  AUD: "A$",
-  NZD: "NZ$",
-  USD: "US$",
-};
-
-// Latest snapshot data shape
-interface LatestSnapshot {
-  id: string;
-  holdingId: string;
-  date: string;
-  balance: string;
-  currency: string;
-}
-
-// Holding with both cost basis and snapshot data
-export interface HoldingWithData extends Holding {
-  quantity: number | null;
-  costBasis: number | null;
-  avgCost: number | null;
-  latestSnapshot: LatestSnapshot | null;
-}
 
 interface DeleteHoldingDialogProps {
   holding: HoldingWithData | null;
@@ -71,7 +54,7 @@ async function deleteHolding(id: string): Promise<void> {
  */
 function formatBalance(balance: string | number, currency: string): string {
   const num = typeof balance === "string" ? Number(balance) : balance;
-  const symbol = CURRENCY_SYMBOLS[currency] || currency;
+  const symbol = CURRENCY_SYMBOLS[currency as Currency] || currency;
   return `${symbol}${num.toLocaleString("en-AU", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -106,11 +89,11 @@ export function DeleteHoldingDialog({
     mutationFn: deleteHolding,
     onSuccess: () => {
       // Invalidate all relevant queries
-      queryClient.invalidateQueries({ queryKey: ["holdings"] });
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      queryClient.invalidateQueries({ queryKey: ["snapshots"] });
-      queryClient.invalidateQueries({ queryKey: ["contributions"] });
-      queryClient.invalidateQueries({ queryKey: ["prices"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.holdings.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapshots.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contributions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.prices.all });
 
       toast.success("Holding deleted successfully");
       onOpenChange(false);
@@ -128,8 +111,8 @@ export function DeleteHoldingDialog({
 
   if (!holding) return null;
 
-  const isTradeable = ["stock", "etf", "crypto"].includes(holding.type);
-  const isSnapshotType = ["super", "cash", "debt"].includes(holding.type);
+  const isTradeable = isTradeableType(holding.type);
+  const isSnapshotType = isSnapshotTypeCheck(holding.type);
 
   return (
     <AnimatedAlertDialog open={open} onOpenChange={onOpenChange}>
@@ -149,7 +132,7 @@ export function DeleteHoldingDialog({
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Type:</span>
-            <span className="text-foreground">{HOLDING_TYPE_LABELS[holding.type]}</span>
+            <span className="text-foreground">{HOLDING_TYPE_LABELS_SINGULAR[holding.type]}</span>
           </div>
           {holding.symbol && (
             <div className="flex justify-between">

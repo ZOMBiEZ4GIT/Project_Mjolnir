@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { holdings, snapshots, contributions } from "@/lib/db/schema";
 import { eq, isNull, and, inArray, desc, lt } from "drizzle-orm";
+import { withAuth } from "@/lib/utils/with-auth";
 
 // Valid snapshot types (non-tradeable holdings)
 const snapshotTypes = ["super", "cash", "debt"] as const;
@@ -33,13 +33,33 @@ function formatMonthYear(dateStr: string): string {
   return date.toLocaleDateString("en-AU", { month: "long", year: "numeric" });
 }
 
-export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+/**
+ * GET /api/check-in/status
+ *
+ * Returns the check-in status for a given month, indicating which snapshot-type
+ * holdings still need a balance update. Used by the check-in modal to determine
+ * which fields to display and to pre-fill with previous values.
+ *
+ * Query parameters:
+ *   - month: (optional) YYYY-MM-01 format. Defaults to current month.
+ *     Must be current or previous month.
+ *
+ * Response:
+ *   - needsCheckIn: Boolean, true if any holdings are missing snapshots
+ *   - holdingsToUpdate: Count of holdings still needing a snapshot
+ *   - totalSnapshotHoldings: Total count of snapshot-type holdings
+ *   - currentMonth: Formatted month string (e.g. "February 2026")
+ *   - holdings: Array of holdings missing snapshots for the month
+ *   - latestContributions: Map of holdingId -> { employerContrib, employeeContrib }
+ *     for active super holdings (used to pre-fill contribution fields)
+ *   - previousBalances: Map of holdingId -> balance string from most recent
+ *     prior snapshot (used to pre-fill balance fields)
+ *
+ * Errors:
+ *   - 400 if month format is invalid or outside allowed range
+ *   - 401 if not authenticated
+ */
+export const GET = withAuth(async (request, _context, userId) => {
   // Get month from query params, default to current month
   const searchParams = request.nextUrl.searchParams;
   const monthParam = searchParams.get("month");
@@ -196,4 +216,4 @@ export async function GET(request: NextRequest) {
     latestContributions,
     previousBalances,
   });
-}
+}, "fetching check-in status");

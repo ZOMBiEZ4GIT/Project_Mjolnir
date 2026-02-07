@@ -32,7 +32,8 @@ import { CurrencyDisplay } from "@/components/ui/currency-display";
 import { TransactionSummary } from "@/components/transactions/transaction-summary";
 import { CurrencyFilter, type CurrencyFilterValue } from "@/components/holdings/currency-filter";
 import type { Holding } from "@/lib/db/schema";
-import type { Currency } from "@/lib/utils/currency";
+import { TRANSACTION_ACTIONS, isTradeable as isTradeableType, type Currency } from "@/lib/constants";
+import { queryKeys } from "@/lib/query-keys";
 
 const MotionTableRow = motion.create(TableRow);
 
@@ -60,7 +61,7 @@ interface TransactionWithHolding {
   };
 }
 
-const transactionActions = ["BUY", "SELL", "DIVIDEND", "SPLIT"] as const;
+const transactionActions = TRANSACTION_ACTIONS;
 type TransactionAction = (typeof transactionActions)[number];
 
 async function fetchTransactions(
@@ -99,9 +100,7 @@ async function fetchTradeableHoldings(): Promise<Holding[]> {
   }
   const holdings: Holding[] = await response.json();
   // Filter to tradeable types only (stock, etf, crypto)
-  return holdings.filter((h) =>
-    ["stock", "etf", "crypto"].includes(h.type)
-  );
+  return holdings.filter((h) => isTradeableType(h.type));
 }
 
 /**
@@ -260,7 +259,7 @@ export default function TransactionsPage() {
 
   // Fetch tradeable holdings for the filter dropdown
   const { data: tradeableHoldings } = useQuery({
-    queryKey: ["holdings", "tradeable"],
+    queryKey: queryKeys.holdings.tradeable,
     queryFn: fetchTradeableHoldings,
     enabled: isLoaded && isSignedIn,
   });
@@ -270,7 +269,7 @@ export default function TransactionsPage() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["transactions", { holdingId: selectedHoldingId, action: selectedAction, currency: selectedCurrency }],
+    queryKey: queryKeys.transactions.list({ holdingId: selectedHoldingId || undefined, action: selectedAction || undefined, currency: selectedCurrency }),
     queryFn: () => fetchTransactions(selectedHoldingId, selectedAction, selectedCurrency),
     enabled: isLoaded && isSignedIn,
   });

@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { calculateNetWorth } from "@/lib/calculations/net-worth";
 import type { Currency } from "@/lib/utils/currency";
+import { withAuth } from "@/lib/utils/with-auth";
 
 const VALID_CURRENCIES = ["AUD", "NZD", "USD"] as const;
 
@@ -24,13 +24,7 @@ const VALID_CURRENCIES = ["AUD", "NZD", "USD"] as const;
  *   - ratesUsed: Exchange rates used for conversion
  *   - calculatedAt: Timestamp when calculation was performed
  */
-export async function GET(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (request, _context, userId) => {
   const searchParams = request.nextUrl.searchParams;
 
   // Note: refresh parameter is documented for future use but currently all calculations
@@ -48,25 +42,17 @@ export async function GET(request: NextRequest) {
     // Invalid currency silently falls back to AUD
   }
 
-  try {
-    const result = await calculateNetWorth(userId, { displayCurrency });
+  const result = await calculateNetWorth(userId, { displayCurrency });
 
-    return NextResponse.json({
-      netWorth: result.netWorth,
-      totalAssets: result.totalAssets,
-      totalDebt: result.totalDebt,
-      breakdown: result.breakdown,
-      staleHoldings: result.staleHoldings,
-      hasStaleData: result.hasStaleData,
-      displayCurrency: result.displayCurrency,
-      ratesUsed: result.ratesUsed,
-      calculatedAt: result.calculatedAt.toISOString(),
-    });
-  } catch (error) {
-    console.error("Error calculating net worth:", error);
-    return NextResponse.json(
-      { error: "Failed to calculate net worth" },
-      { status: 500 }
-    );
-  }
-}
+  return NextResponse.json({
+    netWorth: result.netWorth,
+    totalAssets: result.totalAssets,
+    totalDebt: result.totalDebt,
+    breakdown: result.breakdown,
+    staleHoldings: result.staleHoldings,
+    hasStaleData: result.hasStaleData,
+    displayCurrency: result.displayCurrency,
+    ratesUsed: result.ratesUsed,
+    calculatedAt: result.calculatedAt.toISOString(),
+  });
+}, "calculating net worth");

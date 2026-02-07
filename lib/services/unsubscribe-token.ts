@@ -13,9 +13,18 @@ import { createHmac, timingSafeEqual } from "crypto";
  */
 function getSecret(): string {
   const secret =
-    process.env.UNSUBSCRIBE_SECRET ||
-    process.env.CLERK_SECRET_KEY ||
-    "default-dev-secret-do-not-use-in-production";
+    process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY;
+
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "UNSUBSCRIBE_SECRET or CLERK_SECRET_KEY must be set in production"
+      );
+    }
+    // Dev-only fallback — never used in production
+    return "dev-only-unsubscribe-secret";
+  }
+
   return secret;
 }
 

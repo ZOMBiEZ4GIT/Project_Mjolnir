@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { db } from "@/lib/db";
 import { users, userPreferences } from "@/lib/db/schema";
 import { eq, and, or, isNull, lt } from "drizzle-orm";
@@ -36,9 +37,18 @@ export async function POST(request: NextRequest) {
   }
 
   // Vercel sends the secret in Authorization header as "Bearer <secret>"
-  const providedSecret = authHeader?.replace("Bearer ", "");
+  const providedSecret = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7)
+    : "";
 
-  if (providedSecret !== cronSecret) {
+  // Use timing-safe comparison to prevent secret guessing via response timing
+  const secretBuffer = Buffer.from(cronSecret);
+  const providedBuffer = Buffer.from(providedSecret);
+  const isValid =
+    secretBuffer.length === providedBuffer.length &&
+    timingSafeEqual(secretBuffer, providedBuffer);
+
+  if (!isValid) {
     console.error("[send-reminders] Invalid authorization");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }

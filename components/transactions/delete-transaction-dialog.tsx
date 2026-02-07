@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { showSuccess, showError } from "@/lib/toast-helpers";
+import { queryKeys } from "@/lib/query-keys";
 import {
   AnimatedAlertDialog,
   AnimatedAlertDialogAction,
@@ -114,9 +115,9 @@ export function DeleteTransactionDialog({
   const mutation = useMutation({
     mutationFn: () => deleteTransaction(transaction.id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
       queryClient.invalidateQueries({
-        queryKey: ["holdings", transaction.holdingId, "quantity"],
+        queryKey: queryKeys.holdings.quantity(transaction.holdingId),
       });
       showSuccess("Transaction deleted");
       onDeleted?.(transaction.id);

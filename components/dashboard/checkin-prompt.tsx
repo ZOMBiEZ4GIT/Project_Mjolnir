@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { motion, useReducedMotion } from "framer-motion";
 import { CalendarCheck, X } from "lucide-react";
@@ -46,7 +47,7 @@ export function CheckinPrompt() {
   }, []);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["check-in-status"],
+    queryKey: queryKeys.checkIn.status,
     queryFn: fetchCheckInStatus,
     enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,

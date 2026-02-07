@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { contributions, holdings } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
+import { withAuth } from "@/lib/utils/with-auth";
 
 interface UpdateContributionBody {
   employer_contribution?: string | number;
@@ -10,17 +10,22 @@ interface UpdateContributionBody {
   notes?: string;
 }
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+/**
+ * GET /api/contributions/:id
+ *
+ * Returns a single contribution by ID with holding name.
+ * Ownership is validated via the parent holding's userId.
+ *
+ * Response: Contribution object
+ *   { id, holdingId, date, employerContrib, employeeContrib, notes,
+ *     createdAt, updatedAt, holdingName }
+ *
+ * Errors:
+ *   - 401 if not authenticated
+ *   - 404 if contribution not found or doesn't belong to user
+ */
+export const GET = withAuth(async (_request, context, userId) => {
+  const { id } = await context.params;
 
   // Query with inner join to include holding info and validate ownership
   const result = await db
@@ -51,19 +56,28 @@ export async function GET(
   }
 
   return NextResponse.json(result[0]);
-}
+}, "fetching contribution");
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+/**
+ * PATCH /api/contributions/:id
+ *
+ * Partially updates a contribution. Only contribution amounts and notes
+ * can be changed; holding and date are immutable after creation.
+ *
+ * Request body (all optional):
+ *   - employer_contribution: Numeric amount
+ *   - employee_contribution: Numeric amount
+ *   - notes: Free-text notes
+ *
+ * Response: Updated contribution object with holdingName
+ *
+ * Errors:
+ *   - 400 with { errors } for validation failures or invalid JSON
+ *   - 401 if not authenticated
+ *   - 404 if contribution not found or doesn't belong to user
+ */
+export const PATCH = withAuth(async (request, context, userId) => {
+  const { id } = await context.params;
 
   // Check if contribution exists and belongs to user
   const existing = await db
@@ -146,19 +160,21 @@ export async function PATCH(
     ...updated,
     holdingName: existing[0].holdingName,
   });
-}
+}, "updating contribution");
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+/**
+ * DELETE /api/contributions/:id
+ *
+ * Soft-deletes a contribution by setting `deletedAt` timestamp.
+ *
+ * Response: { success: true }
+ *
+ * Errors:
+ *   - 401 if not authenticated
+ *   - 404 if contribution not found or doesn't belong to user
+ */
+export const DELETE = withAuth(async (_request, context, userId) => {
+  const { id } = await context.params;
 
   // Check if contribution exists and belongs to user
   const existing = await db
@@ -190,4 +206,4 @@ export async function DELETE(
     .where(eq(contributions.id, id));
 
   return NextResponse.json({ success: true });
-}
+}, "deleting contribution");

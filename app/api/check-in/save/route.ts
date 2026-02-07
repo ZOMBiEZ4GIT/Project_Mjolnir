@@ -1,13 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { snapshots, contributions, holdings, type NewSnapshot, type NewContribution } from "@/lib/db/schema";
-import { eq, isNull, and } from "drizzle-orm";
-
-// Valid snapshot types (non-tradeable holdings)
-const snapshotTypes = ["super", "cash", "debt"] as const;
-
-type Currency = "AUD" | "NZD" | "USD";
+import { eq, isNull, and, inArray } from "drizzle-orm";
+import { SNAPSHOT_TYPES, normalizeToFirstOfMonth, isValidSnapshotMonth } from "@/lib/constants";
+import type { Currency } from "@/lib/constants";
+import { withAuth } from "@/lib/utils/with-auth";
 
 // Entry for a super holding with optional contributions
 interface SuperEntry {
@@ -30,32 +27,32 @@ interface CheckInSaveBody {
   debt?: BalanceEntry[];
 }
 
-// Normalize date to first of month (YYYY-MM-01)
-function normalizeToFirstOfMonth(dateStr: string): string {
-  const date = new Date(dateStr);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
-// Check if date is current or previous month
-function isValidSnapshotMonth(dateStr: string): boolean {
-  const now = new Date();
-  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-  const snapshotDate = new Date(dateStr);
-  const snapshotMonth = new Date(snapshotDate.getFullYear(), snapshotDate.getMonth(), 1);
-
-  return snapshotMonth.getTime() === currentMonth.getTime() ||
-         snapshotMonth.getTime() === previousMonth.getTime();
-}
-
-export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+/**
+ * POST /api/check-in/save
+ *
+ * Saves the monthly check-in data. Creates snapshots for all submitted
+ * holdings and contributions for active (non-dormant) super holdings.
+ * All dates are normalized to the first of the month (YYYY-MM-01).
+ *
+ * Request body:
+ *   - month: (required) Date string in YYYY-MM-01 format (current or previous month)
+ *   - super: (optional) Array of { holdingId, balance, employerContrib?, employeeContrib? }
+ *   - cash: (optional) Array of { holdingId, balance }
+ *   - debt: (optional) Array of { holdingId, balance }
+ *
+ * Validation:
+ *   - At least one entry must be provided
+ *   - All holdings must exist, belong to user, and be snapshot types
+ *   - No duplicate snapshots for the same holding + month (returns 409 with conflictHoldings)
+ *
+ * Response: 201 with { success, snapshotsCreated, contributionsCreated }
+ *
+ * Errors:
+ *   - 400 with { errors } for validation failures or no entries
+ *   - 401 if not authenticated
+ *   - 409 with { conflictHoldings } if any holdings already have snapshots
+ */
+export const POST = withAuth(async (request, _context, userId) => {
   let body: CheckInSaveBody;
   try {
     body = await request.json();
@@ -115,7 +112,7 @@ export async function POST(request: NextRequest) {
     const holding = holdingsMap.get(holdingId);
     if (!holding) {
       errors[holdingId] = "Holding not found";
-    } else if (!snapshotTypes.includes(holding.type as (typeof snapshotTypes)[number])) {
+    } else if (!SNAPSHOT_TYPES.includes(holding.type as (typeof SNAPSHOT_TYPES)[number])) {
       errors[holdingId] = "Invalid holding type for snapshot";
     }
   }
@@ -137,12 +134,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ errors }, { status: 400 });
   }
 
-  // Check for existing snapshots (conflict detection)
+  // Check for existing snapshots (conflict detection, scoped to user's holdings)
   const existingSnapshots = await db
     .select()
     .from(snapshots)
     .where(
       and(
+        inArray(snapshots.holdingId, allHoldingIds),
         eq(snapshots.date, normalizedDate),
         isNull(snapshots.deletedAt)
       )
@@ -239,4 +237,4 @@ export async function POST(request: NextRequest) {
     },
     { status: 201 }
   );
-}
+}, "saving check-in data");

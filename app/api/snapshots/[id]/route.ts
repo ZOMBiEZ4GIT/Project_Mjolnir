@@ -1,20 +1,25 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { snapshots, holdings, contributions } from "@/lib/db/schema";
 import { eq, and, isNull } from "drizzle-orm";
+import { withAuth } from "@/lib/utils/with-auth";
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+/**
+ * GET /api/snapshots/:id
+ *
+ * Returns a single snapshot by ID with holding name and type.
+ * Ownership is validated via the parent holding's userId.
+ *
+ * Response: Snapshot object
+ *   { id, holdingId, date, balance, currency, notes, createdAt, updatedAt,
+ *     holdingName, holdingType }
+ *
+ * Errors:
+ *   - 401 if not authenticated
+ *   - 404 if snapshot not found or doesn't belong to user
+ */
+export const GET = withAuth(async (_request, context, userId) => {
+  const { id } = await context.params;
 
   // Query with inner join to include holding info and validate ownership
   const result = await db
@@ -46,24 +51,32 @@ export async function GET(
   }
 
   return NextResponse.json(result[0]);
-}
+}, "fetching snapshot");
 
 interface UpdateSnapshotBody {
   balance?: string | number;
   notes?: string;
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+/**
+ * PATCH /api/snapshots/:id
+ *
+ * Partially updates a snapshot. Only balance and notes can be changed;
+ * the holding and date are immutable after creation.
+ *
+ * Request body (all optional):
+ *   - balance: Numeric balance value
+ *   - notes: Free-text notes
+ *
+ * Response: Updated snapshot object with holdingName and holdingType
+ *
+ * Errors:
+ *   - 400 with { errors } for validation failures or invalid JSON
+ *   - 401 if not authenticated
+ *   - 404 if snapshot not found or doesn't belong to user
+ */
+export const PATCH = withAuth(async (request, context, userId) => {
+  const { id } = await context.params;
 
   // Check if snapshot exists and belongs to user
   const existing = await db
@@ -138,19 +151,23 @@ export async function PATCH(
     holdingName: existing[0].holdingName,
     holdingType: existing[0].holdingType,
   });
-}
+}, "updating snapshot");
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const { id } = await params;
+/**
+ * DELETE /api/snapshots/:id
+ *
+ * Soft-deletes a snapshot by setting `deletedAt` timestamp. For super
+ * holdings, also soft-deletes the associated contribution record for
+ * the same holding + date (if one exists).
+ *
+ * Response: { success: true }
+ *
+ * Errors:
+ *   - 401 if not authenticated
+ *   - 404 if snapshot not found or doesn't belong to user
+ */
+export const DELETE = withAuth(async (_request, context, userId) => {
+  const { id } = await context.params;
 
   // Check if snapshot exists and belongs to user, get holdingId and date
   const existing = await db
@@ -205,4 +222,4 @@ export async function DELETE(
   }
 
   return NextResponse.json({ success: true });
-}
+}, "deleting snapshot");

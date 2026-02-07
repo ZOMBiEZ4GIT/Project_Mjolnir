@@ -19,13 +19,8 @@ import { FormTextareaField } from "@/components/ui/form-textarea-field";
 import { ChevronDown, ChevronRight, Loader2 } from "lucide-react";
 import { useFormShake } from "@/hooks/use-form-shake";
 import { showSuccess, showError } from "@/lib/toast-helpers";
-
-// Currency symbols for display
-const currencySymbols: Record<string, string> = {
-  AUD: "A$",
-  NZD: "NZ$",
-  USD: "US$",
-};
+import { CURRENCY_SYMBOLS } from "@/lib/constants";
+import { queryKeys } from "@/lib/query-keys";
 
 // Format date as "Month Year" (e.g., "January 2026")
 function formatMonthYear(dateStr: string): string {
@@ -188,7 +183,9 @@ export function EditSnapshotModal({
 
   // Fetch contribution if this is a super holding
   const { data: contribution, isLoading: isLoadingContribution } = useQuery({
-    queryKey: ["contribution", snapshot?.holdingId, snapshot?.date],
+    queryKey: snapshot?.holdingId && snapshot?.date
+      ? queryKeys.contributions.single(snapshot.holdingId, snapshot.date)
+      : ["contribution"],
     queryFn: () => fetchContribution(snapshot!.holdingId, snapshot!.date),
     enabled: open && snapshot?.holdingType === "super",
   });
@@ -275,10 +272,10 @@ export function EditSnapshotModal({
       }
 
       // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ["snapshots"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.snapshots.all });
       queryClient.invalidateQueries({ queryKey: ["contribution"] });
-      queryClient.invalidateQueries({ queryKey: ["contributions"] });
-      queryClient.invalidateQueries({ queryKey: ["holdings"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.contributions.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.holdings.all });
 
       showSuccess("Snapshot updated successfully");
       onOpenChange(false);
@@ -300,7 +297,7 @@ export function EditSnapshotModal({
 
   if (!snapshot) return null;
 
-  const currencySymbol = currencySymbols[snapshot.currency] || snapshot.currency;
+  const currencySymbol = CURRENCY_SYMBOLS[snapshot.currency as keyof typeof CURRENCY_SYMBOLS] || snapshot.currency;
 
   return (
     <AnimatedDialog open={open} onOpenChange={onOpenChange}>

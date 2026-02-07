@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-keys";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Mail, Calendar, Send, Loader2 } from "lucide-react";
@@ -133,7 +134,7 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
     data: preferences,
     isLoading: isPreferencesLoading,
   } = useQuery({
-    queryKey: ["preferences"],
+    queryKey: queryKeys.preferences,
     queryFn: fetchPreferences,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
@@ -144,12 +145,12 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
     mutationFn: (emailReminders: boolean) => updatePreferences({ emailReminders }),
     onMutate: async (emailReminders) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["preferences"] });
+      await queryClient.cancelQueries({ queryKey: queryKeys.preferences });
       // Snapshot previous value
-      const previousPreferences = queryClient.getQueryData<PreferencesResponse>(["preferences"]);
+      const previousPreferences = queryClient.getQueryData<PreferencesResponse>(queryKeys.preferences);
       // Optimistically update
       if (previousPreferences) {
-        queryClient.setQueryData<PreferencesResponse>(["preferences"], {
+        queryClient.setQueryData<PreferencesResponse>(queryKeys.preferences, {
           ...previousPreferences,
           emailReminders,
         });
@@ -162,13 +163,13 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
     onError: (_err, _newValue, context) => {
       // Revert on error
       if (context?.previousPreferences) {
-        queryClient.setQueryData(["preferences"], context.previousPreferences);
+        queryClient.setQueryData(queryKeys.preferences, context.previousPreferences);
       }
       toast.error("Failed to update email preferences");
     },
     onSettled: () => {
       // Refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["preferences"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.preferences });
     },
   });
 
@@ -177,12 +178,12 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
     mutationFn: (reminderDay: number) => updatePreferences({ reminderDay }),
     onMutate: async (reminderDay) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["preferences"] });
+      await queryClient.cancelQueries({ queryKey: queryKeys.preferences });
       // Snapshot previous value
-      const previousPreferences = queryClient.getQueryData<PreferencesResponse>(["preferences"]);
+      const previousPreferences = queryClient.getQueryData<PreferencesResponse>(queryKeys.preferences);
       // Optimistically update
       if (previousPreferences) {
-        queryClient.setQueryData<PreferencesResponse>(["preferences"], {
+        queryClient.setQueryData<PreferencesResponse>(queryKeys.preferences, {
           ...previousPreferences,
           reminderDay,
         });
@@ -195,13 +196,13 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
     onError: (_err, _newValue, context) => {
       // Revert on error
       if (context?.previousPreferences) {
-        queryClient.setQueryData(["preferences"], context.previousPreferences);
+        queryClient.setQueryData(queryKeys.preferences, context.previousPreferences);
       }
       toast.error("Failed to update reminder day");
     },
     onSettled: () => {
       // Refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ["preferences"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.preferences });
     },
   });
 

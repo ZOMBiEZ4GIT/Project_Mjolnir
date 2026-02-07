@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 import { getUserPreferences, updateUserPreferences } from "@/lib/queries/users";
+import { withAuth } from "@/lib/utils/with-auth";
 
 const currencies = ["AUD", "NZD", "USD"] as const;
 type Currency = (typeof currencies)[number];
@@ -16,13 +16,7 @@ interface PatchBody {
  * GET /api/preferences
  * Returns current user preferences (creates default if none exist)
  */
-export async function GET() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (_request, _context, userId) => {
   const preferences = await getUserPreferences(userId);
 
   return NextResponse.json({
@@ -32,19 +26,13 @@ export async function GET() {
     reminderDay: preferences.reminderDay,
     updatedAt: preferences.updatedAt,
   });
-}
+}, "fetching preferences");
 
 /**
  * PATCH /api/preferences
  * Updates user preferences (currently only displayCurrency)
  */
-export async function PATCH(request: NextRequest) {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const PATCH = withAuth(async (request, _context, userId) => {
   let body: PatchBody;
   try {
     body = await request.json();
@@ -112,4 +100,4 @@ export async function PATCH(request: NextRequest) {
     reminderDay: updated.reminderDay,
     updatedAt: updated.updatedAt,
   });
-}
+}, "updating preferences");

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { currentUser } from "@clerk/nextjs/server";
 import { sendCheckInReminder } from "@/lib/services/reminders";
 import { isEmailConfigured } from "@/lib/services/email";
+import { withAuth } from "@/lib/utils/with-auth";
 
 /**
  * POST /api/email/test
@@ -9,13 +10,7 @@ import { isEmailConfigured } from "@/lib/services/email";
  * Sends a test check-in reminder email to the current user.
  * Used to verify email configuration is working correctly.
  */
-export async function POST() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (_request, _context, userId) => {
   // Check if email service is configured
   if (!isEmailConfigured()) {
     return NextResponse.json(
@@ -68,4 +63,4 @@ export async function POST() {
     holdingsToUpdate: result.holdingsToUpdate,
     messageId: result.messageId,
   });
-}
+}, "sending test email");

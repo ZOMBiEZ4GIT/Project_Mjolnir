@@ -22,6 +22,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { FormField } from "@/components/ui/form-field";
 import { FormSelectField } from "@/components/ui/form-select-field";
 import { useFormShake } from "@/hooks/use-form-shake";
+import { CURRENCIES, EXCHANGES, TRADEABLE_TYPES } from "@/lib/constants";
+import { queryKeys } from "@/lib/query-keys";
 
 const HOLDING_TYPES = [
   { value: "stock", label: "Stock", description: "Individual company shares" },
@@ -31,12 +33,6 @@ const HOLDING_TYPES = [
   { value: "cash", label: "Cash", description: "Bank accounts and cash" },
   { value: "debt", label: "Debt", description: "Loans and liabilities" },
 ] as const;
-
-const CURRENCIES = ["AUD", "NZD", "USD"] as const;
-const EXCHANGES = ["ASX", "NZX", "NYSE", "NASDAQ"] as const;
-
-// Types that require tradeable form (symbol required)
-const TRADEABLE_TYPES = ["stock", "etf", "crypto"] as const;
 // Types that require exchange
 const EXCHANGE_REQUIRED_TYPES = ["stock", "etf"] as const;
 
@@ -153,7 +149,7 @@ export function AddHoldingDialog({ children }: AddHoldingDialogProps) {
   const mutation = useMutation({
     mutationFn: createHolding,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["holdings"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.holdings.all });
       showSuccess("Holding created successfully");
       handleClose();
     },

@@ -15,16 +15,12 @@ import { HoldingPriceChart } from "@/components/holdings/holding-price-chart";
 import { SuperBalanceHistoryChart } from "@/components/holdings/super-balance-history-chart";
 import type { Holding } from "@/lib/db/schema";
 import type { Currency } from "@/lib/utils/currency";
+import { isTradeable as isTradeableType } from "@/lib/constants";
+import { queryKeys } from "@/lib/query-keys";
 
 export const dynamic = "force-dynamic";
 
-// Types that are tradeable (show price chart)
-const TRADEABLE_TYPES = ["stock", "etf", "crypto"] as const;
-
-// Super type (show balance history chart)
-const SUPER_TYPE = "super" as const;
-
-// Holding type display labels
+// Holding type display labels (singular, with "Cryptocurrency" for detail page)
 const HOLDING_TYPE_LABELS: Record<string, string> = {
   stock: "Stock",
   etf: "ETF",
@@ -210,20 +206,18 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["holding", id],
+    queryKey: queryKeys.holdings.detail(id),
     queryFn: () => fetchHolding(id),
     enabled: isLoaded && isSignedIn && !!id,
   });
 
-  const isTradeable = holding
-    ? TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number])
-    : false;
+  const isTradeable = holding ? isTradeableType(holding.type) : false;
 
-  const isSuper = holding ? holding.type === SUPER_TYPE : false;
+  const isSuper = holding ? holding.type === "super" : false;
 
   // Fetch price for tradeable holdings
   const { data: priceData, isLoading: priceLoading } = useQuery({
-    queryKey: ["price", id],
+    queryKey: queryKeys.prices.single(id),
     queryFn: () => fetchPrice(id),
     enabled: isLoaded && isSignedIn && !!id && isTradeable,
     staleTime: 1000 * 60 * 5, // 5 minutes
