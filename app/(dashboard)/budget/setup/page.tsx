@@ -40,7 +40,9 @@ import {
   Heart,
   Gamepad2,
   HelpCircle,
+  Settings2,
 } from "lucide-react";
+import { CategoryManager } from "@/components/budget/CategoryManager";
 
 export const dynamic = "force-dynamic";
 
@@ -196,6 +198,7 @@ export default function BudgetSetupPage() {
 
   // Multi-step state
   const [currentStep, setCurrentStep] = useState(0);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
 
   // Step 1
   const [paydayDay, setPaydayDay] = useState<number | null>(null);
@@ -395,10 +398,30 @@ export default function BudgetSetupPage() {
 
   return (
     <div className="container mx-auto max-w-2xl px-4 py-8">
-      <h1 className="text-2xl font-bold text-foreground mb-2">Budget Setup</h1>
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold text-foreground">Budget Setup</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowCategoryManager(!showCategoryManager)}
+        >
+          <Settings2 className="h-4 w-4 mr-1.5" />
+          <span className="hidden sm:inline">Manage Categories</span>
+          <span className="sm:hidden">Categories</span>
+        </Button>
+      </div>
       <p className="text-muted-foreground mb-8">
         Configure your pay cycle and monthly income to get started.
       </p>
+
+      {/* Category Manager Panel */}
+      {showCategoryManager && (
+        <Card className="mb-8">
+          <CardContent className="pt-6">
+            <CategoryManager onClose={() => setShowCategoryManager(false)} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Steps indicator */}
       <div className="flex items-center gap-2 mb-8">
