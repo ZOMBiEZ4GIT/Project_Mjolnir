@@ -59,7 +59,7 @@ export function CategoryCard({
   return (
     <Link
       href={`/budget/transactions?category=${categoryId}&from=${periodStart}&to=${periodEnd}`}
-      className="rounded-lg border border-border bg-card/50 p-4 hover:bg-card/80 transition-colors"
+      className="rounded-lg border border-border bg-card/50 p-4 hover:bg-card/80 active:bg-card/50 transition-colors"
     >
       {/* Header: icon + name + percentage */}
       <div className="flex items-center justify-between mb-2">

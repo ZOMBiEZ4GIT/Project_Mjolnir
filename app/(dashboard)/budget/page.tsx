@@ -90,7 +90,7 @@ function BudgetDashboardSkeleton() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
@@ -103,7 +103,7 @@ function BudgetDashboardSkeleton() {
       </div>
 
       {/* Category cards grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
@@ -286,9 +286,9 @@ export default function BudgetDashboardPage() {
       : 0;
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">Budget</h1>
         <div className="flex items-center gap-3">
           <AIRecommendationButton
@@ -303,7 +303,7 @@ export default function BudgetDashboardPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           label="Income"
           value={formatCents(summary.income.actualCents)}
@@ -336,7 +336,7 @@ export default function BudgetDashboardPage() {
       </div>
 
       {/* Hero chart area — Sankey (desktop) / mobile chart placeholder (B4-006) */}
-      <div className="rounded-lg border border-border bg-card/50 p-6">
+      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
         <h2 className="text-sm font-medium text-muted-foreground mb-4">
           Budget Breakdown
         </h2>
@@ -349,7 +349,7 @@ export default function BudgetDashboardPage() {
         <h2 className="text-sm font-medium text-muted-foreground mb-4">
           Categories
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {summary.categories.map((cat) => (
             <CategoryCard
               key={cat.categoryId}
@@ -362,7 +362,7 @@ export default function BudgetDashboardPage() {
       </div>
 
       {/* Payday countdown & Savings indicator — B4-008 / B4-009 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         <PaydayCountdown
           daysElapsed={summary.daysElapsed}
           totalDays={summary.totalDays}
