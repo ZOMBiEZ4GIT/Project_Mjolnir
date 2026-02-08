@@ -21,6 +21,9 @@
 - Mixed bar/line legend: w-4 h-0.5 line indicator for Line series, w-2.5 h-2.5 rounded-sm square for Bar series
 - Design token mapping: emerald→text-positive/bg-positive, red→text-destructive/bg-destructive, amber→text-warning/bg-warning, purple→bg-primary
 - Chart hex colours and colour picker palettes are exempt from token migration — they need literal hex for SVG/canvas
+- Nested nav: NavItem.children[] for sub-sections; sidebar uses collapsible group with ChevronDown, mobile uses same pattern
+- Command menu: flatten children with `parent → child` label format so all pages are searchable
+- Active state for nested nav: exact match for parent route (/budget), startsWith for sub-routes (/budget/transactions)
 
 ---
 
@@ -198,4 +201,25 @@
   - The transactions page already used proper tokens (text-positive, text-destructive, text-warning, bg-warning/10) — set the pattern others should follow
   - Chart hex colours and colour picker palettes are exempt from token migration — they need literal hex for SVG/canvas
   - Typography, spacing (rounded-lg, p-4), and shadows were already consistent across components — no changes needed
+---
+
+## 2026-02-08 - B6-010
+- What was implemented: Budget navigation integration with collapsible sub-links in sidebar and mobile drawer
+- Files changed:
+  - lib/navigation.ts — added `children` field to NavItem interface; Budget item now contains Dashboard, Transactions, Setup sub-links
+  - components/layout/sidebar.tsx — collapsible Budget section with ChevronDown toggle, border-l sub-link indentation, auto-expand when on budget pages
+  - components/layout/mobile-nav.tsx — same collapsible pattern for mobile drawer with 44px min-h touch targets on sub-links
+  - components/command-menu.tsx — flattened nested nav items with "Budget → Dashboard" label format for search
+- **Key changes:**
+  - Removed flat `/budget/transactions` "Budget Txns" nav item — now nested under Budget group
+  - Budget section auto-expands when pathname starts with /budget
+  - Collapsed sidebar shows single Budget icon via NavItemLink; expanded shows collapsible group
+  - Active state: exact match for /budget (Dashboard child), startsWith for sub-routes
+  - UncategorisedBadge moved from flat nav item to Budget → Transactions sub-link
+  - Sub-links indented with ml-4 + border-l border-border + pl-2 for visual hierarchy
+- **Learnings for future iterations:**
+  - Adding children to NavItem is non-breaking — sidebar/mobile handle the `item.children` check, and command-menu flattens
+  - For collapsible groups in sidebar: use button (not Link) for the group header so it toggles expand/collapse
+  - ChevronDown rotation: `rotate-180` on expanded state with `transition-transform duration-200`
+  - Command menu needs children flattened into flat list with prefixed labels so all routes remain keyboard-accessible
 ---
