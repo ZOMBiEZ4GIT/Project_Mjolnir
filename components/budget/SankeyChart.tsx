@@ -66,17 +66,22 @@ function buildGraph(summary: BudgetSummary) {
   const income = summary.income.actualCents;
   if (income <= 0) return null;
 
-  // Build nodes: 0=Income, 1..N=categories, N+1=Savings
+  // Only include categories that actually have spending (so every node has a link)
+  const spentCategories = summary.categories.filter(
+    (c) => c.spentCents > 0
+  );
+
+  if (spentCategories.length === 0) return null;
+
+  const savingsAmount = summary.totals.savingsCents;
+  const includeSavings = savingsAmount > 0;
+
+  // Build nodes: 0=Income, 1..N=categories, optionally N+1=Savings
   const nodes: NodeExtra[] = [
     { name: "Income", colour: INCOME_COLOUR, type: "income" },
   ];
 
-  // Only include categories that have budget OR spending
-  const activeCategories = summary.categories.filter(
-    (c) => c.budgetedCents > 0 || c.spentCents > 0
-  );
-
-  for (const cat of activeCategories) {
+  for (const cat of spentCategories) {
     nodes.push({
       name: cat.categoryName,
       colour: cat.colour,
@@ -85,30 +90,28 @@ function buildGraph(summary: BudgetSummary) {
     });
   }
 
-  const savingsAmount = summary.totals.savingsCents;
-  nodes.push({
-    name: "Savings",
-    colour: savingsAmount >= 0 ? SAVINGS_POSITIVE_COLOUR : SAVINGS_NEGATIVE_COLOUR,
-    type: "savings",
-  });
+  if (includeSavings) {
+    nodes.push({
+      name: "Savings",
+      colour: SAVINGS_POSITIVE_COLOUR,
+      type: "savings",
+    });
+  }
 
   // Build links: Income → each category (by spent amount), Income → Savings
   const links: Array<{ source: number; target: number; value: number } & LinkExtra> = [];
 
-  activeCategories.forEach((cat, i) => {
-    const amount = cat.spentCents;
-    if (amount > 0) {
-      links.push({
-        source: 0,
-        target: i + 1, // offset by 1 for income node
-        value: amount,
-        isOver: cat.status === "over",
-      });
-    }
+  spentCategories.forEach((cat, i) => {
+    links.push({
+      source: 0,
+      target: i + 1, // offset by 1 for income node
+      value: cat.spentCents,
+      isOver: cat.status === "over",
+    });
   });
 
   // Savings link (income → savings)
-  if (savingsAmount > 0) {
+  if (includeSavings) {
     links.push({
       source: 0,
       target: nodes.length - 1,
@@ -116,9 +119,6 @@ function buildGraph(summary: BudgetSummary) {
       isOver: false,
     });
   }
-
-  // If no links at all, return null
-  if (links.length === 0) return null;
 
   return { nodes, links };
 }
