@@ -28,7 +28,7 @@
  *   - Clerk provides the user ID (text PK, not UUID) as the single source of
  *     identity and authentication.
  */
-import { pgTable, text, timestamp, uuid, decimal, date, boolean, pgEnum, unique, integer, bigint, varchar, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, decimal, date, boolean, pgEnum, unique, integer, bigint, varchar, index, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
 // =============================================================================
@@ -505,6 +505,34 @@ export const paydayConfig = pgTable("payday_config", {
 });
 
 // =============================================================================
+// AI RECOMMENDATIONS
+// =============================================================================
+
+/**
+ * AI-generated budget recommendations stored from n8n + Claude analysis.
+ *
+ * Each row stores a complete recommendation payload (suggested budget changes,
+ * pay split config, insights, savings projections) as JSONB. The `status`
+ * column tracks whether the user has accepted, dismissed, or not yet acted
+ * on the recommendation. Linked to a specific budget period.
+ */
+export const aiRecommendations = pgTable(
+  "ai_recommendations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    budgetPeriodId: uuid("budget_period_id")
+      .references(() => budgetPeriods.id)
+      .notNull(),
+    recommendationData: jsonb("recommendation_data").notNull(),
+    status: varchar("status", { length: 20 }).default("pending").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    budgetPeriodIdIdx: index("ai_recommendations_budget_period_id_idx").on(table.budgetPeriodId),
+  })
+);
+
+// =============================================================================
 // RELATIONS
 // =============================================================================
 
@@ -561,6 +589,7 @@ export const importHistoryRelations = relations(importHistory, ({ one }) => ({
 
 export const budgetPeriodsRelations = relations(budgetPeriods, ({ many }) => ({
   allocations: many(budgetAllocations),
+  aiRecommendations: many(aiRecommendations),
 }));
 
 export const budgetAllocationsRelations = relations(budgetAllocations, ({ one }) => ({
@@ -571,6 +600,13 @@ export const budgetAllocationsRelations = relations(budgetAllocations, ({ one })
   category: one(budgetCategories, {
     fields: [budgetAllocations.categoryId],
     references: [budgetCategories.id],
+  }),
+}));
+
+export const aiRecommendationsRelations = relations(aiRecommendations, ({ one }) => ({
+  budgetPeriod: one(budgetPeriods, {
+    fields: [aiRecommendations.budgetPeriodId],
+    references: [budgetPeriods.id],
   }),
 }));
 
@@ -622,3 +658,6 @@ export type NewBudgetPeriod = typeof budgetPeriods.$inferInsert;
 
 export type BudgetAllocation = typeof budgetAllocations.$inferSelect;
 export type NewBudgetAllocation = typeof budgetAllocations.$inferInsert;
+
+export type AiRecommendation = typeof aiRecommendations.$inferSelect;
+export type NewAiRecommendation = typeof aiRecommendations.$inferInsert;

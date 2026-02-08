@@ -101,6 +101,10 @@ export const queryKeys = {
         ["budget", "transactions", filters] as const,
       uncategorisedCount: ["budget", "transactions", "uncategorised-count"] as const,
     },
+    recommendations: {
+      latest: (periodId?: string) =>
+        ["budget", "recommendations", periodId ?? "current"] as const,
+    },
   },
 
   // ---- Settings ----

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { queryKeys } from "@/lib/query-keys";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -20,7 +20,13 @@ import { CategoryCard } from "@/components/budget/CategoryCard";
 import { PaydayCountdown } from "@/components/budget/PaydayCountdown";
 import { SavingsIndicator } from "@/components/budget/SavingsIndicator";
 import { PeriodSelector } from "@/components/budget/PeriodSelector";
+import { AIRecommendationButton } from "@/components/budget/AIRecommendationButton";
+import {
+  RecommendationModal,
+  type AiRecommendation,
+} from "@/components/budget/RecommendationModal";
 import Link from "next/link";
+import { toast } from "sonner";
 import type { BudgetSummary } from "@/lib/budget/summary";
 
 export const dynamic = "force-dynamic";
@@ -119,8 +125,75 @@ function BudgetDashboardSkeleton() {
 
 export default function BudgetDashboardPage() {
   const { isLoaded, isSignedIn } = useAuthSafe();
+  const queryClient = useQueryClient();
 
   const [periodId, setPeriodId] = useState<string | undefined>(undefined);
+  const [activeRecommendation, setActiveRecommendation] =
+    useState<AiRecommendation | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleRecommendation = useCallback((rec: unknown) => {
+    setActiveRecommendation(rec as AiRecommendation);
+    setModalOpen(true);
+  }, []);
+
+  const handleAccept = useCallback(
+    async (rec: AiRecommendation) => {
+      // Build allocations array from the suggested budget
+      const allocations = rec.recommendationData.suggestedBudget.map(
+        (item) => ({
+          categoryId: item.categoryId,
+          allocatedCents: item.suggestedCents,
+        })
+      );
+
+      // Apply allocations and update status atomically (both must succeed)
+      const [allocRes, statusRes] = await Promise.all([
+        fetch(`/api/budget/periods/${rec.budgetPeriodId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ allocations }),
+        }),
+        fetch(`/api/budget/recommendations/${rec.id}/status`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "accepted" }),
+        }),
+      ]);
+
+      if (!allocRes.ok || !statusRes.ok) {
+        toast.error("Failed to apply recommendations");
+        return;
+      }
+
+      setModalOpen(false);
+      toast.success("Budget updated with AI recommendations");
+
+      // Refresh both the summary (new allocations) and recommendation (new status)
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.budget.summary(rec.budgetPeriodId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.budget.recommendations.latest(rec.budgetPeriodId),
+      });
+    },
+    [queryClient]
+  );
+
+  const handleDismiss = useCallback(
+    async (rec: AiRecommendation) => {
+      await fetch(`/api/budget/recommendations/${rec.id}/status`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "dismissed" }),
+      });
+      setModalOpen(false);
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.budget.recommendations.latest(rec.budgetPeriodId),
+      });
+    },
+    [queryClient]
+  );
 
   const {
     data: summary,
@@ -192,6 +265,12 @@ export default function BudgetDashboardPage() {
 
   if (!summary) return null;
 
+  // Category ID → Name map for the recommendation modal
+  const categoryMap: Record<string, string> = {};
+  for (const cat of summary.categories) {
+    categoryMap[cat.categoryId] = cat.categoryName;
+  }
+
   // Derived values
   const incomePercent =
     summary.income.expectedCents > 0
@@ -211,10 +290,16 @@ export default function BudgetDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Budget</h1>
-        <PeriodSelector
-          currentPeriodId={summary.periodId}
-          onPeriodChange={setPeriodId}
-        />
+        <div className="flex items-center gap-3">
+          <AIRecommendationButton
+            periodId={summary.periodId}
+            onRecommendation={handleRecommendation}
+          />
+          <PeriodSelector
+            currentPeriodId={summary.periodId}
+            onPeriodChange={setPeriodId}
+          />
+        </div>
       </div>
 
       {/* Stats row */}
@@ -291,6 +376,18 @@ export default function BudgetDashboardPage() {
           totalDays={summary.totalDays}
         />
       </div>
+
+      {/* AI Recommendation Modal — B5-006 */}
+      {activeRecommendation && (
+        <RecommendationModal
+          recommendation={activeRecommendation}
+          categoryMap={categoryMap}
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          onAccept={handleAccept}
+          onDismiss={handleDismiss}
+        />
+      )}
     </div>
   );
 }
