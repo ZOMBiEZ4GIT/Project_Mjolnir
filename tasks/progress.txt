@@ -1,2 +1,27 @@
 # Ralph Progress Log — B6: Budget Polish & Mobile
 # This file is reset at the start of each epic.
+
+## Codebase Patterns
+- PeriodSelector touch targets: p-2.5 gives ~40px which meets iOS minimum (was p-1 = ~28px)
+- AIRecommendationButton uses `hidden sm:inline` / `sm:hidden` pattern for responsive button text
+- Budget dashboard uses responsive gaps: `gap-3 sm:gap-4` pattern
+- Category cards grid: `grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4`
+- Container padding: `px-3 sm:px-4 py-6 sm:py-8` for mobile-friendly spacing
+- MobileBudgetChart already has `active:bg-card/50` for touch feedback — use same on CategoryCard
+
+---
+
+## 2026-02-08 - B6-001
+- What was implemented: Mobile-optimised budget dashboard for 320px-768px viewports
+- Files changed:
+  - app/(dashboard)/budget/page.tsx — responsive header, gaps, grids, container padding
+  - components/budget/PeriodSelector.tsx — enlarged touch targets (p-1 → p-2.5), removed fixed min-w-[180px]
+  - components/budget/AIRecommendationButton.tsx — responsive text (shorter on mobile)
+  - components/budget/CategoryCard.tsx — added active:bg-card/50 touch feedback
+- **Learnings for future iterations:**
+  - The dashboard already has good responsive foundations (dual chart approach, md: breakpoints)
+  - PeriodSelector was the biggest mobile issue — p-1 padding on nav buttons was too small
+  - AIRecommendationButton text like "Get AI Recommendation" is too long for small screens — use hidden/shown span pairs
+  - Category cards were grid-cols-2 on all small screens — single column works better below sm:
+  - PaydayCountdown and SavingsIndicator already stack via grid-cols-1 md:grid-cols-2 — no changes needed
+---
