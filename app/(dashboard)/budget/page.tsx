@@ -21,6 +21,7 @@ import { PaydayCountdown } from "@/components/budget/PaydayCountdown";
 import { SavingsIndicator } from "@/components/budget/SavingsIndicator";
 import { PeriodSelector } from "@/components/budget/PeriodSelector";
 import { AIRecommendationButton } from "@/components/budget/AIRecommendationButton";
+import { SpendingTrends } from "@/components/budget/SpendingTrends";
 import {
   RecommendationModal,
   type AiRecommendation,
@@ -360,6 +361,9 @@ export default function BudgetDashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* Spending trends chart — B6-006 */}
+      <SpendingTrends />
 
       {/* Payday countdown & Savings indicator — B4-008 / B4-009 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
