@@ -8,6 +8,11 @@
 - Category cards grid: `grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4`
 - Container padding: `px-3 sm:px-4 py-6 sm:py-8` for mobile-friendly spacing
 - MobileBudgetChart already has `active:bg-card/50` for touch feedback — use same on CategoryCard
+- Mobile transaction list: use card layout (sm:hidden) + table (hidden sm:block) dual rendering pattern
+- Mobile filter panel: SlidersHorizontal icon button with badge count, expandable panel with full-width inputs
+- Select items on mobile need py-2.5 for touch-friendly tap targets
+- CategoryBadge touch: h-8 sm:h-7 for mobile/desktop, active:bg-accent/20 for press feedback
+- Refresh button pattern: refetch() from useQuery + isFetching for spin animation
 
 ---
 
@@ -24,4 +29,27 @@
   - AIRecommendationButton text like "Get AI Recommendation" is too long for small screens — use hidden/shown span pairs
   - Category cards were grid-cols-2 on all small screens — single column works better below sm:
   - PaydayCountdown and SavingsIndicator already stack via grid-cols-1 md:grid-cols-2 — no changes needed
+---
+
+## 2026-02-08 - B6-002
+- What was implemented: Mobile-optimised transaction list with card layout, collapsible filters, and refresh button
+- Files changed:
+  - app/(dashboard)/budget/transactions/page.tsx — complete mobile overhaul
+- **Key changes:**
+  - Mobile card layout (TransactionCard component) replaces table below sm: breakpoint — shows description, amount, short date, HELD badge, and category selector
+  - Desktop table retained for sm+ with status column now hidden below md: (was sm:)
+  - Filter bar collapses to SlidersHorizontal icon button on mobile — expands a bordered panel with full-width inputs
+  - Active filter count badge on the filter button when collapsed
+  - Search input is full-width on mobile (flex-1)
+  - Visible RefreshCw button in header with spinning animation during fetch
+  - Container padding and heading sizes responsive: px-3 sm:px-4, text-xl sm:text-2xl
+  - CategoryBadge touch-optimised: h-8 on mobile (h-7 desktop), active:bg-accent/20 for press feedback
+  - Select dropdown items padded to py-2.5 for touch targets
+  - Pagination text shortened: "Prev" on mobile, "Previous" on desktop
+  - formatDateShort() added for mobile cards (no year)
+- **Learnings for future iterations:**
+  - Tables are unsuitable for 320px viewports — always use card/list pattern for mobile with hidden sm:block for the table
+  - Defining DesktopFilterBar + MobileFilterPanel as separate components avoids deeply nested conditionals
+  - isFetching (not isLoading) is needed for refresh spinner — isLoading is only true on first load
+  - Filter count badge (activeFilterCount) provides visual affordance that filters are active when panel is collapsed
 ---
