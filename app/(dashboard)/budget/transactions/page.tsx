@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { TransactionSearch } from "@/components/budget/TransactionSearch";
 import {
   Search,
   AlertCircle,
@@ -37,6 +38,11 @@ import {
   DollarSign,
   HelpCircle,
   Tag,
+  SlidersHorizontal,
+  X,
+  RefreshCw,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -119,6 +125,14 @@ function formatDate(dateString: string): string {
   });
 }
 
+function formatDateShort(dateString: string): string {
+  const date = new Date(dateString + "T00:00:00");
+  return date.toLocaleDateString("en-AU", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
 function formatAmount(amountCents: number): string {
   const abs = Math.abs(amountCents) / 100;
   return abs.toLocaleString("en-AU", {
@@ -146,7 +160,7 @@ function CategoryBadge({
       onValueChange={(value) => onCategoryChange(transaction.id, value)}
     >
       <SelectTrigger
-        className="h-7 w-auto min-w-[130px] max-w-[180px] border-0 bg-transparent px-2 py-0 text-xs font-medium hover:bg-accent/10 focus:ring-0 focus:ring-offset-0"
+        className="h-8 sm:h-7 w-auto min-w-[120px] sm:min-w-[130px] max-w-[180px] border-0 bg-transparent px-2 py-0 text-xs font-medium hover:bg-accent/10 active:bg-accent/20 focus:ring-0 focus:ring-offset-0"
       >
         <span className="flex items-center gap-1.5 truncate">
           <IconComponent className="h-3.5 w-3.5 shrink-0" />
@@ -161,7 +175,7 @@ function CategoryBadge({
         {categories.map((cat) => {
           const CatIcon = ICON_MAP[cat.icon] ?? Tag;
           return (
-            <SelectItem key={cat.id} value={cat.id} className="text-foreground">
+            <SelectItem key={cat.id} value={cat.id} className="text-foreground py-2.5">
               <span className="flex items-center gap-2">
                 <CatIcon className="h-3.5 w-3.5" />
                 <span
@@ -175,6 +189,52 @@ function CategoryBadge({
         })}
       </SelectContent>
     </Select>
+  );
+}
+
+// Mobile transaction card — used below sm: breakpoint
+function TransactionCard({
+  transaction,
+  categories,
+  onCategoryChange,
+}: {
+  transaction: BudgetTransaction;
+  categories: BudgetCategory[];
+  onCategoryChange: (transactionId: string, categoryId: string) => void;
+}) {
+  return (
+    <div className="flex items-start gap-3 px-3 py-3 border-b border-border last:border-b-0">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm text-foreground truncate">{transaction.description}</p>
+          <span
+            className={`text-sm font-mono whitespace-nowrap shrink-0 ${
+              transaction.amountCents < 0 ? "text-destructive" : "text-positive"
+            }`}
+          >
+            {transaction.amountCents < 0 ? "-" : "+"}
+            {formatAmount(transaction.amountCents)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-xs text-muted-foreground">
+            {formatDateShort(transaction.transactionDate)}
+          </span>
+          {transaction.status === "HELD" && (
+            <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-warning/10 text-warning">
+              HELD
+            </span>
+          )}
+        </div>
+        <div className="mt-1">
+          <CategoryBadge
+            transaction={transaction}
+            categories={categories}
+            onCategoryChange={onCategoryChange}
+          />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -194,8 +254,9 @@ export default function BudgetTransactionsPage() {
   const page = Math.max(parseInt(searchParams.get("page") ?? "1", 10) || 1, 1);
   const offset = (page - 1) * PAGE_SIZE;
 
-  // Local state for search input (debounced via form submit)
-  const [searchInput, setSearchInput] = useState(searchFilter ?? "");
+  // Local state for mobile filter toggle
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const updateFilters = useCallback(
     (updates: Record<string, string | undefined>) => {
@@ -254,7 +315,9 @@ export default function BudgetTransactionsPage() {
   const {
     data,
     isLoading,
+    isFetching,
     error,
+    refetch,
   } = useQuery({
     queryKey: queryKeys.budget.transactions.list({
       category: categoryFilter,
@@ -284,21 +347,41 @@ export default function BudgetTransactionsPage() {
     [categoryMutation]
   );
 
-  const handleSearchSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      updateFilters({ search: searchInput || undefined });
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      updateFilters({ search: value || undefined });
     },
-    [searchInput, updateFilters]
+    [updateFilters]
   );
+
+  const handleExportTransactions = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("type", "transactions");
+      if (fromFilter) params.set("from", fromFilter);
+      if (toFilter) params.set("to", toFilter);
+      const url = `/api/budget/export?${params.toString()}`;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [fromFilter, toFilter]);
 
   const transactions = data?.transactions ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const hasFilters = categoryFilter || statusFilter || fromFilter || toFilter || searchFilter || uncategorisedFilter;
+  const activeFilterCount = [categoryFilter, statusFilter, fromFilter, toFilter, searchFilter, uncategorisedFilter].filter(Boolean).length;
 
-  const FilterBar = () => (
-    <div className="flex flex-wrap gap-4 mb-4 items-end">
+  // Desktop filter bar (visible at sm+ breakpoints)
+  const DesktopFilterBar = () => (
+    <div className="hidden sm:flex flex-wrap gap-4 mb-4 items-end">
       {/* Category filter */}
       <div className="flex flex-col gap-1.5">
         <Label className="text-muted-foreground text-sm">Category</Label>
@@ -370,21 +453,15 @@ export default function BudgetTransactionsPage() {
       </div>
 
       {/* Search */}
-      <form onSubmit={handleSearchSubmit} className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5">
         <Label className="text-muted-foreground text-sm">Search</Label>
-        <div className="flex gap-2">
-          <Input
-            type="text"
-            placeholder="Description..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="w-[180px] bg-background border-border text-foreground"
-          />
-          <Button type="submit" variant="outline" size="icon" className="shrink-0">
-            <Search className="h-4 w-4" />
-          </Button>
-        </div>
-      </form>
+        <TransactionSearch
+          value={searchFilter ?? ""}
+          onChange={handleSearchChange}
+          className="w-[220px]"
+          placeholder="Description..."
+        />
+      </div>
 
       {/* Clear filters */}
       {hasFilters && (
@@ -393,22 +470,149 @@ export default function BudgetTransactionsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              setSearchInput("");
-              router.push("/budget/transactions");
-            }}
+            onClick={() => router.push("/budget/transactions")}
             className="text-muted-foreground hover:text-foreground"
           >
-            Clear filters
+            Clear all filters
           </Button>
         </div>
       )}
     </div>
   );
 
+  // Mobile filter panel (visible below sm breakpoint)
+  const MobileFilterPanel = () => (
+    <div className="sm:hidden mb-4">
+      {/* Filter toggle + search row */}
+      <div className="flex gap-2 mb-3">
+        <TransactionSearch
+          value={searchFilter ?? ""}
+          onChange={handleSearchChange}
+          className="flex-1"
+        />
+        <Button
+          variant="outline"
+          size="icon"
+          className="shrink-0 h-10 w-10 relative"
+          onClick={() => setFiltersOpen(!filtersOpen)}
+        >
+          {filtersOpen ? (
+            <X className="h-4 w-4" />
+          ) : (
+            <SlidersHorizontal className="h-4 w-4" />
+          )}
+          {activeFilterCount > 0 && !filtersOpen && (
+            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] font-medium flex items-center justify-center">
+              {activeFilterCount}
+            </span>
+          )}
+        </Button>
+      </div>
+
+      {/* Expandable filter panel */}
+      {filtersOpen && (
+        <div className="rounded-lg border border-border bg-card p-3 space-y-3">
+          {/* Category */}
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-muted-foreground text-sm">Category</Label>
+            <Select
+              value={uncategorisedFilter === "true" ? "__uncategorised" : (categoryFilter ?? "all")}
+              onValueChange={(value) => {
+                if (value === "__uncategorised") {
+                  updateFilters({ uncategorised: "true", category: undefined });
+                } else if (value === "all") {
+                  updateFilters({ category: undefined, uncategorised: undefined });
+                } else {
+                  updateFilters({ category: value, uncategorised: undefined });
+                }
+              }}
+            >
+              <SelectTrigger className="w-full bg-background border-border text-foreground">
+                <SelectValue placeholder="All categories" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border-border">
+                <SelectItem value="all" className="text-foreground">All categories</SelectItem>
+                <SelectItem value="__uncategorised" className="text-warning font-medium">
+                  Uncategorised only
+                </SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id} className="text-foreground py-2.5">
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Status */}
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-muted-foreground text-sm">Status</Label>
+            <Select
+              value={statusFilter ?? "all"}
+              onValueChange={(value) => updateFilters({ status: value === "all" ? undefined : value })}
+            >
+              <SelectTrigger className="w-full bg-background border-border text-foreground">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent className="bg-background border-border">
+                <SelectItem value="all" className="text-foreground py-2.5">All</SelectItem>
+                <SelectItem value="HELD" className="text-foreground py-2.5">Held</SelectItem>
+                <SelectItem value="SETTLED" className="text-foreground py-2.5">Settled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Date range */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground text-sm">From</Label>
+              <Input
+                type="date"
+                value={fromFilter ?? ""}
+                onChange={(e) => updateFilters({ from: e.target.value || undefined })}
+                className="w-full bg-background border-border text-foreground"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label className="text-muted-foreground text-sm">To</Label>
+              <Input
+                type="date"
+                value={toFilter ?? ""}
+                onChange={(e) => updateFilters({ to: e.target.value || undefined })}
+                className="w-full bg-background border-border text-foreground"
+              />
+            </div>
+          </div>
+
+          {/* Clear filters */}
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFiltersOpen(false);
+                router.push("/budget/transactions");
+              }}
+              className="w-full text-muted-foreground hover:text-foreground"
+            >
+              Clear all filters
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  const FilterBar = () => (
+    <>
+      <DesktopFilterBar />
+      <MobileFilterPanel />
+    </>
+  );
+
   if (!isLoaded) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-muted-foreground">Loading...</div>
         </div>
@@ -418,7 +622,7 @@ export default function BudgetTransactionsPage() {
 
   if (!isSignedIn) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
           <h2 className="text-xl text-foreground">Sign in to view your transactions</h2>
         </div>
@@ -428,8 +632,8 @@ export default function BudgetTransactionsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-foreground mb-6">Budget Transactions</h1>
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6">Budget Transactions</h1>
         <FilterBar />
         <div className="flex items-center justify-center min-h-[30vh]">
           <div className="text-muted-foreground">Loading transactions...</div>
@@ -440,8 +644,8 @@ export default function BudgetTransactionsPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-foreground mb-6">Budget Transactions</h1>
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6">Budget Transactions</h1>
         <FilterBar />
         <div className="flex flex-col items-center justify-center min-h-[30vh] gap-2">
           <p className="text-destructive">Failed to load transactions</p>
@@ -453,8 +657,8 @@ export default function BudgetTransactionsPage() {
 
   if (transactions.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-foreground mb-6">Budget Transactions</h1>
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6">Budget Transactions</h1>
         <FilterBar />
         <EmptyState
           icon={hasFilters ? Search : AlertCircle}
@@ -468,10 +672,7 @@ export default function BudgetTransactionsPage() {
             hasFilters ? (
               <Button
                 variant="outline"
-                onClick={() => {
-                  setSearchInput("");
-                  router.push("/budget/transactions");
-                }}
+                onClick={() => router.push("/budget/transactions")}
               >
                 Clear all filters
               </Button>
@@ -483,17 +684,60 @@ export default function BudgetTransactionsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-foreground mb-6">Budget Transactions</h1>
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
+      {/* Header with refresh + export buttons */}
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground">Budget Transactions</h1>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportTransactions}
+            disabled={isExporting}
+            className="gap-1.5"
+          >
+            {isExporting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
+        </div>
+      </div>
+
       <FilterBar />
 
       {/* Results summary */}
       <div className="text-sm text-muted-foreground mb-3">
-        {total} transaction{total !== 1 ? "s" : ""}
+        Showing {total} transaction{total !== 1 ? "s" : ""}
         {totalPages > 1 && ` — page ${page} of ${totalPages}`}
       </div>
 
-      <div className="rounded-lg border border-border overflow-x-auto">
+      {/* Mobile card list (below sm) */}
+      <div className="sm:hidden rounded-lg border border-border">
+        {transactions.map((txn) => (
+          <TransactionCard
+            key={txn.id}
+            transaction={txn}
+            categories={categories}
+            onCategoryChange={handleCategoryChange}
+          />
+        ))}
+      </div>
+
+      {/* Desktop table (sm and above) */}
+      <div className="hidden sm:block rounded-lg border border-border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
@@ -501,7 +745,7 @@ export default function BudgetTransactionsPage() {
               <TableHead className="text-muted-foreground">Description</TableHead>
               <TableHead className="text-muted-foreground text-right">Amount</TableHead>
               <TableHead className="text-muted-foreground">Category</TableHead>
-              <TableHead className="text-muted-foreground hidden sm:table-cell">Status</TableHead>
+              <TableHead className="text-muted-foreground hidden md:table-cell">Status</TableHead>
             </TableRow>
           </TableHeader>
           <tbody className="[&_tr:last-child]:border-0">
@@ -533,7 +777,7 @@ export default function BudgetTransactionsPage() {
                     onCategoryChange={handleCategoryChange}
                   />
                 </TableCell>
-                <TableCell className="hidden sm:table-cell">
+                <TableCell className="hidden md:table-cell">
                   <span
                     className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                       txn.status === "SETTLED"
@@ -560,10 +804,11 @@ export default function BudgetTransactionsPage() {
             onClick={() => goToPage(page - 1)}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
-            Previous
+            <span className="hidden sm:inline">Previous</span>
+            <span className="sm:hidden">Prev</span>
           </Button>
           <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
+            {page} / {totalPages}
           </span>
           <Button
             variant="outline"

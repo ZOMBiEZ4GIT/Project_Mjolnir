@@ -13,6 +13,8 @@ import {
   TrendingUp,
   DollarSign,
   Wallet,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { SankeyChartContainer } from "@/components/budget/SankeyChartContainer";
 import { MobileBudgetChart } from "@/components/budget/MobileBudgetChart";
@@ -21,6 +23,7 @@ import { PaydayCountdown } from "@/components/budget/PaydayCountdown";
 import { SavingsIndicator } from "@/components/budget/SavingsIndicator";
 import { PeriodSelector } from "@/components/budget/PeriodSelector";
 import { AIRecommendationButton } from "@/components/budget/AIRecommendationButton";
+import { SpendingTrends } from "@/components/budget/SpendingTrends";
 import {
   RecommendationModal,
   type AiRecommendation,
@@ -90,7 +93,7 @@ function BudgetDashboardSkeleton() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
@@ -103,7 +106,7 @@ function BudgetDashboardSkeleton() {
       </div>
 
       {/* Category cards grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
@@ -131,6 +134,7 @@ export default function BudgetDashboardPage() {
   const [activeRecommendation, setActiveRecommendation] =
     useState<AiRecommendation | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleRecommendation = useCallback((rec: unknown) => {
     setActiveRecommendation(rec as AiRecommendation);
@@ -205,6 +209,26 @@ export default function BudgetDashboardPage() {
     enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 5,
   });
+
+  const handleExportSummary = useCallback(async () => {
+    if (!summary) return;
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("type", "summary");
+      params.set("from", summary.startDate);
+      params.set("to", summary.endDate);
+      const url = `/api/budget/export?${params.toString()}`;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [summary]);
 
   // Auth loading
   if (!isLoaded) {
@@ -286,11 +310,25 @@ export default function BudgetDashboardPage() {
       : 0;
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">Budget</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportSummary}
+            disabled={isExporting}
+            className="gap-1.5"
+          >
+            {isExporting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
           <AIRecommendationButton
             periodId={summary.periodId}
             onRecommendation={handleRecommendation}
@@ -303,7 +341,7 @@ export default function BudgetDashboardPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           label="Income"
           value={formatCents(summary.income.actualCents)}
@@ -323,8 +361,8 @@ export default function BudgetDashboardPage() {
           icon={TrendingUp}
           accent={
             summary.totals.savingsCents >= 0
-              ? "text-emerald-400"
-              : "text-red-400"
+              ? "text-positive"
+              : "text-destructive"
           }
         />
         <StatCard
@@ -336,7 +374,7 @@ export default function BudgetDashboardPage() {
       </div>
 
       {/* Hero chart area — Sankey (desktop) / mobile chart placeholder (B4-006) */}
-      <div className="rounded-lg border border-border bg-card/50 p-6">
+      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
         <h2 className="text-sm font-medium text-muted-foreground mb-4">
           Budget Breakdown
         </h2>
@@ -349,7 +387,7 @@ export default function BudgetDashboardPage() {
         <h2 className="text-sm font-medium text-muted-foreground mb-4">
           Categories
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
           {summary.categories.map((cat) => (
             <CategoryCard
               key={cat.categoryId}
@@ -361,8 +399,11 @@ export default function BudgetDashboardPage() {
         </div>
       </div>
 
+      {/* Spending trends chart — B6-006 */}
+      <SpendingTrends />
+
       {/* Payday countdown & Savings indicator — B4-008 / B4-009 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
         <PaydayCountdown
           daysElapsed={summary.daysElapsed}
           totalDays={summary.totalDays}

@@ -46,10 +46,10 @@ export function SavingsIndicator({
 
   const colour =
     effectiveRate >= TARGET_RATE
-      ? "text-emerald-400"
+      ? "text-positive"
       : effectiveRate >= 25
-        ? "text-amber-400"
-        : "text-red-400";
+        ? "text-warning"
+        : "text-destructive";
 
   const onTrack = effectiveRate >= TARGET_RATE;
   const Icon = savingsCents >= 0 ? TrendingUp : TrendingDown;

@@ -58,18 +58,18 @@ export function PeriodSelector({
       <button
         onClick={() => hasPrev && onPeriodChange(sorted[activeIndex - 1].id)}
         disabled={!hasPrev}
-        className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="p-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         aria-label="Previous period"
       >
         <ChevronLeft className="h-5 w-5" />
       </button>
-      <span className="text-sm text-foreground font-medium min-w-[180px] text-center">
+      <span className="text-sm text-foreground font-medium text-center">
         {formatDateRange(activePeriod.startDate, activePeriod.endDate)}
       </span>
       <button
         onClick={() => hasNext && onPeriodChange(sorted[activeIndex + 1].id)}
         disabled={!hasNext}
-        className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        className="p-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         aria-label="Next period"
       >
         <ChevronRight className="h-5 w-5" />

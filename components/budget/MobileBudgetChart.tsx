@@ -21,11 +21,11 @@ function formatCents(cents: number): string {
 function StatusIcon({ status }: { status: "under" | "warning" | "over" }) {
   switch (status) {
     case "under":
-      return <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />;
+      return <CheckCircle2 className="h-4 w-4 text-positive shrink-0" />;
     case "warning":
-      return <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />;
+      return <AlertTriangle className="h-4 w-4 text-warning shrink-0" />;
     case "over":
-      return <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />;
+      return <AlertCircle className="h-4 w-4 text-destructive shrink-0" />;
   }
 }
 
@@ -61,7 +61,7 @@ export function MobileBudgetChart({ summary }: MobileBudgetChartProps) {
         </div>
         <div className="h-2 w-full rounded-full bg-muted">
           <div
-            className="h-2 rounded-full bg-purple-500 transition-all"
+            className="h-2 rounded-full bg-primary transition-all"
             style={{ width: `${incomePercent}%` }}
           />
         </div>
@@ -75,10 +75,10 @@ export function MobileBudgetChart({ summary }: MobileBudgetChartProps) {
         const barPercent = Math.min(cat.percentUsed, 100);
         const barColour =
           cat.status === "over"
-            ? "bg-red-500"
+            ? "bg-destructive"
             : cat.status === "warning"
-              ? "bg-amber-500"
-              : "bg-emerald-500";
+              ? "bg-warning"
+              : "bg-positive";
 
         return (
           <Link
@@ -129,7 +129,7 @@ export function MobileBudgetChart({ summary }: MobileBudgetChartProps) {
         <div className="border-t border-border pt-1.5 flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Savings</span>
           <span
-            className={`font-medium ${summary.totals.savingsCents >= 0 ? "text-emerald-400" : "text-red-400"}`}
+            className={`font-medium ${summary.totals.savingsCents >= 0 ? "text-positive" : "text-destructive"}`}
           >
             {formatCents(summary.totals.savingsCents)} (
             {summary.totals.savingsRate}%)

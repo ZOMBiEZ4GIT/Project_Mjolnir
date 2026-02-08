@@ -148,7 +148,7 @@ export function AIRecommendationButton({
         variant="outline"
         size="sm"
         onClick={handleRequest}
-        className="text-red-400 border-red-400/30 hover:bg-red-400/10"
+        className="text-destructive border-destructive/30 hover:bg-destructive/10"
       >
         <AlertCircle className="h-4 w-4" />
         Retry
@@ -160,7 +160,8 @@ export function AIRecommendationButton({
     return (
       <Button variant="outline" size="sm" disabled>
         <Loader2 className="h-4 w-4 animate-spin" />
-        Analysing your spending…
+        <span className="hidden sm:inline">Analysing your spending…</span>
+        <span className="sm:hidden">Analysing…</span>
       </Button>
     );
   }
@@ -173,7 +174,8 @@ export function AIRecommendationButton({
         onClick={() => onRecommendation(existing)}
       >
         <Eye className="h-4 w-4" />
-        View Recommendation
+        <span className="hidden sm:inline">View Recommendation</span>
+        <span className="sm:hidden">View</span>
       </Button>
     );
   }
@@ -181,7 +183,8 @@ export function AIRecommendationButton({
   return (
     <Button variant="outline" size="sm" onClick={handleRequest}>
       <Sparkles className="h-4 w-4" />
-      Get AI Recommendation
+      <span className="hidden sm:inline">Get AI Recommendation</span>
+      <span className="sm:hidden">AI Tips</span>
     </Button>
   );
 }

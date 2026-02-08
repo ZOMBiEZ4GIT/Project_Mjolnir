@@ -39,10 +39,10 @@ export function CategoryCard({
 
   const barColour =
     status === "over"
-      ? "bg-red-500"
+      ? "bg-destructive"
       : status === "warning"
-        ? "bg-amber-500"
-        : "bg-emerald-500";
+        ? "bg-warning"
+        : "bg-positive";
 
   const remainingText =
     remainingCents >= 0
@@ -51,15 +51,15 @@ export function CategoryCard({
 
   const remainingColour =
     status === "over"
-      ? "text-red-400"
+      ? "text-destructive"
       : status === "warning"
-        ? "text-amber-400"
+        ? "text-warning"
         : "text-muted-foreground";
 
   return (
     <Link
       href={`/budget/transactions?category=${categoryId}&from=${periodStart}&to=${periodEnd}`}
-      className="rounded-lg border border-border bg-card/50 p-4 hover:bg-card/80 transition-colors"
+      className="rounded-lg border border-border bg-card/50 p-4 hover:bg-card/80 active:bg-card/50 transition-colors"
     >
       {/* Header: icon + name + percentage */}
       <div className="flex items-center justify-between mb-2">
