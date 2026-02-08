@@ -98,3 +98,20 @@
   - Category API POST requires `id` field as a slug — auto-generate from name rather than requiring user input
   - Sort order reordering needs two sequential PUT calls — can't batch in current API
 ---
+
+## 2026-02-08 - B6-005
+- What was implemented: Spending trends API endpoint returning historical spending data across multiple budget periods
+- Files changed:
+  - app/api/budget/trends/route.ts — new GET endpoint with Clerk auth via withAuth
+- **Key changes:**
+  - Accepts `periods` query param (default 6, max 24) for number of historical periods
+  - Fetches N most recent budget periods ordered by start_date desc
+  - Reuses `calculateBudgetSummary()` for each period — runs all concurrently via Promise.all
+  - Determines current period by checking if today falls within start/end dates → sets isProjected: true
+  - Returns array ordered oldest to newest with: periodId, startDate, endDate, totalSpentCents, totalIncomeCents, savingsRate, isProjected, categories array
+  - Categories include: categoryId, name, colour, spentCents
+- **Learnings for future iterations:**
+  - `calculateBudgetSummary` is safe to call concurrently — no shared mutable state
+  - withAuth pattern handles both auth and error wrapping — just pass handler and error context string
+  - Budget periods use desc(startDate) for fetching recent periods, then .reverse() for oldest-first output
+---
