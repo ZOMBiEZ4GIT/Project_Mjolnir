@@ -8,6 +8,7 @@ import {
   Settings,
   Receipt,
   PieChart,
+  Cog,
   type LucideIcon,
 } from "lucide-react";
 
@@ -16,6 +17,7 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   description: string;
+  children?: NavItem[];
 }
 
 export const navItems: NavItem[] = [
@@ -48,12 +50,26 @@ export const navItems: NavItem[] = [
     label: "Budget",
     icon: PieChart,
     description: "Budget vs actual dashboard",
-  },
-  {
-    href: "/budget/transactions",
-    label: "Budget Txns",
-    icon: Receipt,
-    description: "View categorised transactions",
+    children: [
+      {
+        href: "/budget",
+        label: "Dashboard",
+        icon: PieChart,
+        description: "Budget vs actual dashboard",
+      },
+      {
+        href: "/budget/transactions",
+        label: "Transactions",
+        icon: Receipt,
+        description: "View categorised transactions",
+      },
+      {
+        href: "/budget/setup",
+        label: "Setup",
+        icon: Cog,
+        description: "Configure budget settings",
+      },
+    ],
   },
   {
     href: "/import",

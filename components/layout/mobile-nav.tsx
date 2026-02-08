@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Zap } from "lucide-react";
+import { Menu, Zap, ChevronDown } from "lucide-react";
 import { UserButton } from "@clerk/nextjs";
 
 import { cn } from "@/lib/utils";
@@ -20,8 +20,13 @@ import {
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const [budgetExpanded, setBudgetExpanded] = useState(() =>
+    pathname.startsWith("/budget")
+  );
 
   const hasClerkKey = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+  const isBudgetSection = pathname.startsWith("/budget");
 
   return (
     <>
@@ -73,6 +78,70 @@ export function MobileNav() {
           <nav className="flex flex-col gap-1 px-2 py-4">
             {navItems.map((item) => {
               const Icon = item.icon;
+
+              if (item.children) {
+                const isGroupActive = isBudgetSection;
+                const showChildren = budgetExpanded || isGroupActive;
+
+                return (
+                  <div key={item.href}>
+                    {/* Group header */}
+                    <button
+                      onClick={() => setBudgetExpanded(!budgetExpanded)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-md px-3 py-2 min-h-[44px] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                        isGroupActive
+                          ? "bg-accent/20 text-foreground"
+                          : "text-muted-foreground hover:bg-accent/10 hover:text-foreground"
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                      <ChevronDown
+                        className={cn(
+                          "ml-auto h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                          showChildren && "rotate-180"
+                        )}
+                      />
+                    </button>
+
+                    {/* Sub-links */}
+                    {showChildren && (
+                      <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-border pl-2">
+                        {item.children.map((child) => {
+                          const ChildIcon = child.icon;
+                          const isChildActive =
+                            child.href === "/budget"
+                              ? pathname === "/budget"
+                              : pathname === child.href ||
+                                pathname.startsWith(child.href + "/");
+                          return (
+                            <Link
+                              key={child.href}
+                              href={child.href}
+                              onClick={() => setOpen(false)}
+                              className={cn(
+                                "flex items-center gap-3 rounded-md px-3 py-2 min-h-[44px] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                isChildActive
+                                  ? "bg-accent/20 text-foreground"
+                                  : "text-muted-foreground hover:bg-accent/10 hover:text-foreground"
+                              )}
+                            >
+                              <ChildIcon className="h-4 w-4 shrink-0" />
+                              <span>{child.label}</span>
+                              {child.href === "/budget/transactions" && (
+                                <UncategorisedBadge />
+                              )}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Regular nav item
               const isActive =
                 pathname === item.href ||
                 pathname.startsWith(item.href + "/");
@@ -90,7 +159,6 @@ export function MobileNav() {
                 >
                   <Icon className="h-4 w-4 shrink-0" />
                   <span>{item.label}</span>
-                  {item.href === "/budget/transactions" && <UncategorisedBadge />}
                 </Link>
               );
             })}

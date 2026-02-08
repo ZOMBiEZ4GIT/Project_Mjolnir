@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Keyboard } from "lucide-react";
-import { navItems } from "@/lib/navigation";
+import { navItems, type NavItem } from "@/lib/navigation";
 
 import {
   CommandDialog,
@@ -38,13 +38,28 @@ export function CommandMenu() {
     command();
   }, []);
 
+  // Flatten nav items so children appear as searchable commands
+  const flatItems = navItems.reduce<NavItem[]>((acc, item) => {
+    if (item.children) {
+      item.children.forEach((child) =>
+        acc.push({
+          ...child,
+          label: `${item.label} → ${child.label}`,
+        })
+      );
+    } else {
+      acc.push(item);
+    }
+    return acc;
+  }, []);
+
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
       <CommandInput placeholder="Type a command or search..." />
       <CommandList>
         <CommandEmpty>No results found.</CommandEmpty>
         <CommandGroup heading="Navigation">
-          {navItems.map((item) => (
+          {flatItems.map((item) => (
             <CommandItem
               key={item.href}
               value={item.label}
