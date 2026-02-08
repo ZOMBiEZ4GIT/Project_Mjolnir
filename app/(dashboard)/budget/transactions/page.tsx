@@ -41,6 +41,8 @@ import {
   SlidersHorizontal,
   X,
   RefreshCw,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -254,6 +256,7 @@ export default function BudgetTransactionsPage() {
 
   // Local state for mobile filter toggle
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const updateFilters = useCallback(
     (updates: Record<string, string | undefined>) => {
@@ -350,6 +353,25 @@ export default function BudgetTransactionsPage() {
     },
     [updateFilters]
   );
+
+  const handleExportTransactions = useCallback(async () => {
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("type", "transactions");
+      if (fromFilter) params.set("from", fromFilter);
+      if (toFilter) params.set("to", toFilter);
+      const url = `/api/budget/export?${params.toString()}`;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [fromFilter, toFilter]);
 
   const transactions = data?.transactions ?? [];
   const total = data?.total ?? 0;
@@ -663,19 +685,35 @@ export default function BudgetTransactionsPage() {
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
-      {/* Header with refresh button */}
+      {/* Header with refresh + export buttons */}
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-foreground">Budget Transactions</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="gap-1.5"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
-          <span className="hidden sm:inline">Refresh</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportTransactions}
+            disabled={isExporting}
+            className="gap-1.5"
+          >
+            {isExporting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="gap-1.5"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </Button>
+        </div>
       </div>
 
       <FilterBar />

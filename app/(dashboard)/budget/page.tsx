@@ -13,6 +13,8 @@ import {
   TrendingUp,
   DollarSign,
   Wallet,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { SankeyChartContainer } from "@/components/budget/SankeyChartContainer";
 import { MobileBudgetChart } from "@/components/budget/MobileBudgetChart";
@@ -132,6 +134,7 @@ export default function BudgetDashboardPage() {
   const [activeRecommendation, setActiveRecommendation] =
     useState<AiRecommendation | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleRecommendation = useCallback((rec: unknown) => {
     setActiveRecommendation(rec as AiRecommendation);
@@ -206,6 +209,26 @@ export default function BudgetDashboardPage() {
     enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 5,
   });
+
+  const handleExportSummary = useCallback(async () => {
+    if (!summary) return;
+    setIsExporting(true);
+    try {
+      const params = new URLSearchParams();
+      params.set("type", "summary");
+      params.set("from", summary.startDate);
+      params.set("to", summary.endDate);
+      const url = `/api/budget/export?${params.toString()}`;
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [summary]);
 
   // Auth loading
   if (!isLoaded) {
@@ -291,7 +314,21 @@ export default function BudgetDashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">Budget</h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportSummary}
+            disabled={isExporting}
+            className="gap-1.5"
+          >
+            {isExporting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Download className="h-3.5 w-3.5" />
+            )}
+            <span className="hidden sm:inline">Export CSV</span>
+          </Button>
           <AIRecommendationButton
             periodId={summary.periodId}
             onRecommendation={handleRecommendation}
