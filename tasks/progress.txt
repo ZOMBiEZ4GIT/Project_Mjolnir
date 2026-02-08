@@ -17,6 +17,8 @@
 - CategoryManager: ICON_REGISTRY maps Lucide icon names → components for dynamic rendering in category CRUD
 - Category slug auto-generation: lowercase name → replace non-alphanumeric with hyphens → trim hyphens
 - Reorder via sort_order swap: fetch both categories, swap sortOrder values, call PUT for each
+- SpendingTrends: ComposedChart with dynamic category keys spread as data fields, Bar components mapped from allCategories array
+- Mixed bar/line legend: w-4 h-0.5 line indicator for Line series, w-2.5 h-2.5 rounded-sm square for Bar series
 
 ---
 
@@ -114,4 +116,26 @@
   - `calculateBudgetSummary` is safe to call concurrently — no shared mutable state
   - withAuth pattern handles both auth and error wrapping — just pass handler and error context string
   - Budget periods use desc(startDate) for fetching recent periods, then .reverse() for oldest-first output
+---
+
+## 2026-02-08 - B6-006
+- What was implemented: Spending trends chart component with month-over-month bar chart and savings rate line overlay
+- Files changed:
+  - components/budget/SpendingTrends.tsx — new ComposedChart component with total/breakdown toggle
+  - lib/query-keys.ts — added budget.trends query key
+  - app/(dashboard)/budget/page.tsx — imported and integrated SpendingTrends below category cards
+- **Key changes:**
+  - ComposedChart with stacked Bar components per category and Line overlay for savings rate
+  - Toggle between "Total" (single bar) and "By Category" (stacked bars with category colours from API)
+  - Dual Y-axis: left for spending ($), right for savings rate (%)
+  - Custom tooltip shows category breakdown + total + savings rate with "Projected" badge for current period
+  - Custom legend with line indicator for savings rate and colour swatches for categories
+  - Responsive: h-64 sm:h-72, compact axis tick formatting ($1.2k style)
+  - ChartExportButton for PNG export
+  - Empty state message when no trend data available
+  - Uses existing chart-palette constants (CHART_GRID, CHART_TEXT, CHART_AXIS, POSITIVE, CATEGORY_FALLBACK)
+- **Learnings for future iterations:**
+  - ComposedChart with dynamic category keys: spread category IDs as data keys, then map allCategories to Bar components
+  - Legend for mixed bar/line charts: use line-style indicator (w-4 h-0.5) for Line series vs square (w-2.5 h-2.5) for Bar series
+  - Budget trends query key doesn't need periodId — trends span across periods
 ---
