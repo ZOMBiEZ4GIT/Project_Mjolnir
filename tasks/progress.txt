@@ -139,3 +139,23 @@
   - Legend for mixed bar/line charts: use line-style indicator (w-4 h-0.5) for Line series vs square (w-2.5 h-2.5) for Bar series
   - Budget trends query key doesn't need periodId — trends span across periods
 ---
+
+## 2026-02-08 - B6-007
+- What was implemented: Budget data export API endpoint for CSV downloads of transactions and summaries
+- Files changed:
+  - app/api/budget/export/route.ts — new GET endpoint with type=transactions|summary, from/to date filtering
+  - lib/export/budget-exporter.ts — CSV formatting utilities for budget transactions and summaries
+- **Key changes:**
+  - Two export types: 'transactions' (raw UP transactions with category names) and 'summary' (category breakdowns per period)
+  - Transactions export joins upTransactions with budgetCategories via leftJoin to resolve category names
+  - Summary export uses calculateBudgetSummary for each matching period, flattens category breakdowns into rows
+  - Amount values converted from cents to dollars (formatCents: cents/100 with 2 decimal places) in CSV output
+  - RFC 4180 CSV escaping: quotes, commas, newlines handled via escapeCSVValue helper
+  - Filename includes date range when from/to params provided (e.g. budget-transactions-2026-01-01-to-2026-01-31-2026-02-08.csv)
+  - Content-Disposition: attachment triggers browser download
+- **Learnings for future iterations:**
+  - Existing export patterns in lib/export/ use CSV_COLUMNS config + escapeCSVValue — reused same pattern for consistency
+  - leftJoin (not innerJoin) with budgetCategories needed so uncategorised transactions still appear in export
+  - calculateBudgetSummary is safe to call concurrently with Promise.all (confirmed in B6-005)
+  - For summary export, filtering periods by date uses startDate/endDate on budgetPeriods table, not transaction dates
+---
