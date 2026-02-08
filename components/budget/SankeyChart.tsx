@@ -174,7 +174,6 @@ export function SankeyChart({ summary, width, height }: SankeyChartProps) {
           nodeWidth={NODE_WIDTH}
           nodePadding={NODE_PADDING}
           nodeAlign={sankeyJustify}
-          nodeId={(d) => d.index?.toString() ?? "0"}
         >
           {({ graph: computed, createPath }) => (
             <Group top={margin.top} left={margin.left}>
