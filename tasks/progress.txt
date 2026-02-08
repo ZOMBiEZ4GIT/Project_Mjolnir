@@ -14,6 +14,9 @@
 - CategoryBadge touch: h-8 sm:h-7 for mobile/desktop, active:bg-accent/20 for press feedback
 - Refresh button pattern: refetch() from useQuery + isFetching for spin animation
 - TransactionSearch: debounced search component with local state + useEffect sync for external value resets
+- CategoryManager: ICON_REGISTRY maps Lucide icon names → components for dynamic rendering in category CRUD
+- Category slug auto-generation: lowercase name → replace non-alphanumeric with hyphens → trim hyphens
+- Reorder via sort_order swap: fetch both categories, swap sortOrder values, call PUT for each
 
 ---
 
@@ -71,4 +74,27 @@
   - Debounced inputs need dual state: local for responsiveness, external for URL sync — useEffect to reset local when external changes (e.g. clear all)
   - Removing form submit in favour of debounce simplifies the UI — no search button needed, just type and wait
   - The existing API already handles `search` param with ILIKE on description + rawText — no backend changes needed
+---
+
+## 2026-02-08 - B6-004
+- What was implemented: Custom category management UI with full CRUD, reorder, icon selector, and colour picker
+- Files changed:
+  - components/budget/CategoryManager.tsx — new component: category list with reorder, edit, delete, create form
+  - app/(dashboard)/budget/setup/page.tsx — added "Manage Categories" button that toggles CategoryManager panel
+- **Key changes:**
+  - CategoryManager shows all categories sorted by sortOrder with icon/colour preview
+  - System categories (uncategorised) show Lock icon — no edit/delete/reorder buttons
+  - Non-system categories have ArrowUp/ArrowDown for reorder, Pencil for edit, Trash2 for delete
+  - Delete has inline confirmation (Delete/Cancel buttons replace the trash icon)
+  - Create/edit form shares state: name input, searchable icon grid (31 Lucide icons), 16-colour preset palette
+  - Icon selector supports search filtering and highlights selected icon with primary colour
+  - Colour picker shows preset hex swatches with ring indicator for selected
+  - Category ID auto-generated from name as lowercase slug (e.g. "My Stuff" → "my-stuff")
+  - Reorder swaps sortOrder values via two PUT calls
+  - Integrated into setup page header via Settings2 icon button — responsive text ("Categories" on mobile, "Manage Categories" on desktop)
+- **Learnings for future iterations:**
+  - ICON_REGISTRY pattern: map icon name strings from DB to Lucide React components — reuse in CategoryCard, setup page, etc.
+  - For inline delete confirmation, replacing the trash button with Delete/Cancel buttons avoids a modal — simpler UX
+  - Category API POST requires `id` field as a slug — auto-generate from name rather than requiring user input
+  - Sort order reordering needs two sequential PUT calls — can't batch in current API
 ---
