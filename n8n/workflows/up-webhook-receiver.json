@@ -29,11 +29,34 @@
     },
     {
       "parameters": {
+        "method": "GET",
+        "url": "={{ $json.data.relationships.transaction.links.related }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.UP_API_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "fetch-transaction",
+      "name": "Fetch Transaction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
         "conditions": {
           "options": {
-            "caseSensitive": true,
+            "caseSensitive": false,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "loose"
           },
           "conditions": [
             {
@@ -45,47 +68,46 @@
                 "operation": "exists",
                 "singleValue": true
               }
+            },
+            {
+              "id": "roundup-check",
+              "leftValue": "={{ $json.data.attributes.description }}",
+              "rightValue": "Round Up",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
             }
           ],
-          "combinator": "and"
+          "combinator": "or"
         },
         "options": {}
       },
-      "id": "check-transfer",
-      "name": "Is Transfer?",
+      "id": "skip-check",
+      "name": "Skip? (Transfer/RoundUp)",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [600, 300]
-    },
-    {
-      "parameters": {
-        "jsCode": "const data = $input.first().json.data;\nconst attrs = data.attributes;\nconst category = data.relationships?.category?.data;\n\nreturn [{ json: {\n  up_transaction_id: data.id,\n  description: attrs.description,\n  raw_text: attrs.rawText || null,\n  amount_cents: parseInt(attrs.amount.valueInBaseUnits, 10),\n  status: attrs.status,\n  up_category_id: category?.id || null,\n  transaction_date: attrs.createdAt.split('T')[0],\n  settled_at: attrs.settledAt || null,\n  is_transfer: true,\n  main_category: 'transfer',\n  sub_category: 'internal'\n} }];"
-      },
-      "id": "map-transfer",
-      "name": "Map Transfer",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [800, 150]
+      "position": [800, 300]
     },
     {
       "parameters": {
         "jsCode": "const data = $input.first().json.data;\nconst attrs = data.attributes;\nconst category = data.relationships?.category?.data;\n\nreturn [{ json: {\n  up_transaction_id: data.id,\n  description: attrs.description,\n  raw_text: attrs.rawText || null,\n  amount_cents: parseInt(attrs.amount.valueInBaseUnits, 10),\n  status: attrs.status,\n  up_category_id: category?.id || null,\n  transaction_date: attrs.createdAt.split('T')[0],\n  settled_at: attrs.settledAt || null,\n  is_transfer: false\n} }];"
       },
       "id": "map-normal",
-      "name": "Map Normal Transaction",
+      "name": "Map Transaction",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [800, 450]
+      "position": [1000, 400]
     },
     {
       "parameters": {
-        "jsCode": "const RULES = [\n  // --- Income Detection ---\n  { type: 'income', pattern: 'THE WORKWEARGRO', field: 'description', category: 'income', subcategory: 'salary' },\n\n  // --- Merchant-Specific Overrides ---\n  { type: 'merchant', pattern: 'REAL ESTATE', field: 'description', category: 'bills-fixed', subcategory: 'rent' },\n  { type: 'merchant', pattern: 'ORIGIN ENERGY', field: 'description', category: 'bills-fixed', subcategory: 'energy' },\n  { type: 'merchant', pattern: 'TELSTRA', field: 'description', category: 'bills-fixed', subcategory: 'mobile' },\n\n  // --- UP Category Mapping ---\n  { type: 'up-category', pattern: 'groceries', field: 'up_category_id', category: 'groceries', subcategory: 'general' },\n  { type: 'up-category', pattern: 'restaurants-and-cafes', field: 'up_category_id', category: 'eating-out', subcategory: 'restaurants' },\n  { type: 'up-category', pattern: 'takeaway', field: 'up_category_id', category: 'eating-out', subcategory: 'takeaway' },\n  { type: 'up-category', pattern: 'pubs-and-bars', field: 'up_category_id', category: 'eating-out', subcategory: 'bars' },\n  { type: 'up-category', pattern: 'coffee', field: 'up_category_id', category: 'eating-out', subcategory: 'coffee' },\n  { type: 'up-category', pattern: 'fuel', field: 'up_category_id', category: 'transport', subcategory: 'fuel' },\n  { type: 'up-category', pattern: 'public-transport', field: 'up_category_id', category: 'transport', subcategory: 'public-transport' },\n  { type: 'up-category', pattern: 'parking', field: 'up_category_id', category: 'transport', subcategory: 'parking' },\n  { type: 'up-category', pattern: 'tolls', field: 'up_category_id', category: 'transport', subcategory: 'tolls' },\n  { type: 'up-category', pattern: 'car-insurance-and-maintenance', field: 'up_category_id', category: 'transport', subcategory: 'car-maintenance' },\n  { type: 'up-category', pattern: 'rideshare', field: 'up_category_id', category: 'transport', subcategory: 'rideshare' },\n  { type: 'up-category', pattern: 'rent', field: 'up_category_id', category: 'bills-fixed', subcategory: 'rent' },\n  { type: 'up-category', pattern: 'utilities', field: 'up_category_id', category: 'bills-fixed', subcategory: 'utilities' },\n  { type: 'up-category', pattern: 'internet', field: 'up_category_id', category: 'bills-fixed', subcategory: 'internet' },\n  { type: 'up-category', pattern: 'mobile-phone', field: 'up_category_id', category: 'bills-fixed', subcategory: 'mobile' },\n  { type: 'up-category', pattern: 'home-insurance', field: 'up_category_id', category: 'bills-fixed', subcategory: 'insurance' },\n  { type: 'up-category', pattern: 'clothing-and-accessories', field: 'up_category_id', category: 'shopping', subcategory: 'clothing' },\n  { type: 'up-category', pattern: 'electronics', field: 'up_category_id', category: 'shopping', subcategory: 'electronics' },\n  { type: 'up-category', pattern: 'home-and-garden', field: 'up_category_id', category: 'shopping', subcategory: 'home' },\n  { type: 'up-category', pattern: 'health-and-fitness', field: 'up_category_id', category: 'health', subcategory: 'fitness' },\n  { type: 'up-category', pattern: 'pharmacy', field: 'up_category_id', category: 'health', subcategory: 'pharmacy' },\n  { type: 'up-category', pattern: 'medical', field: 'up_category_id', category: 'health', subcategory: 'medical' },\n  { type: 'up-category', pattern: 'personal-care', field: 'up_category_id', category: 'health', subcategory: 'personal-care' },\n  { type: 'up-category', pattern: 'entertainment', field: 'up_category_id', category: 'fun', subcategory: 'entertainment' },\n  { type: 'up-category', pattern: 'games-and-software', field: 'up_category_id', category: 'fun', subcategory: 'games' },\n  { type: 'up-category', pattern: 'music-and-streaming', field: 'up_category_id', category: 'fun', subcategory: 'streaming' },\n  { type: 'up-category', pattern: 'events-and-gigs', field: 'up_category_id', category: 'fun', subcategory: 'events' },\n  { type: 'up-category', pattern: 'hobbies', field: 'up_category_id', category: 'fun', subcategory: 'hobbies' }\n];\n\nconst transaction = $input.first().json;\nconst description = (transaction.description || '').toUpperCase();\nconst upCategoryId = transaction.up_category_id || '';\nconst amountCents = transaction.amount_cents || 0;\n\nlet mainCategory = 'uncategorised';\nlet subCategory = 'unknown';\n\nfor (const rule of RULES) {\n  const fieldValue = rule.field === 'description' ? description : upCategoryId;\n  const pattern = rule.pattern.toUpperCase();\n\n  if (rule.type === 'income') {\n    if (amountCents > 0 && fieldValue.includes(pattern)) {\n      mainCategory = rule.category;\n      subCategory = rule.subcategory;\n      break;\n    }\n  } else if (rule.type === 'merchant') {\n    if (fieldValue.includes(pattern)) {\n      mainCategory = rule.category;\n      subCategory = rule.subcategory;\n      break;\n    }\n  } else if (rule.type === 'up-category') {\n    if (upCategoryId === rule.pattern) {\n      mainCategory = rule.category;\n      subCategory = rule.subcategory;\n      break;\n    }\n  }\n}\n\nif (mainCategory === 'uncategorised' && amountCents > 200000) {\n  mainCategory = 'income';\n  subCategory = 'unknown';\n}\n\nreturn [{\n  json: {\n    ...transaction,\n    main_category: mainCategory,\n    sub_category: subCategory\n  }\n}];"
+        "jsCode": "const RULES = [\n  { type: 'income', pattern: 'THE WORKWEARGRO', field: 'description', category: 'income', subcategory: 'salary' },\n  { type: 'merchant', pattern: 'REAL ESTATE', field: 'description', category: 'bills-fixed', subcategory: 'rent' },\n  { type: 'merchant', pattern: 'ORIGIN ENERGY', field: 'description', category: 'bills-fixed', subcategory: 'energy' },\n  { type: 'merchant', pattern: 'TELSTRA', field: 'description', category: 'bills-fixed', subcategory: 'mobile' },\n  { type: 'up-category', pattern: 'groceries', field: 'up_category_id', category: 'groceries', subcategory: 'general' },\n  { type: 'up-category', pattern: 'restaurants-and-cafes', field: 'up_category_id', category: 'eating-out', subcategory: 'restaurants' },\n  { type: 'up-category', pattern: 'takeaway', field: 'up_category_id', category: 'eating-out', subcategory: 'takeaway' },\n  { type: 'up-category', pattern: 'pubs-and-bars', field: 'up_category_id', category: 'eating-out', subcategory: 'bars' },\n  { type: 'up-category', pattern: 'coffee', field: 'up_category_id', category: 'eating-out', subcategory: 'coffee' },\n  { type: 'up-category', pattern: 'fuel', field: 'up_category_id', category: 'transport', subcategory: 'fuel' },\n  { type: 'up-category', pattern: 'public-transport', field: 'up_category_id', category: 'transport', subcategory: 'public-transport' },\n  { type: 'up-category', pattern: 'parking', field: 'up_category_id', category: 'transport', subcategory: 'parking' },\n  { type: 'up-category', pattern: 'tolls', field: 'up_category_id', category: 'transport', subcategory: 'tolls' },\n  { type: 'up-category', pattern: 'car-insurance-and-maintenance', field: 'up_category_id', category: 'transport', subcategory: 'car-maintenance' },\n  { type: 'up-category', pattern: 'rideshare', field: 'up_category_id', category: 'transport', subcategory: 'rideshare' },\n  { type: 'up-category', pattern: 'rent', field: 'up_category_id', category: 'bills-fixed', subcategory: 'rent' },\n  { type: 'up-category', pattern: 'utilities', field: 'up_category_id', category: 'bills-fixed', subcategory: 'utilities' },\n  { type: 'up-category', pattern: 'internet', field: 'up_category_id', category: 'bills-fixed', subcategory: 'internet' },\n  { type: 'up-category', pattern: 'mobile-phone', field: 'up_category_id', category: 'bills-fixed', subcategory: 'mobile' },\n  { type: 'up-category', pattern: 'home-insurance', field: 'up_category_id', category: 'bills-fixed', subcategory: 'insurance' },\n  { type: 'up-category', pattern: 'clothing-and-accessories', field: 'up_category_id', category: 'shopping', subcategory: 'clothing' },\n  { type: 'up-category', pattern: 'electronics', field: 'up_category_id', category: 'shopping', subcategory: 'electronics' },\n  { type: 'up-category', pattern: 'home-and-garden', field: 'up_category_id', category: 'shopping', subcategory: 'home' },\n  { type: 'up-category', pattern: 'health-and-fitness', field: 'up_category_id', category: 'health', subcategory: 'fitness' },\n  { type: 'up-category', pattern: 'pharmacy', field: 'up_category_id', category: 'health', subcategory: 'pharmacy' },\n  { type: 'up-category', pattern: 'medical', field: 'up_category_id', category: 'health', subcategory: 'medical' },\n  { type: 'up-category', pattern: 'personal-care', field: 'up_category_id', category: 'health', subcategory: 'personal-care' },\n  { type: 'up-category', pattern: 'entertainment', field: 'up_category_id', category: 'fun', subcategory: 'entertainment' },\n  { type: 'up-category', pattern: 'games-and-software', field: 'up_category_id', category: 'fun', subcategory: 'games' },\n  { type: 'up-category', pattern: 'music-and-streaming', field: 'up_category_id', category: 'fun', subcategory: 'streaming' },\n  { type: 'up-category', pattern: 'events-and-gigs', field: 'up_category_id', category: 'fun', subcategory: 'events' },\n  { type: 'up-category', pattern: 'hobbies', field: 'up_category_id', category: 'fun', subcategory: 'hobbies' }\n];\n\nconst transaction = $input.first().json;\nconst description = (transaction.description || '').toUpperCase();\nconst upCategoryId = transaction.up_category_id || '';\nconst amountCents = transaction.amount_cents || 0;\n\nlet mainCategory = 'uncategorised';\nlet subCategory = 'unknown';\n\nfor (const rule of RULES) {\n  const fieldValue = rule.field === 'description' ? description : upCategoryId;\n  const pattern = rule.pattern.toUpperCase();\n\n  if (rule.type === 'income') {\n    if (amountCents > 0 && fieldValue.includes(pattern)) {\n      mainCategory = rule.category;\n      subCategory = rule.subcategory;\n      break;\n    }\n  } else if (rule.type === 'merchant') {\n    if (fieldValue.includes(pattern)) {\n      mainCategory = rule.category;\n      subCategory = rule.subcategory;\n      break;\n    }\n  } else if (rule.type === 'up-category') {\n    if (upCategoryId === rule.pattern) {\n      mainCategory = rule.category;\n      subCategory = rule.subcategory;\n      break;\n    }\n  }\n}\n\nif (mainCategory === 'uncategorised' && amountCents > 200000) {\n  mainCategory = 'income';\n  subCategory = 'unknown';\n}\n\nreturn [{\n  json: {\n    ...transaction,\n    main_category: mainCategory,\n    sub_category: subCategory\n  }\n}];"
       },
       "id": "categorise-rules",
       "name": "Categorise with Rules",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1000, 450]
+      "position": [1200, 400]
     },
     {
       "parameters": {
@@ -114,7 +136,7 @@
       "name": "Is Uncategorised?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1200, 450]
+      "position": [1400, 400]
     },
     {
       "parameters": {
@@ -124,7 +146,7 @@
       "name": "Build Claude Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1400, 600]
+      "position": [1600, 550]
     },
     {
       "parameters": {
@@ -133,32 +155,21 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "x-api-key",
-              "value": "={{ $env.ANTHROPIC_API_KEY }}"
-            },
-            {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 100, messages: [{ role: 'user', content: $json.claude_prompt }] }) }}",
-        "options": {
-          "timeout": 15000
-        }
+        "options": { "timeout": 15000 }
       },
       "id": "call-claude",
       "name": "Call Claude API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1600, 600]
+      "position": [1800, 550]
     },
     {
       "parameters": {
@@ -168,7 +179,7 @@
       "name": "Parse Claude Category",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1800, 600]
+      "position": [2000, 550]
     },
     {
       "parameters": {
@@ -177,43 +188,31 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.UP_API_TOKEN }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
+            { "name": "Authorization", "value": "={{ 'Bearer ' + $env.UP_API_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ data: [{ type: 'tags', id: $json.main_category }, { type: 'tags', id: $json.sub_category }] }) }}",
-        "options": {
-          "timeout": 10000,
-          "batching": {
-            "batch": {
-              "batchSize": 1
-            }
-          }
-        }
+        "options": { "timeout": 10000 }
       },
       "id": "tag-in-up",
       "name": "Tag in UP",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2000, 550]
+      "position": [2200, 500],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "jsCode": "const crypto = require('crypto');\nconst MJOLNIR_API_KEY = $env.MJOLNIR_API_KEY;\nconst MJOLNIR_WEBHOOK_SECRET = $env.MJOLNIR_WEBHOOK_SECRET;\nconst MJOLNIR_BASE_URL = $env.MJOLNIR_BASE_URL;\n\nconst body = JSON.stringify($input.first().json);\nconst timestamp = Date.now().toString();\n\nconst signature = crypto\n  .createHmac('sha256', MJOLNIR_WEBHOOK_SECRET)\n  .update(`${timestamp}.${body}`)\n  .digest('hex');\n\nreturn [{\n  json: {\n    url: `${MJOLNIR_BASE_URL}/api/up/transactions`,\n    body: $input.first().json,\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Mjolnir-API-Key': MJOLNIR_API_KEY,\n      'X-Mjolnir-Timestamp': timestamp,\n      'X-Mjolnir-Signature': signature\n    }\n  }\n}];"
       },
       "id": "sign-normal",
-      "name": "Sign Normal Request",
+      "name": "Sign Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2000, 400]
+      "position": [2200, 350]
     },
     {
       "parameters": {
@@ -222,22 +221,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "={{ $json.headers['Content-Type'] }}"
-            },
-            {
-              "name": "X-Mjolnir-API-Key",
-              "value": "={{ $json.headers['X-Mjolnir-API-Key'] }}"
-            },
-            {
-              "name": "X-Mjolnir-Timestamp",
-              "value": "={{ $json.headers['X-Mjolnir-Timestamp'] }}"
-            },
-            {
-              "name": "X-Mjolnir-Signature",
-              "value": "={{ $json.headers['X-Mjolnir-Signature'] }}"
-            }
+            { "name": "Content-Type", "value": "={{ $json.headers['Content-Type'] }}" },
+            { "name": "X-Mjolnir-API-Key", "value": "={{ $json.headers['X-Mjolnir-API-Key'] }}" },
+            { "name": "X-Mjolnir-Timestamp", "value": "={{ $json.headers['X-Mjolnir-Timestamp'] }}" },
+            { "name": "X-Mjolnir-Signature", "value": "={{ $json.headers['X-Mjolnir-Signature'] }}" }
           ]
         },
         "sendBody": true,
@@ -246,225 +233,101 @@
         "options": {}
       },
       "id": "post-normal",
-      "name": "POST Normal to Mjolnir",
+      "name": "POST to Mjolnir",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2200, 400]
-    },
-    {
-      "parameters": {
-        "jsCode": "const crypto = require('crypto');\nconst MJOLNIR_API_KEY = $env.MJOLNIR_API_KEY;\nconst MJOLNIR_WEBHOOK_SECRET = $env.MJOLNIR_WEBHOOK_SECRET;\nconst MJOLNIR_BASE_URL = $env.MJOLNIR_BASE_URL;\n\nconst body = JSON.stringify($input.first().json);\nconst timestamp = Date.now().toString();\n\nconst signature = crypto\n  .createHmac('sha256', MJOLNIR_WEBHOOK_SECRET)\n  .update(`${timestamp}.${body}`)\n  .digest('hex');\n\nreturn [{\n  json: {\n    url: `${MJOLNIR_BASE_URL}/api/up/transactions`,\n    body: $input.first().json,\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Mjolnir-API-Key': MJOLNIR_API_KEY,\n      'X-Mjolnir-Timestamp': timestamp,\n      'X-Mjolnir-Signature': signature\n    }\n  }\n}];"
-      },
-      "id": "sign-transfer",
-      "name": "Sign Transfer Request",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1000, 150]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $json.url }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "={{ $json.headers['Content-Type'] }}"
-            },
-            {
-              "name": "X-Mjolnir-API-Key",
-              "value": "={{ $json.headers['X-Mjolnir-API-Key'] }}"
-            },
-            {
-              "name": "X-Mjolnir-Timestamp",
-              "value": "={{ $json.headers['X-Mjolnir-Timestamp'] }}"
-            },
-            {
-              "name": "X-Mjolnir-Signature",
-              "value": "={{ $json.headers['X-Mjolnir-Signature'] }}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.body) }}",
-        "options": {}
-      },
-      "id": "post-transfer",
-      "name": "POST Transfer to Mjolnir",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1200, 150]
+      "position": [2400, 350]
     }
   ],
   "connections": {
     "UP Webhook": {
       "main": [
         [
-          {
-            "node": "Validate UP Signature",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Validate UP Signature", "type": "main", "index": 0 }
         ]
       ]
     },
     "Validate UP Signature": {
       "main": [
         [
-          {
-            "node": "Is Transfer?",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Fetch Transaction", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Is Transfer?": {
+    "Fetch Transaction": {
       "main": [
         [
-          {
-            "node": "Map Transfer",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Map Normal Transaction",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Skip? (Transfer/RoundUp)", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Map Transfer": {
+    "Skip? (Transfer/RoundUp)": {
       "main": [
+        [],
         [
-          {
-            "node": "Sign Transfer Request",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Map Transaction", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Sign Transfer Request": {
+    "Map Transaction": {
       "main": [
         [
-          {
-            "node": "POST Transfer to Mjolnir",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Map Normal Transaction": {
-      "main": [
-        [
-          {
-            "node": "Categorise with Rules",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Categorise with Rules", "type": "main", "index": 0 }
         ]
       ]
     },
     "Categorise with Rules": {
       "main": [
         [
-          {
-            "node": "Is Uncategorised?",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Is Uncategorised?", "type": "main", "index": 0 }
         ]
       ]
     },
     "Is Uncategorised?": {
       "main": [
         [
-          {
-            "node": "Build Claude Prompt",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Build Claude Prompt", "type": "main", "index": 0 }
         ],
         [
-          {
-            "node": "Tag in UP",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Sign Normal Request",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Tag in UP", "type": "main", "index": 0 },
+          { "node": "Sign Request", "type": "main", "index": 0 }
         ]
       ]
     },
     "Build Claude Prompt": {
       "main": [
         [
-          {
-            "node": "Call Claude API",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Call Claude API", "type": "main", "index": 0 }
         ]
       ]
     },
     "Call Claude API": {
       "main": [
         [
-          {
-            "node": "Parse Claude Category",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Parse Claude Category", "type": "main", "index": 0 }
         ]
       ]
     },
     "Parse Claude Category": {
       "main": [
         [
-          {
-            "node": "Tag in UP",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Sign Normal Request",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "Tag in UP", "type": "main", "index": 0 },
+          { "node": "Sign Request", "type": "main", "index": 0 }
         ]
       ]
     },
-    "Sign Normal Request": {
+    "Sign Request": {
       "main": [
         [
-          {
-            "node": "POST Normal to Mjolnir",
-            "type": "main",
-            "index": 0
-          }
+          { "node": "POST to Mjolnir", "type": "main", "index": 0 }
         ]
       ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
+  "settings": { "executionOrder": "v1" },
   "staticData": null,
   "tags": [],
   "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": false,
-    "instanceId": ""
-  },
-  "description": "## UP Webhook Receiver → Mjolnir\n\nReceives UP Bank webhook events, categorises transactions, tags them in UP, and forwards to Mjolnir.\n\n### Flow\n\n1. UP sends webhook event → validates HMAC signature\n2. Detects transfers vs normal transactions\n3. **Transfers:** Maps and sends straight to Mjolnir (tagged as transfer/internal)\n4. **Normal transactions:**\n   a. Rules engine categorises by merchant name, UP category, or income detection\n   b. If uncategorised → Claude Haiku classifies it (main + sub category)\n   c. Tags the transaction in UP with main_category and sub_category\n   d. Signs and POSTs categorised transaction to Mjolnir\n\n### Categories\n\nMain: bills-fixed, groceries, transport, eating-out, shopping, health, fun, income, transfer\nSub: rent, energy, mobile, salary, fuel, restaurants, etc.\n\n### Environment Variables\n\n- `UP_WEBHOOK_SECRET` — UP's webhook signing secret\n- `UP_API_TOKEN` — UP API bearer token (for tagging)\n- `MJOLNIR_API_KEY` — Mjolnir API authentication\n- `MJOLNIR_WEBHOOK_SECRET` — Mjolnir HMAC signing secret\n- `MJOLNIR_BASE_URL` — Mjolnir deployment URL\n- `ANTHROPIC_API_KEY` — Claude API key (only needed for uncategorised transactions)"
+  "meta": { "templateCredsSetupCompleted": false, "instanceId": "" },
+  "description": "## UP Webhook Receiver → Mjolnir\n\nReceives UP Bank webhook events, categorises transactions, tags them in UP, and forwards to Mjolnir.\n\nSkips internal transfers and Round Ups — only processes real money in/out.\n\n### Flow\n\n1. UP sends webhook → validates HMAC signature\n2. Fetches full transaction details from UP API\n3. Skips transfers and Round Ups (dead end)\n4. Maps transaction → runs categorisation rules\n5. If uncategorised → Claude Haiku classifies it\n6. Tags in UP (fire-and-forget, errors ignored)\n7. Signs and POSTs to Mjolnir"
 }

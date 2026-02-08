@@ -55,76 +55,13 @@
     },
     {
       "parameters": {
-        "jsCode": "const RULES = [\n  { type: 'income', pattern: 'THE WORKWEARGRO', field: 'description', category: 'income', subcategory: 'salary' },\n  { type: 'merchant', pattern: 'REAL ESTATE', field: 'description', category: 'bills-fixed', subcategory: 'rent' },\n  { type: 'merchant', pattern: 'ORIGIN ENERGY', field: 'description', category: 'bills-fixed', subcategory: 'energy' },\n  { type: 'merchant', pattern: 'TELSTRA', field: 'description', category: 'bills-fixed', subcategory: 'mobile' },\n  { type: 'up-category', pattern: 'groceries', field: 'up_category_id', category: 'groceries', subcategory: 'general' },\n  { type: 'up-category', pattern: 'restaurants-and-cafes', field: 'up_category_id', category: 'eating-out', subcategory: 'restaurants' },\n  { type: 'up-category', pattern: 'takeaway', field: 'up_category_id', category: 'eating-out', subcategory: 'takeaway' },\n  { type: 'up-category', pattern: 'pubs-and-bars', field: 'up_category_id', category: 'eating-out', subcategory: 'bars' },\n  { type: 'up-category', pattern: 'coffee', field: 'up_category_id', category: 'eating-out', subcategory: 'coffee' },\n  { type: 'up-category', pattern: 'fuel', field: 'up_category_id', category: 'transport', subcategory: 'fuel' },\n  { type: 'up-category', pattern: 'public-transport', field: 'up_category_id', category: 'transport', subcategory: 'public-transport' },\n  { type: 'up-category', pattern: 'parking', field: 'up_category_id', category: 'transport', subcategory: 'parking' },\n  { type: 'up-category', pattern: 'tolls', field: 'up_category_id', category: 'transport', subcategory: 'tolls' },\n  { type: 'up-category', pattern: 'car-insurance-and-maintenance', field: 'up_category_id', category: 'transport', subcategory: 'car-maintenance' },\n  { type: 'up-category', pattern: 'rideshare', field: 'up_category_id', category: 'transport', subcategory: 'rideshare' },\n  { type: 'up-category', pattern: 'rent', field: 'up_category_id', category: 'bills-fixed', subcategory: 'rent' },\n  { type: 'up-category', pattern: 'utilities', field: 'up_category_id', category: 'bills-fixed', subcategory: 'utilities' },\n  { type: 'up-category', pattern: 'internet', field: 'up_category_id', category: 'bills-fixed', subcategory: 'internet' },\n  { type: 'up-category', pattern: 'mobile-phone', field: 'up_category_id', category: 'bills-fixed', subcategory: 'mobile' },\n  { type: 'up-category', pattern: 'home-insurance', field: 'up_category_id', category: 'bills-fixed', subcategory: 'insurance' },\n  { type: 'up-category', pattern: 'clothing-and-accessories', field: 'up_category_id', category: 'shopping', subcategory: 'clothing' },\n  { type: 'up-category', pattern: 'electronics', field: 'up_category_id', category: 'shopping', subcategory: 'electronics' },\n  { type: 'up-category', pattern: 'home-and-garden', field: 'up_category_id', category: 'shopping', subcategory: 'home' },\n  { type: 'up-category', pattern: 'health-and-fitness', field: 'up_category_id', category: 'health', subcategory: 'fitness' },\n  { type: 'up-category', pattern: 'pharmacy', field: 'up_category_id', category: 'health', subcategory: 'pharmacy' },\n  { type: 'up-category', pattern: 'medical', field: 'up_category_id', category: 'health', subcategory: 'medical' },\n  { type: 'up-category', pattern: 'personal-care', field: 'up_category_id', category: 'health', subcategory: 'personal-care' },\n  { type: 'up-category', pattern: 'entertainment', field: 'up_category_id', category: 'fun', subcategory: 'entertainment' },\n  { type: 'up-category', pattern: 'games-and-software', field: 'up_category_id', category: 'fun', subcategory: 'games' },\n  { type: 'up-category', pattern: 'music-and-streaming', field: 'up_category_id', category: 'fun', subcategory: 'streaming' },\n  { type: 'up-category', pattern: 'events-and-gigs', field: 'up_category_id', category: 'fun', subcategory: 'events' },\n  { type: 'up-category', pattern: 'hobbies', field: 'up_category_id', category: 'fun', subcategory: 'hobbies' }\n];\n\nfunction categorise(description, upCategoryId, amountCents) {\n  const descUpper = (description || '').toUpperCase();\n  for (const rule of RULES) {\n    const fieldValue = rule.field === 'description' ? descUpper : upCategoryId;\n    const pattern = rule.pattern.toUpperCase();\n    if (rule.type === 'income') {\n      if (amountCents > 0 && fieldValue.includes(pattern)) return { main: rule.category, sub: rule.subcategory };\n    } else if (rule.type === 'merchant') {\n      if (fieldValue.includes(pattern)) return { main: rule.category, sub: rule.subcategory };\n    } else if (rule.type === 'up-category') {\n      if (upCategoryId === rule.pattern) return { main: rule.category, sub: rule.subcategory };\n    }\n  }\n  if (amountCents > 200000) return { main: 'income', sub: 'unknown' };\n  return { main: 'uncategorised', sub: 'unknown' };\n}\n\nconst allItems = [];\n\nfor (const item of $input.all()) {\n  const transactions = item.json.data || [];\n  for (const txn of transactions) {\n    const attrs = txn.attributes;\n    const category = txn.relationships?.category?.data;\n    const isTransfer = !!txn.relationships?.transferAccount?.data;\n    const amountCents = parseInt(attrs.amount.valueInBaseUnits, 10);\n    const upCategoryId = category?.id || '';\n\n    const mapped = {\n      up_transaction_id: txn.id,\n      description: attrs.description,\n      raw_text: attrs.rawText || null,\n      amount_cents: amountCents,\n      status: attrs.status,\n      up_category_id: upCategoryId || null,\n      transaction_date: attrs.createdAt.split('T')[0],\n      settled_at: attrs.settledAt || null,\n      is_transfer: isTransfer\n    };\n\n    if (isTransfer) {\n      mapped.main_category = 'transfer';\n      mapped.sub_category = 'internal';\n    } else {\n      const cat = categorise(attrs.description, upCategoryId, amountCents);\n      mapped.main_category = cat.main;\n      mapped.sub_category = cat.sub;\n    }\n\n    allItems.push({ json: mapped });\n  }\n}\n\nreturn allItems;"
+        "jsCode": "const RULES = [\n  { type: 'income', pattern: 'THE WORKWEARGRO', field: 'description', category: 'income', subcategory: 'salary' },\n  { type: 'merchant', pattern: 'REAL ESTATE', field: 'description', category: 'bills-fixed', subcategory: 'rent' },\n  { type: 'merchant', pattern: 'ORIGIN ENERGY', field: 'description', category: 'bills-fixed', subcategory: 'energy' },\n  { type: 'merchant', pattern: 'TELSTRA', field: 'description', category: 'bills-fixed', subcategory: 'mobile' },\n  { type: 'up-category', pattern: 'groceries', field: 'up_category_id', category: 'groceries', subcategory: 'general' },\n  { type: 'up-category', pattern: 'restaurants-and-cafes', field: 'up_category_id', category: 'eating-out', subcategory: 'restaurants' },\n  { type: 'up-category', pattern: 'takeaway', field: 'up_category_id', category: 'eating-out', subcategory: 'takeaway' },\n  { type: 'up-category', pattern: 'pubs-and-bars', field: 'up_category_id', category: 'eating-out', subcategory: 'bars' },\n  { type: 'up-category', pattern: 'coffee', field: 'up_category_id', category: 'eating-out', subcategory: 'coffee' },\n  { type: 'up-category', pattern: 'fuel', field: 'up_category_id', category: 'transport', subcategory: 'fuel' },\n  { type: 'up-category', pattern: 'public-transport', field: 'up_category_id', category: 'transport', subcategory: 'public-transport' },\n  { type: 'up-category', pattern: 'parking', field: 'up_category_id', category: 'transport', subcategory: 'parking' },\n  { type: 'up-category', pattern: 'tolls', field: 'up_category_id', category: 'transport', subcategory: 'tolls' },\n  { type: 'up-category', pattern: 'car-insurance-and-maintenance', field: 'up_category_id', category: 'transport', subcategory: 'car-maintenance' },\n  { type: 'up-category', pattern: 'rideshare', field: 'up_category_id', category: 'transport', subcategory: 'rideshare' },\n  { type: 'up-category', pattern: 'rent', field: 'up_category_id', category: 'bills-fixed', subcategory: 'rent' },\n  { type: 'up-category', pattern: 'utilities', field: 'up_category_id', category: 'bills-fixed', subcategory: 'utilities' },\n  { type: 'up-category', pattern: 'internet', field: 'up_category_id', category: 'bills-fixed', subcategory: 'internet' },\n  { type: 'up-category', pattern: 'mobile-phone', field: 'up_category_id', category: 'bills-fixed', subcategory: 'mobile' },\n  { type: 'up-category', pattern: 'home-insurance', field: 'up_category_id', category: 'bills-fixed', subcategory: 'insurance' },\n  { type: 'up-category', pattern: 'clothing-and-accessories', field: 'up_category_id', category: 'shopping', subcategory: 'clothing' },\n  { type: 'up-category', pattern: 'electronics', field: 'up_category_id', category: 'shopping', subcategory: 'electronics' },\n  { type: 'up-category', pattern: 'home-and-garden', field: 'up_category_id', category: 'shopping', subcategory: 'home' },\n  { type: 'up-category', pattern: 'health-and-fitness', field: 'up_category_id', category: 'health', subcategory: 'fitness' },\n  { type: 'up-category', pattern: 'pharmacy', field: 'up_category_id', category: 'health', subcategory: 'pharmacy' },\n  { type: 'up-category', pattern: 'medical', field: 'up_category_id', category: 'health', subcategory: 'medical' },\n  { type: 'up-category', pattern: 'personal-care', field: 'up_category_id', category: 'health', subcategory: 'personal-care' },\n  { type: 'up-category', pattern: 'entertainment', field: 'up_category_id', category: 'fun', subcategory: 'entertainment' },\n  { type: 'up-category', pattern: 'games-and-software', field: 'up_category_id', category: 'fun', subcategory: 'games' },\n  { type: 'up-category', pattern: 'music-and-streaming', field: 'up_category_id', category: 'fun', subcategory: 'streaming' },\n  { type: 'up-category', pattern: 'events-and-gigs', field: 'up_category_id', category: 'fun', subcategory: 'events' },\n  { type: 'up-category', pattern: 'hobbies', field: 'up_category_id', category: 'fun', subcategory: 'hobbies' }\n];\n\nfunction categorise(description, upCategoryId, amountCents) {\n  const descUpper = (description || '').toUpperCase();\n  for (const rule of RULES) {\n    const fieldValue = rule.field === 'description' ? descUpper : upCategoryId;\n    const pattern = rule.pattern.toUpperCase();\n    if (rule.type === 'income') {\n      if (amountCents > 0 && fieldValue.includes(pattern)) return { main: rule.category, sub: rule.subcategory };\n    } else if (rule.type === 'merchant') {\n      if (fieldValue.includes(pattern)) return { main: rule.category, sub: rule.subcategory };\n    } else if (rule.type === 'up-category') {\n      if (upCategoryId === rule.pattern) return { main: rule.category, sub: rule.subcategory };\n    }\n  }\n  if (amountCents > 200000) return { main: 'income', sub: 'unknown' };\n  return { main: 'uncategorised', sub: 'unknown' };\n}\n\nconst allItems = [];\n\nfor (const item of $input.all()) {\n  const transactions = item.json.data || [];\n  for (const txn of transactions) {\n    const attrs = txn.attributes;\n    const category = txn.relationships?.category?.data;\n    const isTransfer = !!txn.relationships?.transferAccount?.data;\n    const isRoundUp = attrs.description === 'Round Up';\n\n    if (isTransfer || isRoundUp) continue;\n\n    const amountCents = parseInt(attrs.amount.valueInBaseUnits, 10);\n    const upCategoryId = category?.id || '';\n    const cat = categorise(attrs.description, upCategoryId, amountCents);\n\n    const mapped = {\n      up_transaction_id: txn.id,\n      description: attrs.description,\n      raw_text: attrs.rawText || null,\n      amount_cents: amountCents,\n      status: attrs.status,\n      up_category_id: upCategoryId || null,\n      transaction_date: attrs.createdAt.split('T')[0],\n      settled_at: attrs.settledAt || null,\n      is_transfer: false,\n      main_category: cat.main,\n      sub_category: cat.sub\n    };\n\n    allItems.push({ json: mapped });\n  }\n}\n\nreturn allItems;"
       },
       "id": "map-and-categorise",
       "name": "Map & Categorise All",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [600, 400]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "transfer-check",
-              "leftValue": "={{ $json.is_transfer }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "is-transfer",
-      "name": "Is Transfer?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [800, 400]
-    },
-    {
-      "parameters": {
-        "jsCode": "const crypto = require('crypto');\nconst MJOLNIR_API_KEY = $env.MJOLNIR_API_KEY;\nconst MJOLNIR_WEBHOOK_SECRET = $env.MJOLNIR_WEBHOOK_SECRET;\nconst MJOLNIR_BASE_URL = $env.MJOLNIR_BASE_URL;\n\nconst body = JSON.stringify($input.first().json);\nconst timestamp = Date.now().toString();\n\nconst signature = crypto\n  .createHmac('sha256', MJOLNIR_WEBHOOK_SECRET)\n  .update(`${timestamp}.${body}`)\n  .digest('hex');\n\nreturn [{\n  json: {\n    url: `${MJOLNIR_BASE_URL}/api/up/transactions`,\n    body: $input.first().json,\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Mjolnir-API-Key': MJOLNIR_API_KEY,\n      'X-Mjolnir-Timestamp': timestamp,\n      'X-Mjolnir-Signature': signature\n    }\n  }\n}];"
-      },
-      "id": "sign-transfer",
-      "name": "Sign Transfer",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [1000, 250]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ $json.url }}",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Content-Type", "value": "={{ $json.headers['Content-Type'] }}" },
-            { "name": "X-Mjolnir-API-Key", "value": "={{ $json.headers['X-Mjolnir-API-Key'] }}" },
-            { "name": "X-Mjolnir-Timestamp", "value": "={{ $json.headers['X-Mjolnir-Timestamp'] }}" },
-            { "name": "X-Mjolnir-Signature", "value": "={{ $json.headers['X-Mjolnir-Signature'] }}" }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.body) }}",
-        "options": {}
-      },
-      "id": "post-transfer",
-      "name": "POST Transfer",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1200, 250]
     },
     {
       "parameters": {
@@ -153,17 +90,17 @@
       "name": "Is Uncategorised?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1000, 500]
+      "position": [800, 400]
     },
     {
       "parameters": {
-        "jsCode": "const transaction = $input.first().json;\n\nconst prompt = `Given this Australian bank transaction:\n- Description: \"${transaction.description}\"\n- Amount: $${(Math.abs(transaction.amount_cents) / 100).toFixed(2)} ${transaction.amount_cents < 0 ? 'debit' : 'credit'}\n- Raw text: \"${transaction.raw_text || 'N/A'}\"\n- UP Category: \"${transaction.up_category_id || 'none'}\"\n\nCategorise into exactly one main category: bills-fixed, groceries, transport, eating-out, shopping, health, fun, income\n\nAlso provide a subcategory (1-2 words, lowercase-hyphenated, e.g. \"energy\", \"fuel\", \"restaurants\").\n\nReturn ONLY valid JSON: {\"category\":\"...\",\"subcategory\":\"...\"}`;\n\nreturn [{\n  json: {\n    ...transaction,\n    claude_prompt: prompt\n  }\n}];"
+        "jsCode": "const results = [];\nfor (const item of $input.all()) {\n  const transaction = item.json;\n  const prompt = `Given this Australian bank transaction:\\n- Description: \"${transaction.description}\"\\n- Amount: $${(Math.abs(transaction.amount_cents) / 100).toFixed(2)} ${transaction.amount_cents < 0 ? 'debit' : 'credit'}\\n- Raw text: \"${transaction.raw_text || 'N/A'}\"\\n- UP Category: \"${transaction.up_category_id || 'none'}\"\\n\\nCategorise into exactly one main category: bills-fixed, groceries, transport, eating-out, shopping, health, fun, income\\n\\nAlso provide a subcategory (1-2 words, lowercase-hyphenated, e.g. \"energy\", \"fuel\", \"restaurants\").\\n\\nReturn ONLY valid JSON: {\"category\":\"...\",\"subcategory\":\"...\"}`;\n  results.push({ json: { ...transaction, claude_prompt: prompt } });\n}\nreturn results;"
       },
       "id": "build-prompt",
       "name": "Build Claude Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1200, 600]
+      "position": [1000, 550]
     },
     {
       "parameters": {
@@ -181,24 +118,30 @@
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 100, messages: [{ role: 'user', content: $json.claude_prompt }] }) }}",
         "options": {
-          "timeout": 15000
+          "timeout": 15000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 1500
+            }
+          }
         }
       },
       "id": "call-claude",
       "name": "Call Claude API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1400, 600]
+      "position": [1200, 550]
     },
     {
       "parameters": {
-        "jsCode": "const response = $input.first().json;\nconst transaction = $('Build Claude Prompt').first().json;\n\nconst content = response.content || [];\nconst textBlock = content.find(b => b.type === 'text');\nlet jsonText = (textBlock?.text || '').trim();\n\nif (jsonText.startsWith('```json')) jsonText = jsonText.slice(7);\nif (jsonText.startsWith('```')) jsonText = jsonText.slice(3);\nif (jsonText.endsWith('```')) jsonText = jsonText.slice(0, -3);\njsonText = jsonText.trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(jsonText);\n} catch (e) {\n  parsed = { category: 'uncategorised', subcategory: 'unknown' };\n}\n\nconst { claude_prompt, ...txnData } = transaction;\n\nreturn [{\n  json: {\n    ...txnData,\n    main_category: parsed.category || 'uncategorised',\n    sub_category: parsed.subcategory || 'unknown'\n  }\n}];"
+        "jsCode": "const results = [];\nconst inputs = $input.all();\nconst promptItems = $('Build Claude Prompt').all();\n\nfor (let i = 0; i < inputs.length; i++) {\n  const response = inputs[i].json;\n  const transaction = promptItems[i]?.json || {};\n\n  const content = response.content || [];\n  const textBlock = content.find(b => b.type === 'text');\n  let jsonText = (textBlock?.text || '').trim();\n\n  if (jsonText.startsWith('```json')) jsonText = jsonText.slice(7);\n  if (jsonText.startsWith('```')) jsonText = jsonText.slice(3);\n  if (jsonText.endsWith('```')) jsonText = jsonText.slice(0, -3);\n  jsonText = jsonText.trim();\n\n  let parsed;\n  try {\n    parsed = JSON.parse(jsonText);\n  } catch (e) {\n    parsed = { category: 'uncategorised', subcategory: 'unknown' };\n  }\n\n  const { claude_prompt, ...txnData } = transaction;\n  results.push({\n    json: {\n      ...txnData,\n      main_category: parsed.category || 'uncategorised',\n      sub_category: parsed.subcategory || 'unknown'\n    }\n  });\n}\nreturn results;"
       },
       "id": "parse-claude",
       "name": "Parse Claude Category",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1600, 600]
+      "position": [1400, 550]
     },
     {
       "parameters": {
@@ -222,17 +165,18 @@
       "name": "Tag in UP",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1800, 550]
+      "position": [1600, 500],
+      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "const crypto = require('crypto');\nconst MJOLNIR_API_KEY = $env.MJOLNIR_API_KEY;\nconst MJOLNIR_WEBHOOK_SECRET = $env.MJOLNIR_WEBHOOK_SECRET;\nconst MJOLNIR_BASE_URL = $env.MJOLNIR_BASE_URL;\n\nconst body = JSON.stringify($input.first().json);\nconst timestamp = Date.now().toString();\n\nconst signature = crypto\n  .createHmac('sha256', MJOLNIR_WEBHOOK_SECRET)\n  .update(`${timestamp}.${body}`)\n  .digest('hex');\n\nreturn [{\n  json: {\n    url: `${MJOLNIR_BASE_URL}/api/up/transactions`,\n    body: $input.first().json,\n    headers: {\n      'Content-Type': 'application/json',\n      'X-Mjolnir-API-Key': MJOLNIR_API_KEY,\n      'X-Mjolnir-Timestamp': timestamp,\n      'X-Mjolnir-Signature': signature\n    }\n  }\n}];"
+        "jsCode": "const crypto = require('crypto');\nconst MJOLNIR_API_KEY = $env.MJOLNIR_API_KEY;\nconst MJOLNIR_WEBHOOK_SECRET = $env.MJOLNIR_WEBHOOK_SECRET;\nconst MJOLNIR_BASE_URL = $env.MJOLNIR_BASE_URL;\n\nconst results = [];\nfor (const item of $input.all()) {\n  const body = JSON.stringify(item.json);\n  const timestamp = Date.now().toString();\n  const signature = crypto\n    .createHmac('sha256', MJOLNIR_WEBHOOK_SECRET)\n    .update(`${timestamp}.${body}`)\n    .digest('hex');\n  results.push({\n    json: {\n      url: `${MJOLNIR_BASE_URL}/api/up/transactions`,\n      body: item.json,\n      headers: {\n        'Content-Type': 'application/json',\n        'X-Mjolnir-API-Key': MJOLNIR_API_KEY,\n        'X-Mjolnir-Timestamp': timestamp,\n        'X-Mjolnir-Signature': signature\n      }\n    }\n  });\n}\nreturn results;"
       },
       "id": "sign-normal",
       "name": "Sign Normal Request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1800, 450]
+      "position": [1600, 400]
     },
     {
       "parameters": {
@@ -256,7 +200,7 @@
       "name": "POST Normal to Mjolnir",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [2000, 450]
+      "position": [1800, 400]
     }
   ],
   "connections": {
@@ -286,36 +230,7 @@
       "main": [
         [
           {
-            "node": "Is Transfer?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Is Transfer?": {
-      "main": [
-        [
-          {
-            "node": "Sign Transfer",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
             "node": "Is Uncategorised?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Sign Transfer": {
-      "main": [
-        [
-          {
-            "node": "POST Transfer",
             "type": "main",
             "index": 0
           }
@@ -405,5 +320,5 @@
     "templateCredsSetupCompleted": false,
     "instanceId": ""
   },
-  "description": "## UP Backfill Transactions\n\nOne-time workflow to import all transactions from 01 Jan 2026 to 07 Feb 2026.\n\n### How to Run\n\n1. Import this workflow\n2. Click 'Test Workflow' (do NOT activate — this is a one-time run)\n3. It will fetch all transactions from UP, categorise them, tag them in UP, and send them to Mjolnir\n\n### Flow\n\n1. Fetches all transactions from UP API with date filters (handles pagination)\n2. Maps each to flat format and applies categorisation rules\n3. Transfers → sent to Mjolnir as-is\n4. Categorised → tagged in UP + sent to Mjolnir\n5. Uncategorised → Claude Haiku classifies → tagged in UP + sent to Mjolnir\n\n### Note\n\nDo NOT activate this workflow. Run it manually once, then delete or disable it."
+  "description": "## UP Backfill Transactions\n\nOne-time workflow to import all transactions from 01 Jan 2026 to 07 Feb 2026.\n\n### How to Run\n\n1. Import this workflow\n2. Click 'Test Workflow' (do NOT activate — this is a one-time run)\n3. It will fetch all transactions from UP, categorise them, tag them in UP, and send them to Mjolnir\n\n### Flow\n\n1. Fetches all transactions from UP API with date filters (handles pagination)\n2. Maps each to flat format and applies categorisation rules (skips transfers and Round Ups)\n3. Categorised → tagged in UP + sent to Mjolnir\n4. Uncategorised → Claude Haiku classifies → tagged in UP + sent to Mjolnir\n\n### Note\n\nDo NOT activate this workflow. Run it manually once, then delete or disable it."
 }
