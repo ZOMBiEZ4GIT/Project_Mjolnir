@@ -13,6 +13,7 @@
 - Select items on mobile need py-2.5 for touch-friendly tap targets
 - CategoryBadge touch: h-8 sm:h-7 for mobile/desktop, active:bg-accent/20 for press feedback
 - Refresh button pattern: refetch() from useQuery + isFetching for spin animation
+- TransactionSearch: debounced search component with local state + useEffect sync for external value resets
 
 ---
 
@@ -52,4 +53,22 @@
   - Defining DesktopFilterBar + MobileFilterPanel as separate components avoids deeply nested conditionals
   - isFetching (not isLoading) is needed for refresh spinner — isLoading is only true on first load
   - Filter count badge (activeFilterCount) provides visual affordance that filters are active when panel is collapsed
+---
+
+## 2026-02-08 - B6-003
+- What was implemented: Debounced transaction search component with 300ms delay
+- Files changed:
+  - components/budget/TransactionSearch.tsx — new component with debounced input, clear button, search icon
+  - app/(dashboard)/budget/transactions/page.tsx — replaced form-based search with TransactionSearch, updated result count text
+- **Key changes:**
+  - TransactionSearch manages its own local state with useEffect sync from external value (for "clear all filters")
+  - 300ms debounce via setTimeout/clearTimeout in useRef — fires onChange to parent after delay
+  - Clear (X) button immediately fires onChange("") without waiting for debounce
+  - Removed handleSearchSubmit form handler — search is now automatic on type
+  - Result count now shows "Showing X transactions" format
+  - "Clear filters" → "Clear all filters" for consistency across desktop and mobile
+- **Learnings for future iterations:**
+  - Debounced inputs need dual state: local for responsiveness, external for URL sync — useEffect to reset local when external changes (e.g. clear all)
+  - Removing form submit in favour of debounce simplifies the UI — no search button needed, just type and wait
+  - The existing API already handles `search` param with ILIKE on description + rawText — no backend changes needed
 ---
