@@ -27,7 +27,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "={{ 'Bearer ' + $env.UP_PERSONAL_ACCESS_TOKEN }}"
+              "value": "={{ 'Bearer ' + $env.UP_API_TOKEN }}"
             }
           ]
         },

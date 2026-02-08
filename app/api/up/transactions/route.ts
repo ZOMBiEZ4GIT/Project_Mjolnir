@@ -9,15 +9,17 @@ import { mapUpCategory, isIncomeTransaction } from "@/lib/budget/categorisation"
 const transactionSchema = z.object({
   up_transaction_id: z.string().min(1),
   description: z.string().min(1),
-  raw_text: z.string().optional(),
+  raw_text: z.string().nullable().optional(),
   amount_cents: z.number().int(),
   status: z.enum(["HELD", "SETTLED"]),
-  up_category_id: z.string().optional(),
-  up_category_name: z.string().optional(),
+  up_category_id: z.string().nullable().optional(),
+  up_category_name: z.string().nullable().optional(),
   transaction_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD format"),
-  settled_at: z.string().optional(),
+  settled_at: z.string().nullable().optional(),
   is_transfer: z.boolean(),
   mjolnir_category_id: z.string().optional(),
+  main_category: z.string().optional(),
+  sub_category: z.string().optional(),
 });
 
 const deleteSchema = z.object({
@@ -64,6 +66,7 @@ async function resolveCategory(
   data: z.infer<typeof transactionSchema>
 ): Promise<string> {
   if (data.mjolnir_category_id) return data.mjolnir_category_id;
+  if (data.main_category && data.main_category !== "uncategorised") return data.main_category;
 
   // Load income source pattern from payday config
   const config = await db
