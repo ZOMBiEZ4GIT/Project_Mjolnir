@@ -159,3 +159,20 @@
   - calculateBudgetSummary is safe to call concurrently with Promise.all (confirmed in B6-005)
   - For summary export, filtering periods by date uses startDate/endDate on budgetPeriods table, not transaction dates
 ---
+
+## 2026-02-08 - B6-008
+- What was implemented: Export buttons for CSV downloads on transactions page and budget dashboard
+- Files changed:
+  - app/(dashboard)/budget/transactions/page.tsx — added Export CSV button next to Refresh button, with loading state
+  - app/(dashboard)/budget/page.tsx — added Export CSV button in header next to AI Recommendation and PeriodSelector
+- **Key changes:**
+  - Transactions page: Export button triggers download via anchor element pointing to /api/budget/export?type=transactions with current from/to date filters
+  - Dashboard page: Export button uses summary.startDate/endDate to scope the summary export to the current period
+  - Both buttons show Loader2 spinner during export and Download icon normally
+  - Responsive text: "Export CSV" label hidden on mobile (icon only), shown on sm+
+  - Download triggered via programmatic anchor element click (same pattern as ChartExportButton)
+- **Learnings for future iterations:**
+  - For CSV exports from API endpoints with Content-Disposition: attachment, the simplest client approach is creating a temporary anchor element with href=url and triggering click — no need for fetch + blob
+  - Export buttons pair well with existing action buttons (Refresh, AI Recommend) using gap-2 flex layout
+  - Date filters from URL search params can be passed through to export API for filtered exports
+---
