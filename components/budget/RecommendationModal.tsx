@@ -202,9 +202,9 @@ export function RecommendationModal({
                           <span
                             className={`inline-flex items-center gap-0.5 ${
                               isIncrease
-                                ? "text-emerald-400"
+                                ? "text-positive"
                                 : isDecrease
-                                  ? "text-red-400"
+                                  ? "text-destructive"
                                   : "text-muted-foreground"
                             }`}
                           >
@@ -251,20 +251,20 @@ export function RecommendationModal({
                   </p>
                 </div>
                 <div>
-                  <TrendingUp className="h-5 w-5 mx-auto text-emerald-400 mb-1" />
+                  <TrendingUp className="h-5 w-5 mx-auto text-positive mb-1" />
                   <p className="text-xs text-muted-foreground">Projected</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">
                     Projected Rate
                   </p>
-                  <p className="text-lg font-semibold text-emerald-400">
+                  <p className="text-lg font-semibold text-positive">
                     {formatRate(data.savingsProjection.projectedRate)}
                   </p>
                 </div>
               </div>
               {data.savingsProjection.monthlyIncreaseCents > 0 && (
-                <p className="text-center text-sm text-emerald-400 mt-3">
+                <p className="text-center text-sm text-positive mt-3">
                   +{formatCents(data.savingsProjection.monthlyIncreaseCents)}
                   /month extra savings
                 </p>
@@ -275,7 +275,7 @@ export function RecommendationModal({
           {/* Section 5 — Actionable Tip */}
           <section>
             <div className="rounded-lg border border-border bg-card p-4 flex gap-3">
-              <Lightbulb className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+              <Lightbulb className="h-5 w-5 text-warning shrink-0 mt-0.5" />
               <div>
                 <h3 className="text-sm font-medium text-foreground mb-1">
                   Tip

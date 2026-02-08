@@ -717,7 +717,7 @@ export default function BudgetSetupPage() {
                     </span>
                     <span
                       className={`font-medium tabular-nums ${
-                        isOverBudget ? "text-destructive" : "text-emerald-400"
+                        isOverBudget ? "text-destructive" : "text-positive"
                       }`}
                     >
                       {isOverBudget ? "-" : ""}$

@@ -39,10 +39,10 @@ export function CategoryCard({
 
   const barColour =
     status === "over"
-      ? "bg-red-500"
+      ? "bg-destructive"
       : status === "warning"
-        ? "bg-amber-500"
-        : "bg-emerald-500";
+        ? "bg-warning"
+        : "bg-positive";
 
   const remainingText =
     remainingCents >= 0
@@ -51,9 +51,9 @@ export function CategoryCard({
 
   const remainingColour =
     status === "over"
-      ? "text-red-400"
+      ? "text-destructive"
       : status === "warning"
-        ? "text-amber-400"
+        ? "text-warning"
         : "text-muted-foreground";
 
   return (

@@ -361,8 +361,8 @@ export default function BudgetDashboardPage() {
           icon={TrendingUp}
           accent={
             summary.totals.savingsCents >= 0
-              ? "text-emerald-400"
-              : "text-red-400"
+              ? "text-positive"
+              : "text-destructive"
           }
         />
         <StatCard

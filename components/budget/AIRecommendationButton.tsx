@@ -148,7 +148,7 @@ export function AIRecommendationButton({
         variant="outline"
         size="sm"
         onClick={handleRequest}
-        className="text-red-400 border-red-400/30 hover:bg-red-400/10"
+        className="text-destructive border-destructive/30 hover:bg-destructive/10"
       >
         <AlertCircle className="h-4 w-4" />
         Retry
