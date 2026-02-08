@@ -1,0 +1,158 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/b5-ai-pay-split-recommendations",
+  "description": "B-5: AI Pay Split Recommendations — AI-powered budget analysis via n8n + Claude, spending pattern insights, budget adjustment suggestions, and UP Pay Split percentage generation.",
+  "userStories": [
+    {
+      "id": "B5-001",
+      "title": "AI recommendations database schema",
+      "description": "As a developer, I need a table to store AI recommendations so they persist and can be retrieved/updated by the UI.",
+      "acceptanceCriteria": [
+        "Create ai_recommendations table in lib/db/schema.ts with columns: id (uuid PK), budget_period_id (uuid FK to budget_periods), recommendation_data (jsonb), status (varchar: 'pending' | 'accepted' | 'dismissed', default 'pending'), created_at (timestamptz)",
+        "Add index on budget_period_id",
+        "Generate migration with npm run db:generate",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B5-002",
+      "title": "Recommendation retrieval and status API endpoints",
+      "description": "As a developer, I need endpoints to fetch the latest recommendation and update its status so the UI can display and act on recommendations.",
+      "acceptanceCriteria": [
+        "Create GET /api/budget/recommendations endpoint — returns the latest recommendation for a given period_id query param (or current period if omitted), ordered by created_at desc, limit 1",
+        "Create PUT /api/budget/recommendations/[id]/status endpoint — accepts { status: 'accepted' | 'dismissed' } validated with Zod, updates the recommendation status",
+        "GET returns 404 with empty body if no recommendation exists for the period",
+        "Both endpoints protected by Clerk auth (withAuth pattern)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B5-003",
+      "title": "Recommendation request API endpoint",
+      "description": "As a developer, I need an endpoint that gathers spending data and triggers an AI recommendation request via n8n.",
+      "acceptanceCriteria": [
+        "Create POST /api/budget/recommendations endpoint (add POST handler to existing route)",
+        "Gathers: current budget period income and allocations, actual spending per category for current period (reuse calculateBudgetSummary), 3-month average spending per category (query last 3 periods if available), savings goal percentage (default 30%), payday config",
+        "Sends this data as a POST to N8N_BASE_URL + '/webhook/budget-recommendation' with HMAC signing headers (X-Mjolnir-API-Key, X-Mjolnir-Timestamp, X-Mjolnir-Signature)",
+        "Returns 202 Accepted immediately with { message: 'Recommendation requested' }",
+        "Protected by Clerk auth",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B5-004",
+      "title": "Recommendation callback endpoint from n8n",
+      "description": "As a developer, I need an endpoint for n8n to return AI recommendations to Mjolnir after Claude processes them.",
+      "acceptanceCriteria": [
+        "Create POST /api/budget/recommendations/callback endpoint",
+        "Uses n8n middleware for authentication (withN8nAuth pattern, same HMAC signing as UP endpoints)",
+        "Accepts structured payload validated with Zod: budget_period_id (string), suggestedBudget (array of { categoryId, currentCents, suggestedCents, reason }), paySplitConfig (array of { saverName, percentage, amountCents }), insights (array of strings), savingsProjection ({ currentRate, projectedRate, monthlyIncreaseCents }), actionableTip (string), generatedAt (string)",
+        "Stores as a new row in ai_recommendations with status 'pending' and the payload as recommendation_data jsonb",
+        "Returns 200 with { stored: true }",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B5-005",
+      "title": "AI recommendation trigger button",
+      "description": "As a user, I want a button on the budget dashboard to request AI-powered recommendations so I can get advice on optimising my budget.",
+      "acceptanceCriteria": [
+        "Create components/budget/AIRecommendationButton.tsx",
+        "Button text: 'Get AI Recommendation' with a sparkles icon (Lucide Sparkles)",
+        "States: idle (clickable), loading (spinner + 'Analysing your spending...'), error (retry option)",
+        "Clicking triggers POST to /api/budget/recommendations, then polls GET /api/budget/recommendations every 3 seconds until a new recommendation appears (max 60 seconds timeout)",
+        "On success, calls an onRecommendation callback prop with the recommendation data",
+        "If a recommendation already exists for current period, show 'View Recommendation' instead",
+        "Integrate into the budget dashboard page",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B5-006",
+      "title": "Recommendation display modal",
+      "description": "As a user, I want to see AI recommendations in a clear modal so I can understand the suggestions and decide what to act on.",
+      "acceptanceCriteria": [
+        "Create components/budget/RecommendationModal.tsx using shadcn Dialog or Sheet",
+        "Section 1 — Insights: bullet list of spending observations from insights array",
+        "Section 2 — Suggested Budget: table with columns: Category, Current, Suggested, Difference, Reason. Green text for increases, red for decreases",
+        "Section 3 — Savings Projection: current rate vs projected rate with monthly savings increase highlighted in green",
+        "Section 4 — Actionable Tip: displayed as a callout card with lightbulb icon",
+        "Footer actions: 'Accept All' button (primary), 'Dismiss' button (secondary/ghost)",
+        "Accept All calls PUT /api/budget/recommendations/[id]/status with 'accepted', Dismiss calls with 'dismissed'",
+        "Dark mode styling consistent with Mjolnir",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B5-007",
+      "title": "Apply recommendations to budget allocations",
+      "description": "As a user, I want accepted AI recommendations to update my budget allocations so I don't have to manually re-enter everything.",
+      "acceptanceCriteria": [
+        "When 'Accept All' is clicked in the modal, also call PUT /api/budget/periods/[id] to update allocations with the suggested amounts from suggestedBudget array",
+        "All allocation updates happen atomically (single API call with full allocations array)",
+        "After applying, marks recommendation status as 'accepted'",
+        "Dashboard data refreshes via TanStack Query invalidation to show new allocation amounts",
+        "Shows a success toast: 'Budget updated with AI recommendations' (use shadcn toast/sonner)",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B5-008",
+      "title": "Pay Split configuration display component",
+      "description": "As a user, I want the recommended Pay Split percentages displayed in a format I can directly apply in the UP app.",
+      "acceptanceCriteria": [
+        "Create components/budget/PaySplitConfig.tsx — formatted Pay Split guide",
+        "Shows each recommended saver: name (e.g. 'Rent'), percentage (e.g. '23.3%'), dollar amount (e.g. '$2,129')",
+        "Total percentages shown with remainder going to spending account clearly labelled",
+        "Copy button that copies the Pay Split config as formatted text to clipboard",
+        "Integrate into the RecommendationModal as Section 3 (between Suggested Budget and Savings Projection)",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "B5-009",
+      "title": "n8n Claude recommendation workflow template",
+      "description": "As a developer, I need an n8n workflow template that receives spending data, calls Claude, and returns structured recommendations.",
+      "acceptanceCriteria": [
+        "Create n8n/workflows/claude-recommendation.json as a valid importable n8n workflow JSON",
+        "Workflow nodes: Webhook trigger (receives spending data from Mjolnir) → Code node (formats Claude prompt with spending data, instructs JSON-only response) → HTTP Request node (calls Claude API at https://api.anthropic.com/v1/messages) → Code node (parses Claude JSON response into structured recommendation payload) → Code node (generates HMAC signing headers) → HTTP Request node (POSTs recommendations back to Mjolnir callback URL)",
+        "Claude prompt template: instructs analysis of Australian spending patterns, budget adjustments, Pay Split percentages, insights, and actionable tip — all as structured JSON matching the callback Zod schema",
+        "Error handling: if Claude call fails, sends error payload to Mjolnir callback",
+        "Uses n8n environment variables for ANTHROPIC_API_KEY, MJOLNIR_API_KEY, MJOLNIR_WEBHOOK_SECRET, MJOLNIR_BASE_URL",
+        "File is valid JSON (parseable with JSON.parse)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}

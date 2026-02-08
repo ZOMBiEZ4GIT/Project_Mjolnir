@@ -1,0 +1,154 @@
+# Ralph Progress Log — B5: AI Pay Split Recommendations
+# This file is reset at the start of each epic.
+
+## Codebase Patterns
+- HMAC signing for outgoing n8n requests: `crypto.createHmac("sha256", secret).update(`${timestamp}.${body}`).digest("hex")` — same pattern as incoming validation
+- `calculateBudgetSummary(periodId)` returns full BudgetSummary with income, categories (with spending), totals, and period dates
+- Fire-and-forget fetch pattern: call `fetch(...).catch(() => {})` without await for async webhook triggers
+- Schema uses `jsonb` from drizzle-orm/pg-core for JSON columns
+- Budget-related tables (budgetPeriods, budgetAllocations) use `bigint` with `mode: "number"` for cents
+- All tables follow the pattern: uuid PK with `defaultRandom()`, timestamptz columns with `defaultNow()`
+- Relations defined separately using `relations()` from drizzle-orm
+- Migration generated with `npm run db:generate`, files in `drizzle/` directory
+- Type inference exports at bottom of schema.ts: `$inferSelect` and `$inferInsert`
+
+## 2026-02-08 - B5-001
+- Implemented `ai_recommendations` table in `lib/db/schema.ts`
+- Columns: id (uuid PK), budget_period_id (uuid FK), recommendation_data (jsonb), status (varchar default 'pending'), created_at (timestamptz)
+- Added index on `budget_period_id`
+- Added relation from `budgetPeriods` → `aiRecommendations` (one-to-many)
+- Added `aiRecommendationsRelations` for the reverse relation
+- Added `AiRecommendation` and `NewAiRecommendation` type exports
+- Generated migration: `drizzle/0014_square_songbird.sql`
+- Files changed: `lib/db/schema.ts`, `drizzle/0014_square_songbird.sql`, `drizzle/meta/`
+- **Learnings for future iterations:**
+  - `jsonb` import was not in the existing drizzle import list — had to add it
+  - Index definition uses the third argument to `pgTable` (callback returning object)
+  - yahoo-finance2 Node version warning is expected and safe to ignore
+---
+
+## 2026-02-08 - B5-002
+- Implemented GET /api/budget/recommendations endpoint — returns latest recommendation for a period
+- Implemented PUT /api/budget/recommendations/[id]/status endpoint — updates recommendation status (accepted/dismissed)
+- GET supports optional `period_id` query param with fallback to current period (same pattern as summary route)
+- PUT uses Zod validation with `z.enum(["accepted", "dismissed"])` for status field
+- Both endpoints protected by `withAuth` Clerk middleware
+- Files changed: `app/api/budget/recommendations/route.ts`, `app/api/budget/recommendations/[id]/status/route.ts`
+- **Learnings for future iterations:**
+  - Recommendation endpoints follow the same period resolution pattern as budget/summary (date range lookup)
+  - The `[id]` dynamic route with nested `/status` works: `app/api/budget/recommendations/[id]/status/route.ts`
+  - `desc()` import for ordering comes from `drizzle-orm`
+---
+
+## 2026-02-08 - B5-003
+- Added POST handler to existing `/api/budget/recommendations/route.ts`
+- Gathers current period summary via `calculateBudgetSummary`, 3-month historical spending averages, and payday config concurrently with `Promise.all`
+- Historical spending uses subquery to find up to 3 previous periods, then aggregates spending per category with OR'd date range conditions
+- Sends payload to `N8N_BASE_URL + '/webhook/budget-recommendation'` with HMAC signing headers (same pattern as incoming n8n validation in reverse)
+- Returns 202 Accepted immediately (fire-and-forget fetch)
+- Returns 503 if N8N env vars not configured
+- Protected by Clerk `withAuth`
+- Files changed: `app/api/budget/recommendations/route.ts`
+- **Learnings for future iterations:**
+  - Outgoing HMAC signing mirrors the incoming pattern: `timestamp.body` signed with `N8N_WEBHOOK_SECRET`
+  - Use fire-and-forget `fetch().catch(() => {})` for async webhook triggers — don't block the response
+  - `paydayConfig` table may be empty (user hasn't configured yet) — provide sensible defaults (day 15, adjust weekends true)
+  - Building OR conditions with drizzle `sql` template: `periodConditions.map(c => sql\`(\${c})\`).reduce((a, b) => sql\`\${a} OR \${b}\`)`
+---
+
+## 2026-02-08 - B5-004
+- Created POST /api/budget/recommendations/callback endpoint for n8n to deliver AI recommendations
+- Uses `withN8nAuth` middleware from `lib/api/up/middleware.ts` for HMAC signature validation
+- Zod schema validates the full recommendation payload: suggestedBudget, paySplitConfig, insights, savingsProjection, actionableTip, generatedAt
+- Stores validated payload in `ai_recommendations` table with `budget_period_id` as FK and `recommendation_data` as JSONB
+- Returns `{ stored: true }` with status 200 on success, 400 on validation failure
+- Files changed: `app/api/budget/recommendations/callback/route.ts`
+- **Learnings for future iterations:**
+  - `withN8nAuth` middleware lives at `lib/api/up/middleware.ts` — reusable for any n8n callback, not just UP
+  - Callback pattern: destructure `budget_period_id` from parsed data, pass remaining fields as `recommendationData` JSONB
+  - The Zod schema for the callback payload should match what the n8n workflow will send (defined in B5-009)
+---
+
+## 2026-02-08 - B5-005
+- Created `components/budget/AIRecommendationButton.tsx` with full state management
+- States: idle (sparkles icon + "Get AI Recommendation"), loading (spinner + "Analysing your spending…"), error (retry with red styling), existing ("View Recommendation" with eye icon)
+- Uses TanStack Query to check for existing recommendation on mount
+- On click: POSTs to `/api/budget/recommendations`, then polls GET every 3s with 60s timeout
+- Tracks baseline recommendation id to detect new vs existing recommendations during polling
+- Added `recommendations.latest(periodId?)` query key to `lib/query-keys.ts`
+- Integrated button into budget dashboard header next to PeriodSelector
+- Added `onRecommendation` callback prop — dashboard stores recommendation in state (modal display is B5-006)
+- Files changed: `components/budget/AIRecommendationButton.tsx` (new), `lib/query-keys.ts`, `app/(dashboard)/budget/page.tsx`
+- **Learnings for future iterations:**
+  - Polling pattern: use `useRef` for interval/timeout IDs and track baseline IDs to distinguish new data from stale
+  - `queryClient.setQueryData()` can optimistically update query cache when polling detects a new result
+  - The budget dashboard header uses `flex items-center justify-between` — additional buttons fit in a wrapper div with `gap-3`
+  - The `useCallback` import is needed when passing stable callback refs to child components
+---
+
+## 2026-02-08 - B5-006
+- Created `components/budget/RecommendationModal.tsx` using shadcn Dialog
+- Section 1 — Insights: bullet list of spending observations
+- Section 2 — Suggested Budget: table with Category, Current, Suggested, Diff, Reason columns. Green for increases, red for decreases
+- Section 3 — Savings Projection: current vs projected rate with monthly savings increase
+- Section 4 — Actionable Tip: callout card with lightbulb icon
+- Footer: "Accept All" (primary) and "Dismiss" (ghost) buttons. Hides when already actioned
+- Accept/Dismiss call PUT `/api/budget/recommendations/[id]/status` then invalidate TanStack Query cache
+- Integrated into budget dashboard — `handleRecommendation` now opens modal, `categoryMap` built from `summary.categories`
+- Exports `AiRecommendation` type for use by other components (B5-007, B5-008)
+- Files changed: `components/budget/RecommendationModal.tsx` (new), `app/(dashboard)/budget/page.tsx`
+- **Learnings for future iterations:**
+  - `recommendation.recommendationData` is the JSONB payload (without `budget_period_id`); `budget_period_id` is a top-level column
+  - Category ID → name mapping: build from `summary.categories` array which has `categoryId` and `categoryName`
+  - Dialog `max-h-[85vh] overflow-y-auto` on DialogContent handles long recommendation lists
+  - The `AiRecommendation` type is re-exported from the modal component to avoid duplicating the type definition
+---
+
+## 2026-02-08 - B5-007
+- Updated `handleAccept` in budget dashboard to apply AI recommendations to budget allocations
+- On "Accept All": sends parallel requests — PUT `/api/budget/periods/[id]` with suggested allocations + PUT status to 'accepted'
+- Maps `suggestedBudget` items to `{ categoryId, allocatedCents: suggestedCents }` for the period update API
+- Error handling: if either request fails, shows error toast and aborts
+- Success: closes modal, shows `toast.success("Budget updated with AI recommendations")`, invalidates both budget summary and recommendations queries
+- Added `sonner` toast import to budget page (direct import pattern, consistent with other dashboard pages)
+- Files changed: `app/(dashboard)/budget/page.tsx`
+- **Learnings for future iterations:**
+  - PUT `/api/budget/periods/[id]` does full allocation replacement — pass the complete allocations array, not a diff
+  - `Promise.all` for parallel API calls is safe here since both are idempotent PUTs
+  - `queryKeys.budget.summary(periodId)` requires the specific periodId to invalidate correctly (not undefined)
+  - Both `toast` helpers (`lib/toast-helpers.ts`) and direct `sonner` imports are used in the codebase — direct import is simpler for one-off calls
+---
+
+## 2026-02-08 - B5-008
+- Created `components/budget/PaySplitConfig.tsx` — formatted Pay Split guide component
+- Shows each saver with name, percentage (1 decimal), and dollar amount in AUD
+- Spending account remainder row shown with italic styling and "remainder" label
+- Summary line shows total allocated percentage and what remains for spending
+- Copy button copies formatted text to clipboard: "UP Pay Split Config\nSaver: X% ($Y)\n..."
+- Uses `useState` for 2-second copied feedback (Check icon replaces Copy icon)
+- Integrated into `RecommendationModal.tsx` as Section 3 between Suggested Budget and Savings Projection
+- Conditionally rendered only when `paySplitConfig` array has items
+- Files changed: `components/budget/PaySplitConfig.tsx` (new), `components/budget/RecommendationModal.tsx`
+- **Learnings for future iterations:**
+  - `navigator.clipboard.writeText` is async — use `async function` handler
+  - The `paySplitConfig` data comes from `recommendation.recommendationData.paySplitConfig` (already typed in RecommendationData)
+  - Reusable sections in RecommendationModal can be extracted as separate components and imported — keeps the modal file manageable
+  - Table styling pattern: `rounded-lg border border-border overflow-hidden` for outer container, consistent with Suggested Budget table
+---
+
+## 2026-02-08 - B5-009
+- Created `n8n/workflows/claude-recommendation.json` — valid importable n8n workflow JSON
+- Workflow nodes: Webhook trigger → Format Claude Prompt (Code) → Call Claude API (HTTP Request) → Parse Claude Response (Code) → Sign Mjolnir Callback (Code) → POST to Mjolnir Callback (HTTP Request)
+- Error path: Handle Error (Code) → POST Error to Mjolnir (HTTP Request) — sends minimal valid payload with error insight
+- Claude prompt: instructs analysis of Australian spending patterns, budget adjustments, Pay Split percentages, insights, and actionable tip — all as structured JSON matching the callback Zod schema
+- Response parser strips markdown code fences, validates required fields, rounds cents to integers
+- Uses n8n `$env` variables for `ANTHROPIC_API_KEY`, `MJOLNIR_API_KEY`, `MJOLNIR_WEBHOOK_SECRET`, `MJOLNIR_BASE_URL`
+- HMAC signing matches existing pattern: `crypto.createHmac("sha256", secret).update(\`${timestamp}.${body}\`).digest("hex")`
+- Files changed: `n8n/workflows/claude-recommendation.json` (new)
+- **Learnings for future iterations:**
+  - n8n webhook node uses `httpMethod` and `path` params — the path becomes the webhook URL suffix
+  - n8n `$()` syntax references other nodes by name: `$('Format Claude Prompt').first().json.budgetPeriodId`
+  - Claude may wrap JSON responses in markdown code fences — always strip `\`\`\`json` and `\`\`\`` before parsing
+  - Error handler nodes in n8n should send a valid payload shape so the callback endpoint doesn't reject it
+  - n8n error connections are configured in the UI, not in the JSON connections — note in workflow description
+---
