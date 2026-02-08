@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { TransactionSearch } from "@/components/budget/TransactionSearch";
 import {
   Search,
   AlertCircle,
@@ -251,8 +252,7 @@ export default function BudgetTransactionsPage() {
   const page = Math.max(parseInt(searchParams.get("page") ?? "1", 10) || 1, 1);
   const offset = (page - 1) * PAGE_SIZE;
 
-  // Local state for search input and mobile filter toggle
-  const [searchInput, setSearchInput] = useState(searchFilter ?? "");
+  // Local state for mobile filter toggle
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const updateFilters = useCallback(
@@ -344,12 +344,11 @@ export default function BudgetTransactionsPage() {
     [categoryMutation]
   );
 
-  const handleSearchSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      updateFilters({ search: searchInput || undefined });
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      updateFilters({ search: value || undefined });
     },
-    [searchInput, updateFilters]
+    [updateFilters]
   );
 
   const transactions = data?.transactions ?? [];
@@ -432,21 +431,15 @@ export default function BudgetTransactionsPage() {
       </div>
 
       {/* Search */}
-      <form onSubmit={handleSearchSubmit} className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5">
         <Label className="text-muted-foreground text-sm">Search</Label>
-        <div className="flex gap-2">
-          <Input
-            type="text"
-            placeholder="Description..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="w-[180px] bg-background border-border text-foreground"
-          />
-          <Button type="submit" variant="outline" size="icon" className="shrink-0">
-            <Search className="h-4 w-4" />
-          </Button>
-        </div>
-      </form>
+        <TransactionSearch
+          value={searchFilter ?? ""}
+          onChange={handleSearchChange}
+          className="w-[220px]"
+          placeholder="Description..."
+        />
+      </div>
 
       {/* Clear filters */}
       {hasFilters && (
@@ -455,13 +448,10 @@ export default function BudgetTransactionsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              setSearchInput("");
-              router.push("/budget/transactions");
-            }}
+            onClick={() => router.push("/budget/transactions")}
             className="text-muted-foreground hover:text-foreground"
           >
-            Clear filters
+            Clear all filters
           </Button>
         </div>
       )}
@@ -473,18 +463,11 @@ export default function BudgetTransactionsPage() {
     <div className="sm:hidden mb-4">
       {/* Filter toggle + search row */}
       <div className="flex gap-2 mb-3">
-        <form onSubmit={handleSearchSubmit} className="flex-1 flex gap-2">
-          <Input
-            type="text"
-            placeholder="Search transactions..."
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            className="flex-1 bg-background border-border text-foreground"
-          />
-          <Button type="submit" variant="outline" size="icon" className="shrink-0 h-10 w-10">
-            <Search className="h-4 w-4" />
-          </Button>
-        </form>
+        <TransactionSearch
+          value={searchFilter ?? ""}
+          onChange={handleSearchChange}
+          className="flex-1"
+        />
         <Button
           variant="outline"
           size="icon"
@@ -585,7 +568,6 @@ export default function BudgetTransactionsPage() {
               variant="ghost"
               size="sm"
               onClick={() => {
-                setSearchInput("");
                 setFiltersOpen(false);
                 router.push("/budget/transactions");
               }}
@@ -668,10 +650,7 @@ export default function BudgetTransactionsPage() {
             hasFilters ? (
               <Button
                 variant="outline"
-                onClick={() => {
-                  setSearchInput("");
-                  router.push("/budget/transactions");
-                }}
+                onClick={() => router.push("/budget/transactions")}
               >
                 Clear all filters
               </Button>
@@ -703,7 +682,7 @@ export default function BudgetTransactionsPage() {
 
       {/* Results summary */}
       <div className="text-sm text-muted-foreground mb-3">
-        {total} transaction{total !== 1 ? "s" : ""}
+        Showing {total} transaction{total !== 1 ? "s" : ""}
         {totalPages > 1 && ` — page ${page} of ${totalPages}`}
       </div>
 
