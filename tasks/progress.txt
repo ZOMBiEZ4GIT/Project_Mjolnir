@@ -19,6 +19,8 @@
 - Reorder via sort_order swap: fetch both categories, swap sortOrder values, call PUT for each
 - SpendingTrends: ComposedChart with dynamic category keys spread as data fields, Bar components mapped from allCategories array
 - Mixed bar/line legend: w-4 h-0.5 line indicator for Line series, w-2.5 h-2.5 rounded-sm square for Bar series
+- Design token mapping: emerald→text-positive/bg-positive, red→text-destructive/bg-destructive, amber→text-warning/bg-warning, purple→bg-primary
+- Chart hex colours and colour picker palettes are exempt from token migration — they need literal hex for SVG/canvas
 
 ---
 
@@ -175,4 +177,25 @@
   - For CSV exports from API endpoints with Content-Disposition: attachment, the simplest client approach is creating a temporary anchor element with href=url and triggering click — no need for fetch + blob
   - Export buttons pair well with existing action buttons (Refresh, AI Recommend) using gap-2 flex layout
   - Date filters from URL search params can be passed through to export API for filtered exports
+---
+
+## 2026-02-08 - B6-009
+- What was implemented: Design token consistency pass — replaced all hardcoded Tailwind colours with CSS custom property tokens across budget components
+- Files changed:
+  - components/budget/MobileBudgetChart.tsx — text-emerald/amber/red → text-positive/warning/destructive, bg-red/amber/emerald → bg-destructive/warning/positive, bg-purple-500 → bg-primary
+  - components/budget/CategoryCard.tsx — bar colours and remaining text colours → design tokens
+  - components/budget/SavingsIndicator.tsx — savings rate colour indicator → text-positive/warning/destructive
+  - components/budget/RecommendationModal.tsx — diff colours, projection colours, tip icon → design tokens
+  - components/budget/AIRecommendationButton.tsx — error state button → text-destructive border-destructive/30
+  - app/(dashboard)/budget/page.tsx — StatCard savings accent → text-positive/text-destructive
+  - app/(dashboard)/budget/setup/page.tsx — unallocated savings text → text-positive
+- **What was NOT changed (intentionally):**
+  - SankeyChart.tsx hex colours (INCOME_COLOUR, SAVINGS_POSITIVE_COLOUR, etc.) — required for SVG rendering
+  - SpendingTrends.tsx chart-palette constants (CHART_GRID, POSITIVE, etc.) — already using centralized hex constants
+  - CategoryManager.tsx COLOUR_PALETTE hex values — these are user-facing colour picker swatches, not status indicators
+- **Learnings for future iterations:**
+  - Design token mapping: emerald→positive, red→destructive, amber→warning, purple→primary
+  - The transactions page already used proper tokens (text-positive, text-destructive, text-warning, bg-warning/10) — set the pattern others should follow
+  - Chart hex colours and colour picker palettes are exempt from token migration — they need literal hex for SVG/canvas
+  - Typography, spacing (rounded-lg, p-4), and shadows were already consistent across components — no changes needed
 ---
