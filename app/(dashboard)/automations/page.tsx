@@ -62,6 +62,36 @@ function formatDuration(ms: number | null): string {
   return `${minutes}m ${remainingSeconds}s`;
 }
 
+function ExecutionTimeline({ executions }: { executions: N8nExecution[] }) {
+  const sorted = [...executions].sort(
+    (a, b) =>
+      new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime()
+  );
+
+  if (sorted.length === 0) return null;
+
+  return (
+    <div className="mb-4">
+      <div className="flex flex-wrap gap-1 items-center" style={{ maxHeight: 32 }}>
+        {sorted.map((execution) => (
+          <span
+            key={execution.id}
+            title={`${new Date(execution.startedAt).toLocaleString("en-AU", {
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })} — ${execution.status === "error" ? "Error" : "Success"} — ${formatDuration(execution.duration)}`}
+            className={`inline-block h-3 w-3 rounded-sm cursor-default transition-opacity hover:opacity-80 ${
+              execution.status === "error" ? "bg-red-500" : "bg-emerald-500"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ExecutionHistory({ executions }: { executions: N8nExecution[] }) {
   const sorted = [...executions].sort(
     (a, b) =>
@@ -184,6 +214,7 @@ function WorkflowCard({
 
       {isSelected && (
         <div className="border-t border-border px-4 sm:px-6 py-4">
+          <ExecutionTimeline executions={workflowExecutions} />
           <h4 className="text-xs font-medium text-muted-foreground mb-3">
             Execution History
           </h4>
