@@ -1,0 +1,2 @@
+# Ralph Progress Log
+# This file is reset at the start of each epic.
