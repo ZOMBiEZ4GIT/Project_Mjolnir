@@ -19,8 +19,8 @@ interface N8nApiExecution {
 }
 
 export const GET = withAuth(async (request) => {
-  const baseUrl = process.env.N8N_API_URL;
-  const apiKey = process.env.N8N_API_KEY;
+  const baseUrl = process.env.N8N_BASE_URL;
+  const apiKey = process.env.N8N_MONITOR_API_KEY;
 
   if (!baseUrl || !apiKey) {
     return NextResponse.json(
