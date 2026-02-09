@@ -1,0 +1,137 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/n8n-flow-monitor",
+  "description": "n8n Flow Monitor — Read-only monitoring of self-hosted n8n workflows with dashboard card and dedicated automations page showing execution history, errors, and pass/fail timeline.",
+  "userStories": [
+    {
+      "id": "N8N-001",
+      "title": "Add n8n API proxy routes",
+      "description": "As a developer, I need server-side API routes that proxy requests to the n8n instance so that credentials stay secure.",
+      "acceptanceCriteria": [
+        "Add N8N_API_URL and N8N_API_KEY to .env.example with placeholder values",
+        "Create app/api/n8n/workflows/route.ts — GET handler that fetches GET {N8N_API_URL}/api/v1/workflows with X-N8N-API-KEY header",
+        "Create app/api/n8n/executions/route.ts — GET handler that fetches GET {N8N_API_URL}/api/v1/executions with optional workflowId and status query params",
+        "Both routes use withAuth() HOF pattern from lib/utils/with-auth.ts",
+        "Workflows route returns mapped array: { id, name, active, createdAt, updatedAt } per workflow",
+        "Executions route returns mapped array: { id, workflowId, workflowName, status, startedAt, stoppedAt, duration (ms), error (message + nodeName if failed) }",
+        "Executions route defaults to last 30 days and limit of 250",
+        "When n8n is unreachable (fetch fails / times out after 10s), return 502 with { error: 'n8n instance is unreachable' }",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "N8N-002",
+      "title": "Add TanStack Query hooks and query keys for n8n data",
+      "description": "As a developer, I need query hooks for fetching n8n workflows and executions so the UI can consume them with loading/error states.",
+      "acceptanceCriteria": [
+        "Add n8n namespace to lib/query-keys.ts with keys: n8n.workflows, n8n.executions(workflowId?: string)",
+        "Create lib/hooks/use-n8n.ts with useN8nWorkflows() hook — calls GET /api/n8n/workflows",
+        "Create useN8nExecutions(workflowId?: string) hook — calls GET /api/n8n/executions with optional workflowId param",
+        "Both hooks use useQuery with staleTime: 30_000 (30 seconds)",
+        "Both hooks are only enabled when user is signed in (follow existing enabled pattern)",
+        "Type definitions for N8nWorkflow and N8nExecution interfaces in the hooks file or a shared types file",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "N8N-003",
+      "title": "Add navigation item for automations page",
+      "description": "As a user, I want to access the automations page from the sidebar navigation.",
+      "acceptanceCriteria": [
+        "Add 'Automations' entry to lib/navigation.ts with href '/automations' and an appropriate Lucide icon (Workflow or Zap)",
+        "Position after existing nav items",
+        "Create placeholder page at app/(dashboard)/automations/page.tsx that renders a heading 'Automations' (will be built out in later stories)",
+        "Navigation item appears in both desktop sidebar and mobile nav",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "N8N-004",
+      "title": "Create n8n status dashboard card",
+      "description": "As a user, I want a card on the main dashboard showing automation health at a glance so I know if any workflows have failed recently.",
+      "acceptanceCriteria": [
+        "Create components/dashboard/n8n-status-card.tsx component",
+        "Card shows: total workflow count, active workflow count",
+        "Card shows failure count in last 24 hours (derived by filtering executions with status 'error' and startedAt within 24h)",
+        "Status line: 'All systems operational' (green dot) when no failures, or 'X failures in last 24h' (red dot) when failures exist",
+        "Shows relative timestamp of most recent execution (e.g. '2 hours ago')",
+        "Includes a link to /automations page",
+        "Loading skeleton state while data is fetching",
+        "Error state shows 'n8n unavailable' with muted/dimmed styling — does not break the dashboard",
+        "Add card to dashboard-content.tsx after the summary cards section, wrapped in existing error boundary pattern",
+        "Matches existing card styling (Card component, dark mode, consistent borders/padding)",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "N8N-005",
+      "title": "Build automations page with workflow list",
+      "description": "As a user, I want the /automations page to list all my n8n workflows with their status and recent execution info.",
+      "acceptanceCriteria": [
+        "Replace placeholder content in app/(dashboard)/automations/page.tsx with full workflow list",
+        "Page header: 'Automations' title with a manual refresh button (calls queryClient.invalidateQueries for n8n keys)",
+        "Each workflow rendered as a card showing: workflow name, active/inactive badge (green/gray), last execution time (relative), last execution status badge (green 'Success' / red 'Error'), total execution count in last 30 days",
+        "Loading skeletons shown while data is fetching (skeleton cards matching the layout)",
+        "Empty state component shown if no workflows returned",
+        "Error state shown if n8n is unreachable with message and retry button",
+        "Workflows are clickable — clicking stores selected workflow ID in local state (detail view built in next story)",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "N8N-006",
+      "title": "Add execution history detail view",
+      "description": "As a user, I want to expand a workflow to see its recent execution history with error details.",
+      "acceptanceCriteria": [
+        "Clicking a workflow card on the automations page expands it to show execution history below (accordion-style or inline expand)",
+        "Execution list shows last 30 days of executions for that workflow, each with: timestamp, status (success/error badge or dot), duration (formatted as e.g. '2.3s' or '1m 12s')",
+        "Failed executions show the error message and the node name where the error occurred",
+        "Visual indicator: green dot for success, red dot for error on each execution row",
+        "Execution list scrollable with max-height if more than ~10 entries",
+        "Clicking a different workflow collapses the previous one and expands the new one",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "N8N-007",
+      "title": "Add pass/fail timeline visualisation",
+      "description": "As a user, I want a compact visual timeline of execution outcomes so I can spot reliability trends at a glance.",
+      "acceptanceCriteria": [
+        "Each workflow's expanded detail view includes a compact timeline visualisation above the execution list",
+        "Timeline shows individual executions as small coloured dots or squares in a horizontal row (green = success, red = error), ordered chronologically left to right",
+        "Hovering a dot shows a tooltip with execution timestamp, status, and duration",
+        "On mobile, tapping a dot shows the tooltip",
+        "Timeline fits in a single row (wraps or scrolls horizontally if many executions)",
+        "Design is compact — no more than 32px tall for the visualisation itself",
+        "Uses dark-mode-appropriate colours (e.g. emerald-500 for success, red-500 for error)",
+        "npm run build && npm run lint passes",
+        "Verify in browser using dev-browser skill"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}
