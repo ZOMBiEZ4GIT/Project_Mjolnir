@@ -13,6 +13,7 @@ import { StaleDataWarning } from "@/components/dashboard/stale-data-warning";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
 import { SuperBreakdownSection } from "@/components/dashboard/super-breakdown-section";
 import { SectionErrorBoundary } from "@/components/dashboard/section-error-boundary";
+import { N8nStatusCard } from "@/components/dashboard/n8n-status-card";
 
 const sectionStaggerContainer: Variants = {
   hidden: {},
@@ -80,6 +81,13 @@ export function DashboardContent({ userName }: DashboardContentProps) {
         <motion.div variants={itemVariants}>
           <SectionErrorBoundary sectionName="Summary Cards">
             <SummaryCards />
+          </SectionErrorBoundary>
+        </motion.div>
+
+        {/* n8n Automation Status */}
+        <motion.div variants={itemVariants}>
+          <SectionErrorBoundary sectionName="Automations">
+            <N8nStatusCard />
           </SectionErrorBoundary>
         </motion.div>
 
