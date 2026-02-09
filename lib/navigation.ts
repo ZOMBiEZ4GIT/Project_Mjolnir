@@ -9,6 +9,7 @@ import {
   Receipt,
   PieChart,
   Cog,
+  Workflow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -70,6 +71,12 @@ export const navItems: NavItem[] = [
         description: "Configure budget settings",
       },
     ],
+  },
+  {
+    href: "/automations",
+    label: "Automations",
+    icon: Workflow,
+    description: "Monitor n8n workflows",
   },
   {
     href: "/import",

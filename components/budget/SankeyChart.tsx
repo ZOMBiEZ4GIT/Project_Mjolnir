@@ -44,7 +44,6 @@ interface SankeyChartProps {
 
 const INCOME_COLOUR = "#8b5cf6";
 const SAVINGS_POSITIVE_COLOUR = "#22c55e";
-const SAVINGS_NEGATIVE_COLOUR = "#ef4444";
 const NODE_WIDTH = 16;
 const NODE_PADDING = 14;
 

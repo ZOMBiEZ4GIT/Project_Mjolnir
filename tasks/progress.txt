@@ -1,2 +1,69 @@
 # Ralph Progress Log
 # This file is reset at the start of each epic.
+
+## Codebase Patterns
+- n8n API uses `data` wrapper for responses — unwrap with `data.data ?? data`
+- Use `AbortSignal.timeout(10_000)` for external API timeouts
+- Return 502 for unreachable external services, 503 for unconfigured services
+
+## 2026-02-09 - N8N-001
+- Implemented n8n API proxy routes (workflows + executions)
+- Files changed: app/api/n8n/workflows/route.ts, app/api/n8n/executions/route.ts, .env.example, components/budget/SankeyChart.tsx
+- **Learnings for future iterations:**
+  - n8n API v1 wraps results in a `data` field — always use `data.data ?? data` to handle both wrapped and unwrapped responses
+  - withAuth() HOF provides userId as 3rd arg, but n8n routes don't need userId (just auth gating)
+  - Pre-existing lint error in SankeyChart (unused SAVINGS_NEGATIVE_COLOUR) — fixed as part of this commit
+---
+
+## 2026-02-09 - N8N-002
+- Added n8n query keys and TanStack Query hooks
+- Files changed: lib/query-keys.ts, lib/hooks/use-n8n.ts
+- **Learnings for future iterations:**
+  - Hooks follow pattern: useAuthSafe() + enabled: isLoaded && !!isSignedIn
+  - staleTime set to 30_000 (30s) for n8n data — frequent enough for monitoring
+  - Export types from hook file for reuse in components
+---
+
+## 2026-02-09 - N8N-003
+- Added Automations nav item and placeholder page
+- Files changed: lib/navigation.ts, app/(dashboard)/automations/page.tsx
+- **Learnings for future iterations:**
+  - Nav items use Lucide icons — Workflow icon fits well for automations
+  - Placeholder pages follow: "use client" + export dynamic = "force-dynamic" + container div pattern
+---
+
+## 2026-02-09 - N8N-004
+- Created n8n status card for dashboard
+- Files changed: components/dashboard/n8n-status-card.tsx, components/dashboard/dashboard-content.tsx
+- **Learnings for future iterations:**
+  - Dashboard cards use `rounded-2xl border border-border bg-card p-4 sm:p-6` pattern
+  - Each section wrapped in `<motion.div variants={itemVariants}>` + `<SectionErrorBoundary>`
+  - Error states should use opacity-60 and muted text — don't break the dashboard
+---
+
+## 2026-02-09 - N8N-005
+- Built full automations page with workflow list, skeletons, empty/error states
+- Files changed: app/(dashboard)/automations/page.tsx
+- **Learnings for future iterations:**
+  - Use EmptyState component from components/ui/empty-state.tsx for empty and error states
+  - queryClient.invalidateQueries() for manual refresh — invalidate both workflows and executions keys
+  - selectedWorkflowId in local state prepares for N8N-006 detail expansion
+---
+
+## 2026-02-09 - N8N-006
+- Added inline execution history when clicking a workflow card
+- Files changed: app/(dashboard)/automations/page.tsx
+- **Learnings for future iterations:**
+  - Refactored WorkflowCard from `<button>` to `<div>` wrapping a `<button>` + expandable section
+  - formatDuration helper: ms → "2.3s" or "1m 12s"
+  - max-h-[400px] with overflow-y-auto for scrollable execution lists
+---
+
+## 2026-02-09 - N8N-007
+- Added compact pass/fail timeline visualisation above execution history
+- Files changed: app/(dashboard)/automations/page.tsx
+- **Learnings for future iterations:**
+  - Native `title` attribute works for both hover tooltips and mobile long-press
+  - `rounded-sm` for squares, `rounded-full` for dots — squares read better at small sizes
+  - `maxHeight: 32` inline style keeps timeline compact
+---

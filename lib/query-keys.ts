@@ -109,6 +109,15 @@ export const queryKeys = {
       ["budget", "trends", periods ?? 6] as const,
   },
 
+  // ---- n8n ----
+  n8n: {
+    workflows: ["n8n", "workflows"] as const,
+    executions: (workflowId?: string) =>
+      workflowId
+        ? (["n8n", "executions", workflowId] as const)
+        : (["n8n", "executions"] as const),
+  },
+
   // ---- Settings ----
   preferences: ["preferences"] as const,
   exchangeRates: ["exchange-rates"] as const,
