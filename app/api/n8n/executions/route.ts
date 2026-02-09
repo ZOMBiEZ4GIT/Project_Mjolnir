@@ -36,11 +36,6 @@ export const GET = withAuth(async (request) => {
   const params = new URLSearchParams();
   params.set("limit", "250");
 
-  // Default to last 30 days
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  params.set("startedAfter", thirtyDaysAgo.toISOString());
-
   if (workflowId) params.set("workflowId", workflowId);
   if (status) params.set("status", status);
 
