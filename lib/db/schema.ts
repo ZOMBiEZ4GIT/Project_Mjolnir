@@ -56,6 +56,12 @@ export const saverTypeEnum = pgEnum("saver_type", [
   "investment",
 ]);
 
+export const goalStatusEnum = pgEnum("goal_status", [
+  "active",
+  "completed",
+  "paused",
+]);
+
 // =============================================================================
 // USERS
 // =============================================================================
@@ -554,6 +560,35 @@ export const budgetSavers = pgTable(
 );
 
 // =============================================================================
+// GOALS
+// =============================================================================
+
+/**
+ * Savings goals with progress tracking, ETAs, and monthly contributions.
+ *
+ * Goals link to the saver that funds them (nullable because some goals like
+ * debt payoff may not have a direct saver link). The priority field controls
+ * display order. currentAmountCents is updated manually or via future automation.
+ */
+export const goals = pgTable("goals", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  saverId: uuid("saver_id").references(() => budgetSavers.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  targetAmountCents: bigint("target_amount_cents", { mode: "number" }).notNull(),
+  currentAmountCents: bigint("current_amount_cents", { mode: "number" }).default(0).notNull(),
+  monthlyContributionCents: bigint("monthly_contribution_cents", { mode: "number" }).notNull(),
+  targetDate: date("target_date"),
+  status: goalStatusEnum("status").default("active").notNull(),
+  priority: integer("priority").default(0).notNull(),
+  colour: varchar("colour", { length: 7 }),
+  icon: varchar("icon", { length: 10 }),
+  notes: text("notes"),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+// =============================================================================
 // AI RECOMMENDATIONS
 // =============================================================================
 
@@ -753,11 +788,19 @@ export const aiRecommendationsRelations = relations(aiRecommendations, ({ one })
 
 export const budgetSaversRelations = relations(budgetSavers, ({ many }) => ({
   categories: many(budgetCategories),
+  goals: many(goals),
 }));
 
 export const budgetCategoriesRelations = relations(budgetCategories, ({ one }) => ({
   saver: one(budgetSavers, {
     fields: [budgetCategories.saverId],
+    references: [budgetSavers.id],
+  }),
+}));
+
+export const goalsRelations = relations(goals, ({ one }) => ({
+  saver: one(budgetSavers, {
+    fields: [goals.saverId],
     references: [budgetSavers.id],
   }),
 }));
@@ -822,3 +865,6 @@ export type NewHealthWorkout = typeof healthWorkouts.$inferInsert;
 
 export type BudgetSaver = typeof budgetSavers.$inferSelect;
 export type NewBudgetSaver = typeof budgetSavers.$inferInsert;
+
+export type Goal = typeof goals.$inferSelect;
+export type NewGoal = typeof goals.$inferInsert;
