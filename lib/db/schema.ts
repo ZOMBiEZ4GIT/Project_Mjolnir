@@ -414,16 +414,27 @@ export const upTransactions = pgTable(
  * - `isSystem` marks system-managed categories that cannot be deleted (e.g. 'uncategorised').
  * - The `id` is a short varchar slug used as the primary key for readability.
  */
-export const budgetCategories = pgTable("budget_categories", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  icon: varchar("icon", { length: 255 }).notNull(), // Lucide icon name
-  colour: varchar("colour", { length: 7 }).notNull(), // Hex colour e.g. #FF5733
-  sortOrder: integer("sort_order").notNull(),
-  isIncome: boolean("is_income").default(false).notNull(),
-  isSystem: boolean("is_system").default(false).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const budgetCategories = pgTable(
+  "budget_categories",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    icon: varchar("icon", { length: 255 }).notNull(), // Lucide icon name
+    colour: varchar("colour", { length: 7 }).notNull(), // Hex colour e.g. #FF5733
+    sortOrder: integer("sort_order").notNull(),
+    isIncome: boolean("is_income").default(false).notNull(),
+    isSystem: boolean("is_system").default(false).notNull(),
+    // Three-tier budget fields (added in BI-A-002)
+    saverId: uuid("saver_id").references(() => budgetSavers.id, { onDelete: "cascade" }),
+    categoryKey: varchar("category_key", { length: 50 }),
+    monthlyBudgetCents: bigint("monthly_budget_cents", { mode: "number" }),
+    isActive: boolean("is_active").default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueSaverCategoryKey: unique().on(table.saverId, table.categoryKey),
+  })
+);
 
 // =============================================================================
 // BUDGET PERIODS
@@ -740,7 +751,15 @@ export const aiRecommendationsRelations = relations(aiRecommendations, ({ one })
   }),
 }));
 
-export const budgetSaversRelations = relations(budgetSavers, () => ({
+export const budgetSaversRelations = relations(budgetSavers, ({ many }) => ({
+  categories: many(budgetCategories),
+}));
+
+export const budgetCategoriesRelations = relations(budgetCategories, ({ one }) => ({
+  saver: one(budgetSavers, {
+    fields: [budgetCategories.saverId],
+    references: [budgetSavers.id],
+  }),
 }));
 
 // =============================================================================
