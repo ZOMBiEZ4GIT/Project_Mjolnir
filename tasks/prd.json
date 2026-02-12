@@ -1,137 +1,179 @@
 {
   "project": "Mjolnir",
-  "branchName": "ralph/n8n-flow-monitor",
-  "description": "n8n Flow Monitor — Read-only monitoring of self-hosted n8n workflows with dashboard card and dedicated automations page showing execution history, errors, and pass/fail timeline.",
+  "branchName": "ralph/bi-a-database-schema",
+  "description": "Budget Intelligence Phase A — Database schema changes for the three-tier budget system (savers, categories, goals). Creates new tables, modifies upTransactions, seeds data, refactors period auto-generation, and removes manual period configuration.",
   "userStories": [
     {
-      "id": "N8N-001",
-      "title": "Add n8n API proxy routes",
-      "description": "As a developer, I need server-side API routes that proxy requests to the n8n instance so that credentials stay secure.",
+      "id": "BI-A-001",
+      "title": "Create budget_savers table and Drizzle schema",
+      "description": "Create the budget_savers table that represents UP Bank savers — the top-level budget tier. Each saver has a monthly budget amount and a type (spending, savings_goal, or investment).",
       "acceptanceCriteria": [
-        "Add N8N_API_URL and N8N_API_KEY to .env.example with placeholder values",
-        "Create app/api/n8n/workflows/route.ts — GET handler that fetches GET {N8N_API_URL}/api/v1/workflows with X-N8N-API-KEY header",
-        "Create app/api/n8n/executions/route.ts — GET handler that fetches GET {N8N_API_URL}/api/v1/executions with optional workflowId and status query params",
-        "Both routes use withAuth() HOF pattern from lib/utils/with-auth.ts",
-        "Workflows route returns mapped array: { id, name, active, createdAt, updatedAt } per workflow",
-        "Executions route returns mapped array: { id, workflowId, workflowName, status, startedAt, stoppedAt, duration (ms), error (message + nodeName if failed) }",
-        "Executions route defaults to last 30 days and limit of 250",
-        "When n8n is unreachable (fetch fails / times out after 10s), return 502 with { error: 'n8n instance is unreachable' }",
+        "Add budgetSavers table to lib/db/schema.ts with columns: id (uuid PK), saverKey (varchar 50, unique), displayName (varchar 100), emoji (varchar 10), monthlyBudgetCents (bigint), saverType (enum: 'spending' | 'savings_goal' | 'investment'), sortOrder (integer), isActive (boolean default true), colour (varchar 7 for hex), notes (text nullable), createdAt, updatedAt",
+        "Create Drizzle enum for saverType if not using check constraint",
+        "Add unique index on saverKey",
+        "Export the table, relations, and inferred types (BudgetSaver, NewBudgetSaver)",
+        "Run npm run db:generate to create migration",
+        "Run npm run db:migrate to apply",
         "npm run build && npm run lint passes"
       ],
       "priority": 1,
       "passes": true,
-      "notes": ""
+      "notes": "Single-user app — no user_id column needed (matches existing pattern). Use bigint for cents to match budgetAllocations convention."
     },
     {
-      "id": "N8N-002",
-      "title": "Add TanStack Query hooks and query keys for n8n data",
-      "description": "As a developer, I need query hooks for fetching n8n workflows and executions so the UI can consume them with loading/error states.",
+      "id": "BI-A-002",
+      "title": "Refactor budget_categories to link to savers",
+      "description": "The existing budgetCategories table is a flat list. Restructure it so each category belongs to a saver via a saverId FK. Add categoryKey for machine-readable identifier. Keep the existing id column but add the new fields.",
       "acceptanceCriteria": [
-        "Add n8n namespace to lib/query-keys.ts with keys: n8n.workflows, n8n.executions(workflowId?: string)",
-        "Create lib/hooks/use-n8n.ts with useN8nWorkflows() hook — calls GET /api/n8n/workflows",
-        "Create useN8nExecutions(workflowId?: string) hook — calls GET /api/n8n/executions with optional workflowId param",
-        "Both hooks use useQuery with staleTime: 30_000 (30 seconds)",
-        "Both hooks are only enabled when user is signed in (follow existing enabled pattern)",
-        "Type definitions for N8nWorkflow and N8nExecution interfaces in the hooks file or a shared types file",
+        "Add saverId column (uuid, FK to budgetSavers.id, ON DELETE CASCADE) to budgetCategories table in schema.ts",
+        "Add categoryKey column (varchar 50) to budgetCategories table",
+        "Add monthlyBudgetCents column (bigint, nullable) for optional per-category sub-budgets",
+        "Add isActive column (boolean, default true)",
+        "Add unique constraint on (saverId, categoryKey)",
+        "Update budgetCategories relations to include the belongsTo budgetSavers relation",
+        "Add budgetSavers relations to include hasMany budgetCategories",
+        "Run npm run db:generate to create migration",
+        "Run npm run db:migrate to apply",
+        "Existing API routes that read budgetCategories still work (columns are additive)",
         "npm run build && npm run lint passes"
       ],
       "priority": 2,
       "passes": true,
-      "notes": ""
+      "notes": "New columns should be nullable initially so existing data doesn't break. Seed story will populate them. The old columns (icon, colour, isIncome, isSystem) can remain for now — removal is a separate cleanup."
     },
     {
-      "id": "N8N-003",
-      "title": "Add navigation item for automations page",
-      "description": "As a user, I want to access the automations page from the sidebar navigation.",
+      "id": "BI-A-003",
+      "title": "Create goals table",
+      "description": "Create the goals table that tracks savings goals with progress, ETAs, and monthly contribution amounts. Goals link to the saver that funds them.",
       "acceptanceCriteria": [
-        "Add 'Automations' entry to lib/navigation.ts with href '/automations' and an appropriate Lucide icon (Workflow or Zap)",
-        "Position after existing nav items",
-        "Create placeholder page at app/(dashboard)/automations/page.tsx that renders a heading 'Automations' (will be built out in later stories)",
-        "Navigation item appears in both desktop sidebar and mobile nav",
-        "npm run build && npm run lint passes",
-        "Verify in browser using dev-browser skill"
+        "Add goals table to lib/db/schema.ts with columns: id (uuid PK), saverId (uuid, FK to budgetSavers.id, nullable), name (varchar 100), targetAmountCents (bigint), currentAmountCents (bigint, default 0), monthlyContributionCents (bigint), targetDate (date, nullable), status (enum: 'active' | 'completed' | 'paused', default 'active'), priority (integer, default 0), colour (varchar 7, nullable), icon (varchar 10, nullable), notes (text, nullable), completedAt (timestamp, nullable), createdAt, updatedAt",
+        "Export table, relations, and inferred types (Goal, NewGoal)",
+        "Add relation from goals to budgetSavers (belongsTo)",
+        "Add relation from budgetSavers to goals (hasMany)",
+        "Run npm run db:generate and npm run db:migrate",
+        "npm run build && npm run lint passes"
       ],
       "priority": 3,
       "passes": true,
-      "notes": ""
+      "notes": "saverId is nullable because some goals (like debt payoff) may not have a direct saver link, or the saver IS the goal. Priority field controls display order."
     },
     {
-      "id": "N8N-004",
-      "title": "Create n8n status dashboard card",
-      "description": "As a user, I want a card on the main dashboard showing automation health at a glance so I know if any workflows have failed recently.",
+      "id": "BI-A-004",
+      "title": "Add three-tier classification fields to upTransactions",
+      "description": "Add saverKey, categoryKey, and tags columns to the upTransactions table so transactions carry the full three-tier classification from n8n.",
       "acceptanceCriteria": [
-        "Create components/dashboard/n8n-status-card.tsx component",
-        "Card shows: total workflow count, active workflow count",
-        "Card shows failure count in last 24 hours (derived by filtering executions with status 'error' and startedAt within 24h)",
-        "Status line: 'All systems operational' (green dot) when no failures, or 'X failures in last 24h' (red dot) when failures exist",
-        "Shows relative timestamp of most recent execution (e.g. '2 hours ago')",
-        "Includes a link to /automations page",
-        "Loading skeleton state while data is fetching",
-        "Error state shows 'n8n unavailable' with muted/dimmed styling — does not break the dashboard",
-        "Add card to dashboard-content.tsx after the summary cards section, wrapped in existing error boundary pattern",
-        "Matches existing card styling (Card component, dark mode, consistent borders/padding)",
-        "npm run build && npm run lint passes",
-        "Verify in browser using dev-browser skill"
+        "Add saverKey column (varchar 50, nullable) to upTransactions in schema.ts",
+        "Add categoryKey column (varchar 50, nullable) to upTransactions in schema.ts",
+        "Add tags column (jsonb, default '[]') to upTransactions in schema.ts",
+        "Add database index on saverKey",
+        "Add database index on categoryKey",
+        "Add composite index on (saverKey, categoryKey)",
+        "Add GIN index on tags for efficient JSONB queries",
+        "Run npm run db:generate and npm run db:migrate",
+        "Existing transaction queries and API routes still work (columns are nullable/additive)",
+        "npm run build && npm run lint passes"
       ],
       "priority": 4,
       "passes": true,
-      "notes": ""
+      "notes": "Drizzle may not support GIN indexes natively — if not, add a raw SQL migration for the GIN index. The saverKey/categoryKey columns are intentionally NOT FKs to keep the system flexible (classification comes from n8n rules, not DB constraints)."
     },
     {
-      "id": "N8N-005",
-      "title": "Build automations page with workflow list",
-      "description": "As a user, I want the /automations page to list all my n8n workflows with their status and recent execution info.",
+      "id": "BI-A-005",
+      "title": "Update ai_recommendations schema for structured responses",
+      "description": "The existing aiRecommendations table stores a generic JSONB blob. Update it to store the new structured recommendation format with overall_status, saver_statuses, goal_progress, insights, and actionable_tip.",
       "acceptanceCriteria": [
-        "Replace placeholder content in app/(dashboard)/automations/page.tsx with full workflow list",
-        "Page header: 'Automations' title with a manual refresh button (calls queryClient.invalidateQueries for n8n keys)",
-        "Each workflow rendered as a card showing: workflow name, active/inactive badge (green/gray), last execution time (relative), last execution status badge (green 'Success' / red 'Error'), total execution count in last 30 days",
-        "Loading skeletons shown while data is fetching (skeleton cards matching the layout)",
-        "Empty state component shown if no workflows returned",
-        "Error state shown if n8n is unreachable with message and retry button",
-        "Workflows are clickable — clicking stores selected workflow ID in local state (detail view built in next story)",
-        "npm run build && npm run lint passes",
-        "Verify in browser using dev-browser skill"
+        "Add overallStatus column (varchar 10, nullable) to aiRecommendations — values: 'green', 'amber', 'red'",
+        "Add saverStatuses column (jsonb, nullable) — array of per-saver health checks",
+        "Add goalProgress column (jsonb, nullable) — array of goal updates",
+        "Add budgetAdjustments column (jsonb, nullable) — suggested budget changes",
+        "Add insights column (jsonb, nullable) — array of insight strings",
+        "Add actionableTip column (text, nullable) — specific time-bound action",
+        "Add savingsProjection column (jsonb, nullable) — savings rate and projections",
+        "Add rawResponse column (jsonb, nullable) — full Claude response for debugging",
+        "Add generatedAt column (timestamp, nullable) — when the recommendation was generated",
+        "Keep existing recommendationData column for backwards compatibility",
+        "Run npm run db:generate and npm run db:migrate",
+        "npm run build && npm run lint passes"
       ],
       "priority": 5,
       "passes": true,
-      "notes": ""
+      "notes": "All new columns nullable so existing recommendations don't break. New recommendations will populate the structured columns; old ones still have recommendationData."
     },
     {
-      "id": "N8N-006",
-      "title": "Add execution history detail view",
-      "description": "As a user, I want to expand a workflow to see its recent execution history with error details.",
+      "id": "BI-A-006",
+      "title": "Seed savers and categories data",
+      "description": "Create a seed script that populates budget_savers and updates budget_categories with the full taxonomy from the spec. This covers all 10 savers and their nested categories.",
       "acceptanceCriteria": [
-        "Clicking a workflow card on the automations page expands it to show execution history below (accordion-style or inline expand)",
-        "Execution list shows last 30 days of executions for that workflow, each with: timestamp, status (success/error badge or dot), duration (formatted as e.g. '2.3s' or '1m 12s')",
-        "Failed executions show the error message and the node name where the error occurred",
-        "Visual indicator: green dot for success, red dot for error on each execution row",
-        "Execution list scrollable with max-height if more than ~10 entries",
-        "Clicking a different workflow collapses the previous one and expands the new one",
-        "npm run build && npm run lint passes",
-        "Verify in browser using dev-browser skill"
+        "Create lib/db/seeds/budget-savers.ts (or similar) with a seedBudgetSavers() function",
+        "Seed all 10 savers: rent ($2,129), essentials ($1,157), food ($904), supplements ($476), debt ($351.91), vitamins ($100), emergency ($1,500), homelab ($500), pearler ($600), spending ($1,451)",
+        "Set correct saverType: rent/essentials/food/supplements/debt/spending = 'spending', vitamins/emergency/homelab = 'savings_goal', pearler = 'investment'",
+        "Set emoji, colour (unique hex per saver), sortOrder, and notes (e.g. 'TEMPORARY — drops post-April 2026' for supplements)",
+        "Seed all categories under each saver: rent(1), essentials(10), food(5), supplements(5), debt(2), spending(10) = 33 categories total",
+        "Each category has categoryKey, displayName, saverId (looked up by saverKey), sortOrder",
+        "Use upsert pattern (INSERT ON CONFLICT DO UPDATE) so re-running is idempotent",
+        "Create an API route or script entry point to trigger seeding: npm run db:seed or app/api/admin/seed/route.ts",
+        "npm run build && npm run lint passes"
       ],
       "priority": 6,
       "passes": true,
-      "notes": ""
+      "notes": "Reference the full taxonomy from the spec (Section 2 and Appendix 9). Cents values: $2,129 = 212900, $351.91 = 35191, etc."
     },
     {
-      "id": "N8N-007",
-      "title": "Add pass/fail timeline visualisation",
-      "description": "As a user, I want a compact visual timeline of execution outcomes so I can spot reliability trends at a glance.",
+      "id": "BI-A-007",
+      "title": "Seed goals data",
+      "description": "Seed the goals table with Roland's active financial goals: Emergency Fund, Homelab Build, Vitamin Reserve, ZIP Payoff, and ANZ Payoff.",
       "acceptanceCriteria": [
-        "Each workflow's expanded detail view includes a compact timeline visualisation above the execution list",
-        "Timeline shows individual executions as small coloured dots or squares in a horizontal row (green = success, red = error), ordered chronologically left to right",
-        "Hovering a dot shows a tooltip with execution timestamp, status, and duration",
-        "On mobile, tapping a dot shows the tooltip",
-        "Timeline fits in a single row (wraps or scrolls horizontally if many executions)",
-        "Design is compact — no more than 32px tall for the visualisation itself",
-        "Uses dark-mode-appropriate colours (e.g. emerald-500 for success, red-500 for error)",
-        "npm run build && npm run lint passes",
-        "Verify in browser using dev-browser skill"
+        "Add goal seeding to the seed script from BI-A-006 (or create lib/db/seeds/goals.ts)",
+        "Seed Emergency Fund: target $15,000, monthly $1,500, ETA Jan 2027, linked to emergency saver, icon '🚨', status 'active', priority 1",
+        "Seed Homelab Build: target $5,000, monthly $500, ETA Jan 2027, linked to homelab saver, icon '🖥️', status 'active', priority 2",
+        "Seed Vitamin Reserve: target $500, monthly $100, ETA Aug 2026, linked to vitamins saver, icon '💊', status 'active', priority 3",
+        "Seed ZIP Payoff: target $269, monthly $51.91, clears Jul 2026, linked to debt saver, icon '💳', status 'active', priority 4",
+        "Seed ANZ Payoff: target $2,300, monthly $300, clears Oct 2026, linked to debt saver, icon '💳', status 'active', priority 5",
+        "All cent values are integers: $15,000 = 1500000, $51.91 = 5191, etc.",
+        "Use upsert pattern so re-running is idempotent (match on name or a goal_key)",
+        "npm run build && npm run lint passes"
       ],
       "priority": 7,
       "passes": true,
-      "notes": ""
+      "notes": "currentAmountCents starts at 0 — will be updated manually or via future automation. targetDate should be calculated from the monthly contribution rate."
+    },
+    {
+      "id": "BI-A-008",
+      "title": "Refactor budget period auto-generation",
+      "description": "Update the existing payday.ts utility to implement the spec's auto-generation rules: payday is always the 14th (adjusted for weekends), periods auto-generate on dashboard load.",
+      "acceptanceCriteria": [
+        "Update lib/budget/payday.ts with getPayday(year, month) function: returns the 14th, or Friday 13th if Saturday, or Friday 12th if Sunday",
+        "Add generatePeriod(year, month) function that returns { start: payday, end: dayBeforeNextPayday }",
+        "Add ensureCurrentPeriodExists() function that checks if a budget_period contains today's date, and creates one if not",
+        "ensureCurrentPeriodExists() uses the fixed expectedIncomeCents of 916853 ($9,168.53) when auto-generating",
+        "Remove dependency on paydayConfig table — payday is hardcoded to 14th with weekend adjustment",
+        "Add unit tests or at least inline test cases in comments verifying: Feb 2026 (14th is Saturday → 13th), Mar 2026 (14th is Saturday → 13th), Apr 2026 (14th is Tuesday → 14th)",
+        "Export the utility functions for use in API routes and dashboard loader",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": "The existing paydayConfig table and its API routes can remain for now but won't be used. The period header should display as '14 Feb – 13 Mar 2026' format."
+    },
+    {
+      "id": "BI-A-009",
+      "title": "Remove manual period configuration and setup wizard",
+      "description": "Remove the budget setup wizard (3-step flow: payday config, income, template/allocations) and the manual period creation UI. Periods are now auto-generated.",
+      "acceptanceCriteria": [
+        "Remove or redirect app/(dashboard)/budget/setup/page.tsx — redirect /budget/setup to /budget",
+        "Remove the PeriodSelector dropdown that allows manual period selection (keep a read-only period date display in the budget header)",
+        "Remove the 'New Period' or 'Configure Period' buttons from the budget page",
+        "Remove PaySplitConfig component usage if it's for manual allocation setup",
+        "Remove CategoryManager component usage if it's for managing the flat category list",
+        "The budget page header should display the current period dates (e.g. '14 Feb – 13 Mar 2026') as static text, not editable",
+        "Add left/right arrows to navigate between periods (view historical data) but not create/edit them",
+        "Call ensureCurrentPeriodExists() on budget page load (server component or API call)",
+        "Remove or deprecate API routes: DELETE /api/budget/periods/[id], POST /api/budget/periods (keep GET for reading)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": "Be conservative — don't delete files that might have useful logic. Comment out or disable rather than delete if unsure. The period navigation (viewing old periods) should still work."
     }
   ]
 }
