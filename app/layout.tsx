@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import { ClerkProvider } from "@/components/providers/clerk-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -47,12 +45,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <QueryProvider>
-        <CurrencyProvider>
-          <AppContent>{children}</AppContent>
-        </CurrencyProvider>
-      </QueryProvider>
-    </ClerkProvider>
+    <QueryProvider>
+      <AppContent>{children}</AppContent>
+    </QueryProvider>
   );
 }

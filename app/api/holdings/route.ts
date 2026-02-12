@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { holdings, snapshots, type NewHolding, type Holding } from "@/lib/db/schema";
 import { eq, isNull, and, sql } from "drizzle-orm";
@@ -46,26 +47,15 @@ interface CreateHoldingBody {
   notes?: string;
 }
 
-/**
- * GET /api/holdings
- *
- * Returns all non-deleted holdings for the authenticated user.
- *
- * Query parameters:
- *   - include_dormant: If "true", includes dormant holdings (default: false)
- *   - include_cost_basis: If "true", calculates and returns quantity, costBasis,
- *     and avgCost for tradeable holdings (stock, etf, crypto)
- *   - include_latest_snapshot: If "true", returns the most recent snapshot for
- *     snapshot-type holdings (super, cash, debt)
- *
- * Response: Array of Holding objects, optionally extended with:
- *   - quantity, costBasis, avgCost (tradeable types, when include_cost_basis=true)
- *   - latestSnapshot { id, holdingId, date, balance, currency } (snapshot types)
- *
- * Errors:
- *   - 401 if not authenticated
- */
-export const GET = withAuth(async (request, _context, userId) => {
+export async function GET(request: NextRequest) {
+  const session = await getSession();
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { userId } = session;
+
   const searchParams = request.nextUrl.searchParams;
   const includeDormant = searchParams.get("include_dormant") === "true";
   const includeCostBasis = searchParams.get("include_cost_basis") === "true";
@@ -85,123 +75,18 @@ export const GET = withAuth(async (request, _context, userId) => {
     .from(holdings)
     .where(and(...conditions));
 
-  // If neither cost basis nor snapshots requested, return just holdings
-  if (!includeCostBasis && !includeLatestSnapshot) {
-    return NextResponse.json(result);
+  return NextResponse.json(result);
+}
+
+export async function POST(request: NextRequest) {
+  const session = await getSession();
+
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Get latest snapshots for snapshot-type holdings if requested
-  let snapshotMap = new Map<string, {
-    id: string;
-    holdingId: string;
-    date: string;
-    balance: string;
-    currency: string;
-  }>();
+  const { userId } = session;
 
-  if (includeLatestSnapshot) {
-    const snapshotHoldingIds = result
-      .filter((h) => snapshotTypes.includes(h.type as (typeof snapshotTypes)[number]))
-      .map((h) => h.id);
-
-    if (snapshotHoldingIds.length > 0) {
-      // Use a subquery to find the max date for each holding
-      const latestDates = db
-        .select({
-          holdingId: snapshots.holdingId,
-          maxDate: sql<string>`MAX(${snapshots.date})`.as("max_date"),
-        })
-        .from(snapshots)
-        .where(
-          and(
-            sql`${snapshots.holdingId} IN (${sql.join(
-              snapshotHoldingIds.map((id) => sql`${id}`),
-              sql`, `
-            )})`,
-            isNull(snapshots.deletedAt)
-          )
-        )
-        .groupBy(snapshots.holdingId)
-        .as("latest_dates");
-
-      const latestSnapshots = await db
-        .select({
-          id: snapshots.id,
-          holdingId: snapshots.holdingId,
-          date: snapshots.date,
-          balance: snapshots.balance,
-          currency: snapshots.currency,
-        })
-        .from(snapshots)
-        .innerJoin(
-          latestDates,
-          and(
-            eq(snapshots.holdingId, latestDates.holdingId),
-            eq(snapshots.date, latestDates.maxDate)
-          )
-        )
-        .where(isNull(snapshots.deletedAt));
-
-      snapshotMap = new Map(
-        latestSnapshots.map((s) => [s.holdingId, s])
-      );
-    }
-  }
-
-  // Build the response with cost basis and/or snapshots
-  const holdingsWithData: HoldingWithData[] = await Promise.all(
-    result.map(async (holding) => {
-      const isTradeable = tradeableTypes.includes(holding.type as (typeof tradeableTypes)[number]);
-      const isSnapshot = snapshotTypes.includes(holding.type as (typeof snapshotTypes)[number]);
-
-      let quantity: number | null = null;
-      let costBasis: number | null = null;
-      let avgCost: number | null = null;
-
-      // Calculate cost basis for tradeable types if requested
-      if (includeCostBasis && isTradeable) {
-        const costBasisResult = await calculateCostBasis(holding.id);
-        quantity = costBasisResult.quantity;
-        costBasis = costBasisResult.costBasis;
-        avgCost = costBasisResult.quantity > 0
-          ? costBasisResult.costBasis / costBasisResult.quantity
-          : null;
-      }
-
-      return {
-        ...holding,
-        quantity,
-        costBasis,
-        avgCost,
-        latestSnapshot: isSnapshot ? snapshotMap.get(holding.id) || null : null,
-      };
-    })
-  );
-
-  return NextResponse.json(holdingsWithData);
-}, "fetching holdings");
-
-/**
- * POST /api/holdings
- *
- * Creates a new holding for the authenticated user.
- *
- * Request body:
- *   - type: (required) "stock" | "etf" | "crypto" | "super" | "cash" | "debt"
- *   - name: (required) Display name for the holding
- *   - currency: (required) "AUD" | "NZD" | "USD"
- *   - symbol: (required for stock/etf/crypto) Ticker symbol (e.g. "VAS.AX")
- *   - exchange: (required for stock/etf) "ASX" | "NZX" | "NYSE" | "NASDAQ"
- *   - isDormant: (optional) Boolean, marks super fund as dormant (default: false)
- *   - notes: (optional) Free-text notes
- *
- * Response: 201 with the created Holding object
- *
- * Errors:
- *   - 400 with { errors } object for validation failures
- *   - 401 if not authenticated
- */
-export const POST = withAuth(async (request, _context, userId) => {
   let body: CreateHoldingBody;
   try {
     body = await request.json();

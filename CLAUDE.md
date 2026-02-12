@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Database:** Neon (Serverless PostgreSQL)
 - **ORM:** Drizzle ORM with Drizzle Kit for migrations
 - **Styling:** Tailwind CSS with shadcn/ui components
-- **Authentication:** Clerk (supports passkeys, Apple, Google, email)
+- **Authentication:** Password-based (bcrypt + JWT in httpOnly cookie)
 - **Server State:** TanStack Query
 - **Client State:** Zustand
 - **Charts:** Tremor or Recharts
@@ -172,7 +172,7 @@ When selling stocks/ETFs/crypto, the cost basis uses first-in-first-out. Impleme
 | Price API down | Show last cached price with "as of X ago" badge |
 | Unknown symbol | Show error on holding form, prevent save |
 | Invalid ticker | Show validation error, suggest correct format (e.g., `.AX` for ASX) |
-| Auth failure | Redirect to Clerk sign-in |
+| Auth failure | Redirect to /login |
 | DB error | Generic "something went wrong" + error logging |
 
 ## Design Principles
@@ -204,8 +204,8 @@ Import should be **idempotent** - re-running doesn't create duplicates.
 
 ```bash
 DATABASE_URL=                           # Neon PostgreSQL connection string
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=      # Clerk public key
-CLERK_SECRET_KEY=                       # Clerk secret key
+AUTH_SECRET=                            # JWT signing secret (openssl rand -base64 32)
+AUTH_PASSWORD_HASH=                     # bcrypt hash of login password
 COINGECKO_API_KEY=                      # Optional, for higher rate limits
 EXCHANGE_RATE_API_KEY=                  # FX service API key
 RESEND_API_KEY=                         # For monthly email reminders

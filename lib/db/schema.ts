@@ -63,7 +63,7 @@ export const exchangeEnum = pgEnum("exchange", ["ASX", "NZX", "NYSE", "NASDAQ"])
  * app, this table will typically contain one row.
  */
 export const users = pgTable("users", {
-  id: text("id").primaryKey(), // Clerk user ID
+  id: text("id").primaryKey(), // Fixed user ID
   email: text("email").notNull(),
   name: text("name"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

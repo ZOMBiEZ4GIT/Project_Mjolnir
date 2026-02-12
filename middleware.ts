@@ -1,31 +1,40 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
+import { jwtVerify } from "jose";
 
-// Define public routes that don't require authentication.
-// /api/cron/* uses its own CRON_SECRET Bearer token auth.
-// /api/email/unsubscribe uses HMAC-signed tokens for verification.
-// /api/up/* uses n8n HMAC request signing (see lib/api/up/middleware.ts).
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/api/health",
-  "/api/cron/(.*)",
-  "/api/email/unsubscribe",
-  "/api/up/(.*)",
-  "/unsubscribed",
-]);
+const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/logout", "/api/health"];
 
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+function isPublic(pathname: string): boolean {
+  return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (isPublic(pathname)) {
+    return NextResponse.next();
   }
-});
+
+  const token = request.cookies.get("mjolnir-session")?.value;
+  if (!token) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  try {
+    await jwtVerify(token, new TextEncoder().encode(secret));
+    return NextResponse.next();
+  } catch {
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
+}
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
     "/(api|trpc)(.*)",
   ],
 };
