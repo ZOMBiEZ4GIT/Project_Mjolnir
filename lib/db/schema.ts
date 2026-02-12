@@ -50,6 +50,12 @@ export const transactionActionEnum = pgEnum("transaction_action", ["BUY", "SELL"
 
 export const exchangeEnum = pgEnum("exchange", ["ASX", "NZX", "NYSE", "NASDAQ"]);
 
+export const saverTypeEnum = pgEnum("saver_type", [
+  "spending",
+  "savings_goal",
+  "investment",
+]);
+
 // =============================================================================
 // USERS
 // =============================================================================
@@ -505,6 +511,38 @@ export const paydayConfig = pgTable("payday_config", {
 });
 
 // =============================================================================
+// BUDGET SAVERS
+// =============================================================================
+
+/**
+ * Budget savers representing UP Bank savers — the top-level budget tier.
+ *
+ * Each saver has a monthly budget amount and a type (spending, savings_goal,
+ * or investment). Savers are the first tier in the three-tier budget system:
+ *   saver -> category -> transaction tags
+ */
+export const budgetSavers = pgTable(
+  "budget_savers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    saverKey: varchar("saver_key", { length: 50 }).notNull(),
+    displayName: varchar("display_name", { length: 100 }).notNull(),
+    emoji: varchar("emoji", { length: 10 }).notNull(),
+    monthlyBudgetCents: bigint("monthly_budget_cents", { mode: "number" }).notNull(),
+    saverType: saverTypeEnum("saver_type").notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    colour: varchar("colour", { length: 7 }).notNull(), // Hex colour e.g. #FF5733
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueSaverKey: unique().on(table.saverKey),
+  })
+);
+
+// =============================================================================
 // AI RECOMMENDATIONS
 // =============================================================================
 
@@ -702,6 +740,9 @@ export const aiRecommendationsRelations = relations(aiRecommendations, ({ one })
   }),
 }));
 
+export const budgetSaversRelations = relations(budgetSavers, () => ({
+}));
+
 // =============================================================================
 // TYPES (for TypeScript inference)
 // =============================================================================
@@ -759,3 +800,6 @@ export type NewHealthDaily = typeof healthDaily.$inferInsert;
 
 export type HealthWorkout = typeof healthWorkouts.$inferSelect;
 export type NewHealthWorkout = typeof healthWorkouts.$inferInsert;
+
+export type BudgetSaver = typeof budgetSavers.$inferSelect;
+export type NewBudgetSaver = typeof budgetSavers.$inferInsert;
