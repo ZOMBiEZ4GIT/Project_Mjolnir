@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { queryKeys } from "@/lib/query-keys";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -282,7 +281,6 @@ function ColourPicker({
 
 export function CategoryManager({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
-  const { isLoaded, isSignedIn } = useAuthSafe();
 
   // UI state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -299,7 +297,6 @@ export function CategoryManager({ onClose }: { onClose: () => void }) {
   const { data: categories = [], isLoading } = useQuery({
     queryKey: queryKeys.budget.categories,
     queryFn: fetchCategories,
-    enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 5,
   });
 

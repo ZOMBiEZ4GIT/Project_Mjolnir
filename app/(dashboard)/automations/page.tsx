@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Workflow, AlertCircle } from "lucide-react";
 import { queryKeys } from "@/lib/query-keys";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import {
   useN8nWorkflows,
   useN8nExecutions,
@@ -226,7 +225,6 @@ function WorkflowCard({
 }
 
 export default function AutomationsPage() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const queryClient = useQueryClient();
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(
     null
@@ -250,30 +248,6 @@ export default function AutomationsPage() {
   function handleRefresh() {
     queryClient.invalidateQueries({ queryKey: queryKeys.n8n.workflows });
     queryClient.invalidateQueries({ queryKey: queryKeys.n8n.executions() });
-  }
-
-  if (!isLoaded) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <WorkflowCardSkeleton key={i} />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (!isSignedIn) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <EmptyState
-          icon={Workflow}
-          title="Sign in required"
-          description="Please sign in to view your automations."
-        />
-      </div>
-    );
   }
 
   return (

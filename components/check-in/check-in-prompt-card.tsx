@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { queryKeys } from "@/lib/query-keys";
 import { Button } from "@/components/ui/button";
 import { CheckInModal } from "./check-in-modal";
@@ -30,19 +29,17 @@ async function fetchCheckInStatus(): Promise<CheckInStatusResponse> {
 }
 
 export function CheckInPromptCard() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.checkIn.status,
     queryFn: fetchCheckInStatus,
-    enabled: isLoaded && isSignedIn,
     // Refetch every minute to stay up to date
     refetchInterval: 60 * 1000,
   });
 
-  // Don't render if not loaded, not signed in, loading, or error
-  if (!isLoaded || !isSignedIn || isLoading || error) {
+  // Don't render if loading or error
+  if (isLoading || error) {
     return null;
   }
 

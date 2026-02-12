@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, Zap, ChevronDown } from "lucide-react";
-import { UserButton } from "@clerk/nextjs";
 
 import { cn } from "@/lib/utils";
 import { navItems } from "@/lib/navigation";
@@ -23,8 +22,6 @@ export function MobileNav() {
   const [budgetExpanded, setBudgetExpanded] = useState(() =>
     pathname.startsWith("/budget")
   );
-
-  const hasClerkKey = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
   const isBudgetSection = pathname.startsWith("/budget");
 
@@ -49,20 +46,11 @@ export function MobileNav() {
           <span className="text-heading-sm text-foreground">Mjolnir</span>
         </div>
 
-        {/* UserButton (right) */}
+        {/* User avatar (right) */}
         <div className="shrink-0">
-          {hasClerkKey ? (
-            <UserButton
-              afterSignOutUrl="/"
-              appearance={{
-                elements: {
-                  avatarBox: "w-8 h-8",
-                },
-              }}
-            />
-          ) : (
-            <div className="w-8" />
-          )}
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary text-sm font-medium">
+            R
+          </div>
         </div>
       </header>
 

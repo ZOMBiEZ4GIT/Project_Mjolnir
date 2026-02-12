@@ -10,7 +10,6 @@ import {
 } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import {
   Currency,
   ExchangeRates,
@@ -182,18 +181,16 @@ interface CurrencyProviderProps {
  * - Provides `convert()` function for currency conversion
  * - Handles optimistic updates when changing display currency
  *
- * Must be wrapped inside ClerkProvider and QueryProvider.
+ * Must be wrapped inside QueryProvider.
  *
  * @example
  * ```tsx
  * // In layout.tsx
- * <ClerkProvider>
- *   <QueryProvider>
- *     <CurrencyProvider>
- *       <App />
- *     </CurrencyProvider>
- *   </QueryProvider>
- * </ClerkProvider>
+ * <QueryProvider>
+ *   <CurrencyProvider>
+ *     <App />
+ *   </CurrencyProvider>
+ * </QueryProvider>
  * ```
  *
  * @example
@@ -209,7 +206,6 @@ export function CurrencyProvider({
   children,
   defaultCurrency = "AUD",
 }: CurrencyProviderProps) {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const queryClient = useQueryClient();
 
   // Local state for optimistic updates
@@ -227,7 +223,6 @@ export function CurrencyProvider({
   } = useQuery({
     queryKey: queryKeys.preferences,
     queryFn: fetchPreferences,
-    enabled: isLoaded && isSignedIn,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
   });
@@ -240,7 +235,6 @@ export function CurrencyProvider({
   } = useQuery({
     queryKey: queryKeys.exchangeRates,
     queryFn: () => fetchExchangeRates(false),
-    enabled: isLoaded && isSignedIn,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
   });
@@ -316,29 +310,23 @@ export function CurrencyProvider({
   // Set display currency with optimistic update
   const setDisplayCurrency = useCallback(
     (currency: Currency) => {
-      if (!isSignedIn) {
-        return;
-      }
       // Optimistic update
       setOptimisticCurrency(currency);
       // Persist to server
       updateCurrencyMutation.mutate(currency);
     },
-    [isSignedIn, updateCurrencyMutation]
+    [updateCurrencyMutation]
   );
 
   // Set show native currency with optimistic update
   const setShowNativeCurrency = useCallback(
     (show: boolean) => {
-      if (!isSignedIn) {
-        return;
-      }
       // Optimistic update
       setOptimisticShowNative(show);
       // Persist to server
       updateShowNativeMutation.mutate(show);
     },
-    [isSignedIn, updateShowNativeMutation]
+    [updateShowNativeMutation]
   );
 
   // Convert function using current rates
@@ -365,7 +353,7 @@ export function CurrencyProvider({
   }, [refetchRates]);
 
   // Compute loading state
-  const isLoading = !isLoaded || preferencesLoading || ratesLoading;
+  const isLoading = preferencesLoading || ratesLoading;
 
   // Compute stale state
   const isStale = ratesData?.isStale ?? false;

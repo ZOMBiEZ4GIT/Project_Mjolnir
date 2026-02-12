@@ -2,7 +2,6 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency } from "@/lib/utils/currency";
 import {
@@ -133,7 +132,6 @@ export function HoldingPriceChart({
   holdingId,
   holdingCurrency,
 }: HoldingPriceChartProps) {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const { isLoading: currencyLoading } = useCurrency();
   const queryClient = useQueryClient();
   const chartRef = useRef<HTMLDivElement>(null);
@@ -146,7 +144,7 @@ export function HoldingPriceChart({
   } = useQuery({
     queryKey: queryKeys.transactions.byHolding(holdingId),
     queryFn: () => fetchTransactions(holdingId),
-    enabled: isLoaded && isSignedIn && !!holdingId,
+    enabled: !!holdingId,
   });
 
   // Retry handler
@@ -155,7 +153,7 @@ export function HoldingPriceChart({
   }, [queryClient, holdingId]);
 
   // Show skeleton while loading
-  if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
+  if (isLoading || currencyLoading) {
     return <ChartSkeleton variant="line" />;
   }
 

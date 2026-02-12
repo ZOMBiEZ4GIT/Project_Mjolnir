@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { queryKeys } from "@/lib/query-keys";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -127,7 +126,6 @@ function BudgetDashboardSkeleton() {
 // ---------------------------------------------------------------------------
 
 export default function BudgetDashboardPage() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const queryClient = useQueryClient();
 
   const [periodId, setPeriodId] = useState<string | undefined>(undefined);
@@ -206,7 +204,6 @@ export default function BudgetDashboardPage() {
   } = useQuery<BudgetSummary, Error>({
     queryKey: queryKeys.budget.summary(periodId),
     queryFn: () => fetchBudgetSummary(periodId),
-    enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -229,27 +226,6 @@ export default function BudgetDashboardPage() {
       setIsExporting(false);
     }
   }, [summary]);
-
-  // Auth loading
-  if (!isLoaded) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <BudgetDashboardSkeleton />
-      </div>
-    );
-  }
-
-  if (!isSignedIn) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <EmptyState
-          icon={PieChart}
-          title="Sign in required"
-          description="Please sign in to view your budget dashboard."
-        />
-      </div>
-    );
-  }
 
   // Loading
   if (isLoading) {

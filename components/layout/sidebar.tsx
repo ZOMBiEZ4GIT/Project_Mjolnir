@@ -1,8 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { PanelLeftClose, PanelLeftOpen, Zap, ChevronDown } from "lucide-react";
-import { UserButton, useUser } from "@clerk/nextjs";
+import { usePathname, useRouter } from "next/navigation";
+import { PanelLeftClose, PanelLeftOpen, Zap, ChevronDown, LogOut } from "lucide-react";
 import { useState } from "react";
 
 import { cn } from "@/lib/utils";
@@ -18,12 +17,15 @@ interface SidebarProps {
 
 export function Sidebar({ isCollapsed, onToggleCollapsed }: SidebarProps) {
   const pathname = usePathname();
-  const { user } = useUser();
+  const router = useRouter();
   const [budgetExpanded, setBudgetExpanded] = useState(() =>
     pathname.startsWith("/budget")
   );
 
-  const hasClerkKey = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
 
   const width = isCollapsed ? 64 : layout.sidebarWidth;
 
@@ -133,30 +135,32 @@ export function Sidebar({ isCollapsed, onToggleCollapsed }: SidebarProps) {
       </nav>
 
       {/* User section */}
-      {hasClerkKey && (
-        <div className="border-t border-border px-3 py-3">
-          <div
-            className={cn(
-              "flex items-center",
-              isCollapsed ? "justify-center" : "gap-3"
-            )}
-          >
-            <UserButton
-              afterSignOutUrl="/"
-              appearance={{
-                elements: {
-                  avatarBox: "w-8 h-8",
-                },
-              }}
-            />
-            {!isCollapsed && user?.firstName && (
-              <span className="truncate text-body-sm text-muted-foreground">
-                {user.firstName}
-              </span>
-            )}
+      <div className="border-t border-border px-3 py-3">
+        <div
+          className={cn(
+            "flex items-center",
+            isCollapsed ? "justify-center" : "gap-3"
+          )}
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary text-sm font-medium">
+            R
           </div>
+          {!isCollapsed && (
+            <>
+              <span className="truncate text-body-sm text-muted-foreground flex-1">
+                Roland
+              </span>
+              <button
+                onClick={handleLogout}
+                title="Sign out"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Collapse toggle */}
       <div className="border-t border-border px-2 py-2">

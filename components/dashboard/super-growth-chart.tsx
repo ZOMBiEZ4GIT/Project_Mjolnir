@@ -2,7 +2,6 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency } from "@/lib/utils/currency";
 import {
@@ -229,7 +228,6 @@ export function SuperGrowthChart({
   holdingId,
   months = 12,
 }: SuperGrowthChartProps) {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
   const queryClient = useQueryClient();
   const chartRef = useRef<HTMLDivElement>(null);
@@ -242,7 +240,6 @@ export function SuperGrowthChart({
   } = useQuery({
     queryKey: queryKeys.super.breakdown(months, holdingId),
     queryFn: () => fetchSuperBreakdown(months, holdingId),
-    enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,
   });
 
@@ -251,8 +248,8 @@ export function SuperGrowthChart({
     queryClient.invalidateQueries({ queryKey: queryKeys.super.breakdown(months, holdingId) });
   }, [queryClient, months, holdingId]);
 
-  // Show skeleton while loading or not authenticated
-  if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
+  // Show skeleton while loading
+  if (isLoading || currencyLoading) {
     return (
       <ChartSkeleton
         title="Superannuation Growth Breakdown"

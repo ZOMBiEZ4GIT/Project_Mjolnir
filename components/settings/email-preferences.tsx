@@ -2,7 +2,6 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { Mail, Calendar, Send, Loader2 } from "lucide-react";
 
@@ -126,7 +125,6 @@ export interface EmailPreferencesProps {
  * <EmailPreferences />
  */
 export function EmailPreferences({ className }: EmailPreferencesProps) {
-  const { user, isLoaded: isUserLoaded } = useUser();
   const queryClient = useQueryClient();
 
   // Fetch preferences using the same query key as CurrencyProvider
@@ -221,10 +219,7 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
     },
   });
 
-  const isLoading = !isUserLoaded || isPreferencesLoading;
-
-  // Get user's primary email address
-  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  const isLoading = isPreferencesLoading;
 
   // Handle toggle change
   const handleRemindersToggle = (checked: boolean) => {
@@ -271,7 +266,7 @@ export function EmailPreferences({ className }: EmailPreferencesProps) {
         <Mail className="h-5 w-5 text-muted-foreground" />
         <span className="text-sm">
           Reminders will be sent to{" "}
-          <span className="font-medium text-foreground">{userEmail ?? "your email"}</span>
+          <span className="font-medium text-foreground">your email</span>
         </span>
       </div>
 

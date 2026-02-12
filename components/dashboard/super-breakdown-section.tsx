@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { SuperGrowthChart } from "./super-growth-chart";
 
 interface SuperHolding {
@@ -63,8 +62,6 @@ function SectionSkeleton() {
  * - Delegates to SuperGrowthChart for actual chart rendering and empty data states
  */
 export function SuperBreakdownSection() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
-
   const {
     data: holdingsData,
     isLoading,
@@ -72,14 +69,8 @@ export function SuperBreakdownSection() {
   } = useQuery({
     queryKey: queryKeys.super.holdingsCheck,
     queryFn: fetchSuperHoldings,
-    enabled: isLoaded && isSignedIn,
     staleTime: 5 * 60 * 1000, // 5 minutes - holdings don't change often
   });
-
-  // Not authenticated or still loading auth
-  if (!isLoaded || !isSignedIn) {
-    return null;
-  }
 
   // Loading state
   if (isLoading) {

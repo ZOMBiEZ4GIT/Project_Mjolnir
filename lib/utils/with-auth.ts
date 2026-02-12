@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { getSession } from "@/lib/auth/session";
 import { NextRequest, NextResponse } from "next/server";
 import { createApiErrorResponse } from "@/lib/utils/api-error";
 
@@ -15,10 +15,11 @@ type AuthedHandler = (
 
 export function withAuth(handler: AuthedHandler, errorContext: string): RouteHandler {
   return async (request, context) => {
-    const { userId } = await auth();
-    if (!userId) {
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const { userId } = session;
     try {
       return await handler(request, context, userId);
     } catch (error) {

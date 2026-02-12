@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { motion, useReducedMotion } from "framer-motion";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { type Currency, type ExchangeRates } from "@/lib/utils/currency";
 import { Wallet, CreditCard } from "lucide-react";
@@ -157,7 +156,6 @@ function SummaryCard({
 
 export function SummaryCards() {
   const shouldReduceMotion = useReducedMotion();
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
 
   const {
@@ -167,18 +165,17 @@ export function SummaryCards() {
   } = useQuery({
     queryKey: queryKeys.netWorth.current(displayCurrency),
     queryFn: () => fetchNetWorth(displayCurrency),
-    enabled: isLoaded && isSignedIn && !currencyLoading,
+    enabled: !currencyLoading,
     refetchInterval: 60 * 1000,
   });
 
   const { data: historyData, isLoading: isLoadingHistory } = useQuery({
     queryKey: queryKeys.netWorth.history(2),
     queryFn: fetchHistory,
-    enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,
   });
 
-  if (!isLoaded || !isSignedIn || isLoadingNetWorth || currencyLoading) {
+  if (isLoadingNetWorth || currencyLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <CardSkeleton />

@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { showSuccess as toastSuccess, showError as toastError } from "@/lib/toast-helpers";
 import {
   AnimatedDialog,
@@ -354,7 +353,6 @@ function formatCurrency(amount: string, currency: string): string {
 }
 
 export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const queryClient = useQueryClient();
 
   // Wizard step: 0 = Select Month, 1 = Update Holdings, 2 = Review & Save
@@ -403,7 +401,7 @@ export function CheckInModal({ open, onOpenChange }: CheckInModalProps) {
   const { data, isLoading, error } = useQuery({
     queryKey: [...queryKeys.checkIn.holdings, watchedMonth],
     queryFn: () => fetchHoldingsForMonth(watchedMonth),
-    enabled: isLoaded && isSignedIn && open,
+    enabled: open,
   });
 
   // Track whether we've synced form fields for current API data

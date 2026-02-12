@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { type Currency, type ExchangeRates } from "@/lib/utils/currency";
 import { queryKeys } from "@/lib/query-keys";
@@ -141,7 +140,6 @@ function HeroSkeleton() {
 
 export function NetWorthHero() {
   const shouldReduceMotion = useReducedMotion();
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
 
   const {
@@ -151,18 +149,17 @@ export function NetWorthHero() {
   } = useQuery({
     queryKey: queryKeys.netWorth.current(displayCurrency),
     queryFn: () => fetchNetWorth(displayCurrency),
-    enabled: isLoaded && isSignedIn && !currencyLoading,
+    enabled: !currencyLoading,
     refetchInterval: 60 * 1000,
   });
 
   const { data: historyData, isLoading: isLoadingHistory } = useQuery({
     queryKey: queryKeys.netWorth.history(SPARKLINE_MONTHS),
     queryFn: () => fetchHistory(SPARKLINE_MONTHS),
-    enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,
   });
 
-  if (!isLoaded || !isSignedIn || isLoadingNetWorth || currencyLoading) {
+  if (isLoadingNetWorth || currencyLoading) {
     return <HeroSkeleton />;
   }
 

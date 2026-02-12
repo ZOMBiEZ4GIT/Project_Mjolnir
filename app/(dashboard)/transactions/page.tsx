@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import type { Variants } from "framer-motion";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import {
   Table,
@@ -214,7 +213,6 @@ function getActionColorClass(action: TransactionWithHolding["action"]): string {
 }
 
 export default function TransactionsPage() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, convert, isLoading: currencyLoading } = useCurrency();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -261,7 +259,6 @@ export default function TransactionsPage() {
   const { data: tradeableHoldings } = useQuery({
     queryKey: queryKeys.holdings.tradeable,
     queryFn: fetchTradeableHoldings,
-    enabled: isLoaded && isSignedIn,
   });
 
   const {
@@ -271,7 +268,6 @@ export default function TransactionsPage() {
   } = useQuery({
     queryKey: queryKeys.transactions.list({ holdingId: selectedHoldingId || undefined, action: selectedAction || undefined, currency: selectedCurrency }),
     queryFn: () => fetchTransactions(selectedHoldingId, selectedAction, selectedCurrency),
-    enabled: isLoaded && isSignedIn,
   });
 
   // Calculate aggregated totals
@@ -491,29 +487,6 @@ export default function TransactionsPage() {
       </div>
     </div>
   );
-
-  // Show loading while Clerk auth is loading
-  if (!isLoaded) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-muted-foreground">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show sign-in prompt if not authenticated
-  if (!isSignedIn) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <h2 className="text-xl text-foreground">Sign in to view your transactions</h2>
-          <p className="text-muted-foreground">You need to be authenticated to access this page.</p>
-        </div>
-      </div>
-    );
-  }
 
   // Show loading while fetching transactions
   if (isLoading) {

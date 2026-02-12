@@ -4,7 +4,6 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Sparkles, Loader2, AlertCircle, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { queryKeys } from "@/lib/query-keys";
 
 interface AiRecommendation {
@@ -27,7 +26,6 @@ export function AIRecommendationButton({
   periodId,
   onRecommendation,
 }: AIRecommendationButtonProps) {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const queryClient = useQueryClient();
 
   const [isRequesting, setIsRequesting] = useState(false);
@@ -49,7 +47,6 @@ export function AIRecommendationButton({
         if (!res.ok) throw new Error("Failed to fetch recommendation");
         return res.json();
       },
-      enabled: isLoaded && isSignedIn,
       staleTime: 1000 * 60 * 2,
     });
 

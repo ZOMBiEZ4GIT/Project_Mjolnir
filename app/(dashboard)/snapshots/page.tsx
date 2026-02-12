@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import {
   Table,
@@ -86,7 +85,6 @@ function formatType(type: string): string {
 }
 
 export default function SnapshotsPage() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, convert, isLoading: currencyLoading } = useCurrency();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -150,7 +148,6 @@ export default function SnapshotsPage() {
   const { data: holdings } = useQuery({
     queryKey: queryKeys.holdings.list({ showDormant: true }),
     queryFn: fetchHoldings,
-    enabled: isLoaded && isSignedIn,
   });
 
   // Filter holdings to only snapshot types (super, cash, debt)
@@ -166,36 +163,12 @@ export default function SnapshotsPage() {
   } = useQuery({
     queryKey: queryKeys.snapshots.list({ holdingId: holdingFilter || undefined }),
     queryFn: () => fetchSnapshots(holdingFilter || undefined),
-    enabled: isLoaded && isSignedIn,
   });
 
   // Apply type filter client-side (API doesn't support type filter directly)
   const filteredSnapshots = typeFilter
     ? snapshots?.filter((s) => s.holdingType === typeFilter)
     : snapshots;
-
-  // Show loading while Clerk auth is loading
-  if (!isLoaded) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-muted-foreground">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show sign-in prompt if not authenticated
-  if (!isSignedIn) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <h2 className="text-xl text-foreground">Sign in to view your snapshots</h2>
-          <p className="text-muted-foreground">You need to be authenticated to access this page.</p>
-        </div>
-      </div>
-    );
-  }
 
   // Show loading while fetching snapshots
   if (isLoading) {

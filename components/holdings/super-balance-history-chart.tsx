@@ -2,7 +2,6 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { formatCurrency, type Currency } from "@/lib/utils/currency";
 import {
@@ -265,7 +264,6 @@ export function SuperBalanceHistoryChart({
   holdingCurrency,
   months = 12,
 }: SuperBalanceHistoryChartProps) {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
   const queryClient = useQueryClient();
   const chartRef = useRef<HTMLDivElement>(null);
@@ -278,7 +276,7 @@ export function SuperBalanceHistoryChart({
   } = useQuery({
     queryKey: queryKeys.super.breakdown(months, holdingId),
     queryFn: () => fetchSuperBreakdown(holdingId, months),
-    enabled: isLoaded && isSignedIn && !!holdingId,
+    enabled: !!holdingId,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
@@ -287,8 +285,8 @@ export function SuperBalanceHistoryChart({
     queryClient.invalidateQueries({ queryKey: queryKeys.super.breakdown(months, holdingId) });
   }, [queryClient, months, holdingId]);
 
-  // Show skeleton while loading or not authenticated
-  if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
+  // Show skeleton while loading
+  if (isLoading || currencyLoading) {
     return <ChartSkeleton variant="bar" />;
   }
 

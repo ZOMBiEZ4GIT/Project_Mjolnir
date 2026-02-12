@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { queryKeys } from "@/lib/query-keys";
 
 async function fetchUncategorisedCount(): Promise<number> {
@@ -16,12 +15,9 @@ async function fetchUncategorisedCount(): Promise<number> {
  * Renders nothing when count is 0.
  */
 export function UncategorisedBadge() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
-
   const { data: count = 0 } = useQuery({
     queryKey: queryKeys.budget.transactions.uncategorisedCount,
     queryFn: fetchUncategorisedCount,
-    enabled: isLoaded && isSignedIn,
     refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
   });
 

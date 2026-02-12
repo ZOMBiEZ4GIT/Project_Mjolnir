@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { motion, useReducedMotion } from "framer-motion";
 import { CalendarCheck, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,6 @@ async function fetchCheckInStatus(): Promise<CheckInStatusResponse> {
 }
 
 export function CheckinPrompt() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -49,7 +47,6 @@ export function CheckinPrompt() {
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.checkIn.status,
     queryFn: fetchCheckInStatus,
-    enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,
   });
 
@@ -61,8 +58,8 @@ export function CheckinPrompt() {
   // Don't render until mounted (avoids hydration mismatch with sessionStorage)
   if (!mounted) return null;
 
-  // Don't render if not loaded, not signed in, loading, or error
-  if (!isLoaded || !isSignedIn || isLoading || error) return null;
+  // Don't render if loading or error
+  if (isLoading || error) return null;
 
   // Don't render if no check-in needed or dismissed
   if (!data?.needsCheckIn || isDismissed) return null;

@@ -6,7 +6,6 @@ import { ArrowLeft, Pencil, TrendingUp, TrendingDown, AlertTriangle, Clock } fro
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { Button } from "@/components/ui/button";
 import { CurrencyDisplay } from "@/components/ui/currency-display";
@@ -196,7 +195,6 @@ interface HoldingDetailPageProps {
 
 export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
   const { id } = use(params);
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, convert, isLoading: currencyLoading } = useCurrency();
   const router = useRouter();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -208,7 +206,7 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
   } = useQuery({
     queryKey: queryKeys.holdings.detail(id),
     queryFn: () => fetchHolding(id),
-    enabled: isLoaded && isSignedIn && !!id,
+    enabled: !!id,
   });
 
   const isTradeable = holding ? isTradeableType(holding.type) : false;
@@ -219,12 +217,12 @@ export default function HoldingDetailPage({ params }: HoldingDetailPageProps) {
   const { data: priceData, isLoading: priceLoading } = useQuery({
     queryKey: queryKeys.prices.single(id),
     queryFn: () => fetchPrice(id),
-    enabled: isLoaded && isSignedIn && !!id && isTradeable,
+    enabled: !!id && isTradeable,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // Show skeleton while loading or not authenticated
-  if (!isLoaded || !isSignedIn || isLoading) {
+  // Show skeleton while loading
+  if (isLoading) {
     return <PageSkeleton />;
   }
 

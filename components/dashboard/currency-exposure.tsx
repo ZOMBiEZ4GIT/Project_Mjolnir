@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { type Currency, type ExchangeRates } from "@/lib/utils/currency";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
@@ -297,7 +296,6 @@ const exposureStaggerContainer: Variants = {
  * Sorted by value descending. Debt is excluded from this breakdown.
  */
 export function CurrencyExposure() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading } = useCurrency();
   const reducedMotion = useReducedMotion();
 
@@ -308,12 +306,12 @@ export function CurrencyExposure() {
   } = useQuery({
     queryKey: queryKeys.currencyExposure(displayCurrency),
     queryFn: () => fetchCurrencyExposure(displayCurrency),
-    enabled: isLoaded && isSignedIn && !currencyLoading,
+    enabled: !currencyLoading,
     refetchInterval: 60 * 1000,
   });
 
-  // Show skeleton while loading or not authenticated
-  if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
+  // Show skeleton while loading
+  if (isLoading || currencyLoading) {
     return <ExposureSkeleton />;
   }
 

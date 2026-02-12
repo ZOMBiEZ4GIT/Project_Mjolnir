@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { currentUser } from "@clerk/nextjs/server";
 import { sendCheckInReminder } from "@/lib/services/reminders";
 import { isEmailConfigured } from "@/lib/services/email";
 import { withAuth } from "@/lib/utils/with-auth";
+import { ensureUser } from "@/lib/queries/users";
 
 /**
  * POST /api/email/test
@@ -19,8 +19,8 @@ export const POST = withAuth(async (_request, _context, userId) => {
     );
   }
 
-  // Get current user details from Clerk
-  const user = await currentUser();
+  // Get current user details from database
+  const user = await ensureUser(userId);
 
   if (!user) {
     return NextResponse.json(
@@ -29,7 +29,7 @@ export const POST = withAuth(async (_request, _context, userId) => {
     );
   }
 
-  const email = user.primaryEmailAddress?.emailAddress;
+  const email = user.email;
 
   if (!email) {
     return NextResponse.json(
@@ -42,7 +42,7 @@ export const POST = withAuth(async (_request, _context, userId) => {
   const result = await sendCheckInReminder({
     userId,
     email,
-    userName: user.firstName ?? undefined,
+    userName: user.name ?? undefined,
   });
 
   if (!result.success) {

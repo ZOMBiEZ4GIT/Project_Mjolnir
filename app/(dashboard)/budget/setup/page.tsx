@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { queryKeys } from "@/lib/query-keys";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -194,7 +193,6 @@ function applyTemplateClient(
 export default function BudgetSetupPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { isLoaded, isSignedIn } = useAuthSafe();
 
   // Multi-step state
   const [currentStep, setCurrentStep] = useState(0);
@@ -220,21 +218,18 @@ export default function BudgetSetupPage() {
   const { data: paydayData, isLoading: isLoadingConfig } = useQuery({
     queryKey: queryKeys.budget.payday,
     queryFn: fetchPaydayConfig,
-    enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 5,
   });
 
   const { data: categories } = useQuery({
     queryKey: queryKeys.budget.categories,
     queryFn: fetchCategories,
-    enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 5,
   });
 
   const { data: templates } = useQuery({
     queryKey: queryKeys.budget.templates,
     queryFn: fetchTemplates,
-    enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 10,
   });
 
@@ -377,22 +372,6 @@ export default function BudgetSetupPage() {
   }
 
   // ---- Early returns ---------------------------------------------------
-
-  if (!isLoaded) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
-
-  if (!isSignedIn) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-muted-foreground">Please sign in to continue.</p>
-      </div>
-    );
-  }
 
   // ---- Render ----------------------------------------------------------
 

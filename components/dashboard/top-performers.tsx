@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { motion, useReducedMotion } from "framer-motion";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { useCurrency } from "@/components/providers/currency-provider";
 import { type Currency } from "@/lib/utils/currency";
 import { TrendingUp, TrendingDown } from "lucide-react";
@@ -126,7 +125,6 @@ function EmptyPerformerList({ type }: { type: "gainers" | "losers" }) {
 
 export function TopPerformers() {
   const shouldReduceMotion = useReducedMotion();
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
 
   const {
@@ -136,11 +134,10 @@ export function TopPerformers() {
   } = useQuery({
     queryKey: queryKeys.topPerformers,
     queryFn: fetchPerformers,
-    enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,
   });
 
-  if (!isLoaded || !isSignedIn || isLoading || currencyLoading) {
+  if (isLoading || currencyLoading) {
     return <PerformersSkeleton />;
   }
 

@@ -3,7 +3,6 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import {
   Table,
   TableCell,
@@ -239,7 +238,6 @@ function TransactionCard({
 }
 
 export default function BudgetTransactionsPage() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const searchParams = useSearchParams();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -309,7 +307,6 @@ export default function BudgetTransactionsPage() {
   const { data: categories = [] } = useQuery({
     queryKey: queryKeys.budget.categories,
     queryFn: fetchCategories,
-    enabled: isLoaded && isSignedIn,
   });
 
   const {
@@ -329,7 +326,6 @@ export default function BudgetTransactionsPage() {
       page: String(page),
     }),
     queryFn: () => fetchBudgetTransactions(apiParams),
-    enabled: isLoaded && isSignedIn,
   });
 
   const categoryMutation = useMutation({
@@ -609,26 +605,6 @@ export default function BudgetTransactionsPage() {
       <MobileFilterPanel />
     </>
   );
-
-  if (!isLoaded) {
-    return (
-      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-muted-foreground">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isSignedIn) {
-    return (
-      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
-        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <h2 className="text-xl text-foreground">Sign in to view your transactions</h2>
-        </div>
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (

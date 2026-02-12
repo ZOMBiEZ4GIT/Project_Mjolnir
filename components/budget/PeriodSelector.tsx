@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Period {
@@ -26,8 +25,6 @@ export function PeriodSelector({
   currentPeriodId,
   onPeriodChange,
 }: PeriodSelectorProps) {
-  const { isLoaded, isSignedIn } = useAuthSafe();
-
   const { data: periods } = useQuery<Period[]>({
     queryKey: queryKeys.budget.periods.all,
     queryFn: async () => {
@@ -35,7 +32,6 @@ export function PeriodSelector({
       if (!res.ok) throw new Error("Failed to fetch periods");
       return res.json();
     },
-    enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 10,
   });
 

@@ -2,7 +2,6 @@
 
 import { useState, useCallback, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { queryKeys } from "@/lib/query-keys";
 import {
   ComposedChart,
@@ -235,7 +234,6 @@ function TrendsLegend({ payload, allCategories }: CustomLegendProps) {
 type ViewMode = "total" | "breakdown";
 
 export function SpendingTrends() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const queryClient = useQueryClient();
   const chartRef = useRef<HTMLDivElement>(null);
   const reducedMotion = useReducedMotion();
@@ -250,7 +248,6 @@ export function SpendingTrends() {
   } = useQuery<TrendPeriod[]>({
     queryKey: queryKeys.budget.trends(periodsCount),
     queryFn: () => fetchTrends(periodsCount),
-    enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -261,7 +258,7 @@ export function SpendingTrends() {
   }, [queryClient, periodsCount]);
 
   // Loading & error states
-  if (!isLoaded || !isSignedIn || isLoading) {
+  if (isLoading) {
     return (
       <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
         <div className="h-5 w-36 rounded bg-muted mb-4" />

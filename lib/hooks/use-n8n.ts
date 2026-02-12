@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -58,24 +57,20 @@ async function fetchExecutions(workflowId?: string): Promise<N8nExecution[]> {
 // Hooks
 // ---------------------------------------------------------------------------
 
-export function useN8nWorkflows() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
+// Middleware guarantees authentication, so no client-side auth checks needed.
 
+export function useN8nWorkflows() {
   return useQuery<N8nWorkflow[], Error>({
     queryKey: queryKeys.n8n.workflows,
     queryFn: fetchWorkflows,
-    enabled: isLoaded && !!isSignedIn,
     staleTime: 30_000,
   });
 }
 
 export function useN8nExecutions(workflowId?: string) {
-  const { isLoaded, isSignedIn } = useAuthSafe();
-
   return useQuery<N8nExecution[], Error>({
     queryKey: queryKeys.n8n.executions(workflowId),
     queryFn: () => fetchExecutions(workflowId),
-    enabled: isLoaded && !!isSignedIn,
     staleTime: 30_000,
   });
 }

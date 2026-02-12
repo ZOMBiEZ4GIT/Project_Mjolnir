@@ -3,7 +3,6 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { Download } from "lucide-react";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { FileUpload } from "@/components/import/file-upload";
 import { ImportResults, type ImportError } from "@/components/import/import-results";
 import { ImportProgress } from "@/components/import/import-progress";
@@ -84,8 +83,6 @@ function validateSnapshotPreview(headers: string[], _rows: string[][]): string[]
 }
 
 export default function ImportPage() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
-
   // Transaction import state
   const [transactionFile, setTransactionFile] = React.useState<File | null>(null);
   const [transactionPreview, setTransactionPreview] = React.useState<PreviewData | null>(null);
@@ -121,10 +118,8 @@ export default function ImportPage() {
 
   // Fetch recent imports on mount and after successful imports
   React.useEffect(() => {
-    if (isSignedIn) {
-      fetchRecentImports();
-    }
-  }, [isSignedIn, fetchRecentImports]);
+    fetchRecentImports();
+  }, [fetchRecentImports]);
 
   // Handle file selection with preview parsing
   const handleTransactionFileSelect = async (file: File) => {
@@ -246,29 +241,6 @@ export default function ImportPage() {
     setSnapshotResults(null);
     setSnapshotRowCount(undefined);
   };
-
-  // Show loading while Clerk auth is loading
-  if (!isLoaded) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-muted-foreground">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show sign-in prompt if not authenticated
-  if (!isSignedIn) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <h2 className="text-xl text-foreground">Sign in to import data</h2>
-          <p className="text-muted-foreground">You need to be authenticated to access this page.</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto px-4 py-8">

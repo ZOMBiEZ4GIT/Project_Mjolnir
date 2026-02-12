@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import {
   AlertTriangle,
   ChevronDown,
@@ -141,17 +140,15 @@ function getActionText(reason: StaleReason): string {
  */
 export function StaleDataWarning() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const { isLoaded, isSignedIn } = useAuthSafe();
 
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.netWorth.all,
     queryFn: fetchNetWorth,
-    enabled: isLoaded && isSignedIn,
     refetchInterval: 60 * 1000,
   });
 
   // Don't render anything while loading or if there's no stale data
-  if (!isLoaded || !isSignedIn || isLoading || error || !data) {
+  if (isLoading || error || !data) {
     return null;
   }
 

@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { getDaysUntilPayday, findNextPayday } from "@/lib/budget/payday";
 import { Calendar } from "lucide-react";
 
@@ -20,8 +19,6 @@ export function PaydayCountdown({
   daysElapsed,
   totalDays,
 }: PaydayCountdownProps) {
-  const { isLoaded, isSignedIn } = useAuthSafe();
-
   const { data: config } = useQuery<PaydayApiResponse>({
     queryKey: queryKeys.budget.payday,
     queryFn: async () => {
@@ -29,7 +26,6 @@ export function PaydayCountdown({
       if (!res.ok) throw new Error("Failed to fetch payday config");
       return res.json();
     },
-    enabled: isLoaded && isSignedIn,
     staleTime: 1000 * 60 * 30,
   });
 

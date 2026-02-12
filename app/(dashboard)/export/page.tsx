@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { Button } from "@/components/ui/button";
 import { Download, Archive, Loader2, BarChart3, ArrowRightLeft, Camera, Check, X } from "lucide-react";
 import { toast } from "sonner";
@@ -21,7 +20,6 @@ type ExportKey = "holdings-csv" | "holdings-json" | "transactions-csv" | "transa
 type ButtonState = "idle" | "downloading" | "success" | "error";
 
 export default function ExportPage() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const [counts, setCounts] = useState<ExportCounts>({ holdings: 0, transactions: 0, snapshots: 0 });
   const [isLoadingCounts, setIsLoadingCounts] = useState(true);
   const [buttonStates, setButtonStates] = useState<Map<ExportKey, ButtonState>>(new Map());
@@ -82,8 +80,6 @@ export default function ExportPage() {
 
   useEffect(() => {
     async function fetchCounts() {
-      if (!isSignedIn) return;
-
       try {
         const holdingsRes = await fetch("/api/holdings?include_dormant=true");
         if (holdingsRes.ok) {
@@ -109,31 +105,8 @@ export default function ExportPage() {
       }
     }
 
-    if (isLoaded && isSignedIn) {
-      fetchCounts();
-    }
-  }, [isLoaded, isSignedIn]);
-
-  if (!isLoaded) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-muted-foreground">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isSignedIn) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <h2 className="text-xl text-foreground">Sign in to export data</h2>
-          <p className="text-muted-foreground">You need to be authenticated to access this page.</p>
-        </div>
-      </div>
-    );
-  }
+    fetchCounts();
+  }, []);
 
   const staggerContainerCustom = {
     hidden: {},

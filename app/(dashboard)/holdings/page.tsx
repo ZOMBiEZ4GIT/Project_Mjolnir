@@ -3,7 +3,38 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
-import { HoldingsTable } from "@/components/holdings/holdings-table";
+import { RefreshCw, Briefcase, Filter, Wallet, ArrowRightLeft, Camera, EyeOff } from "lucide-react";
+import { toast } from "sonner";
+import { queryKeys } from "@/lib/query-keys";
+import { HoldingsTable, type HoldingWithData, type PriceData } from "@/components/holdings/holdings-table";
+
+/**
+ * Sparkline data from the API.
+ */
+interface SparklineDataResult {
+  holdingId: string;
+  symbol: string;
+  prices: number[];
+}
+
+async function fetchSparklineData(): Promise<Map<string, number[]>> {
+  const response = await fetch("/api/prices/sparkline");
+  if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Unauthorized");
+    }
+    throw new Error("Failed to fetch sparkline data");
+  }
+  const results: SparklineDataResult[] = await response.json();
+
+  const map = new Map<string, number[]>();
+  for (const result of results) {
+    if (result.prices.length >= 2) {
+      map.set(result.holdingId, result.prices);
+    }
+  }
+  return map;
+}
 import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
 import { CurrencyFilter, type CurrencyFilterValue } from "@/components/holdings/currency-filter";
 import { FilterTabs, type HoldingTypeFilter } from "@/components/holdings/filter-tabs";
@@ -172,6 +203,171 @@ export default function HoldingsPage() {
     queryKey: queryKeys.holdings.list({ showDormant }),
     queryFn: () => fetchHoldings(showDormant),
   });
+
+  // Check if dormant holdings exist (only when main list is empty and dormant toggle is off)
+  const {
+    data: allHoldings,
+  } = useQuery({
+    queryKey: queryKeys.holdings.list({ showDormant: true }),
+    queryFn: () => fetchHoldings(true),
+    enabled: !showDormant && !isLoading && !!holdings && holdings.length === 0,
+  });
+
+  const hasDormantHoldings = !showDormant && holdings?.length === 0 && (allHoldings?.length ?? 0) > 0;
+
+  // Fetch prices for tradeable holdings
+  const {
+    data: priceMap,
+    isLoading: pricesLoading,
+    isFetching: pricesFetching,
+  } = useQuery({
+    queryKey: queryKeys.prices.all,
+    queryFn: fetchPrices,
+    // Prices can refetch independently without blocking holdings display
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Fetch sparkline data for tradeable holdings (30-day price history)
+  const {
+    data: sparklineMap,
+    isLoading: sparklineLoading,
+  } = useQuery({
+    queryKey: queryKeys.prices.sparkline,
+    queryFn: fetchSparklineData,
+    staleTime: 1000 * 60 * 30, // 30 minutes — historical data doesn't change often
+  });
+
+  // Mutation for refreshing prices (manual user action with toasts)
+  const refreshMutation = useMutation({
+    mutationFn: () => refreshPrices(),
+    onSuccess: (results) => {
+      // Count successes and failures
+      const failures = results.filter((r) => r.error);
+      const successes = results.filter((r) => !r.error && r.price !== null);
+
+      // Invalidate prices query to refetch updated cached prices
+      queryClient.invalidateQueries({ queryKey: queryKeys.prices.all });
+
+      // Show appropriate toast
+      if (failures.length === 0 && successes.length > 0) {
+        toast.success(`Refreshed ${successes.length} price${successes.length === 1 ? "" : "s"}`);
+      } else if (failures.length > 0 && successes.length > 0) {
+        toast.warning(
+          `Refreshed ${successes.length} price${successes.length === 1 ? "" : "s"}, ${failures.length} failed`
+        );
+      } else if (failures.length > 0 && successes.length === 0) {
+        toast.error(`Failed to refresh ${failures.length} price${failures.length === 1 ? "" : "s"}`);
+      } else if (results.length === 0) {
+        toast.info("No tradeable holdings to refresh");
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to refresh prices");
+    },
+  });
+
+  // Mutation for background auto-refresh (silent, no toasts)
+  const backgroundRefreshMutation = useMutation({
+    mutationFn: () => refreshPrices(),
+    onSuccess: () => {
+      // Silently invalidate prices query to refetch updated cached prices
+      queryClient.invalidateQueries({ queryKey: queryKeys.prices.all });
+    },
+    // Silent error handling - no toast for background refresh failures
+  });
+
+  // Derive refreshing state: true when manual/background refresh is in-flight or prices are refetching
+  const pricesRefreshingState = refreshMutation.isPending || backgroundRefreshMutation.isPending || (pricesFetching && !pricesLoading);
+
+  // Speed-dial FAB: refs for hidden dialog triggers + check-in modal state
+  const addHoldingRef = useRef<HTMLButtonElement>(null);
+  const addTransactionRef = useRef<HTMLButtonElement>(null);
+  const [checkInOpen, setCheckInOpen] = useState(false);
+
+  const speedDialActions = useMemo<SpeedDialAction[]>(() => [
+    {
+      id: "add-holding",
+      label: "Add Holding",
+      icon: <Wallet className="h-4 w-4" />,
+      onClick: () => addHoldingRef.current?.click(),
+    },
+    {
+      id: "add-transaction",
+      label: "Add Transaction",
+      icon: <ArrowRightLeft className="h-4 w-4" />,
+      onClick: () => addTransactionRef.current?.click(),
+    },
+    {
+      id: "monthly-check-in",
+      label: "Monthly Check-in",
+      icon: <Camera className="h-4 w-4" />,
+      onClick: () => setCheckInOpen(true),
+    },
+  ], []);
+
+  // Track which holdings are currently being retried
+  const [retryingPriceIds, setRetryingPriceIds] = useState<Set<string>>(new Set());
+
+  // Handler for retrying a single holding's price fetch
+  const handleRetryPrice = useCallback(async (holdingId: string) => {
+    // Add to retrying set
+    setRetryingPriceIds((prev) => new Set(prev).add(holdingId));
+
+    try {
+      const results = await refreshPrices([holdingId]);
+      const result = results[0];
+
+      // Invalidate prices query to refetch updated cached prices
+      queryClient.invalidateQueries({ queryKey: queryKeys.prices.all });
+
+      // Show toast based on result
+      if (result?.error) {
+        toast.error(`Failed to fetch price for ${result.symbol}: ${result.error}`);
+      } else if (result?.price !== null) {
+        toast.success(`Price updated for ${result.symbol}`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to refresh price");
+    } finally {
+      // Remove from retrying set
+      setRetryingPriceIds((prev) => {
+        const next = new Set(prev);
+        next.delete(holdingId);
+        return next;
+      });
+    }
+  }, [queryClient]);
+
+  // Track if auto-refresh has been triggered to prevent duplicate calls
+  const autoRefreshTriggered = useRef(false);
+
+  // Auto-refresh prices on page load if any cached price is stale
+  useEffect(() => {
+    // Only trigger once per page mount
+    if (autoRefreshTriggered.current) return;
+
+    // Wait for prices to load first
+    if (pricesLoading) return;
+
+    // Check if any price is stale
+    if (hasStalePrice(priceMap)) {
+      autoRefreshTriggered.current = true;
+      backgroundRefreshMutation.mutate();
+    }
+  }, [priceMap, pricesLoading, backgroundRefreshMutation]);
+
+  // Filter holdings by currency and type
+  const filteredHoldings = useMemo(() => {
+    if (!holdings) return [];
+    let result = holdings;
+    if (currencyFilter !== "all") {
+      result = result.filter((holding) => holding.currency === currencyFilter);
+    }
+    if (typeFilter !== "all") {
+      result = result.filter((holding) => holding.type === typeFilter);
+    }
+    return result;
+  }, [holdings, currencyFilter, typeFilter]);
 
   // Show loading while fetching holdings
   if (isLoading) {

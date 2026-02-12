@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { CurrencyProvider } from "@/components/providers/currency-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -46,7 +47,9 @@ export default function RootLayout({
 }>) {
   return (
     <QueryProvider>
-      <AppContent>{children}</AppContent>
+      <CurrencyProvider>
+        <AppContent>{children}</AppContent>
+      </CurrencyProvider>
     </QueryProvider>
   );
 }
