@@ -616,6 +616,16 @@ export const aiRecommendations = pgTable(
       .notNull(),
     recommendationData: jsonb("recommendation_data").notNull(),
     status: varchar("status", { length: 20 }).default("pending").notNull(),
+    // Structured recommendation fields (added in BI-A-005)
+    overallStatus: varchar("overall_status", { length: 10 }), // 'green' | 'amber' | 'red'
+    saverStatuses: jsonb("saver_statuses"), // Array of per-saver health checks
+    goalProgress: jsonb("goal_progress"), // Array of goal updates
+    budgetAdjustments: jsonb("budget_adjustments"), // Suggested budget changes
+    insights: jsonb("insights"), // Array of insight strings
+    actionableTip: text("actionable_tip"), // Specific time-bound action
+    savingsProjection: jsonb("savings_projection"), // Savings rate and projections
+    rawResponse: jsonb("raw_response"), // Full Claude response for debugging
+    generatedAt: timestamp("generated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
