@@ -395,6 +395,10 @@ export const upTransactions = pgTable(
     transactionDate: date("transaction_date").notNull(),
     settledAt: timestamp("settled_at", { withTimezone: true }),
     isTransfer: boolean("is_transfer").default(false).notNull(),
+    // Three-tier classification fields (added in BI-A-004)
+    saverKey: varchar("saver_key", { length: 50 }),
+    categoryKey: varchar("category_key", { length: 50 }),
+    tags: jsonb("tags").default([]),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -403,6 +407,9 @@ export const upTransactions = pgTable(
     transactionDateIdx: index("up_transactions_transaction_date_idx").on(table.transactionDate),
     mjolnirCategoryIdIdx: index("up_transactions_mjolnir_category_id_idx").on(table.mjolnirCategoryId),
     statusIdx: index("up_transactions_status_idx").on(table.status),
+    saverKeyIdx: index("up_transactions_saver_key_idx").on(table.saverKey),
+    categoryKeyIdx: index("up_transactions_category_key_idx").on(table.categoryKey),
+    saverCategoryKeyIdx: index("up_transactions_saver_category_key_idx").on(table.saverKey, table.categoryKey),
   })
 );
 
