@@ -577,23 +577,29 @@ export const budgetSavers = pgTable(
  * debt payoff may not have a direct saver link). The priority field controls
  * display order. currentAmountCents is updated manually or via future automation.
  */
-export const goals = pgTable("goals", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  saverId: uuid("saver_id").references(() => budgetSavers.id),
-  name: varchar("name", { length: 100 }).notNull(),
-  targetAmountCents: bigint("target_amount_cents", { mode: "number" }).notNull(),
-  currentAmountCents: bigint("current_amount_cents", { mode: "number" }).default(0).notNull(),
-  monthlyContributionCents: bigint("monthly_contribution_cents", { mode: "number" }).notNull(),
-  targetDate: date("target_date"),
-  status: goalStatusEnum("status").default("active").notNull(),
-  priority: integer("priority").default(0).notNull(),
-  colour: varchar("colour", { length: 7 }),
-  icon: varchar("icon", { length: 10 }),
-  notes: text("notes"),
-  completedAt: timestamp("completed_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const goals = pgTable(
+  "goals",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    saverId: uuid("saver_id").references(() => budgetSavers.id),
+    name: varchar("name", { length: 100 }).notNull(),
+    targetAmountCents: bigint("target_amount_cents", { mode: "number" }).notNull(),
+    currentAmountCents: bigint("current_amount_cents", { mode: "number" }).default(0).notNull(),
+    monthlyContributionCents: bigint("monthly_contribution_cents", { mode: "number" }).notNull(),
+    targetDate: date("target_date"),
+    status: goalStatusEnum("status").default("active").notNull(),
+    priority: integer("priority").default(0).notNull(),
+    colour: varchar("colour", { length: 7 }),
+    icon: varchar("icon", { length: 10 }),
+    notes: text("notes"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueName: unique().on(table.name),
+  })
+);
 
 // =============================================================================
 // AI RECOMMENDATIONS

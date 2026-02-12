@@ -141,6 +141,13 @@
       "when": 1770881201338,
       "tag": "0019_dark_shape",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1770881437404,
+      "tag": "0020_black_callisto",
+      "breakpoints": true
     }
   ]
 }
