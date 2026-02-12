@@ -139,14 +139,13 @@ export const PUT = withAuth(async (request, context) => {
 /**
  * DELETE /api/budget/periods/:id
  *
+ * @deprecated Periods are now auto-generated and should not be manually deleted.
+ * This endpoint is kept for backwards compatibility. See BI-A-009.
+ *
  * Deletes a budget period. Allocations are cascade-deleted automatically.
- *
- * Response: { success: true }
- *
- * Errors:
- *   - 404 if period not found
  */
 export const DELETE = withAuth(async (_request, context) => {
+  console.warn("[DEPRECATED] DELETE /api/budget/periods/:id — periods are now auto-generated");
   const { id } = await context.params;
 
   const existing = await db

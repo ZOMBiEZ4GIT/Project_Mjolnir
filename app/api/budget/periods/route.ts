@@ -59,19 +59,14 @@ export const GET = withAuth(async () => {
 /**
  * POST /api/budget/periods
  *
+ * @deprecated Periods are now auto-generated via ensureCurrentPeriodExists().
+ * This endpoint is kept for backwards compatibility but should not be used
+ * for new code. See BI-A-009.
+ *
  * Creates a new budget period with optional allocations.
- *
- * Request body:
- *   - startDate: (required) YYYY-MM-DD
- *   - endDate: (required) YYYY-MM-DD
- *   - expectedIncomeCents: (required) Integer cents
- *   - notes: (optional) Text
- *   - allocations: (optional) Array of { categoryId, allocatedCents }
- *
- * Response: 201 with the created period and its allocations.
- * Includes a warning if allocations exceed expected income.
  */
 export const POST = withAuth(async (request) => {
+  console.warn("[DEPRECATED] POST /api/budget/periods — periods are now auto-generated");
   let body: unknown;
   try {
     body = await request.json();
