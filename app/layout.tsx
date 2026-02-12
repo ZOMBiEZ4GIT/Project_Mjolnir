@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { ClerkProvider } from "@/components/providers/clerk-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -26,10 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <QueryProvider>
-        <AppContent>{children}</AppContent>
-      </QueryProvider>
-    </ClerkProvider>
+    <QueryProvider>
+      <AppContent>{children}</AppContent>
+    </QueryProvider>
   );
 }

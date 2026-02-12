@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { getSession } from "@/lib/auth/session";
 import { db } from "@/lib/db";
 import { holdings, type NewHolding } from "@/lib/db/schema";
 import { eq, isNull, and } from "drizzle-orm";
@@ -28,11 +28,13 @@ interface CreateHoldingBody {
 }
 
 export async function GET(request: NextRequest) {
-  const { userId } = await auth();
+  const session = await getSession();
 
-  if (!userId) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { userId } = session;
 
   const searchParams = request.nextUrl.searchParams;
   const includeDormant = searchParams.get("include_dormant") === "true";
@@ -55,11 +57,13 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
+  const session = await getSession();
 
-  if (!userId) {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { userId } = session;
 
   let body: CreateHoldingBody;
   try {

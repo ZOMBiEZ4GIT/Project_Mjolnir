@@ -2,7 +2,6 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useAuthSafe } from "@/lib/hooks/use-auth-safe";
 import { HoldingsTable } from "@/components/holdings/holdings-table";
 import { AddHoldingDialog } from "@/components/holdings/add-holding-dialog";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,6 @@ async function fetchHoldings(includeDormant: boolean): Promise<Holding[]> {
 }
 
 export default function HoldingsPage() {
-  const { isLoaded, isSignedIn } = useAuthSafe();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -50,31 +48,7 @@ export default function HoldingsPage() {
   } = useQuery({
     queryKey: ["holdings", { showDormant }],
     queryFn: () => fetchHoldings(showDormant),
-    enabled: isLoaded && isSignedIn,
   });
-
-  // Show loading while Clerk auth is loading
-  if (!isLoaded) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="text-gray-400">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show sign-in prompt if not authenticated
-  if (!isSignedIn) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-          <h2 className="text-xl text-white">Sign in to view your holdings</h2>
-          <p className="text-gray-400">You need to be authenticated to access this page.</p>
-        </div>
-      </div>
-    );
-  }
 
   // Show loading while fetching holdings
   if (isLoading) {
