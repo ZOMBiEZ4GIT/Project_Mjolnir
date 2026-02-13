@@ -43,6 +43,7 @@ interface GoalSummary {
 }
 
 export interface BudgetSummary {
+  periodId: string;
   period: {
     startDate: string;
     endDate: string;
@@ -60,6 +61,8 @@ export interface BudgetSummary {
   totalBudgetedCents: number;
   savingsGoals: GoalSummary[];
 }
+
+export type { SaverSummary, CategorySummary, GoalSummary, PaceStatus };
 
 // ---------------------------------------------------------------------------
 // Fetch helpers

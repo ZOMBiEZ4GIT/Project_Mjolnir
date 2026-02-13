@@ -23,7 +23,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Reference the wireframe in spec Section 7.1. The summary stats should use existing Stat Card patterns if available. Progress bars can use shadcn Progress component or custom."
     },
     {
@@ -44,7 +44,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.1 goals wireframe. Keep it simple — no progress rings yet (that's BI-C-009 area). Linear progress bars are clearer for the overview."
     },
     {
@@ -66,7 +66,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.2 wireframe. Add saverKey as a query param filter to the existing transactions API (GET /api/budget/transactions?saver=food)."
     },
     {
@@ -87,7 +87,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.3.1. Use hex colours from the savers table for bars. The pace line helps answer 'should I be worried?' at a glance."
     },
     {
@@ -109,7 +109,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.3.2. This requires per-day transaction data — may need a new API endpoint or client-side grouping from the transaction list."
     },
     {
@@ -132,7 +132,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.4 wireframe. The n8n flow processes asynchronously — Mjolnir sends the request and then polls the callback result. Use queryClient.invalidateQueries on a timer to poll."
     },
     {
@@ -151,7 +151,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.6 wireframe. The edit capability is important for correcting mis-classifications. When saver changes in the dropdown, the category dropdown should filter to show only that saver's categories."
     },
     {
@@ -173,7 +173,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.5 wireframe. The JSONB unnest query: SELECT tag, COUNT(*), SUM(ABS(amount_cents)) FROM up_transactions, jsonb_array_elements_text(tags) AS tag WHERE ... GROUP BY tag ORDER BY SUM DESC. May need a raw SQL query via Drizzle's sql template."
     },
     {
@@ -193,7 +193,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.3.3. This is a nice visual complement to the category list — shows at a glance where the money went within a saver."
     },
     {
@@ -213,7 +213,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.3.7. This replaces the Sankey chart. Waterfall charts are more readable for showing 'where does the money go'. Remove or hide the old SankeyChartContainer component."
     },
     {
@@ -233,7 +233,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.3.6. Key use case: see if supplement spend actually drops after April 2026. Existing SpendingTrends component may have useful logic to build on."
     },
     {
@@ -254,7 +254,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": "Mobile-first is a design principle for Mjolnir. Roland checks balances on his phone. Use Tailwind responsive classes (sm:, md:, lg:) for breakpoints."
     }
   ]

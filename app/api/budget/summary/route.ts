@@ -308,6 +308,7 @@ export const GET = withAuth(async (request) => {
   const actualIncomeCents = Number(incomeRows[0]?.totalCents ?? 0);
 
   return NextResponse.json({
+    periodId: resolvedPeriodId,
     period: {
       startDate,
       endDate,

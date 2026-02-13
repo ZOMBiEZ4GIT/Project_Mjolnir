@@ -11,6 +11,9 @@ import { withAuth } from "@/lib/utils/with-auth";
  *
  * Query params:
  *   - category: Filter by mjolnir_category_id
+ *   - saver: Filter by saver_key
+ *   - categoryKey: Filter by category_key
+ *   - tag: Filter by tag (matches any element in the JSONB tags array)
  *   - status: Filter by HELD or SETTLED
  *   - from: Start date (YYYY-MM-DD)
  *   - to: End date (YYYY-MM-DD)
@@ -24,6 +27,9 @@ import { withAuth } from "@/lib/utils/with-auth";
 export const GET = withAuth(async (request) => {
   const url = new URL(request.url);
   const category = url.searchParams.get("category");
+  const saver = url.searchParams.get("saver");
+  const categoryKey = url.searchParams.get("categoryKey");
+  const tag = url.searchParams.get("tag");
   const status = url.searchParams.get("status");
   const from = url.searchParams.get("from");
   const to = url.searchParams.get("to");
@@ -37,6 +43,18 @@ export const GET = withAuth(async (request) => {
     isNull(upTransactions.deletedAt),
     eq(upTransactions.isTransfer, false),
   ];
+
+  if (saver) {
+    conditions.push(eq(upTransactions.saverKey, saver));
+  }
+
+  if (categoryKey) {
+    conditions.push(eq(upTransactions.categoryKey, categoryKey));
+  }
+
+  if (tag) {
+    conditions.push(sql`${upTransactions.tags} @> ${JSON.stringify([tag])}::jsonb`);
+  }
 
   if (uncategorised === "true") {
     conditions.push(eq(upTransactions.mjolnirCategoryId, "uncategorised"));
@@ -84,6 +102,9 @@ export const GET = withAuth(async (request) => {
       amountCents: upTransactions.amountCents,
       status: upTransactions.status,
       mjolnirCategoryId: upTransactions.mjolnirCategoryId,
+      saverKey: upTransactions.saverKey,
+      categoryKey: upTransactions.categoryKey,
+      tags: upTransactions.tags,
       transactionDate: upTransactions.transactionDate,
       settledAt: upTransactions.settledAt,
     })

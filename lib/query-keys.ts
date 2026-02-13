@@ -107,6 +107,8 @@ export const queryKeys = {
       latest: (periodId?: string) =>
         ["budget", "recommendations", periodId ?? "current"] as const,
     },
+    tags: (periodId?: string) =>
+      ["budget", "tags", periodId ?? "current"] as const,
     trends: (periods?: number) =>
       ["budget", "trends", periods ?? 6] as const,
   },
