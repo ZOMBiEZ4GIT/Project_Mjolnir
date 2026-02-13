@@ -117,7 +117,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section D7. Keep the anomaly detection simple and rule-based (not ML). The rules here catch obvious issues; Claude's AI check-in handles nuanced analysis."
     }
   ]
