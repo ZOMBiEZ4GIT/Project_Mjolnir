@@ -254,7 +254,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 12,
-      "passes": false,
+      "passes": true,
       "notes": "Mobile-first is a design principle for Mjolnir. Roland checks balances on his phone. Use Tailwind responsive classes (sm:, md:, lg:) for breakpoints."
     }
   ]

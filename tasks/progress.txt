@@ -25,6 +25,9 @@
 - Trends API `/api/budget/trends` now returns `savers[]` alongside `categories[]` — saver data queried directly from `upTransactions` grouped by `saverKey`
 - For multi-period saver queries: use `Promise.all` with per-period SQL queries alongside existing `calculateBudgetSummary` calls
 - Collapsible sections: use `ChevronDown` icon with `-rotate-90` when collapsed, `rotate-0` when expanded; toggle with `useState`
+- Mobile tap targets: minimum 44pt = `h-11 w-11` for icon buttons, `py-2` padding for inline links
+- Tables on mobile: dual layout with `sm:hidden` card view + `hidden sm:block` table view (not just `overflow-x-auto`)
+- SVG chart mobile adjustments need JS `window.innerWidth` check since Tailwind classes don't work inside SVG text elements
 
 ---
 
@@ -188,4 +191,24 @@
   - Budget reference lines per saver use `<ReferenceLine y={budget/100} strokeDasharray="4 4" strokeOpacity={0.35} />` — low opacity avoids visual noise with many savers
   - Saver toggle uses a `Set<string>` of hidden saverKeys — more efficient than tracking "visible" when most are visible by default
   - Collapsible section uses ChevronDown icon with rotation transition — simple useState toggle, no library needed
+---
+
+## 2026-02-13 - BI-C-012
+- What was implemented: Mobile responsive pass across all budget views — period selector, budget overview, charts, saver detail, tag explorer, and transactions
+- Files changed:
+  - `components/budget/PeriodSelector.tsx` — increased arrow buttons to `h-11 w-11` (44pt), reduced date text size on mobile
+  - `app/(dashboard)/budget/page.tsx` — header actions flex-wrap, chart toggle full-width mobile, progress bar text shortened on small screens
+  - `components/budget/charts/budget-vs-actual-chart.tsx` — added mobile detection, narrower Y-axis and truncated labels on mobile
+  - `components/budget/charts/savings-waterfall.tsx` — smaller bars and chart height on mobile, tighter X-axis label truncation
+  - `components/budget/charts/spending-trends.tsx` — saver toggle buttons scroll horizontally with `overflow-x-auto` + `shrink-0`
+  - `components/budget/charts/category-treemap.tsx` — reduced height from 240 to 200, flex-wrap on legend
+  - `app/(dashboard)/budget/tags/page.tsx` — added mobile card layout (`sm:hidden` / `hidden sm:block`), back button 44pt tap target
+  - `app/(dashboard)/budget/saver/[saverKey]/page.tsx` — back link with py-2 for tap target, category row truncation and gap fixes
+  - `app/(dashboard)/budget/transactions/page.tsx` — pagination buttons h-11 on mobile, edit pencil button enlarged to h-9 w-9
+- **Learnings for future iterations:**
+  - 44pt minimum tap target = `h-11 w-11` (44px) with flexbox centering, or `py-2` padding on inline links
+  - Mobile detection pattern: `useState(false)` + `useEffect` with `window.innerWidth < 640` check + resize listener — needed for SVG chart label logic that can't use Tailwind responsive classes
+  - For tables that overflow on mobile, add a separate card layout (`sm:hidden` for cards, `hidden sm:block` for table) rather than relying on `overflow-x-auto` alone
+  - Recharts Y-axis labels with emoji + name: compute width dynamically based on `isMobile` flag (5.5px/char mobile vs 7px/char desktop) and truncate display names > 8 chars on mobile
+  - Chart toggle tabs: use `flex-1 sm:flex-none` for mobile full-width evenly split tabs
 ---
