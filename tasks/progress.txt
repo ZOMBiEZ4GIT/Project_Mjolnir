@@ -1,2 +1,3 @@
-# Ralph Progress Log
-# Reset after bi-b-api-integration completion
+# Ralph Progress Log — bi-c-dashboard-ui
+# Budget Intelligence Phase C — Dashboard UI Rebuild
+# 12 stories: BI-C-001 through BI-C-012
