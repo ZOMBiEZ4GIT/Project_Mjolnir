@@ -184,3 +184,19 @@
   - Spending queries use `lt(amountCents, sql\`0\`)` not a raw template — Drizzle's `lt()` is cleaner for column comparisons
   - The `sql<number>` template literal in aggregations (COALESCE/SUM/ABS) must cast with Number() when used — Drizzle returns string for bigint aggregates
 ---
+
+## 2026-02-13 - BI-B-005
+- Created app/api/budget/recommendations/request/route.ts with POST handler
+- Endpoint builds dynamic context payload: current period info, saver performance (budget vs actual per spending saver), goal progress, top 10 tags by spend, historical saver spending averages (last 3 periods)
+- Top tags query uses `jsonb_array_elements_text(tags)` to unnest JSONB array and aggregate by tag
+- Historical comparison: reuses the same pattern from existing getHistoricalCategorySpending() but groups by saverKey instead of mjolnirCategoryId
+- Signs request with HMAC-SHA256 (X-Mjolnir-API-Key, X-Mjolnir-Timestamp, X-Mjolnir-Signature)
+- Fire-and-forget fetch to N8N_RECOMMENDATION_WEBHOOK_URL — returns `{ success: true, message: 'Recommendation requested' }` immediately
+- Returns 503 with helpful error if N8N_RECOMMENDATION_WEBHOOK_URL is not set
+- Added N8N_RECOMMENDATION_WEBHOOK_URL (plus N8N_BASE_URL, N8N_API_KEY, N8N_WEBHOOK_SECRET) to .env.example
+- Files changed: app/api/budget/recommendations/request/route.ts, .env.example
+- **Learnings for future iterations:**
+  - `jsonb_array_elements_text()` in Drizzle must be used as raw `sql` template — no native Drizzle function for it
+  - The top tags query needs `jsonb_array_length() > 0` filter to avoid errors on empty/null tags arrays
+  - Historical saver spending follows the same OR-of-period-ranges pattern as the existing category version — can be refactored to share code later
+---

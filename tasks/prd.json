@@ -97,7 +97,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "The static context block (Roland's financial plan from Appendix 10) lives in the n8n flow, not in Mjolnir. Mjolnir only sends the dynamic data. Add N8N_RECOMMENDATION_WEBHOOK_URL to .env.example."
     },
     {
