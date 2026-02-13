@@ -1,0 +1,124 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/bi-d-enrichment",
+  "description": "Budget Intelligence Phase D — Enrichment features: historical data backfill, manual tag editing with persistence, rule learning from corrections, post-challenge comparison, goal completion celebrations, and anomaly alerts.",
+  "userStories": [
+    {
+      "id": "BI-D-001",
+      "title": "Backfill existing transactions with three-tier classification",
+      "description": "Re-classify all existing upTransactions using the new three-tier system. Transactions currently only have mjolnirCategoryId — they need saverKey, categoryKey, and tags populated.",
+      "acceptanceCriteria": [
+        "Create a backfill script at lib/db/seeds/backfill-transactions.ts or app/api/admin/backfill/route.ts",
+        "Script reads all upTransactions that have a mjolnirCategoryId but no saverKey",
+        "Uses the mapCategoryToSaver() function from BI-B-008 to derive saverKey and categoryKey",
+        "For known merchants (matching description patterns from the n8n rules), also populate tags array",
+        "Build a description-to-tags mapping covering the major merchants: MARLEY SPOON, WOOLWORTHS, COLES, BODY FIT, MEDIBANK, AUSSIE BROADBAND, JB HI-FI, GHOST, MYKI, UBER EATS, etc.",
+        "Process in batches of 100 to avoid memory/timeout issues",
+        "Log progress: 'Backfilled X of Y transactions'",
+        "Skip transactions that already have a saverKey (idempotent)",
+        "Transactions that can't be mapped: leave saverKey as null, log them for manual review",
+        "Run the backfill and verify: count of transactions with saverKey populated should match expectations",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "This is a one-time migration script. The description pattern matching should mirror the n8n rules engine from spec Section 5.2 but doesn't need to be exhaustive — unmapped transactions can be corrected manually later."
+    },
+    {
+      "id": "BI-D-002",
+      "title": "Build inline tag editor for transactions",
+      "description": "Allow manual editing of saver, category, and tags on individual transactions directly from the transaction list. This is the human-in-the-loop for classification corrections.",
+      "acceptanceCriteria": [
+        "Clicking 'Edit' on a transaction row (from BI-C-007) opens an inline edit form below the transaction",
+        "Saver dropdown: shows all active savers with emoji + name, current value pre-selected",
+        "Category dropdown: dynamically filtered by the selected saver, shows only categories belonging to that saver",
+        "Changing the saver resets the category dropdown to blank (force re-selection)",
+        "Tags input: shows current tags as removable chips/pills, with a text input to add new tags",
+        "New tags are auto-formatted: lowercase, spaces replaced with hyphens, special chars stripped",
+        "Save button calls PUT /api/budget/transactions/[id]/category with { saverKey, categoryKey, tags }",
+        "Update the PUT endpoint to accept and store all three fields (saverKey, categoryKey, tags JSONB)",
+        "Cancel button closes the edit form without saving",
+        "Optimistic update: UI updates immediately, reverts on error",
+        "Success feedback: brief toast or inline confirmation",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "This feeds into BI-D-003 (rule learning). When Roland corrects a classification, we track the correction for potential rule generation."
+    },
+    {
+      "id": "BI-D-003",
+      "title": "Track classification corrections for rule suggestions",
+      "description": "When a user manually corrects a transaction's classification, track the correction. After 3+ corrections for the same merchant to the same saver/category, suggest adding a rule.",
+      "acceptanceCriteria": [
+        "Create a classification_corrections table: id, transactionId, originalSaverKey, originalCategoryKey, correctedSaverKey, correctedCategoryKey, merchantDescription, createdAt",
+        "When a transaction's saver/category is edited via the inline editor, insert a correction record",
+        "Create an API endpoint GET /api/budget/corrections/suggestions that finds merchants with 3+ corrections to the same saver/category",
+        "Response: [{ merchantPattern, suggestedSaverKey, suggestedCategoryKey, correctionCount, exampleDescriptions }]",
+        "Display suggestions as a dismissible banner on the budget page or in a settings area: 'You've corrected [MERCHANT] to [Saver → Category] X times. Add as a rule?'",
+        "Accept button: stores the rule suggestion (for future n8n rules engine updates — could be an exportable JSON)",
+        "Dismiss button: marks the suggestion as dismissed so it doesn't show again",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "This is a feedback loop for improving the n8n rules engine. The actual n8n rule update is manual (Roland copies the pattern into n8n), but this surfaces when a rule should be added."
+    },
+    {
+      "id": "BI-D-004",
+      "title": "Build post-challenge comparison view",
+      "description": "Create a before/after comparison view for the Supplements saver, showing spending patterns before and after the BFT challenge ends in April 2026.",
+      "acceptanceCriteria": [
+        "Create components/budget/challenge-comparison.tsx component",
+        "Shows two side-by-side period groups: 'During Challenge' (Feb-Apr 2026) and 'After Challenge' (May+ 2026)",
+        "For each group: total supplement spend, average monthly spend, category breakdown (pre-workout, protein, greens, ice-cream-mix)",
+        "Highlight the savings: 'You saved $X/month by ending the challenge'",
+        "Show which categories were dropped or reduced",
+        "Accessible from the Supplements saver detail view as a special section",
+        "Only render when there is data for both pre and post periods (graceful handling if April hasn't passed yet)",
+        "If before April 2026: show a 'Challenge ends in X days' countdown instead",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": "Reference spec Section D4. This is a motivational feature — shows the concrete impact of the lifestyle change. Timeline-dependent: becomes meaningful only after May 2026."
+    },
+    {
+      "id": "BI-D-005",
+      "title": "Add goal completion celebrations",
+      "description": "When a goal reaches 100% (or is manually marked complete), show a celebration animation and persist the completion state.",
+      "acceptanceCriteria": [
+        "When a goal's currentAmountCents >= targetAmountCents, auto-update status to 'completed' and set completedAt",
+        "On the goal tracker widget, completed goals show: checkmark icon, 'Completed [date]' text, muted/success colour scheme",
+        "When a goal transitions from active to completed (detected on refetch), trigger a celebration animation",
+        "Celebration: confetti effect using a lightweight library (canvas-confetti or react-confetti) — 3 second burst, not blocking",
+        "Show a toast notification: '🎉 [Goal Name] complete! You did it.'",
+        "Celebration only triggers once per goal completion (store shown state in localStorage)",
+        "Completed goals sort to the bottom of the goal list",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": "Reference spec Section D6. Keep the confetti library small — canvas-confetti is ~6KB gzipped. Don't add heavy animation dependencies."
+    },
+    {
+      "id": "BI-D-006",
+      "title": "Add anomaly detection and proactive alerts",
+      "description": "Detect unusual spending patterns and surface alerts on the budget dashboard without requiring a manual AI check-in.",
+      "acceptanceCriteria": [
+        "Create lib/budget/anomalies.ts with detectAnomalies(periodTransactions, historicalAverages) function",
+        "Detect: single transaction > 2x the average for that category, category spend > 150% of budget with > 50% of period remaining, same merchant charged twice in one day",
+        "Return array of anomaly objects: { type, severity ('warning'|'alert'), saverKey, categoryKey, description, amountCents, comparisonCents }",
+        "Create components/budget/anomaly-alerts.tsx that renders anomalies as dismissible alert banners at the top of the budget page",
+        "Alert styling: amber for warnings, red for alerts, with descriptive text and the transaction/category involved",
+        "Dismissed alerts stored in localStorage (per anomaly type + date) so they don't reappear",
+        "Anomalies are recalculated when the budget summary data refreshes",
+        "Create API endpoint GET /api/budget/anomalies?period_id=X that runs the detection and returns results",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": "Reference spec Section D7. Keep the anomaly detection simple and rule-based (not ML). The rules here catch obvious issues; Claude's AI check-in handles nuanced analysis."
+    }
+  ]
+}
