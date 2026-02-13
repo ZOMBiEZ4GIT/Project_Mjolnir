@@ -21,6 +21,7 @@
 - Savers API returns `{ savers: [...] }` wrapper — unwrap with `data.savers` when fetching client-side
 - For JSONB array aggregation use raw SQL: `db.execute(sql\`SELECT ... FROM table, jsonb_array_elements_text(col) AS tag ...\`)` — returns `{ rows: [...] }`
 - Recharts `Treemap` data needs index signature (`[key: string]: ...`) on interface to satisfy `TreemapDataType`; `Tooltip` must be a child of `<Treemap>`, not outside `ResponsiveContainer`
+- Waterfall chart technique: stacked bars with invisible `base` bar + visible `value` bar; use `stackId` to stack them
 
 ---
 
@@ -157,4 +158,17 @@
   - For treemap rectangles, use `rx`/`ry` attributes on SVG `<rect>` for rounded corners
   - Label visibility in treemap cells should be gated on rectangle width/height to avoid text overflow in small cells
   - Categories with zero actual spend are filtered out of the treemap to avoid empty rectangles
+---
+
+## 2026-02-13 - BI-C-010
+- What was implemented: Savings waterfall chart showing income flowing into spending savers, savings goals, and investments with a remaining float bar
+- Files changed:
+  - `components/budget/charts/savings-waterfall.tsx` — new waterfall chart using Recharts stacked BarChart with invisible base + visible value bars
+  - `app/(dashboard)/budget/page.tsx` — added toggle tabs switching between Budget vs Actual and Income Allocation (waterfall) views
+- **Learnings for future iterations:**
+  - Waterfall chart technique: use stacked bars with an invisible `base` bar (fill="transparent") and a visible `value` bar, both sharing a `stackId`
+  - The summary API only returns spending savers — to get savings_goal and investment savers, use `useBudgetSavers()` which fetches all saver types
+  - Toggle tabs between charts: use a simple state variable with styled buttons in a `bg-muted/50` container, active tab gets `bg-card shadow-sm`
+  - Income for waterfall should use `expectedCents` (budget) not `actualCents` (received so far) — budget allocation is about the plan, not actuals
+  - SankeyChartContainer is no longer imported on the budget page — it still exists but is effectively replaced by the waterfall
 ---

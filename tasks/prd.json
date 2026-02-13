@@ -213,7 +213,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.3.7. This replaces the Sankey chart. Waterfall charts are more readable for showing 'where does the money go'. Remove or hide the old SankeyChartContainer component."
     },
     {
