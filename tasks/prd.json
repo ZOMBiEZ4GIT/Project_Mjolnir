@@ -54,7 +54,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "This is the bridge between n8n's new rules engine and Mjolnir. The n8n side sends { saver: 'food', category: 'meal-kit', tags: ['marley-spoon', 'weekly'] }. Keep backwards compat with old payloads that only have mjolnirCategoryId."
     },
     {

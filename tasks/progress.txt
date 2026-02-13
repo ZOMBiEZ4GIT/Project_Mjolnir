@@ -150,3 +150,18 @@
   - leftJoin for optional FK (saverId nullable) — ensures goals without a saver still appear
   - Pattern: collection route (route.ts) has GET+POST, individual route ([id]/route.ts) has PUT
 ---
+
+## 2026-02-13 - BI-B-003
+- Updated app/api/up/transactions/batch/route.ts to accept three-tier classification fields (saver, category, tags)
+- Added saver (string), category (string), tags (array of strings) to Zod validation schema
+- Maps incoming fields: saver → saverKey, category → categoryKey, tags → tags JSONB
+- Backwards compat: if no saver/category/tags in payload, falls back to mapUpCategory() logic
+- On upsert (re-received transaction), three-tier fields are updated if provided
+- Insert path includes three-tier fields when present
+- Existing select query expanded to include saverKey, categoryKey, tags for comparison
+- Files changed: app/api/up/transactions/batch/route.ts
+- **Learnings for future iterations:**
+  - The batch endpoint already had partial three-tier support scaffolded — check git diff before starting implementation
+  - `hasThreeTier` check uses `data.saver !== undefined` (not truthy check) to allow empty string saver values
+  - Three-tier fields use spread operator with empty object fallback `{}` when not provided — clean pattern for optional field groups
+---
