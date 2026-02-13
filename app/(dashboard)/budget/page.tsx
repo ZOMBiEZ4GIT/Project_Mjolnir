@@ -29,6 +29,7 @@ import {
 import Link from "next/link";
 import { GoalTracker } from "@/components/budget/goal-tracker";
 import { BudgetVsActualChart } from "@/components/budget/charts/budget-vs-actual-chart";
+import { SpendingPaceChart } from "@/components/budget/charts/spending-pace-chart";
 
 export const dynamic = "force-dynamic";
 
@@ -499,6 +500,17 @@ export default function BudgetDashboardPage() {
         <BudgetVsActualChart
           savers={summary.spendingSavers}
           progressPercent={period.progressPercent}
+        />
+      )}
+
+      {/* Spending Pace chart */}
+      {summary.totalBudgetedCents > 0 && (
+        <SpendingPaceChart
+          periodStartDate={period.startDate}
+          periodEndDate={period.endDate}
+          totalBudgetCents={summary.totalBudgetedCents}
+          totalDays={period.totalDays}
+          daysElapsed={period.daysElapsed}
         />
       )}
 
