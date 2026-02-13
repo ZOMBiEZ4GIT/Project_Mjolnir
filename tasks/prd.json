@@ -77,7 +77,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "This replaces lib/budget/summary.ts calculateBudgetSummary(). The old function grouped by flat categories — the new one groups by savers. Keep the old function until the UI is migrated."
     },
     {

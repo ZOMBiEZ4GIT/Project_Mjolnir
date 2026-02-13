@@ -165,3 +165,22 @@
   - `hasThreeTier` check uses `data.saver !== undefined` (not truthy check) to allow empty string saver values
   - Three-tier fields use spread operator with empty object fallback `{}` when not provided — clean pattern for optional field groups
 ---
+
+## 2026-02-13 - BI-B-004
+- Rewrote app/api/budget/summary/route.ts to return saver-based structure instead of flat categories
+- New response shape: { period, income, spendingSavers, totalSpentCents, totalBudgetedCents, savingsGoals }
+- Period includes: startDate, endDate, totalDays, daysElapsed, daysRemaining, progressPercent
+- Income includes: expectedCents, actualCents (sum of positive-amount upTransactions in period)
+- Each spending saver includes: saverKey, displayName, emoji, colour, budgetCents, actualCents, percentUsed, paceStatus, projectedEndCents, categories[]
+- paceStatus uses three-tier logic: under (< 85% of time progress), on (85-100%), over (> 100%)
+- projectedEndCents = (actualCents / daysElapsed) * totalDays
+- Categories grouped by saverId from budgetCategories table, spending matched via saverKey::categoryKey composite key
+- savingsGoals array includes all goals with server-calculated percentComplete
+- 6 parallel DB queries: savers, categories, income, spending-by-saver, spending-by-category, goals
+- Old calculateBudgetSummary() in lib/budget/summary.ts kept intact for backwards compat during UI migration
+- Files changed: app/api/budget/summary/route.ts
+- **Learnings for future iterations:**
+  - budgetCategories.isActive is nullable (no .notNull()) — old categories may have null, but those lack saverId so are filtered in grouping
+  - Spending queries use `lt(amountCents, sql\`0\`)` not a raw template — Drizzle's `lt()` is cleaner for column comparisons
+  - The `sql<number>` template literal in aggregations (COALESCE/SUM/ABS) must cast with Number() when used — Drizzle returns string for bigint aggregates
+---
