@@ -9,6 +9,9 @@
 - Merchant tag patterns are case-insensitive, matched via `.toUpperCase().includes()`
 - Toast feedback: use `showSuccess`/`showError`/`showInfo` from `lib/toast-helpers.ts` (wraps sonner)
 - Optimistic updates: snapshot with specific query key (including filter params), revert in `onError`
+- `classificationCorrections` table tracks saver/category edits — correction recorded in PUT endpoint after update
+- Dismissed suggestions stored in localStorage under `mjolnir:dismissed-correction-suggestions`
+- Raw SQL with `db.execute(sql\`...\`)` for GROUP BY + HAVING queries not expressible in Drizzle query builder
 
 ## 2026-02-13 - BI-D-001
 - Created backfill API route at `app/api/admin/backfill/route.ts`
@@ -40,4 +43,22 @@
   - For TanStack Query optimistic updates, snapshot the specific query key (with filters) not the broad `all` key
   - The `formatTag()` helper strips special chars, collapses hyphens, trims leading/trailing hyphens
   - `useRef<HTMLInputElement>` for focusing the tag input on container click
+---
+
+## 2026-02-13 - BI-D-003
+- Created `classification_corrections` table in Drizzle schema with FK to upTransactions
+- Indexes on merchant_description and (corrected_saver_key, corrected_category_key) for fast grouping
+- Modified PUT `/api/budget/transactions/[id]/category` to capture original saver/category before update, insert correction record when classification actually changes
+- Created GET `/api/budget/corrections/suggestions` endpoint: groups corrections by UPPER(merchant) + corrected saver/category, returns groups with 3+ corrections
+- Built `CorrectionSuggestions` component with dismissible amber banners, "Copy Rule" button (copies JSON to clipboard), localStorage-based dismissal tracking
+- Added query key `budget.corrections.suggestions` to centralised query-keys.ts
+- Integrated banner into budget page after AI Check-in card
+- Generated migration `0021_mute_sunset_bain.sql` (also includes health_daily and health_workouts tables)
+- Files changed: `lib/db/schema.ts`, `app/api/budget/transactions/[id]/category/route.ts`, `app/api/budget/corrections/suggestions/route.ts` (new), `components/budget/correction-suggestions.tsx` (new), `app/(dashboard)/budget/page.tsx`, `lib/query-keys.ts`
+- **Learnings for future iterations:**
+  - Use `db.execute(sql\`...\`)` for complex aggregation queries with GROUP BY/HAVING — Drizzle query builder doesn't support these well
+  - `rows.rows` pattern for accessing raw SQL results from `db.execute()`
+  - Correction tracking: capture original values BEFORE the update, compare AFTER to detect actual changes
+  - localStorage-based dismissal with `Set<string>` pattern: serialize as JSON array, deserialize into Set
+  - Migration may bundle unrelated tables if schema changes were pending — this is expected and safe
 ---

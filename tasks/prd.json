@@ -61,7 +61,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "This is a feedback loop for improving the n8n rules engine. The actual n8n rule update is manual (Roland copies the pattern into n8n), but this surfaces when a rule should be added."
     },
     {
