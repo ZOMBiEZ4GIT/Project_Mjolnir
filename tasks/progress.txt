@@ -1,2 +1,2 @@
-# Ralph Progress Log
-# Reset after bi-c-dashboard-ui completion
+# Ralph Progress Log — bi-d-enrichment
+# Budget Intelligence Phase D — Enrichment Features
