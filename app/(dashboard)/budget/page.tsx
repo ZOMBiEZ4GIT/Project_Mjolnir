@@ -15,6 +15,7 @@ import {
   Loader2,
   CheckCircle2,
   Tag,
+  ChevronDown,
 } from "lucide-react";
 import { PeriodSelector } from "@/components/budget/PeriodSelector";
 import { AIRecommendationButton } from "@/components/budget/AIRecommendationButton";
@@ -33,6 +34,7 @@ import { BudgetVsActualChart } from "@/components/budget/charts/budget-vs-actual
 import { SpendingPaceChart } from "@/components/budget/charts/spending-pace-chart";
 import { AiCheckinCard } from "@/components/budget/ai-checkin-card";
 import { SavingsWaterfall } from "@/components/budget/charts/savings-waterfall";
+import { SpendingTrendsChart } from "@/components/budget/charts/spending-trends";
 
 export const dynamic = "force-dynamic";
 
@@ -279,6 +281,7 @@ export default function BudgetDashboardPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [chartView, setChartView] = useState<"budget" | "waterfall">("budget");
+  const [showTrends, setShowTrends] = useState(false);
 
   const handleRecommendation = useCallback((rec: unknown) => {
     setActiveRecommendation(rec as AiRecommendation);
@@ -555,6 +558,20 @@ export default function BudgetDashboardPage() {
           daysElapsed={period.daysElapsed}
         />
       )}
+
+      {/* Spending Trends — collapsible */}
+      <div>
+        <button
+          onClick={() => setShowTrends((prev) => !prev)}
+          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mb-3"
+        >
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${showTrends ? "rotate-0" : "-rotate-90"}`}
+          />
+          Trends
+        </button>
+        {showTrends && <SpendingTrendsChart />}
+      </div>
 
       {/* Spending Savers section */}
       <div>
