@@ -30,6 +30,7 @@ import Link from "next/link";
 import { GoalTracker } from "@/components/budget/goal-tracker";
 import { BudgetVsActualChart } from "@/components/budget/charts/budget-vs-actual-chart";
 import { SpendingPaceChart } from "@/components/budget/charts/spending-pace-chart";
+import { AiCheckinCard } from "@/components/budget/ai-checkin-card";
 
 export const dynamic = "force-dynamic";
 
@@ -532,6 +533,9 @@ export default function BudgetDashboardPage() {
 
       {/* Goal tracker section */}
       <GoalTracker />
+
+      {/* AI Check-in card */}
+      <AiCheckinCard periodId={summary.periodId} />
 
       {/* AI Recommendation Modal */}
       {activeRecommendation && (
