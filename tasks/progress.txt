@@ -1,2 +1,125 @@
 # Ralph Progress Log
 # This file is reset at the start of each epic.
+
+## Codebase Patterns
+- Drizzle schema is in `lib/db/schema.ts` — all tables, enums, relations, and types in one file
+- Use `bigint("col_name", { mode: "number" })` for cents values (matches budgetAllocations pattern)
+- Empty Drizzle relations cause `no-empty-pattern` lint error — use `() => ({})` not `({ }) => ({})`
+- Build dependencies bcryptjs and jose must be installed (were missing from node_modules)
+- `npm run db:migrate` fails locally (Neon serverless needs real DB URL) — migration SQL generation is sufficient
+- yahoo-finance2 Node version warning is expected and harmless
+- Drizzle doesn't support GIN indexes — add them as raw SQL in migration files
+- onConflictDoUpdate requires a unique constraint on the target column
+- Category IDs use composite format `{saverKey}--{categoryKey}` for three-tier budget system
+- Seed scripts in `lib/db/seeds/` — triggered via POST /api/admin/seed
+- Budget periods are auto-generated via `ensureCurrentPeriodExists()` (called from summary API)
+- getPayday(year, month) uses 1-indexed months (1=Jan, 12=Dec)
+
+---
+
+## 2026-02-12 - BI-A-001
+- Created `budget_savers` table with 12 columns (id, saverKey, displayName, emoji, monthlyBudgetCents, saverType, sortOrder, isActive, colour, notes, createdAt, updatedAt)
+- Added `saver_type` enum (spending, savings_goal, investment)
+- Added unique constraint on saverKey
+- Exported BudgetSaver and NewBudgetSaver types
+- Added budgetSaversRelations (empty for now, will be populated in BI-A-002)
+- Installed missing bcryptjs and jose deps to fix pre-existing build errors
+- Files changed: lib/db/schema.ts, drizzle/0015_handy_phil_sheldon.sql, drizzle/meta/*, package-lock.json
+- **Learnings for future iterations:**
+  - Empty destructured params in Drizzle relations (`({ }) =>`) trigger `no-empty-pattern` lint rule — use `() =>` instead
+  - package-lock.json was out of sync with package.json for bcryptjs/jose — needed npm install
+  - Migration generation works without DB connection; migration application requires real Neon URL
+---
+
+## 2026-02-12 - BI-A-002
+- Added saverId (FK to budget_savers.id ON DELETE CASCADE), categoryKey, monthlyBudgetCents, and isActive columns to budgetCategories
+- All new columns are nullable so existing data isn't broken
+- Added unique constraint on (saverId, categoryKey) for composite uniqueness
+- Added bidirectional Drizzle relations: budgetSavers.categories (hasMany) and budgetCategories.saver (belongsTo)
+- Converted budgetCategories table definition to use callback form for constraints
+- Files changed: lib/db/schema.ts, drizzle/0016_bouncy_raider.sql, drizzle/meta/*
+- **Learnings for future iterations:**
+  - When adding constraints to existing tables, need to convert from simple object form to callback form `pgTable("name", {...}, (table) => ({...}))`
+  - New columns on existing tables should be nullable to preserve existing data
+---
+
+## 2026-02-12 - BI-A-003
+- Created `goals` table with 15 columns including progress tracking, ETAs, monthly contributions
+- Added `goal_status` enum (active, completed, paused)
+- Goals link to budget_savers via nullable saverId FK
+- Added bidirectional relations: budgetSavers.goals (hasMany) and goals.saver (belongsTo)
+- Exported Goal and NewGoal types
+- Files changed: lib/db/schema.ts, drizzle/0017_naive_miek.sql, drizzle/meta/*
+- **Learnings for future iterations:**
+  - Pattern for new tables: define table → add relations → export types → generate migration
+---
+
+## 2026-02-12 - BI-A-004
+- Added saverKey (varchar 50), categoryKey (varchar 50), tags (jsonb default []) to upTransactions
+- Added btree indexes: saverKey, categoryKey, composite (saverKey, categoryKey)
+- Added GIN index on tags via raw SQL appended to Drizzle-generated migration
+- saverKey/categoryKey are NOT FKs — classification is flexible, comes from n8n rules
+- Files changed: lib/db/schema.ts, drizzle/0018_cooing_praxagora.sql, drizzle/meta/*
+- **Learnings for future iterations:**
+  - Drizzle doesn't support GIN indexes — add them as raw SQL appended to generated migration
+  - When editing Drizzle-generated migration SQL, append with `--> statement-breakpoint` separator
+---
+
+## 2026-02-12 - BI-A-005
+- Added 9 structured columns to aiRecommendations: overallStatus, saverStatuses, goalProgress, budgetAdjustments, insights, actionableTip, savingsProjection, rawResponse, generatedAt
+- All columns nullable for backwards compatibility with existing recommendation rows
+- Kept existing recommendationData column intact
+- Files changed: lib/db/schema.ts, drizzle/0019_dark_shape.sql, drizzle/meta/*
+---
+
+## 2026-02-12 - BI-A-006
+- Created lib/db/seeds/budget-savers.ts with seedBudgetSavers() function
+- Seeded 10 savers with correct types, amounts in cents, emoji, colour, sortOrder
+- Seeded 33 categories across 6 savers (rent:1, essentials:10, food:5, supplements:5, debt:2, spending:10)
+- Category IDs use format `{saverKey}--{categoryKey}` for readable unique keys
+- Uses upsert pattern (onConflictDoUpdate) for idempotent re-runs
+- Created POST /api/admin/seed API route to trigger seeding
+- Files changed: lib/db/seeds/budget-savers.ts, app/api/admin/seed/route.ts
+- **Learnings for future iterations:**
+  - Drizzle onConflictDoUpdate requires specifying `target` (conflict columns) and `set` (update values)
+  - Category IDs use composite format `{saverKey}--{categoryKey}` — match this in future lookups
+  - onConflictDoUpdate requires a unique constraint on the target column — add one if missing
+  - Seed script looks up saver IDs by querying after insert, rather than hardcoding UUIDs
+---
+
+## 2026-02-12 - BI-A-007
+- Created lib/db/seeds/goals.ts with seedGoals() function
+- Seeded 5 goals: Emergency Fund, Homelab Build, Vitamin Reserve, ZIP Payoff, ANZ Payoff
+- All cent values as integers, currentAmountCents starts at 0
+- Added unique constraint on goals.name for idempotent upserts (new migration)
+- Updated /api/admin/seed route to also call seedGoals()
+- Files changed: lib/db/seeds/goals.ts, lib/db/schema.ts, app/api/admin/seed/route.ts, drizzle/0020_black_callisto.sql, drizzle/meta/*
+---
+
+## 2026-02-12 - BI-A-008
+- Rewrote lib/budget/payday.ts with hardcoded payday on 14th + weekend adjustment
+- Added getPayday(year, month) — 1-indexed month, returns Date adjusted for weekends
+- Added generatePeriod(year, month) — returns {startDate, endDate, daysInPeriod}
+- Added ensureCurrentPeriodExists() — DB-aware, auto-creates period with fixed income $9,168.53
+- Maintained legacy function signatures (calculateBudgetPeriod, findPaydayOnOrBefore, findNextPayday, getDaysUntilPayday) for backwards compatibility
+- Inline test cases documented in JSDoc header
+- Files changed: lib/budget/payday.ts
+- **Learnings for future iterations:**
+  - getPayday uses 1-indexed months (1=Jan) but Date constructor uses 0-indexed — careful with conversion
+  - Legacy functions preserved with _ prefix on unused params to avoid lint errors
+  - ensureCurrentPeriodExists handles race conditions with onConflictDoNothing + fallback fetch
+---
+
+## 2026-02-12 - BI-A-009
+- Replaced budget setup wizard (3-step flow) with redirect to /budget
+- Integrated ensureCurrentPeriodExists() into GET /api/budget/summary — auto-generates period on page load
+- PeriodSelector unchanged — already has read-only date range with left/right navigation arrows
+- Deprecated POST /api/budget/periods and DELETE /api/budget/periods/[id] with console.warn
+- Removed "Set up budget" empty state from budget page (no longer needed)
+- Removed unused PieChart and Link imports from budget page
+- Files changed: app/(dashboard)/budget/setup/page.tsx, app/(dashboard)/budget/page.tsx, app/api/budget/summary/route.ts, app/api/budget/periods/route.ts, app/api/budget/periods/[id]/route.ts
+- **Learnings for future iterations:**
+  - Budget setup wizard was 767 lines — replaced with 12-line redirect
+  - ensureCurrentPeriodExists() in summary route means periods are always available before data fetch
+  - Deprecated APIs kept for safety — can be fully removed in a future cleanup story
+---

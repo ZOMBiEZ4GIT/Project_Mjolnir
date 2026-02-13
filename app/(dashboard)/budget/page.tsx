@@ -6,7 +6,6 @@ import { queryKeys } from "@/lib/query-keys";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import {
-  PieChart,
   AlertCircle,
   Calendar,
   TrendingUp,
@@ -27,7 +26,6 @@ import {
   RecommendationModal,
   type AiRecommendation,
 } from "@/components/budget/RecommendationModal";
-import Link from "next/link";
 import { toast } from "sonner";
 import type { BudgetSummary } from "@/lib/budget/summary";
 
@@ -237,27 +235,15 @@ export default function BudgetDashboardPage() {
     );
   }
 
-  // Error — special case for "no period"
+  // Error
   if (error) {
-    const isNoPeriod = error.message.includes("No budget period");
     return (
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold text-foreground mb-6">Budget</h1>
         <EmptyState
-          icon={isNoPeriod ? PieChart : AlertCircle}
-          title={isNoPeriod ? "No budget period found" : "Something went wrong"}
-          description={
-            isNoPeriod
-              ? "Set up a budget period to start tracking your spending."
-              : error.message
-          }
-          action={
-            isNoPeriod ? (
-              <Button asChild>
-                <Link href="/budget/setup">Set up budget</Link>
-              </Button>
-            ) : undefined
-          }
+          icon={AlertCircle}
+          title="Something went wrong"
+          description={error.message}
         />
       </div>
     );

@@ -1,0 +1,162 @@
+{
+  "project": "Mjolnir",
+  "branchName": "ralph/bi-b-api-integration",
+  "description": "Budget Intelligence Phase B — API routes, hooks, and integration layer for the three-tier budget system. Creates saver/goal CRUD, updates transaction processing for saver+category+tags, rewrites budget summary logic, and updates the AI recommendation pipeline.",
+  "userStories": [
+    {
+      "id": "BI-B-001",
+      "title": "Create budget savers API routes",
+      "description": "Create API routes for reading and managing budget savers. Primarily read-heavy since savers are seeded, but allow updates for budget amount changes.",
+      "acceptanceCriteria": [
+        "Create app/api/budget/savers/route.ts with GET handler that returns all active savers ordered by sortOrder",
+        "GET response includes each saver's categories (joined from budgetCategories where saverId matches)",
+        "GET response shape: { savers: [{ id, saverKey, displayName, emoji, monthlyBudgetCents, saverType, sortOrder, colour, notes, categories: [{ id, categoryKey, displayName, monthlyBudgetCents }] }] }",
+        "Create PUT handler on same route to update a saver's monthlyBudgetCents, displayName, notes, isActive, or colour by saverKey",
+        "All routes use withAuth() HOF from lib/utils/with-auth.ts",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "No DELETE — savers are managed via isActive flag. No POST — savers are seeded. This is a simple read-heavy endpoint."
+    },
+    {
+      "id": "BI-B-002",
+      "title": "Create goals API routes",
+      "description": "Create CRUD API routes for financial goals. Goals need read, create, update (progress + details), and soft status changes.",
+      "acceptanceCriteria": [
+        "Create app/api/budget/goals/route.ts with GET handler returning all goals ordered by priority",
+        "GET includes linked saver info (saverKey, displayName) via join",
+        "GET response shape: { goals: [{ id, name, saverId, saverKey, saverDisplayName, targetAmountCents, currentAmountCents, monthlyContributionCents, targetDate, status, priority, colour, icon, notes, completedAt, percentComplete }] }",
+        "percentComplete is calculated server-side: Math.round((currentAmountCents / targetAmountCents) * 100)",
+        "Create POST handler to create a new goal with required fields: name, targetAmountCents, monthlyContributionCents",
+        "Create app/api/budget/goals/[id]/route.ts with PUT handler to update goal fields (currentAmountCents, status, targetDate, notes, etc.)",
+        "PUT with status='completed' auto-sets completedAt to now()",
+        "All routes use withAuth()",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Goal progress (currentAmountCents) is updated manually for now. Future automation could sync with UP saver balances."
+    },
+    {
+      "id": "BI-B-003",
+      "title": "Update transaction batch endpoint for three-tier payload",
+      "description": "Update the POST /api/up/transactions/batch endpoint to accept and store saver_key, category_key, and tags from the n8n webhook. This is the critical integration point between n8n classification and Mjolnir storage.",
+      "acceptanceCriteria": [
+        "Update the batch endpoint at app/api/up/transactions/batch to accept saver, category, and tags fields in each transaction object",
+        "Map incoming payload fields: saver → saverKey column, category → categoryKey column, tags → tags JSONB column",
+        "If saver/category/tags are provided, store them in the new columns on upTransactions",
+        "If saver/category/tags are NOT provided (backwards compat), fall back to existing mapUpCategory() logic for mjolnirCategoryId",
+        "Tags must be stored as a JSON array, e.g. ['marley-spoon', 'weekly', 'fixed-cost', 'dinner']",
+        "Validate that tags is an array of strings if provided",
+        "The existing upTransactionId upsert logic still works (INSERT ON CONFLICT DO UPDATE)",
+        "On upsert (re-received transaction), update saver/category/tags if they've changed",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "This is the bridge between n8n's new rules engine and Mjolnir. The n8n side sends { saver: 'food', category: 'meal-kit', tags: ['marley-spoon', 'weekly'] }. Keep backwards compat with old payloads that only have mjolnirCategoryId."
+    },
+    {
+      "id": "BI-B-004",
+      "title": "Rewrite budget summary API for saver-based structure",
+      "description": "Rewrite the budget summary endpoint to return data organized by savers instead of flat categories. This powers the new dashboard overview.",
+      "acceptanceCriteria": [
+        "Update or create app/api/budget/summary/route.ts to return saver-based summary",
+        "Accept query param: period_id (optional, defaults to current period via ensureCurrentPeriodExists())",
+        "Response includes period info: { startDate, endDate, totalDays, daysElapsed, daysRemaining, progressPercent }",
+        "Response includes income: { expectedCents, actualCents } where actualCents = sum of positive-amount upTransactions in the period",
+        "Response includes spending savers array (saverType='spending'), each with: { saverKey, displayName, emoji, colour, budgetCents, actualCents, percentUsed, paceStatus ('under'|'on'|'over'), projectedEndCents }",
+        "Each spending saver includes categories array: [{ categoryKey, displayName, budgetCents, actualCents }]",
+        "actualCents for a saver = sum of absolute amountCents of upTransactions where saverKey matches AND transactionDate is within the period AND amountCents < 0",
+        "paceStatus: percentUsed < (progressPercent * 0.85) = 'under', < progressPercent = 'on', > progressPercent = 'over'",
+        "projectedEndCents = (actualCents / daysElapsed) * totalDays",
+        "Response includes totalSpentCents and totalBudgetedCents across all spending savers",
+        "Response includes savingsGoals array from goals table (for the goal tracker widget)",
+        "Use withAuth()",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "This replaces lib/budget/summary.ts calculateBudgetSummary(). The old function grouped by flat categories — the new one groups by savers. Keep the old function until the UI is migrated."
+    },
+    {
+      "id": "BI-B-005",
+      "title": "Create recommendation request endpoint",
+      "description": "Create an endpoint that builds the full context payload for the Claude recommendation flow and sends it to n8n. This replaces the generic recommendation trigger.",
+      "acceptanceCriteria": [
+        "Create or update app/api/budget/recommendations/request/route.ts with POST handler",
+        "Endpoint builds the dynamic data section: current period info, saver performance (budget vs actual per saver), goal progress, top tags by spend, historical comparison (vs last 3 periods average)",
+        "Top tags query: aggregate upTransactions.tags for the current period, group by tag, sum absolute amountCents, order by total DESC, limit 10",
+        "Historical comparison: for each spending saver, calculate average actualCents over the last 3 completed periods",
+        "POST the assembled context to the n8n recommendation webhook URL (env var: N8N_RECOMMENDATION_WEBHOOK_URL)",
+        "Sign the request using the same HMAC-SHA256 pattern as withN8nAuth (X-Mjolnir-API-Key, X-Mjolnir-Timestamp, X-Mjolnir-Signature headers)",
+        "Return { success: true, message: 'Recommendation requested' } immediately (n8n processes async and calls back)",
+        "If N8N_RECOMMENDATION_WEBHOOK_URL is not set, return 503 with helpful error",
+        "Use withAuth()",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "The static context block (Roland's financial plan from Appendix 10) lives in the n8n flow, not in Mjolnir. Mjolnir only sends the dynamic data. Add N8N_RECOMMENDATION_WEBHOOK_URL to .env.example."
+    },
+    {
+      "id": "BI-B-006",
+      "title": "Update recommendation callback for structured schema",
+      "description": "Update the POST /api/budget/recommendations/callback endpoint to accept and store the new structured recommendation format from n8n.",
+      "acceptanceCriteria": [
+        "Update the callback endpoint at app/api/budget/recommendations/callback to accept the new response schema",
+        "Parse and store structured fields: overallStatus, saverStatuses, goalProgress, budgetAdjustments, insights, actionableTip, savingsProjection",
+        "Store the full response as rawResponse for debugging",
+        "Set generatedAt to the current timestamp",
+        "Link to the current budget period via budgetPeriodId (find the period containing today)",
+        "Also store in the existing recommendationData column for backwards compatibility",
+        "Validate overallStatus is one of 'green', 'amber', 'red'",
+        "Validate insights is an array of strings",
+        "Validate actionableTip is a non-empty string",
+        "Keep using withN8nAuth() for signature validation",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "The callback is called by n8n after Claude processes the recommendation. The response shape matches Section 6.1 of the spec."
+    },
+    {
+      "id": "BI-B-007",
+      "title": "Add TanStack Query hooks for savers, goals, and new summary",
+      "description": "Create React Query hooks for the new API endpoints so the dashboard UI can consume saver data, goal data, and the new budget summary.",
+      "acceptanceCriteria": [
+        "Add budget.savers, budget.goals, budget.summary, budget.recommendation query keys to lib/query-keys.ts",
+        "Create lib/hooks/use-budget-savers.ts with useBudgetSavers() hook — GET /api/budget/savers",
+        "Create lib/hooks/use-budget-goals.ts with useBudgetGoals() hook — GET /api/budget/goals",
+        "Create lib/hooks/use-budget-summary.ts with useBudgetSummary(periodId?: string) hook — GET /api/budget/summary",
+        "Create lib/hooks/use-budget-recommendation.ts with useLatestRecommendation() hook — GET /api/budget/recommendations (latest)",
+        "Add useRequestRecommendation() mutation hook — POST /api/budget/recommendations/request",
+        "Add useUpdateGoal(id) mutation hook — PUT /api/budget/goals/[id]",
+        "All hooks follow existing patterns: staleTime, enabled when signed in, proper TypeScript types",
+        "Export TypeScript interfaces: BudgetSaver, BudgetCategory, Goal, BudgetSummary, Recommendation",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Follow the patterns in existing hooks like use-n8n.ts. Type the response shapes to match the API responses from BI-B-001 through BI-B-006."
+    },
+    {
+      "id": "BI-B-008",
+      "title": "Update auto-categorisation logic for three-tier fallback",
+      "description": "Update lib/budget/categorisation.ts so that when transactions arrive without saver/category/tags (old n8n flow or manual entry), the server can map them to the new three-tier system based on the existing mjolnirCategoryId.",
+      "acceptanceCriteria": [
+        "Update or create a mapping function in lib/budget/categorisation.ts: mapCategoryToSaver(mjolnirCategoryId: string) → { saverKey, categoryKey }",
+        "Map all existing flat categories to their saver+category equivalents: groceries → food/groceries, transport → food/transport, eating-out → spending/eating-out, etc.",
+        "If a transaction has mjolnirCategoryId but no saverKey, auto-populate saverKey and categoryKey using this mapping",
+        "Apply this mapping in the batch transaction endpoint (BI-B-003) as a fallback when saver is null but mjolnirCategoryId exists",
+        "Handle 'income' category: map to saver='income', category='salary'",
+        "Handle 'uncategorised': leave saverKey as null (flagged for manual review)",
+        "npm run build && npm run lint passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "This bridges the gap between the old flat category system and the new three-tier system. Once n8n is updated to send saver/category/tags directly, this fallback becomes less important but should remain for robustness."
+    }
+  ]
+}

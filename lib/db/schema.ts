@@ -50,6 +50,18 @@ export const transactionActionEnum = pgEnum("transaction_action", ["BUY", "SELL"
 
 export const exchangeEnum = pgEnum("exchange", ["ASX", "NZX", "NYSE", "NASDAQ"]);
 
+export const saverTypeEnum = pgEnum("saver_type", [
+  "spending",
+  "savings_goal",
+  "investment",
+]);
+
+export const goalStatusEnum = pgEnum("goal_status", [
+  "active",
+  "completed",
+  "paused",
+]);
+
 // =============================================================================
 // USERS
 // =============================================================================
@@ -383,6 +395,10 @@ export const upTransactions = pgTable(
     transactionDate: date("transaction_date").notNull(),
     settledAt: timestamp("settled_at", { withTimezone: true }),
     isTransfer: boolean("is_transfer").default(false).notNull(),
+    // Three-tier classification fields (added in BI-A-004)
+    saverKey: varchar("saver_key", { length: 50 }),
+    categoryKey: varchar("category_key", { length: 50 }),
+    tags: jsonb("tags").default([]),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -391,6 +407,9 @@ export const upTransactions = pgTable(
     transactionDateIdx: index("up_transactions_transaction_date_idx").on(table.transactionDate),
     mjolnirCategoryIdIdx: index("up_transactions_mjolnir_category_id_idx").on(table.mjolnirCategoryId),
     statusIdx: index("up_transactions_status_idx").on(table.status),
+    saverKeyIdx: index("up_transactions_saver_key_idx").on(table.saverKey),
+    categoryKeyIdx: index("up_transactions_category_key_idx").on(table.categoryKey),
+    saverCategoryKeyIdx: index("up_transactions_saver_category_key_idx").on(table.saverKey, table.categoryKey),
   })
 );
 
@@ -408,16 +427,27 @@ export const upTransactions = pgTable(
  * - `isSystem` marks system-managed categories that cannot be deleted (e.g. 'uncategorised').
  * - The `id` is a short varchar slug used as the primary key for readability.
  */
-export const budgetCategories = pgTable("budget_categories", {
-  id: varchar("id", { length: 255 }).primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  icon: varchar("icon", { length: 255 }).notNull(), // Lucide icon name
-  colour: varchar("colour", { length: 7 }).notNull(), // Hex colour e.g. #FF5733
-  sortOrder: integer("sort_order").notNull(),
-  isIncome: boolean("is_income").default(false).notNull(),
-  isSystem: boolean("is_system").default(false).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const budgetCategories = pgTable(
+  "budget_categories",
+  {
+    id: varchar("id", { length: 255 }).primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    icon: varchar("icon", { length: 255 }).notNull(), // Lucide icon name
+    colour: varchar("colour", { length: 7 }).notNull(), // Hex colour e.g. #FF5733
+    sortOrder: integer("sort_order").notNull(),
+    isIncome: boolean("is_income").default(false).notNull(),
+    isSystem: boolean("is_system").default(false).notNull(),
+    // Three-tier budget fields (added in BI-A-002)
+    saverId: uuid("saver_id").references(() => budgetSavers.id, { onDelete: "cascade" }),
+    categoryKey: varchar("category_key", { length: 50 }),
+    monthlyBudgetCents: bigint("monthly_budget_cents", { mode: "number" }),
+    isActive: boolean("is_active").default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueSaverCategoryKey: unique().on(table.saverId, table.categoryKey),
+  })
+);
 
 // =============================================================================
 // BUDGET PERIODS
@@ -505,6 +535,73 @@ export const paydayConfig = pgTable("payday_config", {
 });
 
 // =============================================================================
+// BUDGET SAVERS
+// =============================================================================
+
+/**
+ * Budget savers representing UP Bank savers — the top-level budget tier.
+ *
+ * Each saver has a monthly budget amount and a type (spending, savings_goal,
+ * or investment). Savers are the first tier in the three-tier budget system:
+ *   saver -> category -> transaction tags
+ */
+export const budgetSavers = pgTable(
+  "budget_savers",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    saverKey: varchar("saver_key", { length: 50 }).notNull(),
+    displayName: varchar("display_name", { length: 100 }).notNull(),
+    emoji: varchar("emoji", { length: 10 }).notNull(),
+    monthlyBudgetCents: bigint("monthly_budget_cents", { mode: "number" }).notNull(),
+    saverType: saverTypeEnum("saver_type").notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    isActive: boolean("is_active").default(true).notNull(),
+    colour: varchar("colour", { length: 7 }).notNull(), // Hex colour e.g. #FF5733
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueSaverKey: unique().on(table.saverKey),
+  })
+);
+
+// =============================================================================
+// GOALS
+// =============================================================================
+
+/**
+ * Savings goals with progress tracking, ETAs, and monthly contributions.
+ *
+ * Goals link to the saver that funds them (nullable because some goals like
+ * debt payoff may not have a direct saver link). The priority field controls
+ * display order. currentAmountCents is updated manually or via future automation.
+ */
+export const goals = pgTable(
+  "goals",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    saverId: uuid("saver_id").references(() => budgetSavers.id),
+    name: varchar("name", { length: 100 }).notNull(),
+    targetAmountCents: bigint("target_amount_cents", { mode: "number" }).notNull(),
+    currentAmountCents: bigint("current_amount_cents", { mode: "number" }).default(0).notNull(),
+    monthlyContributionCents: bigint("monthly_contribution_cents", { mode: "number" }).notNull(),
+    targetDate: date("target_date"),
+    status: goalStatusEnum("status").default("active").notNull(),
+    priority: integer("priority").default(0).notNull(),
+    colour: varchar("colour", { length: 7 }),
+    icon: varchar("icon", { length: 10 }),
+    notes: text("notes"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueName: unique().on(table.name),
+  })
+);
+
+// =============================================================================
 // AI RECOMMENDATIONS
 // =============================================================================
 
@@ -525,6 +622,16 @@ export const aiRecommendations = pgTable(
       .notNull(),
     recommendationData: jsonb("recommendation_data").notNull(),
     status: varchar("status", { length: 20 }).default("pending").notNull(),
+    // Structured recommendation fields (added in BI-A-005)
+    overallStatus: varchar("overall_status", { length: 10 }), // 'green' | 'amber' | 'red'
+    saverStatuses: jsonb("saver_statuses"), // Array of per-saver health checks
+    goalProgress: jsonb("goal_progress"), // Array of goal updates
+    budgetAdjustments: jsonb("budget_adjustments"), // Suggested budget changes
+    insights: jsonb("insights"), // Array of insight strings
+    actionableTip: text("actionable_tip"), // Specific time-bound action
+    savingsProjection: jsonb("savings_projection"), // Savings rate and projections
+    rawResponse: jsonb("raw_response"), // Full Claude response for debugging
+    generatedAt: timestamp("generated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (table) => ({
@@ -702,6 +809,25 @@ export const aiRecommendationsRelations = relations(aiRecommendations, ({ one })
   }),
 }));
 
+export const budgetSaversRelations = relations(budgetSavers, ({ many }) => ({
+  categories: many(budgetCategories),
+  goals: many(goals),
+}));
+
+export const budgetCategoriesRelations = relations(budgetCategories, ({ one }) => ({
+  saver: one(budgetSavers, {
+    fields: [budgetCategories.saverId],
+    references: [budgetSavers.id],
+  }),
+}));
+
+export const goalsRelations = relations(goals, ({ one }) => ({
+  saver: one(budgetSavers, {
+    fields: [goals.saverId],
+    references: [budgetSavers.id],
+  }),
+}));
+
 // =============================================================================
 // TYPES (for TypeScript inference)
 // =============================================================================
@@ -759,3 +885,9 @@ export type NewHealthDaily = typeof healthDaily.$inferInsert;
 
 export type HealthWorkout = typeof healthWorkouts.$inferSelect;
 export type NewHealthWorkout = typeof healthWorkouts.$inferInsert;
+
+export type BudgetSaver = typeof budgetSavers.$inferSelect;
+export type NewBudgetSaver = typeof budgetSavers.$inferInsert;
+
+export type Goal = typeof goals.$inferSelect;
+export type NewGoal = typeof goals.$inferInsert;

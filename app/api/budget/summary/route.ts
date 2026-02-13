@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { and, lte, gte } from "drizzle-orm";
 import { withAuth } from "@/lib/utils/with-auth";
 import { calculateBudgetSummary } from "@/lib/budget/summary";
-import { db } from "@/lib/db";
-import { budgetPeriods } from "@/lib/db/schema";
+import { ensureCurrentPeriodExists } from "@/lib/budget/payday";
 
 export const GET = withAuth(async (request) => {
   const searchParams = request.nextUrl.searchParams;
@@ -14,27 +12,8 @@ export const GET = withAuth(async (request) => {
   if (periodId) {
     resolvedPeriodId = periodId;
   } else {
-    // Find the current period by matching today's date
-    const today = new Date().toISOString().slice(0, 10);
-    const rows = await db
-      .select({ id: budgetPeriods.id })
-      .from(budgetPeriods)
-      .where(
-        and(
-          lte(budgetPeriods.startDate, today),
-          gte(budgetPeriods.endDate, today)
-        )
-      )
-      .limit(1);
-
-    if (!rows[0]) {
-      return NextResponse.json(
-        { error: "No budget period found", setupUrl: "/budget/setup" },
-        { status: 404 }
-      );
-    }
-
-    resolvedPeriodId = rows[0].id;
+    // Auto-generate the current period if it doesn't exist
+    resolvedPeriodId = await ensureCurrentPeriodExists();
   }
 
   try {

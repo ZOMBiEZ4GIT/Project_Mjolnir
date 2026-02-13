@@ -17,7 +17,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 1,
-      "passes": true,
+      "passes": false,
       "notes": "Single-user app — no user_id column needed (matches existing pattern). Use bigint for cents to match budgetAllocations convention."
     },
     {
@@ -38,7 +38,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 2,
-      "passes": true,
+      "passes": false,
       "notes": "New columns should be nullable initially so existing data doesn't break. Seed story will populate them. The old columns (icon, colour, isIncome, isSystem) can remain for now — removal is a separate cleanup."
     },
     {
@@ -54,7 +54,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 3,
-      "passes": true,
+      "passes": false,
       "notes": "saverId is nullable because some goals (like debt payoff) may not have a direct saver link, or the saver IS the goal. Priority field controls display order."
     },
     {
@@ -74,7 +74,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 4,
-      "passes": true,
+      "passes": false,
       "notes": "Drizzle may not support GIN indexes natively — if not, add a raw SQL migration for the GIN index. The saverKey/categoryKey columns are intentionally NOT FKs to keep the system flexible (classification comes from n8n rules, not DB constraints)."
     },
     {
@@ -96,7 +96,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 5,
-      "passes": true,
+      "passes": false,
       "notes": "All new columns nullable so existing recommendations don't break. New recommendations will populate the structured columns; old ones still have recommendationData."
     },
     {
@@ -115,7 +115,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 6,
-      "passes": true,
+      "passes": false,
       "notes": "Reference the full taxonomy from the spec (Section 2 and Appendix 9). Cents values: $2,129 = 212900, $351.91 = 35191, etc."
     },
     {
@@ -134,7 +134,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 7,
-      "passes": true,
+      "passes": false,
       "notes": "currentAmountCents starts at 0 — will be updated manually or via future automation. targetDate should be calculated from the monthly contribution rate."
     },
     {
@@ -152,7 +152,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 8,
-      "passes": true,
+      "passes": false,
       "notes": "The existing paydayConfig table and its API routes can remain for now but won't be used. The period header should display as '14 Feb – 13 Mar 2026' format."
     },
     {
@@ -172,7 +172,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 9,
-      "passes": true,
+      "passes": false,
       "notes": "Be conservative — don't delete files that might have useful logic. Comment out or disable rather than delete if unsure. The period navigation (viewing old periods) should still work."
     }
   ]
