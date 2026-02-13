@@ -1,10 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
 import { motion, useReducedMotion } from "framer-motion";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { type Currency, type ExchangeRates } from "@/lib/utils/currency";
-import { queryKeys } from "@/lib/query-keys";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { NumberTicker } from "@/components/dashboard/number-ticker";
 import { ChangeBadge } from "@/components/dashboard/change-badge";
@@ -12,63 +9,10 @@ import { StaleIndicator } from "@/components/dashboard/stale-indicator";
 import { slideUp } from "@/lib/animations";
 import { POSITIVE, NEGATIVE } from "@/lib/chart-palette";
 import { HeroBeams } from "@/components/effects/hero-beams";
-
-interface HoldingValue {
-  id: string;
-  name: string;
-  symbol: string | null;
-  value: number;
-  currency: string;
-  valueNative: number;
-}
-
-interface AssetTypeBreakdown {
-  type: "stock" | "etf" | "crypto" | "super" | "cash";
-  totalValue: number;
-  count: number;
-  holdings: HoldingValue[];
-}
-
-interface NetWorthResponse {
-  netWorth: number;
-  totalAssets: number;
-  totalDebt: number;
-  breakdown: AssetTypeBreakdown[];
-  hasStaleData: boolean;
-  displayCurrency: Currency;
-  ratesUsed: ExchangeRates;
-  calculatedAt: string;
-}
-
-interface HistoryPoint {
-  date: string;
-  netWorth: number;
-  totalAssets: number;
-  totalDebt: number;
-}
-
-interface HistoryResponse {
-  history: HistoryPoint[];
-  generatedAt: string;
-}
-
-async function fetchNetWorth(displayCurrency: Currency): Promise<NetWorthResponse> {
-  const response = await fetch(`/api/net-worth?displayCurrency=${displayCurrency}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch net worth");
-  }
-  return response.json();
-}
-
-async function fetchHistory(months: number): Promise<HistoryResponse> {
-  const response = await fetch(`/api/net-worth/history?months=${months}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch history");
-  }
-  return response.json();
-}
-
-const SPARKLINE_MONTHS = 6;
+import {
+  useDashboardNetWorth,
+  useDashboardHistory,
+} from "@/lib/hooks/use-dashboard-data";
 
 interface SparklineDataPoint {
   netWorth: number;
@@ -127,37 +71,35 @@ function formatTimeAgo(date: Date): string {
 
 function HeroSkeleton() {
   return (
-    <div className="rounded-2xl border border-accent/20 bg-gradient-to-br from-card via-card to-accent/5 p-6 sm:p-8 shadow-glow-md">
-      <div className="animate-pulse">
-        <div className="h-3 w-20 bg-muted rounded mb-4" />
-        <div className="h-14 w-72 bg-muted rounded mb-4" />
-        <div className="h-7 w-48 bg-muted rounded mb-2" />
-        <div className="h-3 w-24 bg-muted rounded" />
+    <div className="rounded-2xl p-[1px] shadow-glow-lg bg-accent/20">
+      <div className="rounded-[calc(1rem-1px)] bg-gradient-to-br from-card via-card to-accent/5 p-6 sm:p-8">
+        <div>
+          <div className="h-3 w-20 skeleton-shimmer mb-4" />
+          <div className="h-14 w-72 skeleton-shimmer mb-4" />
+          <div className="h-7 w-48 skeleton-shimmer mb-2" />
+          <div className="h-3 w-24 skeleton-shimmer" />
+        </div>
       </div>
     </div>
   );
 }
 
+/** Number of recent history points to show in the sparkline */
+const SPARKLINE_POINTS = 7;
+
 export function NetWorthHero() {
   const shouldReduceMotion = useReducedMotion();
-  const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
+  const { convert } = useCurrency();
 
   const {
     data: netWorthData,
     isLoading: isLoadingNetWorth,
     error: netWorthError,
-  } = useQuery({
-    queryKey: queryKeys.netWorth.current(displayCurrency),
-    queryFn: () => fetchNetWorth(displayCurrency),
-    enabled: !currencyLoading,
-    refetchInterval: 60 * 1000,
-  });
+    displayCurrency,
+    currencyLoading,
+  } = useDashboardNetWorth();
 
-  const { data: historyData, isLoading: isLoadingHistory } = useQuery({
-    queryKey: queryKeys.netWorth.history(SPARKLINE_MONTHS),
-    queryFn: () => fetchHistory(SPARKLINE_MONTHS),
-    refetchInterval: 60 * 1000,
-  });
+  const { data: historyData, isLoading: isLoadingHistory } = useDashboardHistory();
 
   if (isLoadingNetWorth || currencyLoading) {
     return <HeroSkeleton />;
@@ -193,18 +135,34 @@ export function NetWorthHero() {
 
   const calculatedAt = new Date(netWorthData.calculatedAt);
 
+  // Slice last N points from the shared 12-month history for the sparkline
   const sparklineData: SparklineDataPoint[] =
-    historyData?.history.map((point) => ({
-      netWorth: convert(point.netWorth, "AUD"),
-    })) ?? [];
+    historyData?.history
+      .slice(-SPARKLINE_POINTS)
+      .map((point) => ({
+        netWorth: convert(point.netWorth, "AUD"),
+      })) ?? [];
 
   return (
     <motion.div
-      className="relative rounded-2xl border border-accent/20 bg-gradient-to-br from-card via-card to-accent/5 p-6 sm:p-8 shadow-glow-md"
+      className="relative rounded-2xl p-[1px] shadow-glow-lg overflow-hidden"
       initial={shouldReduceMotion ? false : slideUp.initial}
       animate={slideUp.animate}
       transition={shouldReduceMotion ? { duration: 0 } : slideUp.transition}
     >
+      {/* Animated conic-gradient border */}
+      {!shouldReduceMotion && (
+        <div
+          className="absolute inset-0 rounded-2xl animate-conic-spin"
+          style={{
+            background:
+              "conic-gradient(from var(--angle), hsl(263 84% 70% / 0.8), hsl(263 84% 70% / 0.1), hsl(263 84% 70% / 0.4), hsl(263 84% 70% / 0.1), hsl(263 84% 70% / 0.8))",
+          }}
+        />
+      )}
+
+      {/* Inner card */}
+      <div className="relative rounded-[calc(1rem-1px)] bg-gradient-to-br from-card via-card to-accent/5 p-6 sm:p-8">
       {/* Ambient beam effect behind content */}
       {!shouldReduceMotion && <HeroBeams />}
 
@@ -257,6 +215,7 @@ export function NetWorthHero() {
       {/* Timestamp */}
       <div className="text-body-sm text-muted-foreground">
         as of {formatTimeAgo(calculatedAt)}
+      </div>
       </div>
     </motion.div>
   );

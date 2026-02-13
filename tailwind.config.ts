@@ -137,6 +137,10 @@ export default {
           "0%": { backgroundPosition: "200% 0" },
           "100%": { backgroundPosition: "-200% 0" },
         },
+        "conic-spin": {
+          "0%": { "--angle": "0deg" },
+          "100%": { "--angle": "360deg" },
+        },
         "gradient-shift": {
           "0%, 100%": { backgroundPosition: "0% 50%" },
           "50%": { backgroundPosition: "100% 50%" },
@@ -153,6 +157,7 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out forwards",
         "accordion-up": "accordion-up 0.15s ease-in forwards",
         shimmer: "shimmer 2s infinite linear",
+        "conic-spin": "conic-spin 4s linear infinite",
         "gradient-shift": "gradient-shift 18s ease infinite",
         "beam-drift-1": "beam-drift 12s ease-in-out infinite",
         "beam-drift-2": "beam-drift 10s ease-in-out 2s infinite",

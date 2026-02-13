@@ -198,7 +198,6 @@ export function AssetAllocationPieChart() {
     queryKey: queryKeys.netWorth.current(displayCurrency),
     queryFn: () => fetchNetWorth(displayCurrency),
     enabled: !currencyLoading,
-    refetchInterval: 60 * 1000,
   });
 
   // Retry handler
@@ -256,7 +255,7 @@ export function AssetAllocationPieChart() {
   // Empty state
   if (pieData.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+      <div className="rounded-2xl glass-card p-4 sm:p-6">
         <h3 className="text-label uppercase text-muted-foreground mb-4">
           Asset Allocation
         </h3>
@@ -269,7 +268,7 @@ export function AssetAllocationPieChart() {
 
   return (
     <motion.div
-      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      className="rounded-2xl glass-card p-4 sm:p-6"
       {...(reducedMotion ? {} : fadeIn)}
     >
       <h3 className="text-label uppercase text-muted-foreground mb-6">

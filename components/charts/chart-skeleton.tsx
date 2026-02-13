@@ -35,9 +35,9 @@ export function ChartSkeleton({
   variant = "bar",
 }: ChartSkeletonProps) {
   const content = (
-    <div className="animate-pulse">
+    <div>
       {title && !withContainer && (
-        <div className="h-5 w-48 bg-muted rounded mb-6" />
+        <div className="h-5 w-48 skeleton-shimmer mb-6" />
       )}
       <div
         className={`${height} bg-muted/50 rounded flex items-center justify-center`}
@@ -67,7 +67,7 @@ function BarSkeleton() {
       {heights.map((h, i) => (
         <div
           key={i}
-          className="w-4 bg-muted rounded-t"
+          className="w-4 skeleton-shimmer rounded-t"
           style={{ height: `${h}%` }}
         />
       ))}

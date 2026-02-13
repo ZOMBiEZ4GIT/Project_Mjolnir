@@ -23,18 +23,10 @@ import {
   type TimeRange,
 } from "@/components/charts";
 import type { Time } from "lightweight-charts";
-
-interface HistoryPoint {
-  date: string;
-  netWorth: number;
-  totalAssets: number;
-  totalDebt: number;
-}
-
-interface HistoryResponse {
-  history: HistoryPoint[];
-  generatedAt: string;
-}
+import {
+  useDashboardHistory,
+  type HistoryResponse,
+} from "@/lib/hooks/use-dashboard-data";
 
 /**
  * Chart view modes.
@@ -123,16 +115,8 @@ function ChartViewToggle({ viewMode, onChange }: ChartViewToggleProps) {
 /**
  * Net Worth History Chart
  *
- * Displays a TradingView area chart for Net Worth view and Recharts for Assets vs Debt.
- * Features:
- * - TradingView Lightweight Charts with purple gradient fill for Net Worth view
- * - Time range selector: 3M, 6M, 1Y, All
- * - Default selection is 12 months (1Y)
- * - URL param ?range=3m persists selection
- * - Custom tooltip styled with design tokens
- * - Fade-in animation on mount (200ms)
- * - Keeps Recharts AssetsVsDebtChart for Assets vs Debt view
- * - Export button uses html2canvas on chart container
+ * Uses the shared 12-month history for ranges <=12mo.
+ * Only fetches separately for "All" (60mo).
  */
 export function NetWorthChart() {
   const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
@@ -174,6 +158,9 @@ export function NetWorthChart() {
   const selectedOption = TIME_RANGE_OPTIONS.find((opt) => opt.value === selectedRange);
   const months = selectedOption?.months ?? 12;
 
+  // Use shared 12mo hook for ranges <= 12mo; separate query only for "All" (60mo)
+  const needsSeparateQuery = months > 12;
+
   // Handle range change by updating URL param
   const handleRangeChange = useCallback(
     (newRange: TimeRange) => {
@@ -189,15 +176,27 @@ export function NetWorthChart() {
     [searchParams, pathname, router]
   );
 
+  // Shared 12-month history (used for 3M, 6M, 1Y)
   const {
-    data: historyData,
-    isLoading,
-    error,
+    data: sharedHistoryData,
+    isLoading: sharedLoading,
+    error: sharedError,
+  } = useDashboardHistory();
+
+  // Separate query only for "All" range (60mo)
+  const {
+    data: allHistoryData,
+    isLoading: allLoading,
+    error: allError,
   } = useQuery({
     queryKey: queryKeys.netWorth.history(months),
     queryFn: () => fetchHistory(months),
-    refetchInterval: 60 * 1000,
+    enabled: needsSeparateQuery,
   });
+
+  const historyData = needsSeparateQuery ? allHistoryData : sharedHistoryData;
+  const isLoading = needsSeparateQuery ? allLoading : sharedLoading;
+  const error = needsSeparateQuery ? allError : sharedError;
 
   // Retry handler
   const handleRetry = useCallback(() => {
@@ -205,13 +204,25 @@ export function NetWorthChart() {
   }, [queryClient, months]);
 
   // Transform data for TradingView — sorted by date ascending, time as YYYY-MM-DD string
+  // For ranges < 12mo, slice the shared data to the correct month count
   const tvData: TVDataPoint[] = useMemo(() => {
     if (!historyData?.history) return [];
-    return historyData.history.map((point) => ({
+    const points = needsSeparateQuery
+      ? historyData.history
+      : historyData.history.slice(-months);
+    return points.map((point) => ({
       time: point.date as Time,
       value: convert(point.netWorth, "AUD"),
     }));
-  }, [historyData, convert]);
+  }, [historyData, convert, needsSeparateQuery, months]);
+
+  // Sliced history for Assets vs Debt view
+  const chartHistory = useMemo(() => {
+    if (!historyData?.history) return [];
+    return needsSeparateQuery
+      ? historyData.history
+      : historyData.history.slice(-months);
+  }, [historyData, needsSeparateQuery, months]);
 
   // Handle crosshair move from TradingView chart
   const handleCrosshairMove = useCallback((data: TVCrosshairData | null) => {
@@ -254,9 +265,9 @@ export function NetWorthChart() {
   // Empty state
   if (tvData.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+      <div className="rounded-2xl glass-card p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <h3 className="text-label uppercase text-muted-foreground">
+          <h3 className="text-heading-sm text-foreground">
             Net Worth History
           </h3>
           <div className="flex items-center gap-2 flex-wrap">
@@ -283,7 +294,7 @@ export function NetWorthChart() {
 
   return (
     <motion.div
-      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      className="rounded-2xl glass-card p-4 sm:p-6"
       {...(reducedMotion ? {} : fadeIn)}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
@@ -352,7 +363,7 @@ export function NetWorthChart() {
               exit={reducedMotion ? undefined : { opacity: 0 }}
               transition={reducedMotion ? { duration: 0 } : { duration: 0.2 }}
             >
-              <AssetsVsDebtChart data={historyData.history} />
+              <AssetsVsDebtChart data={chartHistory} />
             </motion.div>
           )}
         </AnimatePresence>

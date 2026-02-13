@@ -37,38 +37,38 @@ async function fetchPerformers(): Promise<PerformersResponse> {
 
 function PerformersSkeleton() {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
-      <div className="animate-pulse">
+    <div className="rounded-2xl glass-card p-4 sm:p-6">
+      <div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <div className="h-4 w-28 bg-muted rounded mb-4" />
+            <div className="h-4 w-28 skeleton-shimmer mb-4" />
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex justify-between items-center">
                   <div className="flex-1">
-                    <div className="h-4 w-24 bg-muted rounded mb-1" />
-                    <div className="h-3 w-16 bg-muted/70 rounded" />
+                    <div className="h-4 w-24 skeleton-shimmer mb-1" />
+                    <div className="h-3 w-16 skeleton-shimmer" />
                   </div>
                   <div className="text-right">
-                    <div className="h-4 w-20 bg-muted rounded mb-1" />
-                    <div className="h-3 w-14 bg-muted/70 rounded" />
+                    <div className="h-4 w-20 skeleton-shimmer mb-1" />
+                    <div className="h-3 w-14 skeleton-shimmer" />
                   </div>
                 </div>
               ))}
             </div>
           </div>
           <div>
-            <div className="h-4 w-24 bg-muted rounded mb-4" />
+            <div className="h-4 w-24 skeleton-shimmer mb-4" />
             <div className="space-y-3">
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="flex justify-between items-center">
                   <div className="flex-1">
-                    <div className="h-4 w-24 bg-muted rounded mb-1" />
-                    <div className="h-3 w-16 bg-muted/70 rounded" />
+                    <div className="h-4 w-24 skeleton-shimmer mb-1" />
+                    <div className="h-3 w-16 skeleton-shimmer" />
                   </div>
                   <div className="text-right">
-                    <div className="h-4 w-20 bg-muted rounded mb-1" />
-                    <div className="h-3 w-14 bg-muted/70 rounded" />
+                    <div className="h-4 w-20 skeleton-shimmer mb-1" />
+                    <div className="h-3 w-14 skeleton-shimmer" />
                   </div>
                 </div>
               ))}
@@ -134,7 +134,6 @@ export function TopPerformers() {
   } = useQuery({
     queryKey: queryKeys.topPerformers,
     queryFn: fetchPerformers,
-    refetchInterval: 60 * 1000,
   });
 
   if (isLoading || currencyLoading) {
@@ -158,8 +157,8 @@ export function TopPerformers() {
 
   if (hasNoData) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
-        <h3 className="text-label uppercase text-muted-foreground mb-4">
+      <div className="rounded-2xl glass-card p-4 sm:p-6">
+        <h3 className="text-heading-sm text-foreground mb-4">
           Top Performers
         </h3>
         <div className="py-8 text-center">
@@ -178,7 +177,7 @@ export function TopPerformers() {
 
   return (
     <motion.div
-      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      className="rounded-2xl glass-card p-4 sm:p-6"
       initial={shouldReduceMotion ? false : fadeIn.initial}
       animate={fadeIn.animate}
       transition={shouldReduceMotion ? { duration: 0 } : fadeIn.transition}
@@ -188,7 +187,7 @@ export function TopPerformers() {
         <div>
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="h-5 w-5 text-positive" />
-            <h3 className="text-label uppercase text-muted-foreground">
+            <h3 className="text-heading-sm text-foreground">
               Top Gainers
             </h3>
           </div>
@@ -218,7 +217,7 @@ export function TopPerformers() {
         <div>
           <div className="flex items-center gap-2 mb-4">
             <TrendingDown className="h-5 w-5 text-destructive" />
-            <h3 className="text-label uppercase text-muted-foreground">
+            <h3 className="text-heading-sm text-foreground">
               Top Losers
             </h3>
           </div>
