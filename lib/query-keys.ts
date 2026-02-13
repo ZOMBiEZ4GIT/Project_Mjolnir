@@ -114,6 +114,7 @@ export const queryKeys = {
     corrections: {
       suggestions: ["budget", "corrections", "suggestions"] as const,
     },
+    challengeComparison: ["budget", "challenge-comparison"] as const,
   },
 
   // ---- n8n ----

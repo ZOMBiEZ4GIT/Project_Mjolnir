@@ -12,6 +12,7 @@ import {
 } from "@/lib/hooks/use-budget-summary";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CategoryTreemap } from "@/components/budget/charts/category-treemap";
+import { ChallengeComparison } from "@/components/budget/challenge-comparison";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -475,6 +476,9 @@ export default function SaverDetailPage({
           </span>
         </div>
       </div>
+
+      {/* Challenge comparison — supplements saver only */}
+      {saverKey === "supplements" && <ChallengeComparison />}
 
       {/* Category treemap */}
       <CategoryTreemap
