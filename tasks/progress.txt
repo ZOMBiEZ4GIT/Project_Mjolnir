@@ -1,2 +1,127 @@
 # Ralph Progress Log — bi-d-enrichment
 # Budget Intelligence Phase D — Enrichment Features
+
+## Codebase Patterns
+- Admin endpoints at `app/api/admin/` don't use `withAuth` wrapper (matches seed route pattern)
+- `mapCategoryToSaver()` in `lib/budget/categorisation.ts` maps flat mjolnirCategoryId to `{ saverKey, categoryKey }`
+- Tags are stored as JSONB arrays in upTransactions — use `jsonb_array_elements_text()` for querying
+- Budget categories use `{saverKey}--{categoryKey}` as their ID format (e.g., `food--groceries`)
+- Merchant tag patterns are case-insensitive, matched via `.toUpperCase().includes()`
+- Toast feedback: use `showSuccess`/`showError`/`showInfo` from `lib/toast-helpers.ts` (wraps sonner)
+- Optimistic updates: snapshot with specific query key (including filter params), revert in `onError`
+- `classificationCorrections` table tracks saver/category edits — correction recorded in PUT endpoint after update
+- Dismissed suggestions stored in localStorage under `mjolnir:dismissed-correction-suggestions`
+- Raw SQL with `db.execute(sql\`...\`)` for GROUP BY + HAVING queries not expressible in Drizzle query builder
+- Celebration/confetti effects: use `canvas-confetti` via `lib/budget/celebrations.ts`, localStorage guard at `mjolnir:celebrated-goals`
+- Anomaly detection: pure-function `detectAnomalies()` in `lib/budget/anomalies.ts`, localStorage dismissal at `mjolnir:dismissed-anomaly-alerts`
+- Historical averages: fetch up to 6 prior periods, compute per-category avg transaction size and period totals for baseline comparison
+
+## 2026-02-13 - BI-D-001
+- Created backfill API route at `app/api/admin/backfill/route.ts`
+- Processes upTransactions missing saverKey in batches of 100
+- Uses `mapCategoryToSaver()` for mjolnirCategoryId → three-tier mapping
+- Built merchant description-to-tags mapping covering: WOOLWORTHS, COLES, ALDI, MARLEY SPOON, UBER EATS, DOORDASH, MENULOG, BODY FIT, MEDIBANK, AUSSIE BROADBAND, TELSTRA, ORIGIN ENERGY, REAL ESTATE, GHOST, BULK NUTRIENTS, MYPROTEIN, MYKI, UBER TRIP, JB HI-FI, APPLE.COM, OFFICEWORKS, COFFEE, ZIP PAY, ANZ CREDIT
+- Merchant rules can also override saver/category (e.g., BODY FIT → essentials/fitness instead of generic health mapping)
+- Idempotent: skips transactions that already have saverKey populated
+- Returns summary with counts and sample of unmapped descriptions for manual review
+- Files changed: `app/api/admin/backfill/route.ts`
+- **Learnings for future iterations:**
+  - The admin seed route doesn't use auth — backfill follows same pattern
+  - Use offset-based pagination for batch processing (not cursor) since we're updating rows in place
+  - Income detection: positive amountCents with no other mapping → default to income/salary
+---
+
+## 2026-02-13 - BI-D-002
+- Enhanced the inline tag editor in TransactionEditForm with chip/pill UI
+- Tags now display as removable pills with X button (bg-primary/15 styling)
+- New tags auto-formatted: lowercase, spaces→hyphens, special chars stripped, consecutive hyphens collapsed
+- Tag input supports Enter/comma to add, Backspace to remove last tag, blur to commit pending input
+- Added optimistic updates: UI updates immediately on save, reverts on error via onMutate/onError
+- Added toast notifications via showSuccess/showError on mutation result
+- Saver dropdown already resets category on change (pre-existing from BI-C-007)
+- PUT endpoint already accepts saverKey, categoryKey, tags — no backend changes needed
+- Files changed: `app/(dashboard)/budget/transactions/page.tsx`
+- **Learnings for future iterations:**
+  - Toast helpers at `lib/toast-helpers.ts`: showSuccess, showError, showInfo
+  - For TanStack Query optimistic updates, snapshot the specific query key (with filters) not the broad `all` key
+  - The `formatTag()` helper strips special chars, collapses hyphens, trims leading/trailing hyphens
+  - `useRef<HTMLInputElement>` for focusing the tag input on container click
+---
+
+## 2026-02-13 - BI-D-003
+- Created `classification_corrections` table in Drizzle schema with FK to upTransactions
+- Indexes on merchant_description and (corrected_saver_key, corrected_category_key) for fast grouping
+- Modified PUT `/api/budget/transactions/[id]/category` to capture original saver/category before update, insert correction record when classification actually changes
+- Created GET `/api/budget/corrections/suggestions` endpoint: groups corrections by UPPER(merchant) + corrected saver/category, returns groups with 3+ corrections
+- Built `CorrectionSuggestions` component with dismissible amber banners, "Copy Rule" button (copies JSON to clipboard), localStorage-based dismissal tracking
+- Added query key `budget.corrections.suggestions` to centralised query-keys.ts
+- Integrated banner into budget page after AI Check-in card
+- Generated migration `0021_mute_sunset_bain.sql` (also includes health_daily and health_workouts tables)
+- Files changed: `lib/db/schema.ts`, `app/api/budget/transactions/[id]/category/route.ts`, `app/api/budget/corrections/suggestions/route.ts` (new), `components/budget/correction-suggestions.tsx` (new), `app/(dashboard)/budget/page.tsx`, `lib/query-keys.ts`
+- **Learnings for future iterations:**
+  - Use `db.execute(sql\`...\`)` for complex aggregation queries with GROUP BY/HAVING — Drizzle query builder doesn't support these well
+  - `rows.rows` pattern for accessing raw SQL results from `db.execute()`
+  - Correction tracking: capture original values BEFORE the update, compare AFTER to detect actual changes
+  - localStorage-based dismissal with `Set<string>` pattern: serialize as JSON array, deserialize into Set
+  - Migration may bundle unrelated tables if schema changes were pending — this is expected and safe
+---
+
+## 2026-02-13 - BI-D-004
+- Created GET `/api/budget/challenge-comparison` endpoint for BFT supplement challenge data
+- API aggregates upTransactions by categoryKey for two periods: "During Challenge" (Feb-Apr 2026) and "After Challenge" (May 2026+)
+- Uses ABS(amountCents) for spend totals, groups by categoryKey with SUM and COUNT
+- Calculates months elapsed per period and average monthly spend
+- Built `ChallengeComparison` component with two display modes:
+  - **Pre-challenge-end**: countdown timer ("Challenge ends in X days") with spend-so-far summary
+  - **Post-challenge-end**: side-by-side period comparison with totals, monthly averages, category breakdowns, savings highlight, and dropped/reduced category detection
+- Integrated into saver detail page: renders only when `saverKey === "supplements"`
+- Added `budget.challengeComparison` query key to centralised query-keys.ts
+- Files changed: `app/api/budget/challenge-comparison/route.ts` (new), `components/budget/challenge-comparison.tsx` (new), `app/(dashboard)/budget/saver/[saverKey]/page.tsx`, `lib/query-keys.ts`
+- **Learnings for future iterations:**
+  - Drizzle `db.select().groupBy()` works well for simple GROUP BY — no need for raw SQL when not using HAVING
+  - `COALESCE(SUM(ABS(...)), 0)` handles empty result sets cleanly in aggregations
+  - Category keys like "pre-workout" can be formatted for display with simple split-on-hyphen + capitalize
+  - Conditional rendering by saverKey keeps saver-specific features isolated without extra routing
+---
+
+## 2026-02-13 - BI-D-005
+- Added auto-completion logic to PUT `/api/budget/goals/[id]`: when `currentAmountCents >= targetAmountCents` and no explicit status provided, auto-sets status to 'completed' with completedAt timestamp
+- Installed `canvas-confetti` (~6KB gzipped) for celebration animations
+- Created `lib/budget/celebrations.ts` with: `fireCelebration()` (3-second confetti burst), `hasCelebrated(goalId)`, `markCelebrated(goalId)` using localStorage key `mjolnir:celebrated-goals`
+- Updated GoalTracker component with `useRef`/`useEffect` to detect goal transitions from active→completed on data refetch
+- On completion detection: fires confetti, shows toast notification, marks as celebrated in localStorage (one-time guard)
+- Completed goals get muted/success styling: `border-positive/30 bg-positive/5` border+background, muted text for name
+- Completed goals already sorted to bottom via existing `[...activeGoals, ...completedGoals]` logic
+- Files changed: `app/api/budget/goals/[id]/route.ts`, `components/budget/goal-tracker.tsx`, `lib/budget/celebrations.ts` (new), `package.json`, `package-lock.json`
+- **Learnings for future iterations:**
+  - `canvas-confetti` works well as a vanilla JS library in React — no need for react-confetti wrapper
+  - `useRef` for tracking previous data state across TanStack Query refetches avoids stale closure issues
+  - Goals table uses bigint for `targetAmountCents` — cast with `Number()` when comparing to JS numbers
+  - localStorage celebration guard pattern: array of goal IDs, check before firing, mark immediately after
+---
+
+## 2026-02-13 - BI-D-006
+- Created `lib/budget/anomalies.ts` with pure `detectAnomalies()` function implementing three detection rules:
+  1. **Large transaction**: single tx > 2x historical average for that saver+category (3x = alert severity)
+  2. **Category overspend**: category spend > 150% of budget when > 50% of period remains (2x = alert severity)
+  3. **Duplicate merchant**: same merchant description charged twice in one day
+- Created GET `/api/budget/anomalies?period_id=X` endpoint:
+  - Resolves current period via `ensureCurrentPeriodExists()` if no period_id given
+  - Fetches up to 6 prior periods for historical baseline
+  - Computes per-category average transaction size and average period totals
+  - Builds category budget lookup from budgetSavers + budgetCategories tables
+  - Passes all data to `detectAnomalies()` and returns the result
+- Created `components/budget/anomaly-alerts.tsx` with dismissible alert banners:
+  - Warning styling: amber border/bg (`border-warning/30 bg-warning/5`) with AlertCircle icon
+  - Alert styling: red border/bg (`border-destructive/30 bg-destructive/5`) with AlertTriangle icon
+  - LocalStorage dismissal tracking at `mjolnir:dismissed-anomaly-alerts`
+  - Recalculates on summary data refresh (5-minute stale time)
+- Added `budget.anomalies` query key to `lib/query-keys.ts`
+- Integrated `<AnomalyAlerts />` into budget page above AI Check-in card (most urgent info first)
+- Files changed: `lib/budget/anomalies.ts` (new), `app/api/budget/anomalies/route.ts` (new), `components/budget/anomaly-alerts.tsx` (new), `lib/query-keys.ts`, `app/(dashboard)/budget/page.tsx`
+- **Learnings for future iterations:**
+  - Historical averages work well with Promise.all spread pattern: `...priorPeriods.map(p => db.select()...)` inside the main parallel fetch
+  - Anomaly ID format `type::key` enables stable localStorage dismissal even when anomaly details change
+  - Severity-based styling: destructive tokens for alerts, warning tokens for warnings — follows existing AI check-in pattern
+  - Detection function is pure (no DB/side effects) making it easy to unit test
+---

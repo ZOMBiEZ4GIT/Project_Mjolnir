@@ -111,6 +111,12 @@ export const queryKeys = {
       ["budget", "tags", periodId ?? "current"] as const,
     trends: (periods?: number) =>
       ["budget", "trends", periods ?? 6] as const,
+    corrections: {
+      suggestions: ["budget", "corrections", "suggestions"] as const,
+    },
+    challengeComparison: ["budget", "challenge-comparison"] as const,
+    anomalies: (periodId?: string) =>
+      ["budget", "anomalies", periodId ?? "current"] as const,
   },
 
   // ---- n8n ----

@@ -71,6 +71,27 @@ export const PUT = withAuth(async (request, context) => {
     }
   }
 
+  // Auto-complete: if currentAmountCents is being updated and meets/exceeds target,
+  // and no explicit status was provided, auto-mark as completed
+  if (
+    data.currentAmountCents !== undefined &&
+    data.status === undefined
+  ) {
+    // We need the current target to check against — fetch the goal first
+    const [existing] = await db
+      .select({ targetAmountCents: goals.targetAmountCents, status: goals.status })
+      .from(goals)
+      .where(eq(goals.id, id));
+
+    if (existing && existing.status === "active") {
+      const target = Number(existing.targetAmountCents);
+      if (data.currentAmountCents >= target) {
+        updateFields.status = "completed";
+        updateFields.completedAt = new Date();
+      }
+    }
+  }
+
   updateFields.updatedAt = new Date();
 
   const [updated] = await db

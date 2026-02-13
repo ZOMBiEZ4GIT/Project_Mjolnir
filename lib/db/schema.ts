@@ -891,3 +891,50 @@ export type NewBudgetSaver = typeof budgetSavers.$inferInsert;
 
 export type Goal = typeof goals.$inferSelect;
 export type NewGoal = typeof goals.$inferInsert;
+
+// =============================================================================
+// CLASSIFICATION CORRECTIONS
+// =============================================================================
+
+/**
+ * Tracks manual corrections to transaction classifications.
+ *
+ * When a user edits a transaction's saver/category via the inline editor,
+ * a record is created here. After 3+ corrections for the same merchant
+ * pattern to the same saver/category, the system suggests adding a rule.
+ */
+export const classificationCorrections = pgTable(
+  "classification_corrections",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    transactionId: uuid("transaction_id")
+      .references(() => upTransactions.id)
+      .notNull(),
+    originalSaverKey: varchar("original_saver_key", { length: 50 }),
+    originalCategoryKey: varchar("original_category_key", { length: 50 }),
+    correctedSaverKey: varchar("corrected_saver_key", { length: 50 }).notNull(),
+    correctedCategoryKey: varchar("corrected_category_key", { length: 50 }).notNull(),
+    merchantDescription: varchar("merchant_description", { length: 512 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    merchantIdx: index("classification_corrections_merchant_idx").on(table.merchantDescription),
+    correctedIdx: index("classification_corrections_corrected_idx").on(
+      table.correctedSaverKey,
+      table.correctedCategoryKey
+    ),
+  })
+);
+
+export const classificationCorrectionsRelations = relations(
+  classificationCorrections,
+  ({ one }) => ({
+    transaction: one(upTransactions, {
+      fields: [classificationCorrections.transactionId],
+      references: [upTransactions.id],
+    }),
+  })
+);
+
+export type ClassificationCorrection = typeof classificationCorrections.$inferSelect;
+export type NewClassificationCorrection = typeof classificationCorrections.$inferInsert;

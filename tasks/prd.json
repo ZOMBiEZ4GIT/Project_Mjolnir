@@ -21,7 +21,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "This is a one-time migration script. The description pattern matching should mirror the n8n rules engine from spec Section 5.2 but doesn't need to be exhaustive — unmapped transactions can be corrected manually later."
     },
     {
@@ -43,7 +43,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "This feeds into BI-D-003 (rule learning). When Roland corrects a classification, we track the correction for potential rule generation."
     },
     {
@@ -61,7 +61,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "This is a feedback loop for improving the n8n rules engine. The actual n8n rule update is manual (Roland copies the pattern into n8n), but this surfaces when a rule should be added."
     },
     {
@@ -80,7 +80,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section D4. This is a motivational feature — shows the concrete impact of the lifestyle change. Timeline-dependent: becomes meaningful only after May 2026."
     },
     {
@@ -98,7 +98,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section D6. Keep the confetti library small — canvas-confetti is ~6KB gzipped. Don't add heavy animation dependencies."
     },
     {
@@ -117,7 +117,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section D7. Keep the anomaly detection simple and rule-based (not ML). The rules here catch obvious issues; Claude's AI check-in handles nuanced analysis."
     }
   ]

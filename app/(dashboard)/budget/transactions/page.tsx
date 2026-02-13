@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, type KeyboardEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
@@ -46,6 +46,7 @@ import {
   Check,
 } from "lucide-react";
 import { queryKeys } from "@/lib/query-keys";
+import { showSuccess, showError } from "@/lib/toast-helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -233,6 +234,16 @@ function TagPills({ tags }: { tags: string[] | null }) {
 // Edit form (inline)
 // ---------------------------------------------------------------------------
 
+function formatTag(raw: string): string {
+  return raw
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 function TransactionEditForm({
   transaction,
   savers,
@@ -262,9 +273,9 @@ function TransactionEditForm({
   const [selectedCategoryId, setSelectedCategoryId] = useState(
     transaction.mjolnirCategoryId ?? ""
   );
-  const [tagsInput, setTagsInput] = useState(
-    (transaction.tags ?? []).join(", ")
-  );
+  const [tags, setTags] = useState<string[]>(transaction.tags ?? []);
+  const [tagInput, setTagInput] = useState("");
+  const tagInputRef = useRef<HTMLInputElement>(null);
 
   // Get categories for selected saver
   const selectedSaver = savers.find((s) => s.saverKey === selectedSaverKey);
@@ -291,17 +302,49 @@ function TransactionEditForm({
     }
   };
 
+  const addTag = (raw: string) => {
+    const formatted = formatTag(raw);
+    if (formatted && !tags.includes(formatted)) {
+      setTags((prev) => [...prev, formatted]);
+    }
+    setTagInput("");
+  };
+
+  const removeTag = (tag: string) => {
+    setTags((prev) => prev.filter((t) => t !== tag));
+  };
+
+  const handleTagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      if (tagInput.trim()) {
+        addTag(tagInput);
+      }
+    } else if (e.key === "Backspace" && !tagInput && tags.length > 0) {
+      // Remove last tag when pressing backspace on empty input
+      setTags((prev) => prev.slice(0, -1));
+    }
+  };
+
+  const handleTagInputBlur = () => {
+    if (tagInput.trim()) {
+      addTag(tagInput);
+    }
+  };
+
   const handleSubmit = () => {
     if (!selectedCategoryId) return;
-    const parsedTags = tagsInput
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
+    // Commit any pending tag input
+    const finalTags = tagInput.trim()
+      ? [...tags, formatTag(tagInput)].filter(
+          (t, i, arr) => t && arr.indexOf(t) === i
+        )
+      : tags;
     onSave({
       category_id: selectedCategoryId,
       saverKey: selectedSaverKey,
       categoryKey: selectedCategoryKey,
-      tags: parsedTags,
+      tags: finalTags,
     });
   };
 
@@ -375,17 +418,45 @@ function TransactionEditForm({
         </Select>
       </div>
 
-      {/* Tags input */}
+      {/* Tags chip input */}
       <div className="flex flex-col gap-1">
-        <Label className="text-xs text-muted-foreground">
-          Tags (comma-separated)
-        </Label>
-        <Input
-          value={tagsInput}
-          onChange={(e) => setTagsInput(e.target.value)}
-          placeholder="e.g. weekly, fixed-cost"
-          className="h-8 text-xs bg-background border-border"
-        />
+        <Label className="text-xs text-muted-foreground">Tags</Label>
+        <div
+          className="flex flex-wrap items-center gap-1.5 min-h-[32px] px-2 py-1 rounded-md border border-border bg-background cursor-text"
+          onClick={() => tagInputRef.current?.focus()}
+        >
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center gap-1 rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[11px] font-medium"
+            >
+              {tag}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeTag(tag);
+                }}
+                className="hover:text-destructive transition-colors"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          <input
+            ref={tagInputRef}
+            type="text"
+            value={tagInput}
+            onChange={(e) => setTagInput(e.target.value)}
+            onKeyDown={handleTagKeyDown}
+            onBlur={handleTagInputBlur}
+            placeholder={tags.length === 0 ? "Add tags..." : ""}
+            className="flex-1 min-w-[80px] bg-transparent text-xs text-foreground placeholder:text-muted-foreground outline-none"
+          />
+        </div>
+        <span className="text-[10px] text-muted-foreground">
+          Press Enter or comma to add
+        </span>
       </div>
 
       {/* Actions */}
@@ -706,6 +777,48 @@ export default function BudgetTransactionsPage() {
         tags?: string[];
       };
     }) => updateTransactionClassification(transactionId, data),
+    onMutate: async ({ transactionId, data: mutationData }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.budget.transactions.all,
+      });
+
+      // Snapshot previous value
+      const queryKey = queryKeys.budget.transactions.list({
+        category: categoryFilter,
+        saver: saverFilter,
+        tag: tagFilter,
+        status: statusFilter,
+        from: fromFilter,
+        to: toFilter,
+        search: searchFilter,
+        uncategorised: uncategorisedFilter,
+        page: String(page),
+      });
+      const previousData =
+        queryClient.getQueryData<TransactionsResponse>(queryKey);
+
+      // Optimistically update
+      if (previousData) {
+        queryClient.setQueryData<TransactionsResponse>(queryKey, {
+          ...previousData,
+          transactions: previousData.transactions.map((txn) =>
+            txn.id === transactionId
+              ? {
+                  ...txn,
+                  mjolnirCategoryId: mutationData.category_id,
+                  saverKey: mutationData.saverKey ?? txn.saverKey,
+                  categoryKey: mutationData.categoryKey ?? txn.categoryKey,
+                  tags: mutationData.tags ?? txn.tags,
+                }
+              : txn
+          ),
+        });
+      }
+
+      setEditingTransactionId(null);
+      return { previousData, queryKey };
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.budget.transactions.all,
@@ -713,7 +826,16 @@ export default function BudgetTransactionsPage() {
       queryClient.invalidateQueries({
         queryKey: queryKeys.budget.summary(),
       });
-      setEditingTransactionId(null);
+      showSuccess("Classification updated");
+    },
+    onError: (_err, _vars, context) => {
+      // Revert optimistic update
+      if (context?.previousData && context.queryKey) {
+        queryClient.setQueryData(context.queryKey, context.previousData);
+      }
+      showError("Failed to update classification", {
+        description: "Please try again.",
+      });
     },
   });
 
