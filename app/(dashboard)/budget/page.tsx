@@ -28,6 +28,7 @@ import {
 } from "@/lib/hooks/use-budget-summary";
 import Link from "next/link";
 import { GoalTracker } from "@/components/budget/goal-tracker";
+import { BudgetVsActualChart } from "@/components/budget/charts/budget-vs-actual-chart";
 
 export const dynamic = "force-dynamic";
 
@@ -492,6 +493,14 @@ export default function BudgetDashboardPage() {
           />
         </div>
       </div>
+
+      {/* Budget vs Actual chart */}
+      {summary.spendingSavers.length > 0 && (
+        <BudgetVsActualChart
+          savers={summary.spendingSavers}
+          progressPercent={period.progressPercent}
+        />
+      )}
 
       {/* Spending Savers section */}
       <div>
