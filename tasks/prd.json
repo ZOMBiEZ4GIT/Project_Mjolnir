@@ -80,7 +80,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section D4. This is a motivational feature — shows the concrete impact of the lifestyle change. Timeline-dependent: becomes meaningful only after May 2026."
     },
     {

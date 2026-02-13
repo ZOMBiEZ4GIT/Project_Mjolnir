@@ -62,3 +62,21 @@
   - localStorage-based dismissal with `Set<string>` pattern: serialize as JSON array, deserialize into Set
   - Migration may bundle unrelated tables if schema changes were pending — this is expected and safe
 ---
+
+## 2026-02-13 - BI-D-004
+- Created GET `/api/budget/challenge-comparison` endpoint for BFT supplement challenge data
+- API aggregates upTransactions by categoryKey for two periods: "During Challenge" (Feb-Apr 2026) and "After Challenge" (May 2026+)
+- Uses ABS(amountCents) for spend totals, groups by categoryKey with SUM and COUNT
+- Calculates months elapsed per period and average monthly spend
+- Built `ChallengeComparison` component with two display modes:
+  - **Pre-challenge-end**: countdown timer ("Challenge ends in X days") with spend-so-far summary
+  - **Post-challenge-end**: side-by-side period comparison with totals, monthly averages, category breakdowns, savings highlight, and dropped/reduced category detection
+- Integrated into saver detail page: renders only when `saverKey === "supplements"`
+- Added `budget.challengeComparison` query key to centralised query-keys.ts
+- Files changed: `app/api/budget/challenge-comparison/route.ts` (new), `components/budget/challenge-comparison.tsx` (new), `app/(dashboard)/budget/saver/[saverKey]/page.tsx`, `lib/query-keys.ts`
+- **Learnings for future iterations:**
+  - Drizzle `db.select().groupBy()` works well for simple GROUP BY — no need for raw SQL when not using HAVING
+  - `COALESCE(SUM(ABS(...)), 0)` handles empty result sets cleanly in aggregations
+  - Category keys like "pre-workout" can be formatted for display with simple split-on-hyphen + capitalize
+  - Conditional rendering by saverKey keeps saver-specific features isolated without extra routing
+---
