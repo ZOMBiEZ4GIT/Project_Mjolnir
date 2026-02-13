@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useBudgetGoals, useUpdateGoal, type Goal } from "@/lib/hooks/use-budget-goals";
 import { CheckCircle2, ChevronDown, ChevronUp, Loader2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { showSuccess } from "@/lib/toast-helpers";
+import { fireCelebration, hasCelebrated, markCelebrated } from "@/lib/budget/celebrations";
 
 // ---------------------------------------------------------------------------
 // Format helpers
@@ -147,7 +149,7 @@ function GoalCard({ goal }: { goal: Goal }) {
   const debt = isDebtPayoff(goal);
 
   return (
-    <div className="rounded-lg border border-border bg-card/50 p-4">
+    <div className={`rounded-lg border p-4 ${isCompleted ? "border-positive/30 bg-positive/5" : "border-border bg-card/50"}`}>
       {/* Header row: icon + name, expand button */}
       <button
         type="button"
@@ -160,7 +162,7 @@ function GoalCard({ goal }: { goal: Goal }) {
           ) : (
             <span className="text-lg shrink-0">{goal.icon ?? "🎯"}</span>
           )}
-          <span className="text-sm font-medium text-foreground truncate">
+          <span className={`text-sm font-medium truncate ${isCompleted ? "text-muted-foreground" : "text-foreground"}`}>
             {goal.name}
           </span>
         </div>
@@ -261,6 +263,29 @@ function GoalCard({ goal }: { goal: Goal }) {
 
 export function GoalTracker() {
   const { data: goals, isLoading } = useBudgetGoals();
+  const prevGoalsRef = useRef<Goal[] | null>(null);
+
+  // Detect goal completions and fire celebration
+  useEffect(() => {
+    if (!goals || goals.length === 0) return;
+
+    const prev = prevGoalsRef.current;
+    if (prev) {
+      for (const goal of goals) {
+        if (goal.status !== "completed") continue;
+        const prevGoal = prev.find((g) => g.id === goal.id);
+        if (!prevGoal || prevGoal.status === "completed") continue;
+        // Goal just transitioned to completed
+        if (!hasCelebrated(goal.id)) {
+          markCelebrated(goal.id);
+          fireCelebration();
+          showSuccess(`${goal.name} complete! You did it.`);
+        }
+      }
+    }
+
+    prevGoalsRef.current = goals;
+  }, [goals]);
 
   if (isLoading) return <GoalTrackerSkeleton />;
   if (!goals || goals.length === 0) return null;
