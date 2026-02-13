@@ -123,3 +123,15 @@
   - ensureCurrentPeriodExists() in summary route means periods are always available before data fetch
   - Deprecated APIs kept for safety — can be fully removed in a future cleanup story
 ---
+
+## 2026-02-13 - BI-B-001
+- Created app/api/budget/savers/route.ts with GET and PUT handlers
+- GET returns all savers ordered by sortOrder with categories joined from budgetCategories (grouped by saverId)
+- Response shape: { savers: [{ id, saverKey, displayName, emoji, monthlyBudgetCents, saverType, sortOrder, colour, notes, categories: [{ id, categoryKey, displayName, monthlyBudgetCents }] }] }
+- PUT accepts saverKey + optional fields (monthlyBudgetCents, displayName, notes, isActive, colour), validates with Zod, updates via eq(saverKey)
+- Both handlers use withAuth() for authentication
+- Files changed: app/api/budget/savers/route.ts
+- **Learnings for future iterations:**
+  - Followed existing pattern from /api/budget/categories — query both tables, group children by parent ID in Map, assemble response
+  - PUT on collection route (not [id] route) using saverKey as identifier — matches the seed-based model where saverKey is the stable identifier
+---
