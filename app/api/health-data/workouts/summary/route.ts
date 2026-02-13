@@ -23,8 +23,8 @@ export const GET = withAuth(async (request) => {
     SELECT
       DATE_TRUNC('week', workout_date::timestamp)::date AS "weekStart",
       COUNT(*)::int AS "sessionCount",
-      ROUND(SUM(duration_minutes::float)::numeric, 0) AS "totalMinutes",
-      ROUND(SUM(energy_kj::float / ${KJ_TO_KCAL})::numeric, 0) AS "totalKcal"
+      ROUND(SUM(duration_minutes)::numeric, 0) AS "totalMinutes",
+      ROUND(SUM(active_energy_kj::float / ${KJ_TO_KCAL})::numeric, 0) AS "totalKcal"
     FROM health_workouts
     WHERE workout_date >= ${startDate}
     GROUP BY DATE_TRUNC('week', workout_date::timestamp)
@@ -36,7 +36,7 @@ export const GET = withAuth(async (request) => {
     SELECT
       workout_type AS "workoutType",
       COUNT(*)::int AS "count",
-      ROUND(SUM(duration_minutes::float)::numeric, 0) AS "totalMinutes"
+      ROUND(SUM(duration_minutes)::numeric, 0) AS "totalMinutes"
     FROM health_workouts
     WHERE workout_date >= ${startDate}
     GROUP BY workout_type

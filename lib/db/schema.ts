@@ -555,29 +555,41 @@ export const healthDaily = pgTable("health_daily", {
   bmi: decimal("bmi", { precision: 5, scale: 2 }),
   // Heart & recovery
   restingHr: decimal("resting_hr", { precision: 5, scale: 1 }),
-  hrv: decimal("hrv", { precision: 6, scale: 1 }),
+  hrvMs: decimal("hrv_ms", { precision: 6, scale: 1 }),
   vo2Max: decimal("vo2_max", { precision: 5, scale: 1 }),
-  // Nutrition (stored in kJ, converted to kcal at API layer)
-  energyKj: decimal("energy_kj", { precision: 10, scale: 2 }),
-  proteinG: decimal("protein_g", { precision: 8, scale: 2 }),
-  carbsG: decimal("carbs_g", { precision: 8, scale: 2 }),
-  fatG: decimal("fat_g", { precision: 8, scale: 2 }),
+  respiratoryRate: decimal("respiratory_rate", { precision: 5, scale: 1 }),
+  hrAvg: decimal("hr_avg", { precision: 5, scale: 1 }),
+  hrMin: decimal("hr_min", { precision: 5, scale: 1 }),
+  hrMax: decimal("hr_max", { precision: 5, scale: 1 }),
+  // Sleep (durations in hours)
+  sleepTotalHrs: decimal("sleep_total_hrs", { precision: 5, scale: 2 }),
+  sleepDeepHrs: decimal("sleep_deep_hrs", { precision: 5, scale: 2 }),
+  sleepRemHrs: decimal("sleep_rem_hrs", { precision: 5, scale: 2 }),
+  sleepCoreHrs: decimal("sleep_core_hrs", { precision: 5, scale: 2 }),
+  sleepAwakeHrs: decimal("sleep_awake_hrs", { precision: 5, scale: 2 }),
+  sleepStart: text("sleep_start"), // TIME as text, e.g. "22:30:00"
+  sleepEnd: text("sleep_end"),     // TIME as text, e.g. "06:45:00"
+  wristTempC: decimal("wrist_temp_c", { precision: 5, scale: 2 }),
+  breathingDisturbances: decimal("breathing_disturbances", { precision: 5, scale: 1 }),
   // Activity
   steps: integer("steps"),
   activeEnergyKj: decimal("active_energy_kj", { precision: 10, scale: 2 }),
+  basalEnergyKj: decimal("basal_energy_kj", { precision: 10, scale: 2 }),
   exerciseMinutes: integer("exercise_minutes"),
   standHours: integer("stand_hours"),
-  // Sleep (durations in hours)
-  sleepHours: decimal("sleep_hours", { precision: 5, scale: 2 }),
-  sleepDeep: decimal("sleep_deep", { precision: 5, scale: 2 }),
-  sleepRem: decimal("sleep_rem", { precision: 5, scale: 2 }),
-  sleepCore: decimal("sleep_core", { precision: 5, scale: 2 }),
-  sleepAwake: decimal("sleep_awake", { precision: 5, scale: 2 }),
-  sleepStart: text("sleep_start"), // TIME as text, e.g. "22:30:00"
-  sleepEnd: text("sleep_end"),     // TIME as text, e.g. "06:45:00"
-  // Respiratory
-  breathingDisturbances: decimal("breathing_disturbances", { precision: 5, scale: 1 }),
-  respiratoryRate: decimal("respiratory_rate", { precision: 5, scale: 1 }),
+  standMinutes: integer("stand_minutes"),
+  distanceKm: decimal("distance_km", { precision: 10, scale: 3 }),
+  daylightMinutes: integer("daylight_minutes"),
+  // Nutrition (stored in kJ, converted to kcal at API layer)
+  caloriesKj: decimal("calories_kj", { precision: 10, scale: 2 }),
+  proteinG: decimal("protein_g", { precision: 8, scale: 2 }),
+  carbsG: decimal("carbs_g", { precision: 8, scale: 2 }),
+  fatG: decimal("fat_g", { precision: 8, scale: 2 }),
+  fibreG: decimal("fibre_g", { precision: 8, scale: 2 }),
+  waterMl: decimal("water_ml", { precision: 10, scale: 2 }),
+  caffeineMg: decimal("caffeine_mg", { precision: 8, scale: 2 }),
+  // System
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
 });
 
 /**
@@ -590,16 +602,21 @@ export const healthDaily = pgTable("health_daily", {
 export const healthWorkouts = pgTable(
   "health_workouts",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
     workoutDate: date("workout_date").notNull(),
-    startTime: text("start_time").notNull(), // TIME as text, e.g. "07:30:00"
     workoutType: text("workout_type").notNull(),
-    durationMinutes: decimal("duration_minutes", { precision: 8, scale: 2 }),
-    energyKj: decimal("energy_kj", { precision: 10, scale: 2 }),
-    avgHr: decimal("avg_hr", { precision: 5, scale: 1 }),
-    maxHr: decimal("max_hr", { precision: 5, scale: 1 }),
+    startTime: text("start_time").notNull(), // TIMESTAMPTZ as text
+    endTime: text("end_time"),               // TIMESTAMPTZ as text
+    durationMinutes: integer("duration_minutes"),
     distanceKm: decimal("distance_km", { precision: 10, scale: 3 }),
+    activeEnergyKj: decimal("active_energy_kj", { precision: 10, scale: 2 }),
     isIndoor: boolean("is_indoor"),
+    hrAvg: integer("hr_avg"),
+    hrMin: integer("hr_min"),
+    hrMax: integer("hr_max"),
+    hrRecovery: integer("hr_recovery"),
+    temperatureC: decimal("temperature_c", { precision: 5, scale: 2 }),
+    humidityPct: integer("humidity_pct"),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
   },
   (table) => ({
     workoutDateIdx: index("health_workouts_workout_date_idx").on(table.workoutDate),

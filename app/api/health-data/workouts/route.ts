@@ -34,14 +34,14 @@ export const GET = withAuth(async (request) => {
     .limit(limit);
 
   const result = rows.map((row) => ({
-    id: row.id,
+    id: `${row.workoutDate}-${row.startTime}-${row.workoutType}`,
     workoutDate: row.workoutDate,
     startTime: row.startTime,
     workoutType: row.workoutType,
-    durationMinutes: row.durationMinutes ? Number(row.durationMinutes) : null,
-    caloriesKcal: row.energyKj ? kjToKcal(Number(row.energyKj)) : null,
-    avgHr: row.avgHr ? Number(row.avgHr) : null,
-    maxHr: row.maxHr ? Number(row.maxHr) : null,
+    durationMinutes: row.durationMinutes,
+    caloriesKcal: row.activeEnergyKj ? kjToKcal(Number(row.activeEnergyKj)) : null,
+    avgHr: row.hrAvg,
+    maxHr: row.hrMax,
     distanceKm: row.distanceKm ? Number(row.distanceKm) : null,
     isIndoor: row.isIndoor,
   }));

@@ -20,34 +20,32 @@ export const GET = withAuth(async (request) => {
   const rows = await db
     .select({
       logDate: healthDaily.logDate,
-      sleepHours: healthDaily.sleepHours,
-      sleepDeep: healthDaily.sleepDeep,
-      sleepRem: healthDaily.sleepRem,
-      sleepCore: healthDaily.sleepCore,
-      sleepAwake: healthDaily.sleepAwake,
+      sleepTotalHrs: healthDaily.sleepTotalHrs,
+      sleepDeepHrs: healthDaily.sleepDeepHrs,
+      sleepRemHrs: healthDaily.sleepRemHrs,
+      sleepCoreHrs: healthDaily.sleepCoreHrs,
+      sleepAwakeHrs: healthDaily.sleepAwakeHrs,
       sleepStart: healthDaily.sleepStart,
       sleepEnd: healthDaily.sleepEnd,
       breathingDisturbances: healthDaily.breathingDisturbances,
       respiratoryRate: healthDaily.respiratoryRate,
     })
     .from(healthDaily)
-    .where(
-      gte(healthDaily.logDate, startDate),
-    )
+    .where(gte(healthDaily.logDate, startDate))
     .orderBy(asc(healthDaily.logDate));
 
   // Filter to rows that have sleep data and compute efficiency
   const result = rows
-    .filter((row) => row.sleepHours !== null)
+    .filter((row) => row.sleepTotalHrs !== null)
     .map((row) => {
-      const total = Number(row.sleepHours ?? 0);
-      const awake = Number(row.sleepAwake ?? 0);
+      const total = Number(row.sleepTotalHrs ?? 0);
+      const awake = Number(row.sleepAwakeHrs ?? 0);
       return {
         logDate: row.logDate,
         sleepHours: total,
-        sleepDeep: row.sleepDeep ? Number(row.sleepDeep) : null,
-        sleepRem: row.sleepRem ? Number(row.sleepRem) : null,
-        sleepCore: row.sleepCore ? Number(row.sleepCore) : null,
+        sleepDeep: row.sleepDeepHrs ? Number(row.sleepDeepHrs) : null,
+        sleepRem: row.sleepRemHrs ? Number(row.sleepRemHrs) : null,
+        sleepCore: row.sleepCoreHrs ? Number(row.sleepCoreHrs) : null,
         sleepAwake: awake,
         sleepStart: row.sleepStart,
         sleepEnd: row.sleepEnd,

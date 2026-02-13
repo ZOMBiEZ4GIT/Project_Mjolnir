@@ -21,10 +21,10 @@ export const GET = withAuth(async (request) => {
     SELECT
       DATE_TRUNC('week', log_date::timestamp)::date AS "weekStart",
       ROUND(AVG(weight_kg::float)::numeric, 1) AS "avgWeightKg",
-      ROUND(AVG(energy_kj::float / ${KJ_TO_KCAL})::numeric, 0) AS "avgCaloriesKcal",
+      ROUND(AVG(calories_kj::float / ${KJ_TO_KCAL})::numeric, 0) AS "avgCaloriesKcal",
       ROUND(AVG(protein_g::float)::numeric, 0) AS "avgProteinG",
-      ROUND(AVG(hrv::float)::numeric, 0) AS "avgHrv",
-      ROUND(AVG(sleep_hours::float)::numeric, 1) AS "avgSleepHours",
+      ROUND(AVG(hrv_ms::float)::numeric, 0) AS "avgHrv",
+      ROUND(AVG(sleep_total_hrs::float)::numeric, 1) AS "avgSleepHours",
       ROUND(AVG(steps)::numeric, 0) AS "avgSteps",
       ROUND(AVG(resting_hr::float)::numeric, 0) AS "avgRestingHr",
       COUNT(*)::int AS "daysWithData"
