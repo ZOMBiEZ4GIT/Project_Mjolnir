@@ -115,6 +115,8 @@ export const queryKeys = {
       suggestions: ["budget", "corrections", "suggestions"] as const,
     },
     challengeComparison: ["budget", "challenge-comparison"] as const,
+    anomalies: (periodId?: string) =>
+      ["budget", "anomalies", periodId ?? "current"] as const,
   },
 
   // ---- n8n ----
