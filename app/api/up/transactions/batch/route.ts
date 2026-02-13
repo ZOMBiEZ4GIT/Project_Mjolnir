@@ -18,6 +18,10 @@ const transactionSchema = z.object({
   settled_at: z.string().optional(),
   is_transfer: z.boolean(),
   mjolnir_category_id: z.string().optional(),
+  // Three-tier classification fields (from n8n rules engine)
+  saver: z.string().optional(),
+  category: z.string().optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 const batchSchema = z.object({
@@ -64,18 +68,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ inserted: 0, updated: 0 }, { status: 200 });
     }
 
-    // Look up which transaction IDs already exist (including their current category)
+    // Look up which transaction IDs already exist (including their current classification)
     const upTxnIds = txns.map((t) => t.up_transaction_id);
     const existing = await db
       .select({
         upTransactionId: upTransactions.upTransactionId,
         mjolnirCategoryId: upTransactions.mjolnirCategoryId,
+        saverKey: upTransactions.saverKey,
+        categoryKey: upTransactions.categoryKey,
+        tags: upTransactions.tags,
       })
       .from(upTransactions)
       .where(inArray(upTransactions.upTransactionId, upTxnIds));
 
     const existingMap = new Map(
-      existing.map((e) => [e.upTransactionId, e.mjolnirCategoryId])
+      existing.map((e) => [e.upTransactionId, {
+        mjolnirCategoryId: e.mjolnirCategoryId,
+        saverKey: e.saverKey,
+        categoryKey: e.categoryKey,
+        tags: e.tags,
+      }])
     );
 
     // Load income source pattern once for the batch
@@ -110,22 +122,35 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date(),
       };
 
+      // Three-tier classification: use saver/category/tags from payload if provided
+      const hasThreeTier = data.saver !== undefined;
+      const threeTierFields = hasThreeTier
+        ? {
+            saverKey: data.saver ?? null,
+            categoryKey: data.category ?? null,
+            tags: data.tags ?? [],
+          }
+        : {};
+
       if (existingMap.has(data.up_transaction_id)) {
-        // Only set category if the existing record doesn't already have one
-        const existingCategory = existingMap.get(data.up_transaction_id);
-        const categoryUpdate = existingCategory
+        const existingRecord = existingMap.get(data.up_transaction_id)!;
+
+        // For three-tier fields: always update if provided in payload (re-classification)
+        // For mjolnirCategoryId: only set if existing record doesn't have one
+        const categoryUpdate = existingRecord.mjolnirCategoryId
           ? {}
           : { mjolnirCategoryId: resolveCategory(data) };
 
         await db
           .update(upTransactions)
-          .set({ ...values, ...categoryUpdate })
+          .set({ ...values, ...categoryUpdate, ...threeTierFields })
           .where(eq(upTransactions.upTransactionId, data.up_transaction_id));
         updated++;
       } else {
         await db.insert(upTransactions).values({
           upTransactionId: data.up_transaction_id,
           mjolnirCategoryId: resolveCategory(data),
+          ...threeTierFields,
           ...values,
         });
         inserted++;
