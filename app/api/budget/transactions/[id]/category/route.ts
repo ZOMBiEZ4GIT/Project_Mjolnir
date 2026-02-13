@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { upTransactions, budgetCategories, budgetSavers } from "@/lib/db/schema";
+import {
+  upTransactions,
+  budgetCategories,
+  budgetSavers,
+  classificationCorrections,
+} from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { withAuth } from "@/lib/utils/with-auth";
 
@@ -33,9 +38,14 @@ const updateClassificationSchema = z.object({
 export const PUT = withAuth(async (request, context) => {
   const { id } = await context.params;
 
-  // Check if transaction exists
+  // Fetch existing transaction (including current classification for correction tracking)
   const existing = await db
-    .select({ id: upTransactions.id })
+    .select({
+      id: upTransactions.id,
+      description: upTransactions.description,
+      saverKey: upTransactions.saverKey,
+      categoryKey: upTransactions.categoryKey,
+    })
     .from(upTransactions)
     .where(eq(upTransactions.id, id))
     .limit(1);
@@ -46,6 +56,8 @@ export const PUT = withAuth(async (request, context) => {
       { status: 404 }
     );
   }
+
+  const originalTx = existing[0];
 
   let body: unknown;
   try {
@@ -116,6 +128,23 @@ export const PUT = withAuth(async (request, context) => {
     .set(updateFields)
     .where(eq(upTransactions.id, id))
     .returning();
+
+  // Track the correction if saver or category actually changed
+  const newSaverKey = parsed.data.saverKey ?? originalTx.saverKey;
+  const newCategoryKey = parsed.data.categoryKey ?? originalTx.categoryKey;
+  const saverChanged = newSaverKey !== originalTx.saverKey;
+  const categoryChanged = newCategoryKey !== originalTx.categoryKey;
+
+  if ((saverChanged || categoryChanged) && newSaverKey && newCategoryKey) {
+    await db.insert(classificationCorrections).values({
+      transactionId: id,
+      originalSaverKey: originalTx.saverKey,
+      originalCategoryKey: originalTx.categoryKey,
+      correctedSaverKey: newSaverKey,
+      correctedCategoryKey: newCategoryKey,
+      merchantDescription: originalTx.description,
+    });
+  }
 
   return NextResponse.json(updated);
 }, "updating transaction classification");

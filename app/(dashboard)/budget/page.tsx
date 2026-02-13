@@ -33,6 +33,7 @@ import { GoalTracker } from "@/components/budget/goal-tracker";
 import { BudgetVsActualChart } from "@/components/budget/charts/budget-vs-actual-chart";
 import { SpendingPaceChart } from "@/components/budget/charts/spending-pace-chart";
 import { AiCheckinCard } from "@/components/budget/ai-checkin-card";
+import { CorrectionSuggestions } from "@/components/budget/correction-suggestions";
 import { SavingsWaterfall } from "@/components/budget/charts/savings-waterfall";
 import { SpendingTrendsChart } from "@/components/budget/charts/spending-trends";
 
@@ -599,6 +600,9 @@ export default function BudgetDashboardPage() {
 
       {/* AI Check-in card */}
       <AiCheckinCard periodId={summary.periodId} />
+
+      {/* Classification correction suggestions */}
+      <CorrectionSuggestions />
 
       {/* AI Recommendation Modal */}
       {activeRecommendation && (
