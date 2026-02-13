@@ -35,7 +35,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 2,
-      "passes": false,
+      "passes": true,
       "notes": "Goal progress (currentAmountCents) is updated manually for now. Future automation could sync with UP saver balances."
     },
     {

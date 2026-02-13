@@ -135,3 +135,18 @@
   - Followed existing pattern from /api/budget/categories — query both tables, group children by parent ID in Map, assemble response
   - PUT on collection route (not [id] route) using saverKey as identifier — matches the seed-based model where saverKey is the stable identifier
 ---
+
+## 2026-02-13 - BI-B-002
+- Created app/api/budget/goals/route.ts with GET and POST handlers
+- GET returns all goals ordered by priority, with linked saver info (saverKey, saverDisplayName) via leftJoin on budgetSavers
+- GET response includes server-calculated percentComplete: Math.round((currentAmountCents / targetAmountCents) * 100)
+- POST creates a new goal with Zod-validated fields: name, targetAmountCents, monthlyContributionCents (required) + optional saverId, targetDate, priority, colour, icon, notes
+- Created app/api/budget/goals/[id]/route.ts with PUT handler for updating goal fields
+- PUT with status='completed' auto-sets completedAt to new Date()
+- Both routes use withAuth()
+- Files changed: app/api/budget/goals/route.ts, app/api/budget/goals/[id]/route.ts
+- **Learnings for future iterations:**
+  - Goals use UUID id as route param (unlike savers which use saverKey) — goals don't have a stable key like saverKey
+  - leftJoin for optional FK (saverId nullable) — ensures goals without a saver still appear
+  - Pattern: collection route (route.ts) has GET+POST, individual route ([id]/route.ts) has PUT
+---
