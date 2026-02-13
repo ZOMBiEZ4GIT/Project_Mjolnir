@@ -233,3 +233,20 @@
   - budget.summary query key already existed in query-keys.ts — only savers and goals needed adding
   - Mutation hooks should invalidate related query keys (e.g., updating a goal invalidates both goals and summary)
 ---
+
+## 2026-02-13 - BI-B-008
+- Added mapCategoryToSaver() function to lib/budget/categorisation.ts
+- Maps flat mjolnirCategoryId values to three-tier { saverKey, categoryKey } pairs:
+  - groceries → food/groceries, eating-out → food/eating-out
+  - transport → essentials/transport, bills-fixed → essentials/subscriptions, health → essentials/medical
+  - shopping → spending/misc-spending, fun → spending/entertainment
+  - income → income/salary
+  - uncategorised → null (flagged for manual review)
+- Updated batch endpoint to apply mapCategoryToSaver() as fallback when saver field is not in payload but mjolnirCategoryId is resolved
+- For existing records: only applies fallback mapping if existing record doesn't already have saverKey (preserves explicit classifications)
+- For new records: always applies fallback mapping when no three-tier fields in payload
+- Files changed: lib/budget/categorisation.ts, app/api/up/transactions/batch/route.ts
+- **Learnings for future iterations:**
+  - The fallback mapping bridges old flat categories to three-tier — once n8n sends saver/category/tags directly, the fallback becomes less critical but stays for robustness
+  - On upsert (existing records), differentiate between explicit three-tier (always update) vs fallback (only if no existing saverKey) to avoid overwriting intentional classifications
+---

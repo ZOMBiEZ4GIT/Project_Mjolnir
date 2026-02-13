@@ -155,7 +155,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "This bridges the gap between the old flat category system and the new three-tier system. Once n8n is updated to send saver/category/tags directly, this fallback becomes less important but should remain for robustness."
     }
   ]
