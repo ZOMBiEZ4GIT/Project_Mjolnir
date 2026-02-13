@@ -39,7 +39,10 @@ export class ExchangeRateError extends Error {
 interface ExchangeRateApiResponse {
   result: "success" | "error";
   base_code?: string;
+  /** Authenticated endpoint uses conversion_rates */
   conversion_rates?: Record<string, number>;
+  /** Free endpoint (open.er-api.com) uses rates */
+  rates?: Record<string, number>;
   error?: string;
   "error-type"?: string;
 }
@@ -158,7 +161,9 @@ export async function fetchExchangeRate(
     }
 
     // Validate response has conversion rates
-    if (!data.conversion_rates) {
+    // Free endpoint returns "rates", authenticated endpoint returns "conversion_rates"
+    const ratesMap = data.conversion_rates ?? data.rates;
+    if (!ratesMap) {
       throw new ExchangeRateError(
         `No conversion rates returned for ${normalizedFrom}`,
         normalizedFrom,
@@ -167,7 +172,7 @@ export async function fetchExchangeRate(
     }
 
     // Get the rate for target currency
-    const rate = data.conversion_rates[normalizedTo];
+    const rate = ratesMap[normalizedTo];
 
     if (rate === undefined || rate === null) {
       throw new ExchangeRateError(
