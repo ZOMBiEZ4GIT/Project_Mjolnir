@@ -47,7 +47,6 @@ export function CheckinPrompt() {
   const { data, isLoading, error } = useQuery({
     queryKey: queryKeys.checkIn.status,
     queryFn: fetchCheckInStatus,
-    refetchInterval: 60 * 1000,
   });
 
   const handleDismiss = () => {
@@ -72,7 +71,7 @@ export function CheckinPrompt() {
         initial={reducedMotion ? false : { opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: "easeOut" }}
-        className="rounded-2xl border border-accent/30 bg-card/50 p-4 sm:p-6 shadow-glow-sm"
+        className="rounded-2xl border border-accent/30 glass-card p-4 sm:p-6 shadow-glow-sm"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-start gap-3">

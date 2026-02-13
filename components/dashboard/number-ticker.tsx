@@ -19,6 +19,9 @@ interface NumberTickerProps {
  * then morphs between values on change. Digits animate
  * individually for a slot-machine feel.
  *
+ * On subsequent value changes, briefly flashes the text colour
+ * green (increase) or red (decrease) before settling back.
+ *
  * Uses tabular-nums to prevent layout shift during animation.
  * Respects prefers-reduced-motion (shows final value instantly).
  */
@@ -39,6 +42,8 @@ export function NumberTicker({
   });
   const displayRef = useRef<HTMLSpanElement>(null);
   const isInitialMount = useRef(true);
+  const prevValueRef = useRef(value);
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Update the motion value when target value changes
   useEffect(() => {
@@ -48,6 +53,7 @@ export function NumberTicker({
       if (displayRef.current) {
         displayRef.current.textContent = formatCurrency(value, currency, { compact });
       }
+      prevValueRef.current = value;
       return;
     }
 
@@ -60,10 +66,40 @@ export function NumberTicker({
       });
       isInitialMount.current = false;
     } else {
-      // Subsequent changes: morph to new value (faster spring)
+      // Subsequent changes: morph to new value + flash colour
       motionValue.set(value);
+
+      if (displayRef.current && value !== prevValueRef.current) {
+        // Flash positive (green) or negative (red)
+        const flashColour =
+          value > prevValueRef.current
+            ? "hsl(142 71% 45%)"  // positive
+            : "hsl(0 84% 63%)";  // negative
+        displayRef.current.style.color = flashColour;
+        displayRef.current.style.transition = "color 0s";
+
+        // Clear any pending timer
+        if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+
+        // Fade back to inherited colour after 400ms
+        flashTimerRef.current = setTimeout(() => {
+          if (displayRef.current) {
+            displayRef.current.style.transition = "color 0.4s ease";
+            displayRef.current.style.color = "";
+          }
+        }, 400);
+      }
     }
-  }, [value, currency, motionValue, shouldReduceMotion]);
+
+    prevValueRef.current = value;
+  }, [value, currency, motionValue, shouldReduceMotion, compact]);
+
+  // Cleanup flash timer on unmount
+  useEffect(() => {
+    return () => {
+      if (flashTimerRef.current) clearTimeout(flashTimerRef.current);
+    };
+  }, []);
 
   // Subscribe to spring changes and update the display
   useEffect(() => {

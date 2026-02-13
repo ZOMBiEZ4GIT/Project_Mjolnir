@@ -1,78 +1,25 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/query-keys";
 import { motion, useReducedMotion } from "framer-motion";
 import { useCurrency } from "@/components/providers/currency-provider";
-import { type Currency, type ExchangeRates } from "@/lib/utils/currency";
+import { type Currency } from "@/lib/utils/currency";
 import { Wallet, CreditCard } from "lucide-react";
 import { NumberTicker } from "@/components/dashboard/number-ticker";
 import { ChangeBadge } from "@/components/dashboard/change-badge";
 import { staggerContainer, staggerItem } from "@/lib/animations";
-
-interface HoldingValue {
-  id: string;
-  name: string;
-  symbol: string | null;
-  value: number;
-  currency: string;
-  valueNative: number;
-}
-
-interface AssetTypeBreakdown {
-  type: "stock" | "etf" | "crypto" | "super" | "cash";
-  totalValue: number;
-  count: number;
-  holdings: HoldingValue[];
-}
-
-interface NetWorthResponse {
-  netWorth: number;
-  totalAssets: number;
-  totalDebt: number;
-  breakdown: AssetTypeBreakdown[];
-  hasStaleData: boolean;
-  displayCurrency: Currency;
-  ratesUsed: ExchangeRates;
-  calculatedAt: string;
-}
-
-interface HistoryPoint {
-  date: string;
-  netWorth: number;
-  totalAssets: number;
-  totalDebt: number;
-}
-
-interface HistoryResponse {
-  history: HistoryPoint[];
-  generatedAt: string;
-}
-
-async function fetchNetWorth(displayCurrency: Currency): Promise<NetWorthResponse> {
-  const response = await fetch(`/api/net-worth?displayCurrency=${displayCurrency}`);
-  if (!response.ok) {
-    throw new Error("Failed to fetch net worth");
-  }
-  return response.json();
-}
-
-async function fetchHistory(): Promise<HistoryResponse> {
-  const response = await fetch("/api/net-worth/history?months=2");
-  if (!response.ok) {
-    throw new Error("Failed to fetch history");
-  }
-  return response.json();
-}
+import {
+  useDashboardNetWorth,
+  useDashboardHistory,
+} from "@/lib/hooks/use-dashboard-data";
 
 function CardSkeleton() {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
-      <div className="animate-pulse">
-        <div className="h-3 w-20 bg-muted rounded mb-3" />
-        <div className="h-8 w-40 bg-muted rounded mb-3" />
-        <div className="h-5 w-32 bg-muted rounded mb-2" />
-        <div className="h-3 w-24 bg-muted rounded" />
+    <div className="rounded-2xl glass-card p-4 sm:p-6">
+      <div>
+        <div className="h-3 w-20 skeleton-shimmer mb-3" />
+        <div className="h-8 w-40 skeleton-shimmer mb-3" />
+        <div className="h-5 w-32 skeleton-shimmer mb-2" />
+        <div className="h-3 w-24 skeleton-shimmer" />
       </div>
     </div>
   );
@@ -114,7 +61,13 @@ function SummaryCard({
   return (
     <motion.div
       variants={staggerItem}
-      className="rounded-2xl border border-border bg-card p-4 sm:p-6 transition-shadow duration-150 hover:shadow-card-hover"
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.15 }}
+      className={`rounded-2xl glass-card p-4 sm:p-6 ${
+        variant === "assets"
+          ? "hover:shadow-glow-positive"
+          : "hover:shadow-glow-negative"
+      }`}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
@@ -156,24 +109,17 @@ function SummaryCard({
 
 export function SummaryCards() {
   const shouldReduceMotion = useReducedMotion();
-  const { displayCurrency, isLoading: currencyLoading, convert } = useCurrency();
+  const { convert } = useCurrency();
 
   const {
     data: netWorthData,
     isLoading: isLoadingNetWorth,
     error: netWorthError,
-  } = useQuery({
-    queryKey: queryKeys.netWorth.current(displayCurrency),
-    queryFn: () => fetchNetWorth(displayCurrency),
-    enabled: !currencyLoading,
-    refetchInterval: 60 * 1000,
-  });
+    displayCurrency,
+    currencyLoading,
+  } = useDashboardNetWorth();
 
-  const { data: historyData, isLoading: isLoadingHistory } = useQuery({
-    queryKey: queryKeys.netWorth.history(2),
-    queryFn: fetchHistory,
-    refetchInterval: 60 * 1000,
-  });
+  const { data: historyData, isLoading: isLoadingHistory } = useDashboardHistory();
 
   if (isLoadingNetWorth || currencyLoading) {
     return (
@@ -217,7 +163,7 @@ export function SummaryCards() {
     : {
         ...staggerContainer,
         visible: {
-          transition: { staggerChildren: 0.1 },
+          transition: { staggerChildren: 0.05 },
         },
       };
 

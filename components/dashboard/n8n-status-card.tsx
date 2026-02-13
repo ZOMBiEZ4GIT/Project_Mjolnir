@@ -20,16 +20,16 @@ function formatRelativeTime(dateStr: string): string {
 
 function StatusCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
-      <div className="animate-pulse">
+    <div className="rounded-2xl glass-card p-4 sm:p-6">
+      <div>
         <div className="flex items-center gap-2 mb-4">
-          <div className="h-5 w-5 bg-muted rounded" />
-          <div className="h-5 w-24 bg-muted rounded" />
+          <div className="h-5 w-5 skeleton-shimmer" />
+          <div className="h-5 w-24 skeleton-shimmer" />
         </div>
         <div className="space-y-3">
-          <div className="h-4 w-48 bg-muted rounded" />
-          <div className="h-4 w-32 bg-muted/70 rounded" />
-          <div className="h-4 w-40 bg-muted/70 rounded" />
+          <div className="h-4 w-48 skeleton-shimmer" />
+          <div className="h-4 w-32 skeleton-shimmer" />
+          <div className="h-4 w-40 skeleton-shimmer" />
         </div>
       </div>
     </div>
@@ -58,7 +58,7 @@ export function N8nStatusCard() {
 
   if (hasError) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6 opacity-60">
+      <div className="rounded-2xl glass-card p-4 sm:p-6 opacity-60">
         <div className="flex items-center gap-2 mb-2">
           <Workflow className="h-5 w-5 text-muted-foreground" />
           <h3 className="text-sm font-medium text-muted-foreground">Automations</h3>
@@ -93,7 +93,7 @@ export function N8nStatusCard() {
   return (
     <Link
       href="/automations"
-      className="block rounded-2xl border border-border bg-card p-4 sm:p-6 transition-colors hover:bg-card/80"
+      className="block rounded-2xl glass-card p-4 sm:p-6 transition-transform hover:-translate-y-0.5"
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">

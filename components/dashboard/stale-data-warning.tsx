@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { queryKeys } from "@/lib/query-keys";
 import {
   AlertTriangle,
   ChevronDown,
@@ -13,40 +11,12 @@ import {
   ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
+import {
+  useDashboardNetWorth,
+  type StaleHolding,
+} from "@/lib/hooks/use-dashboard-data";
 
-/**
- * Reason why a holding's data is considered stale.
- */
-type StaleReason =
-  | "price_expired" // Tradeable: cached price is older than TTL
-  | "no_price" // Tradeable: no cached price available
-  | "snapshot_old" // Snapshot: snapshot is older than 2 months
-  | "no_snapshot"; // Snapshot: no snapshot available
-
-interface StaleHolding {
-  holdingId: string;
-  name: string;
-  type: string;
-  lastUpdated: string | null;
-  reason: StaleReason;
-}
-
-interface NetWorthResponse {
-  netWorth: number;
-  totalAssets: number;
-  totalDebt: number;
-  hasStaleData: boolean;
-  staleHoldings: StaleHolding[];
-  calculatedAt: string;
-}
-
-async function fetchNetWorth(): Promise<NetWorthResponse> {
-  const response = await fetch("/api/net-worth");
-  if (!response.ok) {
-    throw new Error("Failed to fetch net worth");
-  }
-  return response.json();
-}
+type StaleReason = "price_expired" | "no_price" | "snapshot_old" | "no_snapshot";
 
 /**
  * Formats a relative timestamp.
@@ -132,31 +102,25 @@ function getActionText(reason: StaleReason): string {
  * Stale Data Warning Banner
  *
  * Displays a warning banner on the dashboard when there are holdings with stale data.
- * Features:
- * - Yellow warning banner if any holdings have stale data
- * - Expandable to show list of stale holdings
- * - Each holding shows: name, type, last updated, reason
- * - Link to holding or action to refresh
+ * Uses the shared useDashboardNetWorth() hook to avoid a duplicate /api/net-worth request.
  */
 export function StaleDataWarning() {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const { data, isLoading, error } = useQuery({
-    queryKey: queryKeys.netWorth.all,
-    queryFn: fetchNetWorth,
-    refetchInterval: 60 * 1000,
-  });
+  const { data, isLoading, error } = useDashboardNetWorth();
 
   // Don't render anything while loading or if there's no stale data
   if (isLoading || error || !data) {
     return null;
   }
 
-  if (!data.hasStaleData || data.staleHoldings.length === 0) {
+  const staleHoldings: StaleHolding[] = data.staleHoldings ?? [];
+
+  if (!data.hasStaleData || staleHoldings.length === 0) {
     return null;
   }
 
-  const staleCount = data.staleHoldings.length;
+  const staleCount = staleHoldings.length;
 
   return (
     <div className="rounded-2xl border border-warning/30 bg-warning/10 overflow-hidden">
@@ -190,7 +154,7 @@ export function StaleDataWarning() {
       {isExpanded && (
         <div className="border-t border-warning/20 bg-background">
           <div className="divide-y divide-warning/20">
-            {data.staleHoldings.map((holding) => (
+            {staleHoldings.map((holding) => (
               <div
                 key={holding.holdingId}
                 className="p-4 flex items-center justify-between hover:bg-warning/10 transition-colors"
@@ -240,7 +204,7 @@ export function StaleDataWarning() {
           {/* Footer with summary */}
           <div className="p-4 border-t border-warning/20 bg-muted">
             <p className="text-xs text-warning/80">
-              {data.staleHoldings.some(
+              {staleHoldings.some(
                 (h) => h.reason === "price_expired" || h.reason === "no_price"
               ) && (
                 <span className="flex items-center gap-1">
@@ -249,7 +213,7 @@ export function StaleDataWarning() {
                   prices at once.
                 </span>
               )}
-              {data.staleHoldings.some(
+              {staleHoldings.some(
                 (h) => h.reason === "snapshot_old" || h.reason === "no_snapshot"
               ) && (
                 <span className="flex items-center gap-1 mt-1">

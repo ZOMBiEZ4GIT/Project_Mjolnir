@@ -19,7 +19,7 @@ export function ChartCard({ title, actions, children, className = "" }: ChartCar
 
   return (
     <motion.div
-      className={`rounded-2xl border border-border bg-card p-4 sm:p-6 ${className}`}
+      className={`rounded-2xl glass-card p-4 sm:p-6 ${className}`}
       {...(reducedMotion ? {} : fadeIn)}
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">

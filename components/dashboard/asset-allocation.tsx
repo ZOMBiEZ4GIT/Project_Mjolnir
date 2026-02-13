@@ -136,20 +136,20 @@ function getAssetHexColor(type: string): string {
 
 function AllocationSkeleton() {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
-      <div className="animate-pulse">
-        <div className="h-4 w-32 bg-muted rounded mb-6" />
+    <div className="rounded-2xl glass-card p-4 sm:p-6">
+      <div>
+        <div className="h-4 w-32 skeleton-shimmer mb-6" />
         <div className="space-y-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <div className="h-5 w-5 bg-muted rounded" />
-                  <div className="h-4 w-24 bg-muted rounded" />
+                  <div className="h-5 w-5 skeleton-shimmer" />
+                  <div className="h-4 w-24 skeleton-shimmer" />
                 </div>
-                <div className="h-4 w-20 bg-muted rounded" />
+                <div className="h-4 w-20 skeleton-shimmer" />
               </div>
-              <div className="h-2 w-full bg-muted rounded" />
+              <div className="h-2 w-full skeleton-shimmer" />
             </div>
           ))}
         </div>
@@ -364,7 +364,6 @@ export function AssetAllocation() {
     queryKey: queryKeys.netWorth.current(displayCurrency),
     queryFn: () => fetchNetWorth(displayCurrency),
     enabled: !currencyLoading,
-    refetchInterval: 60 * 1000,
   });
 
   if (isLoading || currencyLoading) {
@@ -391,7 +390,7 @@ export function AssetAllocation() {
 
   if (sortedBreakdown.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+      <div className="rounded-2xl glass-card p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h3 className="text-label uppercase text-muted-foreground">
             Asset Allocation
@@ -419,7 +418,7 @@ export function AssetAllocation() {
 
   return (
     <motion.div
-      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      className="rounded-2xl glass-card p-4 sm:p-6"
       initial={shouldReduceMotion ? false : fadeIn.initial}
       animate={fadeIn.animate}
       transition={shouldReduceMotion ? { duration: 0 } : fadeIn.transition}

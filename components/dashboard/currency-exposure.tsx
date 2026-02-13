@@ -109,20 +109,20 @@ function getCurrencyFlag(currency: Currency): string {
  */
 function ExposureSkeleton() {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
-      <div className="animate-pulse">
-        <div className="h-5 w-40 bg-muted rounded mb-6" />
+    <div className="rounded-2xl glass-card p-4 sm:p-6">
+      <div>
+        <div className="h-5 w-40 skeleton-shimmer mb-6" />
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i}>
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 bg-muted rounded" />
-                  <div className="h-4 w-32 bg-muted rounded" />
+                  <div className="h-6 w-6 skeleton-shimmer" />
+                  <div className="h-4 w-32 skeleton-shimmer" />
                 </div>
-                <div className="h-4 w-20 bg-muted rounded" />
+                <div className="h-4 w-20 skeleton-shimmer" />
               </div>
-              <div className="h-2 w-full bg-muted rounded" />
+              <div className="h-2 w-full skeleton-shimmer" />
             </div>
           ))}
         </div>
@@ -307,7 +307,6 @@ export function CurrencyExposure() {
     queryKey: queryKeys.currencyExposure(displayCurrency),
     queryFn: () => fetchCurrencyExposure(displayCurrency),
     enabled: !currencyLoading,
-    refetchInterval: 60 * 1000,
   });
 
   // Show skeleton while loading
@@ -334,7 +333,7 @@ export function CurrencyExposure() {
   // Empty state
   if (exposure.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+      <div className="rounded-2xl glass-card p-4 sm:p-6">
         <h3 className="text-label uppercase text-muted-foreground mb-4">
           Currency Exposure
         </h3>
@@ -347,7 +346,7 @@ export function CurrencyExposure() {
 
   return (
     <motion.div
-      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      className="rounded-2xl glass-card p-4 sm:p-6"
       {...(reducedMotion ? {} : fadeIn)}
     >
       <h3 className="text-label uppercase text-muted-foreground mb-6">

@@ -19,18 +19,18 @@ const sectionStaggerContainer: Variants = {
   hidden: {},
   visible: {
     transition: {
-      staggerChildren: 0.08, // 80ms between sections
+      staggerChildren: 0.04,
     },
   },
 };
 
 const sectionStaggerItem: Variants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 8 },
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.3,
+      duration: 0.2,
       ease: "easeOut",
     },
   },

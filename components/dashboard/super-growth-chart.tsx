@@ -240,7 +240,6 @@ export function SuperGrowthChart({
   } = useQuery({
     queryKey: queryKeys.super.breakdown(months, holdingId),
     queryFn: () => fetchSuperBreakdown(months, holdingId),
-    refetchInterval: 60 * 1000,
   });
 
   // Retry handler
@@ -286,7 +285,7 @@ export function SuperGrowthChart({
   // Empty state - no super holdings
   if (holdings.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+      <div className="rounded-2xl glass-card p-4 sm:p-6">
         <h3 className="text-label uppercase text-muted-foreground mb-4">
           Superannuation Growth Breakdown
         </h3>
@@ -300,7 +299,7 @@ export function SuperGrowthChart({
   // Empty state - no breakdown data yet
   if (breakdown.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+      <div className="rounded-2xl glass-card p-4 sm:p-6">
         <h3 className="text-label uppercase text-muted-foreground mb-4">
           Superannuation Growth Breakdown
         </h3>
@@ -356,7 +355,7 @@ export function SuperGrowthChart({
 
   return (
     <motion.div
-      className="rounded-2xl border border-border bg-card p-4 sm:p-6"
+      className="rounded-2xl glass-card p-4 sm:p-6"
       {...(reducedMotion ? {} : fadeIn)}
     >
       <div className="flex items-center justify-between mb-6">
