@@ -26,3 +26,17 @@
   - `RecommendationModal` uses a `categoryMap` — when flattening from savers, use `cat.categoryKey` as the key (not categoryId).
   - Components removed from page imports (SankeyChartContainer, MobileBudgetChart, CategoryCard, PaydayCountdown, SavingsIndicator, SpendingTrends) still exist and may be used in future stories.
 ---
+
+## 2026-02-13 - BI-C-002
+- What was implemented: Goal tracker widget with expandable cards, progress bars, inline edit form
+- Files changed:
+  - `components/budget/goal-tracker.tsx` — new component with GoalTracker, GoalCard, GoalEditForm, GoalTrackerSkeleton
+  - `app/(dashboard)/budget/page.tsx` — imported and placed GoalTracker after Spending Savers section
+- **Learnings for future iterations:**
+  - `useBudgetGoals()` hook from `lib/hooks/use-budget-goals.ts` provides full Goal[] with percentComplete, status, notes, etc.
+  - `useUpdateGoal(id)` mutation invalidates both `budget.goals` and `budget.summary()` query keys on success
+  - Goal colour from DB is hex string (same pattern as savers) — use inline `style={{ backgroundColor }}` for progress bars
+  - For ETA calculation: if `targetDate` is set, use it directly; otherwise estimate from `monthlyContributionCents` vs remaining amount
+  - Debt payoff goals identified by name containing "debt", "payoff", "pay off", or "loan" — show "Clears [month]" instead of "ETA [month]"
+  - Goal cards use click-to-expand pattern (not navigate) since goals don't have their own detail pages
+---
