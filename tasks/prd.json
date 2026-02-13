@@ -132,7 +132,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.4 wireframe. The n8n flow processes asynchronously — Mjolnir sends the request and then polls the callback result. Use queryClient.invalidateQueries on a timer to poll."
     },
     {

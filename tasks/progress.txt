@@ -93,3 +93,17 @@
   - Today marker uses ReferenceLine with `x={daysElapsed}` and dotted stroke
   - Query key reuses `queryKeys.budget.transactions.list()` with from/to/limit filters for proper cache management
 ---
+
+## 2026-02-13 - BI-C-006
+- What was implemented: AI check-in card showing latest recommendation with overall status, saver health grid, insights, actionable tip, and "Run Check-in" button with polling
+- Files changed:
+  - `components/budget/ai-checkin-card.tsx` — new component with AiCheckinCard, RecommendationDisplay, AiCheckinSkeleton
+  - `app/(dashboard)/budget/page.tsx` — imported and placed AiCheckinCard after GoalTracker section
+- **Learnings for future iterations:**
+  - `useLatestRecommendation(periodId)` from `lib/hooks/use-budget-recommendation.ts` returns structured `Recommendation` with `overallStatus`, `saverStatuses`, `insights`, `actionableTip`, etc.
+  - `useRequestRecommendation()` mutation calls POST `/api/budget/recommendations/request` (saver-based, not the old category-based POST)
+  - Polling for async n8n results: use `queryClient.invalidateQueries` on a timer (every 5s) rather than manual fetch — TanStack Query handles cache updates and re-renders automatically
+  - Baseline ID pattern: capture current recommendation ID before requesting, stop polling when a new ID appears via the query data
+  - Recommendation `generatedAt` may be null (for old records) — fall back to `createdAt` for timestamp display
+  - Saver health grid uses `saverStatuses[].saverKey` as labels — these are machine keys (e.g. "food"), not display names with emojis
+---
