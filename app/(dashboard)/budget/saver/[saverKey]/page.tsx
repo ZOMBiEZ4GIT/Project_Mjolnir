@@ -11,6 +11,7 @@ import {
   type CategorySummary,
 } from "@/lib/hooks/use-budget-summary";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CategoryTreemap } from "@/components/budget/charts/category-treemap";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -474,6 +475,13 @@ export default function SaverDetailPage({
           </span>
         </div>
       </div>
+
+      {/* Category treemap */}
+      <CategoryTreemap
+        categories={saver.categories}
+        saverKey={saverKey}
+        progressPercent={period.progressPercent}
+      />
 
       {/* Categories section */}
       <div>
