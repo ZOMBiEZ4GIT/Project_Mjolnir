@@ -22,6 +22,9 @@
 - For JSONB array aggregation use raw SQL: `db.execute(sql\`SELECT ... FROM table, jsonb_array_elements_text(col) AS tag ...\`)` — returns `{ rows: [...] }`
 - Recharts `Treemap` data needs index signature (`[key: string]: ...`) on interface to satisfy `TreemapDataType`; `Tooltip` must be a child of `<Treemap>`, not outside `ResponsiveContainer`
 - Waterfall chart technique: stacked bars with invisible `base` bar + visible `value` bar; use `stackId` to stack them
+- Trends API `/api/budget/trends` now returns `savers[]` alongside `categories[]` — saver data queried directly from `upTransactions` grouped by `saverKey`
+- For multi-period saver queries: use `Promise.all` with per-period SQL queries alongside existing `calculateBudgetSummary` calls
+- Collapsible sections: use `ChevronDown` icon with `-rotate-90` when collapsed, `rotate-0` when expanded; toggle with `useState`
 
 ---
 
@@ -171,4 +174,18 @@
   - Toggle tabs between charts: use a simple state variable with styled buttons in a `bg-muted/50` container, active tab gets `bg-card shadow-sm`
   - Income for waterfall should use `expectedCents` (budget) not `actualCents` (received so far) — budget allocation is about the plan, not actuals
   - SankeyChartContainer is no longer imported on the budget page — it still exists but is effectively replaced by the waterfall
+---
+
+## 2026-02-13 - BI-C-011
+- What was implemented: Month-over-month spending trends line chart with per-saver comparison, budget reference lines, saver toggle filter, and collapsible section on budget page
+- Files changed:
+  - `app/api/budget/trends/route.ts` — extended to include saver-level spending data (`savers[]`) alongside existing category data
+  - `components/budget/charts/spending-trends.tsx` — new Recharts LineChart component with saver lines, budget reference lines, toggle filter, tooltip
+  - `app/(dashboard)/budget/page.tsx` — added collapsible "Trends" section with SpendingTrendsChart import
+- **Learnings for future iterations:**
+  - Trends API now returns both `categories[]` (old format from calculateBudgetSummary) and `savers[]` (new saver-based format) — backward compatible
+  - For multi-period saver aggregation: query `upTransactions` grouped by `saverKey` per period directly rather than going through `calculateBudgetSummary` which only returns category data
+  - Budget reference lines per saver use `<ReferenceLine y={budget/100} strokeDasharray="4 4" strokeOpacity={0.35} />` — low opacity avoids visual noise with many savers
+  - Saver toggle uses a `Set<string>` of hidden saverKeys — more efficient than tracking "visible" when most are visible by default
+  - Collapsible section uses ChevronDown icon with rotation transition — simple useState toggle, no library needed
 ---

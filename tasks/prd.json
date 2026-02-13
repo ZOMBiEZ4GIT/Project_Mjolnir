@@ -233,7 +233,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 11,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.3.6. Key use case: see if supplement spend actually drops after April 2026. Existing SpendingTrends component may have useful logic to build on."
     },
     {
