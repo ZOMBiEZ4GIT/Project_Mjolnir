@@ -138,7 +138,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Follow the patterns in existing hooks like use-n8n.ts. Type the response shapes to match the API responses from BI-B-001 through BI-B-006."
     },
     {

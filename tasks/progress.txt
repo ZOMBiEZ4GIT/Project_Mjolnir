@@ -216,3 +216,20 @@
   - rawResponse stores the original body (unknown type from withN8nAuth) before Zod parsing — useful for debugging schema mismatches
   - saverStatuses, goalProgress, budgetAdjustments, savingsProjection are optional in the schema (nullable columns) — only insights and actionableTip are required
 ---
+
+## 2026-02-13 - BI-B-007
+- Created 4 TanStack Query hook files in lib/hooks/:
+  - use-budget-savers.ts: useBudgetSavers() — GET /api/budget/savers
+  - use-budget-goals.ts: useBudgetGoals() + useUpdateGoal(id) mutation — GET /api/budget/goals, PUT /api/budget/goals/[id]
+  - use-budget-summary.ts: useBudgetSummary(periodId?) — GET /api/budget/summary
+  - use-budget-recommendation.ts: useLatestRecommendation(periodId?) + useRequestRecommendation() mutation — GET /api/budget/recommendations, POST /api/budget/recommendations/request
+- Added budget.savers and budget.goals query keys to lib/query-keys.ts
+- Exported TypeScript interfaces: BudgetSaver, BudgetCategory, Goal, BudgetSummary, Recommendation
+- All hooks follow existing use-n8n.ts patterns: staleTime, proper TypeScript generics, "use client" directive
+- Mutation hooks invalidate related queries on success (goals invalidates summary, recommendation request invalidates latest)
+- Files changed: lib/query-keys.ts, lib/hooks/use-budget-savers.ts, lib/hooks/use-budget-goals.ts, lib/hooks/use-budget-summary.ts, lib/hooks/use-budget-recommendation.ts
+- **Learnings for future iterations:**
+  - Hook pattern: "use client" directive → types → fetch helpers → hooks. Keep fetch functions private, export only hooks and types
+  - budget.summary query key already existed in query-keys.ts — only savers and goals needed adding
+  - Mutation hooks should invalidate related query keys (e.g., updating a goal invalidates both goals and summary)
+---
