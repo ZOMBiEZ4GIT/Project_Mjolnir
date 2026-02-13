@@ -1,27 +1,33 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { upTransactions, budgetCategories } from "@/lib/db/schema";
+import { upTransactions, budgetCategories, budgetSavers } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { withAuth } from "@/lib/utils/with-auth";
 
-const updateCategorySchema = z.object({
+const updateClassificationSchema = z.object({
   category_id: z.string().min(1, "category_id is required"),
+  saverKey: z.string().min(1).optional(),
+  categoryKey: z.string().min(1).optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 /**
  * PUT /api/budget/transactions/:id/category
  *
- * Updates the Mjolnir category for a specific UP transaction.
- * Used for manual category overrides when auto-categorisation is incorrect.
+ * Updates the classification for a specific UP transaction.
+ * Supports updating Mjolnir category, saver key, category key, and tags.
  *
  * Request body:
- *   - category_id: The Mjolnir budget category slug to assign
+ *   - category_id: The Mjolnir budget category slug to assign (required)
+ *   - saverKey: (optional) The saver key to assign
+ *   - categoryKey: (optional) The category key to assign
+ *   - tags: (optional) Array of tag strings
  *
  * Response: Updated transaction object
  *
  * Errors:
- *   - 400 for validation failures or invalid category_id
+ *   - 400 for validation failures or invalid category_id/saverKey
  *   - 404 if transaction not found
  */
 export const PUT = withAuth(async (request, context) => {
@@ -51,7 +57,7 @@ export const PUT = withAuth(async (request, context) => {
     );
   }
 
-  const parsed = updateCategorySchema.safeParse(body);
+  const parsed = updateClassificationSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
       { error: "Validation failed", errors: parsed.error.flatten().fieldErrors },
@@ -73,14 +79,43 @@ export const PUT = withAuth(async (request, context) => {
     );
   }
 
+  // Validate saver exists if provided
+  if (parsed.data.saverKey) {
+    const saver = await db
+      .select({ saverKey: budgetSavers.saverKey })
+      .from(budgetSavers)
+      .where(eq(budgetSavers.saverKey, parsed.data.saverKey))
+      .limit(1);
+
+    if (saver.length === 0) {
+      return NextResponse.json(
+        { error: `Saver '${parsed.data.saverKey}' does not exist` },
+        { status: 400 }
+      );
+    }
+  }
+
+  // Build update fields
+  const updateFields: Record<string, unknown> = {
+    mjolnirCategoryId: parsed.data.category_id,
+    updatedAt: new Date(),
+  };
+
+  if (parsed.data.saverKey !== undefined) {
+    updateFields.saverKey = parsed.data.saverKey;
+  }
+  if (parsed.data.categoryKey !== undefined) {
+    updateFields.categoryKey = parsed.data.categoryKey;
+  }
+  if (parsed.data.tags !== undefined) {
+    updateFields.tags = parsed.data.tags;
+  }
+
   const [updated] = await db
     .update(upTransactions)
-    .set({
-      mjolnirCategoryId: parsed.data.category_id,
-      updatedAt: new Date(),
-    })
+    .set(updateFields)
     .where(eq(upTransactions.id, id))
     .returning();
 
   return NextResponse.json(updated);
-}, "updating transaction category");
+}, "updating transaction classification");
