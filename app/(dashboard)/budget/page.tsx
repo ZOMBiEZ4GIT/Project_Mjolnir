@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -13,61 +13,36 @@ import {
   Wallet,
   Download,
   Loader2,
+  CheckCircle2,
 } from "lucide-react";
-import { SankeyChartContainer } from "@/components/budget/SankeyChartContainer";
-import { MobileBudgetChart } from "@/components/budget/MobileBudgetChart";
-import { CategoryCard } from "@/components/budget/CategoryCard";
-import { PaydayCountdown } from "@/components/budget/PaydayCountdown";
-import { SavingsIndicator } from "@/components/budget/SavingsIndicator";
 import { PeriodSelector } from "@/components/budget/PeriodSelector";
 import { AIRecommendationButton } from "@/components/budget/AIRecommendationButton";
-import { SpendingTrends } from "@/components/budget/SpendingTrends";
 import {
   RecommendationModal,
   type AiRecommendation,
 } from "@/components/budget/RecommendationModal";
 import { toast } from "sonner";
-import type { BudgetSummary } from "@/lib/budget/summary";
+import {
+  useBudgetSummary,
+  type SaverSummary,
+} from "@/lib/hooks/use-budget-summary";
+import Link from "next/link";
 
 export const dynamic = "force-dynamic";
-
-// ---------------------------------------------------------------------------
-// Fetch helper
-// ---------------------------------------------------------------------------
-
-async function fetchBudgetSummary(
-  periodId?: string
-): Promise<BudgetSummary> {
-  const url = periodId
-    ? `/api/budget/summary?period_id=${periodId}`
-    : "/api/budget/summary";
-
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    if (response.status === 401) throw new Error("Unauthorized");
-    if (response.status === 404) {
-      const data = await response.json();
-      throw new Error(data.error || "No budget period found");
-    }
-    throw new Error("Failed to fetch budget summary");
-  }
-
-  return response.json();
-}
 
 // ---------------------------------------------------------------------------
 // Format helpers
 // ---------------------------------------------------------------------------
 
 function formatCents(cents: number): string {
-  const dollars = cents / 100;
-  return dollars.toLocaleString("en-AU", {
+  const dollars = Math.abs(cents) / 100;
+  const formatted = dollars.toLocaleString("en-AU", {
     style: "currency",
     currency: "AUD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
+  return cents < 0 ? `-${formatted}` : formatted;
 }
 
 // ---------------------------------------------------------------------------
@@ -83,13 +58,7 @@ function BudgetDashboardSkeleton() {
         <div className="h-9 w-24 rounded bg-muted" />
       </div>
 
-      {/* Hero chart placeholder */}
-      <div className="rounded-lg border border-border bg-card/50 p-6">
-        <div className="h-5 w-32 rounded bg-muted mb-4" />
-        <div className="h-64 rounded bg-muted" />
-      </div>
-
-      {/* Stats row */}
+      {/* Summary stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div
@@ -102,19 +71,191 @@ function BudgetDashboardSkeleton() {
         ))}
       </div>
 
-      {/* Category cards grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-        {Array.from({ length: 6 }).map((_, i) => (
+      {/* Overall progress bar skeleton */}
+      <div className="rounded-lg border border-border bg-card/50 p-4">
+        <div className="h-4 w-40 rounded bg-muted mb-3" />
+        <div className="h-3 w-full rounded-full bg-muted" />
+      </div>
+
+      {/* Saver cards skeleton */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
             className="rounded-lg border border-border bg-card/50 p-4"
           >
-            <div className="h-4 w-24 rounded bg-muted mb-3" />
+            <div className="flex items-center gap-2 mb-3">
+              <div className="h-6 w-6 rounded bg-muted" />
+              <div className="h-5 w-32 rounded bg-muted" />
+            </div>
             <div className="h-2 w-full rounded-full bg-muted mb-2" />
-            <div className="h-4 w-16 rounded bg-muted" />
+            <div className="h-4 w-24 rounded bg-muted" />
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Traffic light status dot
+// ---------------------------------------------------------------------------
+
+function TrafficLight({
+  saver,
+  progressPercent,
+}: {
+  saver: SaverSummary;
+  progressPercent: number;
+}) {
+  // Fixed amount exactly at 100% gets a checkmark (e.g. rent already paid)
+  if (saver.percentUsed === 100 && saver.budgetCents > 0) {
+    return <CheckCircle2 className="h-4 w-4 text-positive shrink-0" />;
+  }
+
+  // Pace-based traffic light
+  const pacePercent =
+    saver.budgetCents > 0
+      ? (saver.actualCents / saver.budgetCents) * 100
+      : 0;
+
+  let dotColour: string;
+  if (pacePercent > progressPercent) {
+    dotColour = "bg-destructive"; // red — over pace
+  } else if (pacePercent >= progressPercent * 0.85) {
+    dotColour = "bg-warning"; // amber — near pace
+  } else {
+    dotColour = "bg-positive"; // green — under pace
+  }
+
+  return (
+    <span
+      className={`inline-block h-3 w-3 rounded-full shrink-0 ${dotColour}`}
+    />
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Saver card
+// ---------------------------------------------------------------------------
+
+function SaverCard({
+  saver,
+  progressPercent,
+}: {
+  saver: SaverSummary;
+  progressPercent: number;
+}) {
+  const barPercent = Math.min(saver.percentUsed, 100);
+  const overBudget = saver.percentUsed > 100;
+
+  // Top 3-4 categories by actual spend
+  const topCategories = [...saver.categories]
+    .sort((a, b) => b.actualCents - a.actualCents)
+    .slice(0, 4)
+    .filter((c) => c.actualCents > 0);
+
+  return (
+    <Link
+      href={`/budget/saver/${saver.saverKey}`}
+      className="block rounded-lg border border-border bg-card/50 p-4 hover:bg-card/80 active:bg-card/50 transition-colors"
+    >
+      {/* Header: emoji + name + traffic light */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-lg shrink-0">{saver.emoji}</span>
+          <span className="text-sm font-medium text-foreground truncate">
+            {saver.displayName}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs text-muted-foreground">
+            {Math.round(saver.percentUsed)}%
+          </span>
+          <TrafficLight saver={saver} progressPercent={progressPercent} />
+        </div>
+      </div>
+
+      {/* Progress bar — use saver's colour */}
+      <div className="h-2 w-full rounded-full bg-muted mb-2">
+        <div
+          className={`h-2 rounded-full transition-all ${
+            overBudget ? "bg-destructive" : ""
+          }`}
+          style={{
+            width: `${barPercent}%`,
+            backgroundColor: overBudget ? undefined : saver.colour,
+          }}
+        />
+      </div>
+
+      {/* Amounts */}
+      <div className="flex items-center justify-between text-xs mb-3">
+        <span className="text-muted-foreground">
+          {formatCents(saver.actualCents)} / {formatCents(saver.budgetCents)}
+        </span>
+        <span
+          className={
+            overBudget
+              ? "text-destructive"
+              : saver.paceStatus === "on"
+                ? "text-warning"
+                : "text-muted-foreground"
+          }
+        >
+          {overBudget
+            ? `${formatCents(saver.actualCents - saver.budgetCents)} over`
+            : `${formatCents(saver.budgetCents - saver.actualCents)} left`}
+        </span>
+      </div>
+
+      {/* Top categories preview */}
+      {topCategories.length > 0 && (
+        <div className="border-t border-border pt-2 space-y-1">
+          {topCategories.map((cat) => (
+            <div
+              key={cat.categoryKey ?? "uncategorised"}
+              className="flex items-center justify-between text-xs text-muted-foreground"
+            >
+              <span className="truncate">{cat.displayName}</span>
+              <span className="shrink-0 ml-2">
+                {formatCents(cat.actualCents)}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Link>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// StatCard
+// ---------------------------------------------------------------------------
+
+function StatCard({
+  label,
+  value,
+  subtext,
+  icon: Icon,
+  accent,
+}: {
+  label: string;
+  value: string;
+  subtext: string;
+  icon: React.ComponentType<{ className?: string }>;
+  accent?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border bg-card/50 p-4">
+      <div className="flex items-center gap-2 mb-1">
+        <Icon className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">{label}</span>
+      </div>
+      <p className={`text-lg font-semibold ${accent ?? "text-foreground"}`}>
+        {value}
+      </p>
+      <p className="text-xs text-muted-foreground mt-0.5">{subtext}</p>
     </div>
   );
 }
@@ -139,7 +280,6 @@ export default function BudgetDashboardPage() {
 
   const handleAccept = useCallback(
     async (rec: AiRecommendation) => {
-      // Build allocations array from the suggested budget
       const allocations = rec.recommendationData.suggestedBudget.map(
         (item) => ({
           categoryId: item.categoryId,
@@ -147,7 +287,6 @@ export default function BudgetDashboardPage() {
         })
       );
 
-      // Apply allocations and update status atomically (both must succeed)
       const [allocRes, statusRes] = await Promise.all([
         fetch(`/api/budget/periods/${rec.budgetPeriodId}`, {
           method: "PUT",
@@ -169,7 +308,6 @@ export default function BudgetDashboardPage() {
       setModalOpen(false);
       toast.success("Budget updated with AI recommendations");
 
-      // Refresh both the summary (new allocations) and recommendation (new status)
       queryClient.invalidateQueries({
         queryKey: queryKeys.budget.summary(rec.budgetPeriodId),
       });
@@ -195,15 +333,7 @@ export default function BudgetDashboardPage() {
     [queryClient]
   );
 
-  const {
-    data: summary,
-    isLoading,
-    error,
-  } = useQuery<BudgetSummary, Error>({
-    queryKey: queryKeys.budget.summary(periodId),
-    queryFn: () => fetchBudgetSummary(periodId),
-    staleTime: 1000 * 60 * 5,
-  });
+  const { data: summary, isLoading, error } = useBudgetSummary(periodId);
 
   const handleExportSummary = useCallback(async () => {
     if (!summary) return;
@@ -211,8 +341,8 @@ export default function BudgetDashboardPage() {
     try {
       const params = new URLSearchParams();
       params.set("type", "summary");
-      params.set("from", summary.startDate);
-      params.set("to", summary.endDate);
+      params.set("from", summary.period.startDate);
+      params.set("to", summary.period.endDate);
       const url = `/api/budget/export?${params.toString()}`;
       const link = document.createElement("a");
       link.href = url;
@@ -251,13 +381,8 @@ export default function BudgetDashboardPage() {
 
   if (!summary) return null;
 
-  // Category ID → Name map for the recommendation modal
-  const categoryMap: Record<string, string> = {};
-  for (const cat of summary.categories) {
-    categoryMap[cat.categoryId] = cat.categoryName;
-  }
-
   // Derived values
+  const { period } = summary;
   const incomePercent =
     summary.income.expectedCents > 0
       ? Math.round(
@@ -265,15 +390,30 @@ export default function BudgetDashboardPage() {
         )
       : 0;
   const spentPercent =
-    summary.totals.budgetedCents > 0
+    summary.totalBudgetedCents > 0
       ? Math.round(
-          (summary.totals.spentCents / summary.totals.budgetedCents) * 100
+          (summary.totalSpentCents / summary.totalBudgetedCents) * 100
         )
       : 0;
+  const savingsCents = summary.income.actualCents - summary.totalSpentCents;
+  const savingsRate =
+    summary.income.actualCents > 0
+      ? Math.round((savingsCents / summary.income.actualCents) * 1000) / 10
+      : 0;
+
+  // Category map for recommendation modal (flatten from savers)
+  const categoryMap: Record<string, string> = {};
+  for (const saver of summary.spendingSavers) {
+    for (const cat of saver.categories) {
+      if (cat.categoryKey) {
+        categoryMap[cat.categoryKey] = cat.displayName;
+      }
+    }
+  }
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 space-y-4 sm:space-y-6">
-      {/* Header */}
+      {/* Header with period navigation */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">Budget</h1>
         <div className="flex items-center gap-2 sm:gap-3">
@@ -302,7 +442,7 @@ export default function BudgetDashboardPage() {
         </div>
       </div>
 
-      {/* Stats row */}
+      {/* Summary stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           label="Income"
@@ -311,76 +451,64 @@ export default function BudgetDashboardPage() {
           icon={DollarSign}
         />
         <StatCard
-          label="Spent"
-          value={formatCents(summary.totals.spentCents)}
-          subtext={`${spentPercent}% of ${formatCents(summary.totals.budgetedCents)} budgeted`}
+          label="Total Spent"
+          value={formatCents(summary.totalSpentCents)}
+          subtext={`${spentPercent}% of ${formatCents(summary.totalBudgetedCents)} budgeted`}
           icon={Wallet}
         />
         <StatCard
-          label="Savings"
-          value={formatCents(summary.totals.savingsCents)}
-          subtext={`${summary.totals.savingsRate}% savings rate`}
+          label="Total Saved"
+          value={formatCents(savingsCents)}
+          subtext={`${savingsRate}% savings rate`}
           icon={TrendingUp}
-          accent={
-            summary.totals.savingsCents >= 0
-              ? "text-positive"
-              : "text-destructive"
-          }
+          accent={savingsCents >= 0 ? "text-positive" : "text-destructive"}
         />
         <StatCard
           label="Days left"
-          value={String(summary.daysRemaining)}
-          subtext={`${summary.daysElapsed} days elapsed`}
+          value={String(period.daysRemaining)}
+          subtext={`${period.daysElapsed} days elapsed`}
           icon={Calendar}
         />
       </div>
 
-      {/* Hero chart area — Sankey (desktop) / mobile chart placeholder (B4-006) */}
-      <div className="rounded-lg border border-border bg-card/50 p-4 sm:p-6">
-        <h2 className="text-sm font-medium text-muted-foreground mb-4">
-          Budget Breakdown
-        </h2>
-        <SankeyChartContainer summary={summary} />
-        <MobileBudgetChart summary={summary} />
+      {/* Overall progress bar with period info */}
+      <div className="rounded-lg border border-border bg-card/50 p-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm text-muted-foreground">
+            Day {period.daysElapsed} of {period.totalDays} (
+            {period.progressPercent}% through period)
+          </span>
+          <span className="text-sm font-medium text-foreground">
+            {spentPercent}% spent
+          </span>
+        </div>
+        <div className="h-3 w-full rounded-full bg-muted">
+          <div
+            className={`h-3 rounded-full transition-all ${
+              spentPercent > 100 ? "bg-destructive" : "bg-primary"
+            }`}
+            style={{ width: `${Math.min(spentPercent, 100)}%` }}
+          />
+        </div>
       </div>
 
-      {/* Category cards grid — B4-007 */}
+      {/* Spending Savers section */}
       <div>
-        <h2 className="text-sm font-medium text-muted-foreground mb-4">
-          Categories
+        <h2 className="text-sm font-medium text-muted-foreground mb-3">
+          Spending Savers
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-          {summary.categories.map((cat) => (
-            <CategoryCard
-              key={cat.categoryId}
-              category={cat}
-              periodStart={summary.startDate}
-              periodEnd={summary.endDate}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          {summary.spendingSavers.map((saver) => (
+            <SaverCard
+              key={saver.saverKey}
+              saver={saver}
+              progressPercent={period.progressPercent}
             />
           ))}
         </div>
       </div>
 
-      {/* Spending trends chart — B6-006 */}
-      <SpendingTrends />
-
-      {/* Payday countdown & Savings indicator — B4-008 / B4-009 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-        <PaydayCountdown
-          daysElapsed={summary.daysElapsed}
-          totalDays={summary.totalDays}
-        />
-        <SavingsIndicator
-          savingsCents={summary.totals.savingsCents}
-          savingsRate={summary.totals.savingsRate}
-          spentCents={summary.totals.spentCents}
-          incomeCents={summary.income.actualCents}
-          daysElapsed={summary.daysElapsed}
-          totalDays={summary.totalDays}
-        />
-      </div>
-
-      {/* AI Recommendation Modal — B5-006 */}
+      {/* AI Recommendation Modal */}
       {activeRecommendation && (
         <RecommendationModal
           recommendation={activeRecommendation}
@@ -391,37 +519,6 @@ export default function BudgetDashboardPage() {
           onDismiss={handleDismiss}
         />
       )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// StatCard
-// ---------------------------------------------------------------------------
-
-function StatCard({
-  label,
-  value,
-  subtext,
-  icon: Icon,
-  accent,
-}: {
-  label: string;
-  value: string;
-  subtext: string;
-  icon: React.ComponentType<{ className?: string }>;
-  accent?: string;
-}) {
-  return (
-    <div className="rounded-lg border border-border bg-card/50 p-4">
-      <div className="flex items-center gap-2 mb-1">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">{label}</span>
-      </div>
-      <p className={`text-lg font-semibold ${accent ?? "text-foreground"}`}>
-        {value}
-      </p>
-      <p className="text-xs text-muted-foreground mt-0.5">{subtext}</p>
     </div>
   );
 }
