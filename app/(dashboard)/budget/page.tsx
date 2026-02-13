@@ -14,6 +14,7 @@ import {
   Download,
   Loader2,
   CheckCircle2,
+  Tag,
 } from "lucide-react";
 import { PeriodSelector } from "@/components/budget/PeriodSelector";
 import { AIRecommendationButton } from "@/components/budget/AIRecommendationButton";
@@ -421,6 +422,12 @@ export default function BudgetDashboardPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">Budget</h1>
         <div className="flex items-center gap-2 sm:gap-3">
+          <Link href="/budget/tags">
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <Tag className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Tags</span>
+            </Button>
+          </Link>
           <Button
             variant="outline"
             size="sm"
