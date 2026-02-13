@@ -23,7 +23,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 1,
-      "passes": false,
+      "passes": true,
       "notes": "Reference the wireframe in spec Section 7.1. The summary stats should use existing Stat Card patterns if available. Progress bars can use shadcn Progress component or custom."
     },
     {

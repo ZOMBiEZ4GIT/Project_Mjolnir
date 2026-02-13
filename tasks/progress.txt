@@ -1,3 +1,28 @@
 # Ralph Progress Log — bi-c-dashboard-ui
 # Budget Intelligence Phase C — Dashboard UI Rebuild
 # 12 stories: BI-C-001 through BI-C-012
+
+## Codebase Patterns
+- Budget page now uses `useBudgetSummary()` hook from `lib/hooks/use-budget-summary.ts` (not the old `lib/budget/summary.ts` type)
+- API `/api/budget/summary` returns new shape: `{ periodId, period: { startDate, endDate, totalDays, daysElapsed, daysRemaining, progressPercent }, income, spendingSavers, totalSpentCents, totalBudgetedCents, savingsGoals }`
+- Old `BudgetSummary` type in `lib/budget/summary.ts` is still used by `SankeyChartContainer`, `MobileBudgetChart`, `CategoryCard` — those components not yet migrated
+- SaverSummary, CategorySummary, GoalSummary types exported from `lib/hooks/use-budget-summary.ts`
+- Traffic light logic: compare `pacePercent` (actualCents/budgetCents*100) vs `progressPercent` (time-based), not raw percentUsed
+- Saver colour from DB is hex string used inline via `style={{ backgroundColor }}` — CSS variables not applicable here
+- Quote glob paths with parentheses in git commands: `git add "app/(dashboard)/budget/page.tsx"`
+
+---
+
+## 2026-02-13 - BI-C-001
+- What was implemented: Replaced flat category-based budget page with saver-based overview
+- Files changed:
+  - `app/(dashboard)/budget/page.tsx` — full rewrite to saver-based layout
+  - `app/api/budget/summary/route.ts` — added `periodId` to JSON response
+  - `lib/hooks/use-budget-summary.ts` — added `periodId` to BudgetSummary type, exported sub-types
+- **Learnings for future iterations:**
+  - The old page imported `BudgetSummary` from `lib/budget/summary.ts` and fetched directly via inline `fetchBudgetSummary`. New page uses `useBudgetSummary()` hook which has its own type definitions.
+  - The old summary API returned a flat shape with `categories[]` and `totals{}`. The new API returns `spendingSavers[]` with nested `categories[]` per saver.
+  - PeriodSelector and AIRecommendationButton both need `summary.periodId` — this was missing from the new API response until added.
+  - `RecommendationModal` uses a `categoryMap` — when flattening from savers, use `cat.categoryKey` as the key (not categoryId).
+  - Components removed from page imports (SankeyChartContainer, MobileBudgetChart, CategoryCard, PaydayCountdown, SavingsIndicator, SpendingTrends) still exist and may be used in future stories.
+---
