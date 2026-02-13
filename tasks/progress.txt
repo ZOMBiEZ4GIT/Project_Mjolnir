@@ -12,6 +12,8 @@
 - Quote glob paths with parentheses in git commands: `git add "app/(dashboard)/budget/page.tsx"`
 - Transaction API supports `saver` query param to filter by saver_key; response includes `saverKey`, `categoryKey`, `tags`
 - Next.js 16 dynamic routes use `params: Promise<{}>` — unwrap with `use(params)` from React
+- Budget chart components go in `components/budget/charts/` directory; wrap with `ChartCard` from `components/charts/chart-card.tsx`
+- For horizontal bar charts: Recharts `BarChart layout="vertical"`, use `barGap={-barHeight}` to overlay bars
 
 ---
 
@@ -56,4 +58,20 @@
   - Next.js 16 uses `params: Promise<{}>` pattern — unwrap with `use(params)` from React
   - Categories sorted by actual spend descending, then alphabetically — gives a natural "where the money went" ordering
   - Tags rendered as pill badges using `bg-muted text-muted-foreground` for subtle appearance
+---
+
+## 2026-02-13 - BI-C-004
+- What was implemented: Horizontal bar chart showing budget vs actual for each spending saver with pace reference line
+- Files changed:
+  - `components/budget/charts/budget-vs-actual-chart.tsx` — new chart component using Recharts BarChart with vertical layout
+  - `app/(dashboard)/budget/page.tsx` — imported and placed BudgetVsActualChart between progress bar and saver cards
+- **Learnings for future iterations:**
+  - Recharts horizontal bars: use `layout="vertical"` on BarChart component
+  - Overflow visualisation: split actual into `actualNormal` (capped at budget) and `actualOverflow` (excess), stack them with `stackId="actual"`, colour overflow in NEGATIVE red
+  - Budget bar rendered as transparent fill with `stroke={CHART_GRID}` for outlined/ghost appearance
+  - Pace reference line uses `ReferenceLine x={paceLineValue}` with dashed stroke
+  - Custom YAxisLabel component renders emoji + name as SVG text — pass chartData as prop to look up emoji
+  - `barGap={-barHeight}` overlays actual bar on top of budget bar for visual comparison
+  - ChartCard wrapper from `components/charts/chart-card.tsx` provides consistent card styling + Framer Motion fade-in
+  - Chart height is dynamic based on number of savers: `savers.length * (barHeight + gap) + padding`
 ---

@@ -87,7 +87,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.3.1. Use hex colours from the savers table for bars. The pace line helps answer 'should I be worried?' at a glance."
     },
     {
