@@ -20,6 +20,7 @@
 - PUT `/api/budget/transactions/[id]/category` accepts optional `saverKey`, `categoryKey`, `tags` alongside required `category_id`
 - Savers API returns `{ savers: [...] }` wrapper — unwrap with `data.savers` when fetching client-side
 - For JSONB array aggregation use raw SQL: `db.execute(sql\`SELECT ... FROM table, jsonb_array_elements_text(col) AS tag ...\`)` — returns `{ rows: [...] }`
+- Recharts `Treemap` data needs index signature (`[key: string]: ...`) on interface to satisfy `TreemapDataType`; `Tooltip` must be a child of `<Treemap>`, not outside `ResponsiveContainer`
 
 ---
 
@@ -142,4 +143,18 @@
   - Clicking a tag navigates to `/budget/transactions?tag=encodedTag` — the existing transactions page already supports the `tag` query param
   - The `withAuth` wrapper handles auth + error catching uniformly — just return NextResponse from the handler
   - Unused Drizzle imports (and, gte, lte, isNull) cause lint errors — only import what's actually used
+---
+
+## 2026-02-13 - BI-C-009
+- What was implemented: Category treemap chart for saver detail view showing proportional spend by category with traffic-light colouring
+- Files changed:
+  - `components/budget/charts/category-treemap.tsx` — new Recharts Treemap component with custom content renderer, tooltip, click-to-filter, and legend
+  - `app/(dashboard)/budget/saver/[saverKey]/page.tsx` — imported and placed CategoryTreemap above the category list
+- **Learnings for future iterations:**
+  - Recharts `Treemap` requires data with index signature `[key: string]: ...` — use `interface X { [key: string]: string | number | ... }` to satisfy `TreemapDataType`
+  - Treemap custom content renderer receives all data fields as props — access `fill` via `(props as Record<string, unknown>)["fill"]`
+  - Recharts `Tooltip` must be a child of the chart component (`<Treemap>...</Treemap>`) not outside `ResponsiveContainer`
+  - For treemap rectangles, use `rx`/`ry` attributes on SVG `<rect>` for rounded corners
+  - Label visibility in treemap cells should be gated on rectangle width/height to avoid text overflow in small cells
+  - Categories with zero actual spend are filtered out of the treemap to avoid empty rectangles
 ---

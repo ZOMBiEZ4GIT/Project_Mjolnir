@@ -193,7 +193,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.3.3. This is a nice visual complement to the category list — shows at a glance where the money went within a saver."
     },
     {
