@@ -109,7 +109,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.3.2. This requires per-day transaction data — may need a new API endpoint or client-side grouping from the transaction list."
     },
     {

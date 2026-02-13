@@ -14,6 +14,8 @@
 - Next.js 16 dynamic routes use `params: Promise<{}>` — unwrap with `use(params)` from React
 - Budget chart components go in `components/budget/charts/` directory; wrap with `ChartCard` from `components/charts/chart-card.tsx`
 - For horizontal bar charts: Recharts `BarChart layout="vertical"`, use `barGap={-barHeight}` to overlay bars
+- Spending transactions have negative `amountCents`; use `Math.abs()` when summing and filter `>= 0` to exclude income
+- For Recharts dashed reference lines as Area: use `<Area fill="none" strokeDasharray="6 4" />` instead of ReferenceLine when you need data-bound diagonal lines
 
 ---
 
@@ -74,4 +76,20 @@
   - `barGap={-barHeight}` overlays actual bar on top of budget bar for visual comparison
   - ChartCard wrapper from `components/charts/chart-card.tsx` provides consistent card styling + Framer Motion fade-in
   - Chart height is dynamic based on number of savers: `savers.length * (barHeight + gap) + padding`
+---
+
+## 2026-02-13 - BI-C-005
+- What was implemented: Cumulative spending pace line chart showing actual spending vs budget pace line
+- Files changed:
+  - `components/budget/charts/spending-pace-chart.tsx` — new chart using Recharts AreaChart with pace line overlay
+  - `app/(dashboard)/budget/page.tsx` — imported and placed SpendingPaceChart after BudgetVsActualChart
+- **Learnings for future iterations:**
+  - Transaction data grouped client-side by day rather than adding a new API endpoint — fetch all period transactions with limit=2000 and group by `Math.floor(diffMs / (1000*60*60*24)) + 1`
+  - Pace line rendered as an Area with `fill="none"` and dashed stroke for the diagonal reference line effect
+  - Spending = negative amountCents in up_transactions; filter `txn.amountCents >= 0` to exclude income
+  - Line colour dynamically set: NEGATIVE (red) if current cumulative > pace, POSITIVE (green) if under pace
+  - Area fill uses linearGradient with low opacity for subtle under-pace shading
+  - X-axis tick labels use modulo filter (`day % 5 === 0`) to avoid label crowding on ~30 day periods
+  - Today marker uses ReferenceLine with `x={daysElapsed}` and dotted stroke
+  - Query key reuses `queryKeys.budget.transactions.list()` with from/to/limit filters for proper cache management
 ---
