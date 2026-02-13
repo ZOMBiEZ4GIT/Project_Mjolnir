@@ -1,2 +1,43 @@
 # Ralph Progress Log — bi-d-enrichment
 # Budget Intelligence Phase D — Enrichment Features
+
+## Codebase Patterns
+- Admin endpoints at `app/api/admin/` don't use `withAuth` wrapper (matches seed route pattern)
+- `mapCategoryToSaver()` in `lib/budget/categorisation.ts` maps flat mjolnirCategoryId to `{ saverKey, categoryKey }`
+- Tags are stored as JSONB arrays in upTransactions — use `jsonb_array_elements_text()` for querying
+- Budget categories use `{saverKey}--{categoryKey}` as their ID format (e.g., `food--groceries`)
+- Merchant tag patterns are case-insensitive, matched via `.toUpperCase().includes()`
+- Toast feedback: use `showSuccess`/`showError`/`showInfo` from `lib/toast-helpers.ts` (wraps sonner)
+- Optimistic updates: snapshot with specific query key (including filter params), revert in `onError`
+
+## 2026-02-13 - BI-D-001
+- Created backfill API route at `app/api/admin/backfill/route.ts`
+- Processes upTransactions missing saverKey in batches of 100
+- Uses `mapCategoryToSaver()` for mjolnirCategoryId → three-tier mapping
+- Built merchant description-to-tags mapping covering: WOOLWORTHS, COLES, ALDI, MARLEY SPOON, UBER EATS, DOORDASH, MENULOG, BODY FIT, MEDIBANK, AUSSIE BROADBAND, TELSTRA, ORIGIN ENERGY, REAL ESTATE, GHOST, BULK NUTRIENTS, MYPROTEIN, MYKI, UBER TRIP, JB HI-FI, APPLE.COM, OFFICEWORKS, COFFEE, ZIP PAY, ANZ CREDIT
+- Merchant rules can also override saver/category (e.g., BODY FIT → essentials/fitness instead of generic health mapping)
+- Idempotent: skips transactions that already have saverKey populated
+- Returns summary with counts and sample of unmapped descriptions for manual review
+- Files changed: `app/api/admin/backfill/route.ts`
+- **Learnings for future iterations:**
+  - The admin seed route doesn't use auth — backfill follows same pattern
+  - Use offset-based pagination for batch processing (not cursor) since we're updating rows in place
+  - Income detection: positive amountCents with no other mapping → default to income/salary
+---
+
+## 2026-02-13 - BI-D-002
+- Enhanced the inline tag editor in TransactionEditForm with chip/pill UI
+- Tags now display as removable pills with X button (bg-primary/15 styling)
+- New tags auto-formatted: lowercase, spaces→hyphens, special chars stripped, consecutive hyphens collapsed
+- Tag input supports Enter/comma to add, Backspace to remove last tag, blur to commit pending input
+- Added optimistic updates: UI updates immediately on save, reverts on error via onMutate/onError
+- Added toast notifications via showSuccess/showError on mutation result
+- Saver dropdown already resets category on change (pre-existing from BI-C-007)
+- PUT endpoint already accepts saverKey, categoryKey, tags — no backend changes needed
+- Files changed: `app/(dashboard)/budget/transactions/page.tsx`
+- **Learnings for future iterations:**
+  - Toast helpers at `lib/toast-helpers.ts`: showSuccess, showError, showInfo
+  - For TanStack Query optimistic updates, snapshot the specific query key (with filters) not the broad `all` key
+  - The `formatTag()` helper strips special chars, collapses hyphens, trims leading/trailing hyphens
+  - `useRef<HTMLInputElement>` for focusing the tag input on container click
+---
