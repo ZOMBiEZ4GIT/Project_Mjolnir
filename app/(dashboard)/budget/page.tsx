@@ -27,6 +27,7 @@ import {
   type SaverSummary,
 } from "@/lib/hooks/use-budget-summary";
 import Link from "next/link";
+import { GoalTracker } from "@/components/budget/goal-tracker";
 
 export const dynamic = "force-dynamic";
 
@@ -507,6 +508,9 @@ export default function BudgetDashboardPage() {
           ))}
         </div>
       </div>
+
+      {/* Goal tracker section */}
+      <GoalTracker />
 
       {/* AI Recommendation Modal */}
       {activeRecommendation && (
