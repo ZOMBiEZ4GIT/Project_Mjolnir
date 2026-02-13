@@ -19,6 +19,7 @@
 - Transaction API supports `categoryKey` and `tag` query params for filtering; tag uses JSONB `@>` containment operator
 - PUT `/api/budget/transactions/[id]/category` accepts optional `saverKey`, `categoryKey`, `tags` alongside required `category_id`
 - Savers API returns `{ savers: [...] }` wrapper — unwrap with `data.savers` when fetching client-side
+- For JSONB array aggregation use raw SQL: `db.execute(sql\`SELECT ... FROM table, jsonb_array_elements_text(col) AS tag ...\`)` — returns `{ rows: [...] }`
 
 ---
 
@@ -125,4 +126,20 @@
   - `ClassificationLabel` component shows "emoji Saver > Category" using savers data to resolve display names from machine keys
   - Tags rendered as pill badges with `bg-muted text-muted-foreground` for subtle styling consistent with saver detail page
   - Mobile TransactionCard doesn't need `onCategoryChange` prop — it uses the edit form for all classification changes
+---
+
+## 2026-02-13 - BI-C-008
+- What was implemented: Tag explorer page with JSONB unnest API, sortable table, period selector, search filter, and navigation to filtered transaction list
+- Files changed:
+  - `app/api/budget/tags/route.ts` — new API endpoint using raw SQL with `jsonb_array_elements_text()` to unnest and aggregate tags
+  - `app/(dashboard)/budget/tags/page.tsx` — new page with sortable table, period dropdown, search input, empty state
+  - `app/(dashboard)/budget/page.tsx` — added Tags link button in header actions
+  - `lib/query-keys.ts` — added `budget.tags(periodId)` query key
+- **Learnings for future iterations:**
+  - JSONB unnest in Drizzle requires raw SQL via `db.execute(sql\`...\`)` — returns `{ rows: [...] }` not an array directly
+  - For raw SQL with Drizzle column references, use `${upTransactions.columnName}` inside `sql` template for proper table/column resolution
+  - Budget periods API returns sorted by startDate desc — `periods[0]` is the most recent period
+  - Clicking a tag navigates to `/budget/transactions?tag=encodedTag` — the existing transactions page already supports the `tag` query param
+  - The `withAuth` wrapper handles auth + error catching uniformly — just return NextResponse from the handler
+  - Unused Drizzle imports (and, gte, lte, isNull) cause lint errors — only import what's actually used
 ---

@@ -173,7 +173,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.5 wireframe. The JSONB unnest query: SELECT tag, COUNT(*), SUM(ABS(amount_cents)) FROM up_transactions, jsonb_array_elements_text(tags) AS tag WHERE ... GROUP BY tag ORDER BY SUM DESC. May need a raw SQL query via Drizzle's sql template."
     },
     {
