@@ -32,6 +32,7 @@ import { GoalTracker } from "@/components/budget/goal-tracker";
 import { BudgetVsActualChart } from "@/components/budget/charts/budget-vs-actual-chart";
 import { SpendingPaceChart } from "@/components/budget/charts/spending-pace-chart";
 import { AiCheckinCard } from "@/components/budget/ai-checkin-card";
+import { SavingsWaterfall } from "@/components/budget/charts/savings-waterfall";
 
 export const dynamic = "force-dynamic";
 
@@ -277,6 +278,7 @@ export default function BudgetDashboardPage() {
     useState<AiRecommendation | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [chartView, setChartView] = useState<"budget" | "waterfall">("budget");
 
   const handleRecommendation = useCallback((rec: unknown) => {
     setActiveRecommendation(rec as AiRecommendation);
@@ -503,12 +505,44 @@ export default function BudgetDashboardPage() {
         </div>
       </div>
 
-      {/* Budget vs Actual chart */}
+      {/* Chart toggle tabs */}
       {summary.spendingSavers.length > 0 && (
-        <BudgetVsActualChart
-          savers={summary.spendingSavers}
-          progressPercent={period.progressPercent}
-        />
+        <div className="space-y-4">
+          <div className="flex gap-1 p-1 rounded-lg bg-muted/50 w-fit">
+            <button
+              onClick={() => setChartView("budget")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                chartView === "budget"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Budget vs Actual
+            </button>
+            <button
+              onClick={() => setChartView("waterfall")}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                chartView === "waterfall"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Income Allocation
+            </button>
+          </div>
+
+          {chartView === "budget" ? (
+            <BudgetVsActualChart
+              savers={summary.spendingSavers}
+              progressPercent={period.progressPercent}
+            />
+          ) : (
+            <SavingsWaterfall
+              incomeCents={summary.income.expectedCents}
+              spendingSavers={summary.spendingSavers}
+            />
+          )}
+        </div>
       )}
 
       {/* Spending Pace chart */}
