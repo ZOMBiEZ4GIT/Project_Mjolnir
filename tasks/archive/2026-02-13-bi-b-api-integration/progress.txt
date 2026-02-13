@@ -1,0 +1,252 @@
+# Ralph Progress Log
+# This file is reset at the start of each epic.
+
+## Codebase Patterns
+- Drizzle schema is in `lib/db/schema.ts` — all tables, enums, relations, and types in one file
+- Use `bigint("col_name", { mode: "number" })` for cents values (matches budgetAllocations pattern)
+- Empty Drizzle relations cause `no-empty-pattern` lint error — use `() => ({})` not `({ }) => ({})`
+- Build dependencies bcryptjs and jose must be installed (were missing from node_modules)
+- `npm run db:migrate` fails locally (Neon serverless needs real DB URL) — migration SQL generation is sufficient
+- yahoo-finance2 Node version warning is expected and harmless
+- Drizzle doesn't support GIN indexes — add them as raw SQL in migration files
+- onConflictDoUpdate requires a unique constraint on the target column
+- Category IDs use composite format `{saverKey}--{categoryKey}` for three-tier budget system
+- Seed scripts in `lib/db/seeds/` — triggered via POST /api/admin/seed
+- Budget periods are auto-generated via `ensureCurrentPeriodExists()` (called from summary API)
+- getPayday(year, month) uses 1-indexed months (1=Jan, 12=Dec)
+
+---
+
+## 2026-02-12 - BI-A-001
+- Created `budget_savers` table with 12 columns (id, saverKey, displayName, emoji, monthlyBudgetCents, saverType, sortOrder, isActive, colour, notes, createdAt, updatedAt)
+- Added `saver_type` enum (spending, savings_goal, investment)
+- Added unique constraint on saverKey
+- Exported BudgetSaver and NewBudgetSaver types
+- Added budgetSaversRelations (empty for now, will be populated in BI-A-002)
+- Installed missing bcryptjs and jose deps to fix pre-existing build errors
+- Files changed: lib/db/schema.ts, drizzle/0015_handy_phil_sheldon.sql, drizzle/meta/*, package-lock.json
+- **Learnings for future iterations:**
+  - Empty destructured params in Drizzle relations (`({ }) =>`) trigger `no-empty-pattern` lint rule — use `() =>` instead
+  - package-lock.json was out of sync with package.json for bcryptjs/jose — needed npm install
+  - Migration generation works without DB connection; migration application requires real Neon URL
+---
+
+## 2026-02-12 - BI-A-002
+- Added saverId (FK to budget_savers.id ON DELETE CASCADE), categoryKey, monthlyBudgetCents, and isActive columns to budgetCategories
+- All new columns are nullable so existing data isn't broken
+- Added unique constraint on (saverId, categoryKey) for composite uniqueness
+- Added bidirectional Drizzle relations: budgetSavers.categories (hasMany) and budgetCategories.saver (belongsTo)
+- Converted budgetCategories table definition to use callback form for constraints
+- Files changed: lib/db/schema.ts, drizzle/0016_bouncy_raider.sql, drizzle/meta/*
+- **Learnings for future iterations:**
+  - When adding constraints to existing tables, need to convert from simple object form to callback form `pgTable("name", {...}, (table) => ({...}))`
+  - New columns on existing tables should be nullable to preserve existing data
+---
+
+## 2026-02-12 - BI-A-003
+- Created `goals` table with 15 columns including progress tracking, ETAs, monthly contributions
+- Added `goal_status` enum (active, completed, paused)
+- Goals link to budget_savers via nullable saverId FK
+- Added bidirectional relations: budgetSavers.goals (hasMany) and goals.saver (belongsTo)
+- Exported Goal and NewGoal types
+- Files changed: lib/db/schema.ts, drizzle/0017_naive_miek.sql, drizzle/meta/*
+- **Learnings for future iterations:**
+  - Pattern for new tables: define table → add relations → export types → generate migration
+---
+
+## 2026-02-12 - BI-A-004
+- Added saverKey (varchar 50), categoryKey (varchar 50), tags (jsonb default []) to upTransactions
+- Added btree indexes: saverKey, categoryKey, composite (saverKey, categoryKey)
+- Added GIN index on tags via raw SQL appended to Drizzle-generated migration
+- saverKey/categoryKey are NOT FKs — classification is flexible, comes from n8n rules
+- Files changed: lib/db/schema.ts, drizzle/0018_cooing_praxagora.sql, drizzle/meta/*
+- **Learnings for future iterations:**
+  - Drizzle doesn't support GIN indexes — add them as raw SQL appended to generated migration
+  - When editing Drizzle-generated migration SQL, append with `--> statement-breakpoint` separator
+---
+
+## 2026-02-12 - BI-A-005
+- Added 9 structured columns to aiRecommendations: overallStatus, saverStatuses, goalProgress, budgetAdjustments, insights, actionableTip, savingsProjection, rawResponse, generatedAt
+- All columns nullable for backwards compatibility with existing recommendation rows
+- Kept existing recommendationData column intact
+- Files changed: lib/db/schema.ts, drizzle/0019_dark_shape.sql, drizzle/meta/*
+---
+
+## 2026-02-12 - BI-A-006
+- Created lib/db/seeds/budget-savers.ts with seedBudgetSavers() function
+- Seeded 10 savers with correct types, amounts in cents, emoji, colour, sortOrder
+- Seeded 33 categories across 6 savers (rent:1, essentials:10, food:5, supplements:5, debt:2, spending:10)
+- Category IDs use format `{saverKey}--{categoryKey}` for readable unique keys
+- Uses upsert pattern (onConflictDoUpdate) for idempotent re-runs
+- Created POST /api/admin/seed API route to trigger seeding
+- Files changed: lib/db/seeds/budget-savers.ts, app/api/admin/seed/route.ts
+- **Learnings for future iterations:**
+  - Drizzle onConflictDoUpdate requires specifying `target` (conflict columns) and `set` (update values)
+  - Category IDs use composite format `{saverKey}--{categoryKey}` — match this in future lookups
+  - onConflictDoUpdate requires a unique constraint on the target column — add one if missing
+  - Seed script looks up saver IDs by querying after insert, rather than hardcoding UUIDs
+---
+
+## 2026-02-12 - BI-A-007
+- Created lib/db/seeds/goals.ts with seedGoals() function
+- Seeded 5 goals: Emergency Fund, Homelab Build, Vitamin Reserve, ZIP Payoff, ANZ Payoff
+- All cent values as integers, currentAmountCents starts at 0
+- Added unique constraint on goals.name for idempotent upserts (new migration)
+- Updated /api/admin/seed route to also call seedGoals()
+- Files changed: lib/db/seeds/goals.ts, lib/db/schema.ts, app/api/admin/seed/route.ts, drizzle/0020_black_callisto.sql, drizzle/meta/*
+---
+
+## 2026-02-12 - BI-A-008
+- Rewrote lib/budget/payday.ts with hardcoded payday on 14th + weekend adjustment
+- Added getPayday(year, month) — 1-indexed month, returns Date adjusted for weekends
+- Added generatePeriod(year, month) — returns {startDate, endDate, daysInPeriod}
+- Added ensureCurrentPeriodExists() — DB-aware, auto-creates period with fixed income $9,168.53
+- Maintained legacy function signatures (calculateBudgetPeriod, findPaydayOnOrBefore, findNextPayday, getDaysUntilPayday) for backwards compatibility
+- Inline test cases documented in JSDoc header
+- Files changed: lib/budget/payday.ts
+- **Learnings for future iterations:**
+  - getPayday uses 1-indexed months (1=Jan) but Date constructor uses 0-indexed — careful with conversion
+  - Legacy functions preserved with _ prefix on unused params to avoid lint errors
+  - ensureCurrentPeriodExists handles race conditions with onConflictDoNothing + fallback fetch
+---
+
+## 2026-02-12 - BI-A-009
+- Replaced budget setup wizard (3-step flow) with redirect to /budget
+- Integrated ensureCurrentPeriodExists() into GET /api/budget/summary — auto-generates period on page load
+- PeriodSelector unchanged — already has read-only date range with left/right navigation arrows
+- Deprecated POST /api/budget/periods and DELETE /api/budget/periods/[id] with console.warn
+- Removed "Set up budget" empty state from budget page (no longer needed)
+- Removed unused PieChart and Link imports from budget page
+- Files changed: app/(dashboard)/budget/setup/page.tsx, app/(dashboard)/budget/page.tsx, app/api/budget/summary/route.ts, app/api/budget/periods/route.ts, app/api/budget/periods/[id]/route.ts
+- **Learnings for future iterations:**
+  - Budget setup wizard was 767 lines — replaced with 12-line redirect
+  - ensureCurrentPeriodExists() in summary route means periods are always available before data fetch
+  - Deprecated APIs kept for safety — can be fully removed in a future cleanup story
+---
+
+## 2026-02-13 - BI-B-001
+- Created app/api/budget/savers/route.ts with GET and PUT handlers
+- GET returns all savers ordered by sortOrder with categories joined from budgetCategories (grouped by saverId)
+- Response shape: { savers: [{ id, saverKey, displayName, emoji, monthlyBudgetCents, saverType, sortOrder, colour, notes, categories: [{ id, categoryKey, displayName, monthlyBudgetCents }] }] }
+- PUT accepts saverKey + optional fields (monthlyBudgetCents, displayName, notes, isActive, colour), validates with Zod, updates via eq(saverKey)
+- Both handlers use withAuth() for authentication
+- Files changed: app/api/budget/savers/route.ts
+- **Learnings for future iterations:**
+  - Followed existing pattern from /api/budget/categories — query both tables, group children by parent ID in Map, assemble response
+  - PUT on collection route (not [id] route) using saverKey as identifier — matches the seed-based model where saverKey is the stable identifier
+---
+
+## 2026-02-13 - BI-B-002
+- Created app/api/budget/goals/route.ts with GET and POST handlers
+- GET returns all goals ordered by priority, with linked saver info (saverKey, saverDisplayName) via leftJoin on budgetSavers
+- GET response includes server-calculated percentComplete: Math.round((currentAmountCents / targetAmountCents) * 100)
+- POST creates a new goal with Zod-validated fields: name, targetAmountCents, monthlyContributionCents (required) + optional saverId, targetDate, priority, colour, icon, notes
+- Created app/api/budget/goals/[id]/route.ts with PUT handler for updating goal fields
+- PUT with status='completed' auto-sets completedAt to new Date()
+- Both routes use withAuth()
+- Files changed: app/api/budget/goals/route.ts, app/api/budget/goals/[id]/route.ts
+- **Learnings for future iterations:**
+  - Goals use UUID id as route param (unlike savers which use saverKey) — goals don't have a stable key like saverKey
+  - leftJoin for optional FK (saverId nullable) — ensures goals without a saver still appear
+  - Pattern: collection route (route.ts) has GET+POST, individual route ([id]/route.ts) has PUT
+---
+
+## 2026-02-13 - BI-B-003
+- Updated app/api/up/transactions/batch/route.ts to accept three-tier classification fields (saver, category, tags)
+- Added saver (string), category (string), tags (array of strings) to Zod validation schema
+- Maps incoming fields: saver → saverKey, category → categoryKey, tags → tags JSONB
+- Backwards compat: if no saver/category/tags in payload, falls back to mapUpCategory() logic
+- On upsert (re-received transaction), three-tier fields are updated if provided
+- Insert path includes three-tier fields when present
+- Existing select query expanded to include saverKey, categoryKey, tags for comparison
+- Files changed: app/api/up/transactions/batch/route.ts
+- **Learnings for future iterations:**
+  - The batch endpoint already had partial three-tier support scaffolded — check git diff before starting implementation
+  - `hasThreeTier` check uses `data.saver !== undefined` (not truthy check) to allow empty string saver values
+  - Three-tier fields use spread operator with empty object fallback `{}` when not provided — clean pattern for optional field groups
+---
+
+## 2026-02-13 - BI-B-004
+- Rewrote app/api/budget/summary/route.ts to return saver-based structure instead of flat categories
+- New response shape: { period, income, spendingSavers, totalSpentCents, totalBudgetedCents, savingsGoals }
+- Period includes: startDate, endDate, totalDays, daysElapsed, daysRemaining, progressPercent
+- Income includes: expectedCents, actualCents (sum of positive-amount upTransactions in period)
+- Each spending saver includes: saverKey, displayName, emoji, colour, budgetCents, actualCents, percentUsed, paceStatus, projectedEndCents, categories[]
+- paceStatus uses three-tier logic: under (< 85% of time progress), on (85-100%), over (> 100%)
+- projectedEndCents = (actualCents / daysElapsed) * totalDays
+- Categories grouped by saverId from budgetCategories table, spending matched via saverKey::categoryKey composite key
+- savingsGoals array includes all goals with server-calculated percentComplete
+- 6 parallel DB queries: savers, categories, income, spending-by-saver, spending-by-category, goals
+- Old calculateBudgetSummary() in lib/budget/summary.ts kept intact for backwards compat during UI migration
+- Files changed: app/api/budget/summary/route.ts
+- **Learnings for future iterations:**
+  - budgetCategories.isActive is nullable (no .notNull()) — old categories may have null, but those lack saverId so are filtered in grouping
+  - Spending queries use `lt(amountCents, sql\`0\`)` not a raw template — Drizzle's `lt()` is cleaner for column comparisons
+  - The `sql<number>` template literal in aggregations (COALESCE/SUM/ABS) must cast with Number() when used — Drizzle returns string for bigint aggregates
+---
+
+## 2026-02-13 - BI-B-005
+- Created app/api/budget/recommendations/request/route.ts with POST handler
+- Endpoint builds dynamic context payload: current period info, saver performance (budget vs actual per spending saver), goal progress, top 10 tags by spend, historical saver spending averages (last 3 periods)
+- Top tags query uses `jsonb_array_elements_text(tags)` to unnest JSONB array and aggregate by tag
+- Historical comparison: reuses the same pattern from existing getHistoricalCategorySpending() but groups by saverKey instead of mjolnirCategoryId
+- Signs request with HMAC-SHA256 (X-Mjolnir-API-Key, X-Mjolnir-Timestamp, X-Mjolnir-Signature)
+- Fire-and-forget fetch to N8N_RECOMMENDATION_WEBHOOK_URL — returns `{ success: true, message: 'Recommendation requested' }` immediately
+- Returns 503 with helpful error if N8N_RECOMMENDATION_WEBHOOK_URL is not set
+- Added N8N_RECOMMENDATION_WEBHOOK_URL (plus N8N_BASE_URL, N8N_API_KEY, N8N_WEBHOOK_SECRET) to .env.example
+- Files changed: app/api/budget/recommendations/request/route.ts, .env.example
+- **Learnings for future iterations:**
+  - `jsonb_array_elements_text()` in Drizzle must be used as raw `sql` template — no native Drizzle function for it
+  - The top tags query needs `jsonb_array_length() > 0` filter to avoid errors on empty/null tags arrays
+  - Historical saver spending follows the same OR-of-period-ranges pattern as the existing category version — can be refactored to share code later
+---
+
+## 2026-02-13 - BI-B-006
+- Rewrote app/api/budget/recommendations/callback/route.ts for new structured recommendation schema
+- New Zod schema validates: overallStatus (green/amber/red), saverStatuses[], goalProgress[], budgetAdjustments[], insights[] (min 1), actionableTip (min 1 char), savingsProjection
+- Stores all structured fields in dedicated columns (overallStatus, saverStatuses, goalProgress, budgetAdjustments, insights, actionableTip, savingsProjection)
+- Stores rawResponse (full request body) for debugging
+- Sets generatedAt to current timestamp (new Date())
+- Finds current budget period via ensureCurrentPeriodExists() — auto-creates period if missing
+- Backwards compat: full parsed payload stored in recommendationData JSONB column
+- Removed old budget_period_id from payload — period is now auto-detected server-side
+- Files changed: app/api/budget/recommendations/callback/route.ts
+- **Learnings for future iterations:**
+  - The callback no longer requires budget_period_id in the payload — uses ensureCurrentPeriodExists() to auto-link to the correct period
+  - rawResponse stores the original body (unknown type from withN8nAuth) before Zod parsing — useful for debugging schema mismatches
+  - saverStatuses, goalProgress, budgetAdjustments, savingsProjection are optional in the schema (nullable columns) — only insights and actionableTip are required
+---
+
+## 2026-02-13 - BI-B-007
+- Created 4 TanStack Query hook files in lib/hooks/:
+  - use-budget-savers.ts: useBudgetSavers() — GET /api/budget/savers
+  - use-budget-goals.ts: useBudgetGoals() + useUpdateGoal(id) mutation — GET /api/budget/goals, PUT /api/budget/goals/[id]
+  - use-budget-summary.ts: useBudgetSummary(periodId?) — GET /api/budget/summary
+  - use-budget-recommendation.ts: useLatestRecommendation(periodId?) + useRequestRecommendation() mutation — GET /api/budget/recommendations, POST /api/budget/recommendations/request
+- Added budget.savers and budget.goals query keys to lib/query-keys.ts
+- Exported TypeScript interfaces: BudgetSaver, BudgetCategory, Goal, BudgetSummary, Recommendation
+- All hooks follow existing use-n8n.ts patterns: staleTime, proper TypeScript generics, "use client" directive
+- Mutation hooks invalidate related queries on success (goals invalidates summary, recommendation request invalidates latest)
+- Files changed: lib/query-keys.ts, lib/hooks/use-budget-savers.ts, lib/hooks/use-budget-goals.ts, lib/hooks/use-budget-summary.ts, lib/hooks/use-budget-recommendation.ts
+- **Learnings for future iterations:**
+  - Hook pattern: "use client" directive → types → fetch helpers → hooks. Keep fetch functions private, export only hooks and types
+  - budget.summary query key already existed in query-keys.ts — only savers and goals needed adding
+  - Mutation hooks should invalidate related query keys (e.g., updating a goal invalidates both goals and summary)
+---
+
+## 2026-02-13 - BI-B-008
+- Added mapCategoryToSaver() function to lib/budget/categorisation.ts
+- Maps flat mjolnirCategoryId values to three-tier { saverKey, categoryKey } pairs:
+  - groceries → food/groceries, eating-out → food/eating-out
+  - transport → essentials/transport, bills-fixed → essentials/subscriptions, health → essentials/medical
+  - shopping → spending/misc-spending, fun → spending/entertainment
+  - income → income/salary
+  - uncategorised → null (flagged for manual review)
+- Updated batch endpoint to apply mapCategoryToSaver() as fallback when saver field is not in payload but mjolnirCategoryId is resolved
+- For existing records: only applies fallback mapping if existing record doesn't already have saverKey (preserves explicit classifications)
+- For new records: always applies fallback mapping when no three-tier fields in payload
+- Files changed: lib/budget/categorisation.ts, app/api/up/transactions/batch/route.ts
+- **Learnings for future iterations:**
+  - The fallback mapping bridges old flat categories to three-tier — once n8n sends saver/category/tags directly, the fallback becomes less critical but stays for robustness
+  - On upsert (existing records), differentiate between explicit three-tier (always update) vs fallback (only if no existing saverKey) to avoid overwriting intentional classifications
+---
