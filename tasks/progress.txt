@@ -200,3 +200,19 @@
   - The top tags query needs `jsonb_array_length() > 0` filter to avoid errors on empty/null tags arrays
   - Historical saver spending follows the same OR-of-period-ranges pattern as the existing category version — can be refactored to share code later
 ---
+
+## 2026-02-13 - BI-B-006
+- Rewrote app/api/budget/recommendations/callback/route.ts for new structured recommendation schema
+- New Zod schema validates: overallStatus (green/amber/red), saverStatuses[], goalProgress[], budgetAdjustments[], insights[] (min 1), actionableTip (min 1 char), savingsProjection
+- Stores all structured fields in dedicated columns (overallStatus, saverStatuses, goalProgress, budgetAdjustments, insights, actionableTip, savingsProjection)
+- Stores rawResponse (full request body) for debugging
+- Sets generatedAt to current timestamp (new Date())
+- Finds current budget period via ensureCurrentPeriodExists() — auto-creates period if missing
+- Backwards compat: full parsed payload stored in recommendationData JSONB column
+- Removed old budget_period_id from payload — period is now auto-detected server-side
+- Files changed: app/api/budget/recommendations/callback/route.ts
+- **Learnings for future iterations:**
+  - The callback no longer requires budget_period_id in the payload — uses ensureCurrentPeriodExists() to auto-link to the correct period
+  - rawResponse stores the original body (unknown type from withN8nAuth) before Zod parsing — useful for debugging schema mismatches
+  - saverStatuses, goalProgress, budgetAdjustments, savingsProjection are optional in the schema (nullable columns) — only insights and actionableTip are required
+---
