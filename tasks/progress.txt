@@ -16,6 +16,9 @@
 - For horizontal bar charts: Recharts `BarChart layout="vertical"`, use `barGap={-barHeight}` to overlay bars
 - Spending transactions have negative `amountCents`; use `Math.abs()` when summing and filter `>= 0` to exclude income
 - For Recharts dashed reference lines as Area: use `<Area fill="none" strokeDasharray="6 4" />` instead of ReferenceLine when you need data-bound diagonal lines
+- Transaction API supports `categoryKey` and `tag` query params for filtering; tag uses JSONB `@>` containment operator
+- PUT `/api/budget/transactions/[id]/category` accepts optional `saverKey`, `categoryKey`, `tags` alongside required `category_id`
+- Savers API returns `{ savers: [...] }` wrapper — unwrap with `data.savers` when fetching client-side
 
 ---
 
@@ -106,4 +109,20 @@
   - Baseline ID pattern: capture current recommendation ID before requesting, stop polling when a new ID appears via the query data
   - Recommendation `generatedAt` may be null (for old records) — fall back to `createdAt` for timestamp display
   - Saver health grid uses `saverStatuses[].saverKey` as labels — these are machine keys (e.g. "food"), not display names with emojis
+---
+
+## 2026-02-13 - BI-C-007
+- What was implemented: Updated transaction list with three-tier classification display (saver/category/tags), filter capabilities, and inline edit form
+- Files changed:
+  - `app/(dashboard)/budget/transactions/page.tsx` — added saver/category/tags display, ClassificationLabel component, TagPills component, TransactionEditForm, saver filter, tag filter, edit button per row
+  - `app/api/budget/transactions/route.ts` — added `categoryKey` and `tag` query param filters (tag uses JSONB `@>` containment operator)
+  - `app/api/budget/transactions/[id]/category/route.ts` — extended to accept `saverKey`, `categoryKey`, and `tags` in addition to `category_id`
+- **Learnings for future iterations:**
+  - Transaction API now supports `?categoryKey=X` and `?tag=Y` filters; tag filter uses `tags @> '["tagvalue"]'::jsonb` for JSONB array containment
+  - PUT category endpoint now accepts optional `saverKey`, `categoryKey`, and `tags` fields alongside the required `category_id`
+  - Savers API (`/api/budget/savers`) returns `{ savers: [...] }` wrapper — unwrap with `data.savers` when fetching
+  - Edit form cascading dropdowns: when saver changes, reset category selection — use `saverCategories` from the selected saver's `categories[]` array to filter the BudgetCategory list
+  - `ClassificationLabel` component shows "emoji Saver > Category" using savers data to resolve display names from machine keys
+  - Tags rendered as pill badges with `bg-muted text-muted-foreground` for subtle styling consistent with saver detail page
+  - Mobile TransactionCard doesn't need `onCategoryChange` prop — it uses the edit form for all classification changes
 ---

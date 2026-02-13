@@ -151,7 +151,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.6 wireframe. The edit capability is important for correcting mis-classifications. When saver changes in the dropdown, the category dropdown should filter to show only that saver's categories."
     },
     {
