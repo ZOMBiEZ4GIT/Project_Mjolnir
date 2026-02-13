@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { upTransactions, paydayConfig } from "@/lib/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { withN8nAuth } from "@/lib/api/up/middleware";
-import { mapUpCategory, isIncomeTransaction } from "@/lib/budget/categorisation";
+import { mapUpCategory, isIncomeTransaction, mapCategoryToSaver } from "@/lib/budget/categorisation";
 
 const transactionSchema = z.object({
   up_transaction_id: z.string().min(1),
@@ -124,32 +124,45 @@ export async function POST(request: NextRequest) {
 
       // Three-tier classification: use saver/category/tags from payload if provided
       const hasThreeTier = data.saver !== undefined;
-      const threeTierFields = hasThreeTier
-        ? {
-            saverKey: data.saver ?? null,
-            categoryKey: data.category ?? null,
-            tags: data.tags ?? [],
-          }
-        : {};
+      const resolvedCategoryId = resolveCategory(data);
+      let threeTierFields: { saverKey?: string | null; categoryKey?: string | null; tags?: string[] };
+
+      if (hasThreeTier) {
+        threeTierFields = {
+          saverKey: data.saver ?? null,
+          categoryKey: data.category ?? null,
+          tags: data.tags ?? [],
+        };
+      } else {
+        // Fallback: map flat mjolnirCategoryId to three-tier saver/category
+        const mapped = mapCategoryToSaver(resolvedCategoryId);
+        threeTierFields = mapped
+          ? { saverKey: mapped.saverKey, categoryKey: mapped.categoryKey }
+          : {};
+      }
 
       if (existingMap.has(data.up_transaction_id)) {
         const existingRecord = existingMap.get(data.up_transaction_id)!;
 
         // For three-tier fields: always update if provided in payload (re-classification)
+        // For fallback mapping: only set if existing record doesn't have saverKey
+        const shouldApplyThreeTier = hasThreeTier || !existingRecord.saverKey;
+        const threeUpdate = shouldApplyThreeTier ? threeTierFields : {};
+
         // For mjolnirCategoryId: only set if existing record doesn't have one
         const categoryUpdate = existingRecord.mjolnirCategoryId
           ? {}
-          : { mjolnirCategoryId: resolveCategory(data) };
+          : { mjolnirCategoryId: resolvedCategoryId };
 
         await db
           .update(upTransactions)
-          .set({ ...values, ...categoryUpdate, ...threeTierFields })
+          .set({ ...values, ...categoryUpdate, ...threeUpdate })
           .where(eq(upTransactions.upTransactionId, data.up_transaction_id));
         updated++;
       } else {
         await db.insert(upTransactions).values({
           upTransactionId: data.up_transaction_id,
-          mjolnirCategoryId: resolveCategory(data),
+          mjolnirCategoryId: resolvedCategoryId,
           ...threeTierFields,
           ...values,
         });

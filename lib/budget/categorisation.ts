@@ -69,6 +69,41 @@ export function mapUpCategory(upCategoryId: string | null): string {
 }
 
 /**
+ * Maps a flat mjolnirCategoryId to the three-tier { saverKey, categoryKey } pair.
+ * Used as a fallback when transactions arrive without saver/category/tags
+ * (e.g., from the old n8n flow or manual entry).
+ *
+ * Returns null for 'uncategorised' — these are flagged for manual review.
+ * Returns { saverKey: 'income', categoryKey: 'salary' } for income transactions.
+ */
+const MJOLNIR_TO_SAVER_MAP: Record<string, { saverKey: string; categoryKey: string }> = {
+  // Food saver
+  "groceries": { saverKey: "food", categoryKey: "groceries" },
+  "eating-out": { saverKey: "food", categoryKey: "eating-out" },
+
+  // Essentials saver
+  "transport": { saverKey: "essentials", categoryKey: "transport" },
+  "bills-fixed": { saverKey: "essentials", categoryKey: "subscriptions" },
+  "health": { saverKey: "essentials", categoryKey: "medical" },
+
+  // Spending saver
+  "shopping": { saverKey: "spending", categoryKey: "misc-spending" },
+  "fun": { saverKey: "spending", categoryKey: "entertainment" },
+
+  // Income (not a saver, but mapped for completeness)
+  "income": { saverKey: "income", categoryKey: "salary" },
+};
+
+export function mapCategoryToSaver(
+  mjolnirCategoryId: string
+): { saverKey: string; categoryKey: string } | null {
+  if (!mjolnirCategoryId || mjolnirCategoryId === "uncategorised") {
+    return null;
+  }
+  return MJOLNIR_TO_SAVER_MAP[mjolnirCategoryId] ?? null;
+}
+
+/**
  * Detects whether a transaction is an income deposit.
  *
  * A transaction is considered income when:
