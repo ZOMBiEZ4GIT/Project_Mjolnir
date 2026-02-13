@@ -287,14 +287,14 @@ export function SpendingTrendsChart() {
     <ChartCard
       title="Spending Trends"
       actions={
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex gap-1.5 overflow-x-auto max-w-full pb-1 -mb-1">
           {allSavers.map((saver) => {
             const isVisible = !hiddenSavers.has(saver.saverKey);
             return (
               <button
                 key={saver.saverKey}
                 onClick={() => toggleSaver(saver.saverKey)}
-                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors border ${
+                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors border shrink-0 ${
                   isVisible
                     ? "border-border bg-card text-foreground"
                     : "border-transparent bg-muted/50 text-muted-foreground line-through"

@@ -532,10 +532,10 @@ function TransactionCard({
               {!isEditing && (
                 <button
                   onClick={() => onEditStart(transaction.id)}
-                  className="p-1 rounded hover:bg-accent/10 text-muted-foreground hover:text-foreground transition-colors"
+                  className="h-9 w-9 flex items-center justify-center rounded hover:bg-accent/10 text-muted-foreground hover:text-foreground transition-colors"
                   title="Edit classification"
                 >
-                  <Pencil className="h-3 w-3" />
+                  <Pencil className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
@@ -1419,6 +1419,7 @@ export default function BudgetTransactionsPage() {
             size="sm"
             disabled={page <= 1}
             onClick={() => goToPage(page - 1)}
+            className="h-11 sm:h-9"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline">Previous</span>
@@ -1432,6 +1433,7 @@ export default function BudgetTransactionsPage() {
             size="sm"
             disabled={page >= totalPages}
             onClick={() => goToPage(page + 1)}
+            className="h-11 sm:h-9"
           >
             Next
             <ChevronRight className="h-4 w-4 ml-1" />

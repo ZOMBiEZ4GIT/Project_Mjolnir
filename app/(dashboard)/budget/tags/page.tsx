@@ -214,7 +214,7 @@ export default function TagExplorerPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/budget"
-            className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="h-11 w-11 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             aria-label="Back to Budget"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -280,8 +280,33 @@ export default function TagExplorerPage() {
             )}
           </p>
 
-          {/* Table */}
-          <div className="rounded-lg border border-border overflow-x-auto">
+          {/* Mobile card list (below sm) */}
+          <div className="sm:hidden space-y-2">
+            {filteredAndSorted.map((t) => (
+              <button
+                key={t.tag}
+                onClick={() => handleTagClick(t.tag)}
+                className="w-full text-left rounded-lg border border-border bg-card/50 p-3 hover:bg-card/80 active:bg-card/50 transition-colors"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">{t.tag}</span>
+                  </span>
+                  <span className="text-sm font-medium tabular-nums text-foreground">
+                    {formatCents(t.totalCents)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{t.count} transaction{t.count !== 1 ? "s" : ""}</span>
+                  <span>avg {formatCents(t.avgCents)}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Desktop table (sm and above) */}
+          <div className="hidden sm:block rounded-lg border border-border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

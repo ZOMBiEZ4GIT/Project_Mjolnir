@@ -194,14 +194,14 @@ function CategoryRow({
 
   return (
     <div className="rounded-lg border border-border bg-card/50 p-3">
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-sm font-medium text-foreground">
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <span className="text-sm font-medium text-foreground truncate min-w-0">
           {category.displayName}
         </span>
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center gap-2 text-xs shrink-0">
           {hasBudget ? (
             <>
-              <span className="text-muted-foreground">
+              <span className="text-muted-foreground whitespace-nowrap">
                 {formatCents(category.actualCents)} /{" "}
                 {formatCents(category.budgetCents)}
               </span>
@@ -216,7 +216,7 @@ function CategoryRow({
               </span>
             </>
           ) : (
-            <span className="text-muted-foreground">
+            <span className="text-muted-foreground whitespace-nowrap">
               {formatCents(category.actualCents)}
             </span>
           )}
@@ -340,7 +340,7 @@ export default function SaverDetailPage({
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         <Link
           href="/budget"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors py-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Budget
@@ -356,7 +356,7 @@ export default function SaverDetailPage({
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         <Link
           href="/budget"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors py-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Budget
@@ -376,7 +376,7 @@ export default function SaverDetailPage({
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
         <Link
           href="/budget"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4 transition-colors py-2"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Budget
@@ -408,10 +408,10 @@ export default function SaverDetailPage({
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 space-y-4 sm:space-y-6">
-      {/* Back link */}
+      {/* Back link — 44pt min tap target */}
       <Link
         href="/budget"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors py-2 -my-2"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to Budget

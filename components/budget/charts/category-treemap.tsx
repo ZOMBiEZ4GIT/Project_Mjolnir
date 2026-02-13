@@ -233,7 +233,7 @@ export function CategoryTreemap({
 
   return (
     <ChartCard title="Category Breakdown">
-      <ResponsiveContainer width="100%" height={240}>
+      <ResponsiveContainer width="100%" height={200}>
         <Treemap
           data={data}
           dataKey="size"
@@ -248,7 +248,7 @@ export function CategoryTreemap({
           <Tooltip content={<TreemapTooltip />} />
         </Treemap>
       </ResponsiveContainer>
-      <div className="flex items-center gap-4 mt-3 text-[10px] text-muted-foreground">
+      <div className="flex items-center gap-3 sm:gap-4 mt-3 text-[10px] text-muted-foreground flex-wrap">
         <span className="flex items-center gap-1.5">
           <span
             className="inline-block h-2.5 w-2.5 rounded-sm"

@@ -426,9 +426,9 @@ export default function BudgetDashboardPage() {
       {/* Header with period navigation */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold text-foreground">Budget</h1>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           <Link href="/budget/tags">
-            <Button variant="outline" size="sm" className="gap-1.5">
+            <Button variant="outline" size="sm" className="gap-1.5 h-9">
               <Tag className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Tags</span>
             </Button>
@@ -438,7 +438,7 @@ export default function BudgetDashboardPage() {
             size="sm"
             onClick={handleExportSummary}
             disabled={isExporting}
-            className="gap-1.5"
+            className="gap-1.5 h-9"
           >
             {isExporting ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -489,12 +489,17 @@ export default function BudgetDashboardPage() {
 
       {/* Overall progress bar with period info */}
       <div className="rounded-lg border border-border bg-card/50 p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-muted-foreground">
-            Day {period.daysElapsed} of {period.totalDays} (
-            {period.progressPercent}% through period)
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="text-xs sm:text-sm text-muted-foreground">
+            Day {period.daysElapsed} of {period.totalDays}{" "}
+            <span className="hidden sm:inline">
+              ({period.progressPercent}% through period)
+            </span>
+            <span className="sm:hidden">
+              · {period.progressPercent}%
+            </span>
           </span>
-          <span className="text-sm font-medium text-foreground">
+          <span className="text-xs sm:text-sm font-medium text-foreground shrink-0">
             {spentPercent}% spent
           </span>
         </div>
@@ -511,10 +516,10 @@ export default function BudgetDashboardPage() {
       {/* Chart toggle tabs */}
       {summary.spendingSavers.length > 0 && (
         <div className="space-y-4">
-          <div className="flex gap-1 p-1 rounded-lg bg-muted/50 w-fit">
+          <div className="flex gap-1 p-1 rounded-lg bg-muted/50 w-full sm:w-fit">
             <button
               onClick={() => setChartView("budget")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              className={`flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-medium rounded-md transition-colors ${
                 chartView === "budget"
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -524,7 +529,7 @@ export default function BudgetDashboardPage() {
             </button>
             <button
               onClick={() => setChartView("waterfall")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              className={`flex-1 sm:flex-none px-3 py-2 sm:py-1.5 text-xs font-medium rounded-md transition-colors ${
                 chartView === "waterfall"
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"

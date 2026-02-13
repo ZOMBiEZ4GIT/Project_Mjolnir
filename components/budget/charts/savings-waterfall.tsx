@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -97,11 +98,16 @@ function XAxisLabel(props: {
   y?: number;
   payload?: { value: string };
   chartData: WaterfallBar[];
+  isMobile?: boolean;
 }) {
-  const { x = 0, y = 0, payload, chartData } = props;
+  const { x = 0, y = 0, payload, chartData, isMobile } = props;
   if (!payload) return null;
 
   const row = chartData.find((r) => r.label === payload.value);
+  const maxLen = isMobile ? 6 : 10;
+  const displayName = payload.value.length > maxLen
+    ? payload.value.slice(0, maxLen - 1) + "…"
+    : payload.value;
 
   return (
     <g transform={`translate(${x},${y})`}>
@@ -120,12 +126,10 @@ function XAxisLabel(props: {
         y={14}
         dy={12}
         textAnchor="middle"
-        className="text-[9px] sm:text-[10px]"
+        className="text-[8px] sm:text-[10px]"
         fill={CHART_TEXT}
       >
-        {payload.value.length > 10
-          ? payload.value.slice(0, 9) + "…"
-          : payload.value}
+        {displayName}
       </text>
     </g>
   );
@@ -159,6 +163,14 @@ export function SavingsWaterfall({
   spendingSavers,
 }: SavingsWaterfallProps) {
   const { data: allSavers } = useBudgetSavers();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const incomeDollars = Math.round(incomeCents / 100);
 
@@ -254,9 +266,10 @@ export function SavingsWaterfall({
     dollars: Math.abs(runningTotal),
   });
 
-  // Chart dimensions
+  // Chart dimensions — shorter on mobile
   const maxValue = Math.max(incomeDollars, ...bars.map((b) => b.base + b.value));
-  const chartHeight = 320;
+  const chartHeight = isMobile ? 280 : 320;
+  const barSize = isMobile ? 24 : 32;
 
   // Nothing to show
   if (incomeDollars <= 0 && bars.length <= 2) return null;
@@ -266,12 +279,12 @@ export function SavingsWaterfall({
       <ResponsiveContainer width="100%" height={chartHeight}>
         <BarChart
           data={bars}
-          margin={{ top: 8, right: 8, bottom: 32, left: 8 }}
-          barSize={32}
+          margin={{ top: 8, right: 4, bottom: 32, left: 4 }}
+          barSize={barSize}
         >
           <XAxis
             dataKey="label"
-            tick={<XAxisLabel chartData={bars} />}
+            tick={<XAxisLabel chartData={bars} isMobile={isMobile} />}
             stroke={CHART_AXIS}
             axisLine={{ stroke: CHART_AXIS }}
             tickLine={false}

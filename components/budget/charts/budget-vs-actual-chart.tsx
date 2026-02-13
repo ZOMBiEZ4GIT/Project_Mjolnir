@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -108,11 +109,15 @@ function YAxisLabel(props: {
   y?: number;
   payload?: { value: string };
   chartData: ChartRow[];
+  isMobile?: boolean;
 }) {
-  const { x = 0, y = 0, payload, chartData } = props;
+  const { x = 0, y = 0, payload, chartData, isMobile } = props;
   if (!payload) return null;
 
   const row = chartData.find((r) => r.label === payload.value);
+  const displayName = isMobile && payload.value.length > 8
+    ? payload.value.slice(0, 7) + "…"
+    : payload.value;
 
   return (
     <g transform={`translate(${x},${y})`}>
@@ -124,7 +129,7 @@ function YAxisLabel(props: {
         className="text-[11px] sm:text-xs"
         fill={CHART_TEXT}
       >
-        {row?.emoji} {payload.value}
+        {row?.emoji} {displayName}
       </text>
     </g>
   );
@@ -138,6 +143,15 @@ export function BudgetVsActualChart({
   savers,
   progressPercent,
 }: BudgetVsActualChartProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   if (savers.length === 0) return null;
 
   // Transform saver data for the chart
@@ -169,11 +183,13 @@ export function BudgetVsActualChart({
   const maxBudget = Math.max(...chartData.map((d) => d.budgetDollars));
   const paceLineValue = Math.round((progressPercent / 100) * maxBudget);
 
-  // Calculate Y-axis width based on longest label
+  // Calculate Y-axis width — narrower on mobile to give more chart space
   const longestLabel = Math.max(
     ...chartData.map((d) => `${d.emoji} ${d.label}`.length)
   );
-  const yAxisWidth = Math.min(Math.max(longestLabel * 7, 80), 140);
+  const yAxisWidth = isMobile
+    ? Math.min(Math.max(longestLabel * 5.5, 70), 100)
+    : Math.min(Math.max(longestLabel * 7, 80), 140);
 
   const barHeight = 28;
   const chartHeight = Math.max(chartData.length * (barHeight + 16) + 40, 150);
@@ -203,7 +219,7 @@ export function BudgetVsActualChart({
             type="category"
             dataKey="label"
             width={yAxisWidth}
-            tick={<YAxisLabel chartData={chartData} />}
+            tick={<YAxisLabel chartData={chartData} isMobile={isMobile} />}
             axisLine={false}
             tickLine={false}
           />
