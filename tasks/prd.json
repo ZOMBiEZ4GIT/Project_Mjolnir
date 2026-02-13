@@ -66,7 +66,7 @@
         "npm run build && npm run lint passes"
       ],
       "priority": 3,
-      "passes": false,
+      "passes": true,
       "notes": "Reference spec Section 7.2 wireframe. Add saverKey as a query param filter to the existing transactions API (GET /api/budget/transactions?saver=food)."
     },
     {

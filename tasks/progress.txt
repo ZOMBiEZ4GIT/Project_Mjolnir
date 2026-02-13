@@ -10,6 +10,8 @@
 - Traffic light logic: compare `pacePercent` (actualCents/budgetCents*100) vs `progressPercent` (time-based), not raw percentUsed
 - Saver colour from DB is hex string used inline via `style={{ backgroundColor }}` — CSS variables not applicable here
 - Quote glob paths with parentheses in git commands: `git add "app/(dashboard)/budget/page.tsx"`
+- Transaction API supports `saver` query param to filter by saver_key; response includes `saverKey`, `categoryKey`, `tags`
+- Next.js 16 dynamic routes use `params: Promise<{}>` — unwrap with `use(params)` from React
 
 ---
 
@@ -39,4 +41,19 @@
   - For ETA calculation: if `targetDate` is set, use it directly; otherwise estimate from `monthlyContributionCents` vs remaining amount
   - Debt payoff goals identified by name containing "debt", "payoff", "pay off", or "loan" — show "Clears [month]" instead of "ETA [month]"
   - Goal cards use click-to-expand pattern (not navigate) since goals don't have their own detail pages
+---
+
+## 2026-02-13 - BI-C-003
+- What was implemented: Saver detail view with category drilldown and recent transactions
+- Files changed:
+  - `app/(dashboard)/budget/saver/[saverKey]/page.tsx` — new dynamic route page with saver header, category breakdown, and transaction list
+  - `app/api/budget/transactions/route.ts` — added `saver` query param filter and `saverKey`, `categoryKey`, `tags` to response
+- **Learnings for future iterations:**
+  - Transaction API now supports `?saver=food` filter using `eq(upTransactions.saverKey, saver)`
+  - Transaction response now includes `saverKey`, `categoryKey`, and `tags` fields (needed for BI-C-007 too)
+  - Saver detail page reuses `useBudgetSummary()` to get the saver data, then filters to find the matching saver by `saverKey`
+  - Transactions fetched separately via `/api/budget/transactions?saver=X&from=Y&to=Z&limit=20`
+  - Next.js 16 uses `params: Promise<{}>` pattern — unwrap with `use(params)` from React
+  - Categories sorted by actual spend descending, then alphabetically — gives a natural "where the money went" ordering
+  - Tags rendered as pill badges using `bg-muted text-muted-foreground` for subtle appearance
 ---
