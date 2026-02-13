@@ -3,18 +3,30 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { aiRecommendations } from "@/lib/db/schema";
 import { withN8nAuth } from "@/lib/api/up/middleware";
+import { ensureCurrentPeriodExists } from "@/lib/budget/payday";
 
-const suggestedBudgetItemSchema = z.object({
-  categoryId: z.string(),
+// ---------------------------------------------------------------------------
+// Zod schema for the new structured recommendation callback from n8n
+// ---------------------------------------------------------------------------
+
+const saverStatusSchema = z.object({
+  saverKey: z.string(),
+  status: z.enum(["green", "amber", "red"]),
+  message: z.string().optional(),
+});
+
+const goalProgressSchema = z.object({
+  goalName: z.string(),
+  percentComplete: z.number(),
+  onTrack: z.boolean(),
+  message: z.string().optional(),
+});
+
+const budgetAdjustmentSchema = z.object({
+  saverKey: z.string(),
   currentCents: z.number().int(),
   suggestedCents: z.number().int(),
   reason: z.string(),
-});
-
-const paySplitItemSchema = z.object({
-  saverName: z.string(),
-  percentage: z.number(),
-  amountCents: z.number().int(),
 });
 
 const savingsProjectionSchema = z.object({
@@ -24,13 +36,13 @@ const savingsProjectionSchema = z.object({
 });
 
 const callbackPayloadSchema = z.object({
-  budget_period_id: z.string().uuid(),
-  suggestedBudget: z.array(suggestedBudgetItemSchema),
-  paySplitConfig: z.array(paySplitItemSchema),
-  insights: z.array(z.string()),
-  savingsProjection: savingsProjectionSchema,
-  actionableTip: z.string(),
-  generatedAt: z.string(),
+  overallStatus: z.enum(["green", "amber", "red"]),
+  saverStatuses: z.array(saverStatusSchema).optional(),
+  goalProgress: z.array(goalProgressSchema).optional(),
+  budgetAdjustments: z.array(budgetAdjustmentSchema).optional(),
+  insights: z.array(z.string()).min(1),
+  actionableTip: z.string().min(1),
+  savingsProjection: savingsProjectionSchema.optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -43,12 +55,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { budget_period_id, ...rest } = parsed.data;
+    const data = parsed.data;
+
+    // Find the budget period containing today
+    const budgetPeriodId = await ensureCurrentPeriodExists();
 
     await db.insert(aiRecommendations).values({
-      budgetPeriodId: budget_period_id,
-      recommendationData: rest,
+      budgetPeriodId,
+      // Backwards compat: store the full payload in the existing JSONB column
+      recommendationData: data,
       status: "pending",
+      // Structured fields
+      overallStatus: data.overallStatus,
+      saverStatuses: data.saverStatuses ?? null,
+      goalProgress: data.goalProgress ?? null,
+      budgetAdjustments: data.budgetAdjustments ?? null,
+      insights: data.insights,
+      actionableTip: data.actionableTip,
+      savingsProjection: data.savingsProjection ?? null,
+      rawResponse: body,
+      generatedAt: new Date(),
     });
 
     return NextResponse.json({ stored: true }, { status: 200 });
