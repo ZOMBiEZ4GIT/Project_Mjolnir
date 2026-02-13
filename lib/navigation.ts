@@ -10,6 +10,13 @@ import {
   PieChart,
   Cog,
   Workflow,
+  HeartPulse,
+  Scale,
+  Moon,
+  Activity,
+  Utensils,
+  Dumbbell,
+  LayoutGrid,
   type LucideIcon,
 } from "lucide-react";
 
@@ -27,6 +34,50 @@ export const navItems: NavItem[] = [
     label: "Dashboard",
     icon: LayoutDashboard,
     description: "View net worth overview",
+  },
+  {
+    href: "/health",
+    label: "Health",
+    icon: HeartPulse,
+    description: "Apple Health dashboard",
+    children: [
+      {
+        href: "/health",
+        label: "Overview",
+        icon: LayoutGrid,
+        description: "Health overview and KPIs",
+      },
+      {
+        href: "/health/body-comp",
+        label: "Body Comp",
+        icon: Scale,
+        description: "Weight, body fat, lean mass",
+      },
+      {
+        href: "/health/sleep",
+        label: "Sleep",
+        icon: Moon,
+        description: "Sleep stages and quality",
+      },
+      {
+        href: "/health/heart",
+        label: "Heart",
+        icon: Activity,
+        description: "HRV, resting HR, VO2 max",
+      },
+      {
+        href: "/health/nutrition",
+        label: "Nutrition",
+        icon: Utensils,
+        description: "Calories, macros, protein",
+      },
+      {
+        href: "/health/workouts",
+        label: "Workouts",
+        icon: Dumbbell,
+        description: "Workout frequency and types",
+      },
+    ],
   },
   {
     href: "/holdings",

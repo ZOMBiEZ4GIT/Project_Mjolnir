@@ -18,9 +18,29 @@ interface SidebarProps {
 export function Sidebar({ isCollapsed, onToggleCollapsed }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [budgetExpanded, setBudgetExpanded] = useState(() =>
-    pathname.startsWith("/budget")
-  );
+
+  // Generic expanded groups — auto-expand groups matching the current path
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const item of navItems) {
+      if (item.children && pathname.startsWith(item.href)) {
+        initial.add(item.href);
+      }
+    }
+    return initial;
+  });
+
+  function toggleGroup(href: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(href)) {
+        next.delete(href);
+      } else {
+        next.add(href);
+      }
+      return next;
+    });
+  }
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -28,8 +48,6 @@ export function Sidebar({ isCollapsed, onToggleCollapsed }: SidebarProps) {
   }
 
   const width = isCollapsed ? 64 : layout.sidebarWidth;
-
-  const isBudgetSection = pathname.startsWith("/budget");
 
   return (
     <aside
@@ -59,9 +77,9 @@ export function Sidebar({ isCollapsed, onToggleCollapsed }: SidebarProps) {
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-4">
         {navItems.map((item) => {
           if (item.children) {
-            // Collapsible group (Budget)
-            const isGroupActive = isBudgetSection;
-            const showChildren = isCollapsed ? false : (budgetExpanded || isGroupActive);
+            const isGroupActive = pathname.startsWith(item.href);
+            const isExpanded = expandedGroups.has(item.href);
+            const showChildren = isCollapsed ? false : (isExpanded || isGroupActive);
 
             return (
               <div key={item.href}>
@@ -74,7 +92,7 @@ export function Sidebar({ isCollapsed, onToggleCollapsed }: SidebarProps) {
                   />
                 ) : (
                   <button
-                    onClick={() => setBudgetExpanded(!budgetExpanded)}
+                    onClick={() => toggleGroup(item.href)}
                     className={cn(
                       "relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                       isGroupActive
@@ -98,8 +116,8 @@ export function Sidebar({ isCollapsed, onToggleCollapsed }: SidebarProps) {
                   <div className="ml-4 mt-1 flex flex-col gap-0.5 border-l border-border pl-2">
                     {item.children.map((child) => {
                       const isChildActive =
-                        child.href === "/budget"
-                          ? pathname === "/budget"
+                        child.href === item.href
+                          ? pathname === item.href
                           : pathname === child.href ||
                             pathname.startsWith(child.href + "/");
                       return (

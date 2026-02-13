@@ -533,6 +533,81 @@ export const aiRecommendations = pgTable(
 );
 
 // =============================================================================
+// HEALTH — Apple Health data synced via n8n webhook pipeline
+// =============================================================================
+
+/**
+ * Daily health metrics from Apple Health.
+ *
+ * One row per day, keyed by `log_date`. All metric columns are nullable
+ * because not every metric is available every day (e.g. body fat requires
+ * a smart scale reading). Energy values are stored in kilojoules (native
+ * Apple Health unit) and converted to kilocalories at the API layer.
+ *
+ * Sleep start/end are TIME columns stored as text strings ("HH:MM:SS").
+ */
+export const healthDaily = pgTable("health_daily", {
+  logDate: date("log_date").primaryKey(),
+  // Body composition
+  weightKg: decimal("weight_kg", { precision: 6, scale: 2 }),
+  bodyFatPct: decimal("body_fat_pct", { precision: 5, scale: 2 }),
+  leanMassKg: decimal("lean_mass_kg", { precision: 6, scale: 2 }),
+  bmi: decimal("bmi", { precision: 5, scale: 2 }),
+  // Heart & recovery
+  restingHr: decimal("resting_hr", { precision: 5, scale: 1 }),
+  hrv: decimal("hrv", { precision: 6, scale: 1 }),
+  vo2Max: decimal("vo2_max", { precision: 5, scale: 1 }),
+  // Nutrition (stored in kJ, converted to kcal at API layer)
+  energyKj: decimal("energy_kj", { precision: 10, scale: 2 }),
+  proteinG: decimal("protein_g", { precision: 8, scale: 2 }),
+  carbsG: decimal("carbs_g", { precision: 8, scale: 2 }),
+  fatG: decimal("fat_g", { precision: 8, scale: 2 }),
+  // Activity
+  steps: integer("steps"),
+  activeEnergyKj: decimal("active_energy_kj", { precision: 10, scale: 2 }),
+  exerciseMinutes: integer("exercise_minutes"),
+  standHours: integer("stand_hours"),
+  // Sleep (durations in hours)
+  sleepHours: decimal("sleep_hours", { precision: 5, scale: 2 }),
+  sleepDeep: decimal("sleep_deep", { precision: 5, scale: 2 }),
+  sleepRem: decimal("sleep_rem", { precision: 5, scale: 2 }),
+  sleepCore: decimal("sleep_core", { precision: 5, scale: 2 }),
+  sleepAwake: decimal("sleep_awake", { precision: 5, scale: 2 }),
+  sleepStart: text("sleep_start"), // TIME as text, e.g. "22:30:00"
+  sleepEnd: text("sleep_end"),     // TIME as text, e.g. "06:45:00"
+  // Respiratory
+  breathingDisturbances: decimal("breathing_disturbances", { precision: 5, scale: 1 }),
+  respiratoryRate: decimal("respiratory_rate", { precision: 5, scale: 1 }),
+});
+
+/**
+ * Individual workout sessions from Apple Health.
+ *
+ * Each row is a single workout event. Energy values are in kilojoules.
+ * A composite unique constraint on (workout_date, start_time, workout_type)
+ * prevents duplicate imports from n8n. Indexed on workout_date for range queries.
+ */
+export const healthWorkouts = pgTable(
+  "health_workouts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    workoutDate: date("workout_date").notNull(),
+    startTime: text("start_time").notNull(), // TIME as text, e.g. "07:30:00"
+    workoutType: text("workout_type").notNull(),
+    durationMinutes: decimal("duration_minutes", { precision: 8, scale: 2 }),
+    energyKj: decimal("energy_kj", { precision: 10, scale: 2 }),
+    avgHr: decimal("avg_hr", { precision: 5, scale: 1 }),
+    maxHr: decimal("max_hr", { precision: 5, scale: 1 }),
+    distanceKm: decimal("distance_km", { precision: 10, scale: 3 }),
+    isIndoor: boolean("is_indoor"),
+  },
+  (table) => ({
+    workoutDateIdx: index("health_workouts_workout_date_idx").on(table.workoutDate),
+    uniqueWorkout: unique().on(table.workoutDate, table.startTime, table.workoutType),
+  })
+);
+
+// =============================================================================
 // RELATIONS
 // =============================================================================
 
@@ -661,3 +736,9 @@ export type NewBudgetAllocation = typeof budgetAllocations.$inferInsert;
 
 export type AiRecommendation = typeof aiRecommendations.$inferSelect;
 export type NewAiRecommendation = typeof aiRecommendations.$inferInsert;
+
+export type HealthDaily = typeof healthDaily.$inferSelect;
+export type NewHealthDaily = typeof healthDaily.$inferInsert;
+
+export type HealthWorkout = typeof healthWorkouts.$inferSelect;
+export type NewHealthWorkout = typeof healthWorkouts.$inferInsert;

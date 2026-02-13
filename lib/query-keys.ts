@@ -118,6 +118,19 @@ export const queryKeys = {
         : (["n8n", "executions"] as const),
   },
 
+  // ---- Health ----
+  health: {
+    today: ["health", "today"] as const,
+    daily: (range: string) => ["health", "daily", range] as const,
+    bodyComp: (range: string) => ["health", "body-comp", range] as const,
+    sleep: (range: string) => ["health", "sleep", range] as const,
+    weekly: ["health", "weekly"] as const,
+    workouts: (filters: { limit?: number; type?: string }) =>
+      ["health", "workouts", filters] as const,
+    workoutsSummary: (range: string) =>
+      ["health", "workouts-summary", range] as const,
+  },
+
   // ---- Settings ----
   preferences: ["preferences"] as const,
   exchangeRates: ["exchange-rates"] as const,

@@ -19,11 +19,29 @@ import {
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const [budgetExpanded, setBudgetExpanded] = useState(() =>
-    pathname.startsWith("/budget")
-  );
 
-  const isBudgetSection = pathname.startsWith("/budget");
+  // Generic expanded groups — auto-expand group matching current path
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const item of navItems) {
+      if (item.children && pathname.startsWith(item.href)) {
+        initial.add(item.href);
+      }
+    }
+    return initial;
+  });
+
+  function toggleGroup(href: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(href)) {
+        next.delete(href);
+      } else {
+        next.add(href);
+      }
+      return next;
+    });
+  }
 
   return (
     <>
@@ -68,14 +86,15 @@ export function MobileNav() {
               const Icon = item.icon;
 
               if (item.children) {
-                const isGroupActive = isBudgetSection;
-                const showChildren = budgetExpanded || isGroupActive;
+                const isGroupActive = pathname.startsWith(item.href);
+                const isExpanded = expandedGroups.has(item.href);
+                const showChildren = isExpanded || isGroupActive;
 
                 return (
                   <div key={item.href}>
                     {/* Group header */}
                     <button
-                      onClick={() => setBudgetExpanded(!budgetExpanded)}
+                      onClick={() => toggleGroup(item.href)}
                       className={cn(
                         "flex w-full items-center gap-3 rounded-md px-3 py-2 min-h-[44px] text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                         isGroupActive
@@ -99,8 +118,8 @@ export function MobileNav() {
                         {item.children.map((child) => {
                           const ChildIcon = child.icon;
                           const isChildActive =
-                            child.href === "/budget"
-                              ? pathname === "/budget"
+                            child.href === item.href
+                              ? pathname === item.href
                               : pathname === child.href ||
                                 pathname.startsWith(child.href + "/");
                           return (
