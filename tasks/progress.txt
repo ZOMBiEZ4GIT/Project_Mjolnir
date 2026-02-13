@@ -12,6 +12,7 @@
 - `classificationCorrections` table tracks saver/category edits — correction recorded in PUT endpoint after update
 - Dismissed suggestions stored in localStorage under `mjolnir:dismissed-correction-suggestions`
 - Raw SQL with `db.execute(sql\`...\`)` for GROUP BY + HAVING queries not expressible in Drizzle query builder
+- Celebration/confetti effects: use `canvas-confetti` via `lib/budget/celebrations.ts`, localStorage guard at `mjolnir:celebrated-goals`
 
 ## 2026-02-13 - BI-D-001
 - Created backfill API route at `app/api/admin/backfill/route.ts`
@@ -79,4 +80,20 @@
   - `COALESCE(SUM(ABS(...)), 0)` handles empty result sets cleanly in aggregations
   - Category keys like "pre-workout" can be formatted for display with simple split-on-hyphen + capitalize
   - Conditional rendering by saverKey keeps saver-specific features isolated without extra routing
+---
+
+## 2026-02-13 - BI-D-005
+- Added auto-completion logic to PUT `/api/budget/goals/[id]`: when `currentAmountCents >= targetAmountCents` and no explicit status provided, auto-sets status to 'completed' with completedAt timestamp
+- Installed `canvas-confetti` (~6KB gzipped) for celebration animations
+- Created `lib/budget/celebrations.ts` with: `fireCelebration()` (3-second confetti burst), `hasCelebrated(goalId)`, `markCelebrated(goalId)` using localStorage key `mjolnir:celebrated-goals`
+- Updated GoalTracker component with `useRef`/`useEffect` to detect goal transitions from active→completed on data refetch
+- On completion detection: fires confetti, shows toast notification, marks as celebrated in localStorage (one-time guard)
+- Completed goals get muted/success styling: `border-positive/30 bg-positive/5` border+background, muted text for name
+- Completed goals already sorted to bottom via existing `[...activeGoals, ...completedGoals]` logic
+- Files changed: `app/api/budget/goals/[id]/route.ts`, `components/budget/goal-tracker.tsx`, `lib/budget/celebrations.ts` (new), `package.json`, `package-lock.json`
+- **Learnings for future iterations:**
+  - `canvas-confetti` works well as a vanilla JS library in React — no need for react-confetti wrapper
+  - `useRef` for tracking previous data state across TanStack Query refetches avoids stale closure issues
+  - Goals table uses bigint for `targetAmountCents` — cast with `Number()` when comparing to JS numbers
+  - localStorage celebration guard pattern: array of goal IDs, check before firing, mark immediately after
 ---
