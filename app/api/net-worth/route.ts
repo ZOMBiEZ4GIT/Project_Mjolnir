@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { calculateNetWorth } from "@/lib/calculations/net-worth";
 import type { Currency } from "@/lib/utils/currency";
 import { withAuth } from "@/lib/utils/with-auth";
-
-const VALID_CURRENCIES = ["AUD", "NZD", "USD"] as const;
+import { CURRENCIES } from "@/lib/constants";
 
 /**
  * GET /api/net-worth
@@ -27,16 +26,11 @@ const VALID_CURRENCIES = ["AUD", "NZD", "USD"] as const;
 export const GET = withAuth(async (request, _context, userId) => {
   const searchParams = request.nextUrl.searchParams;
 
-  // Note: refresh parameter is documented for future use but currently all calculations
-  // are fresh. In the future, this could be used to return a cached result vs fresh calculation.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const refresh = searchParams.get("refresh") === "true";
-
   // Parse display currency parameter
   const displayCurrencyParam = searchParams.get("displayCurrency");
   let displayCurrency: Currency = "AUD";
   if (displayCurrencyParam) {
-    if (VALID_CURRENCIES.includes(displayCurrencyParam as Currency)) {
+    if (CURRENCIES.includes(displayCurrencyParam as (typeof CURRENCIES)[number])) {
       displayCurrency = displayCurrencyParam as Currency;
     }
     // Invalid currency silently falls back to AUD

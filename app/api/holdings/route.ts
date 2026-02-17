@@ -1,40 +1,21 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { holdings, snapshots, type NewHolding, type Holding } from "@/lib/db/schema";
+import { holdings, snapshots, type NewHolding } from "@/lib/db/schema";
 import { eq, isNull, and, sql } from "drizzle-orm";
 import { calculateCostBasis } from "@/lib/calculations/cost-basis";
 import { withAuth } from "@/lib/utils/with-auth";
+import {
+  HOLDING_TYPE_ORDER,
+  CURRENCIES,
+  EXCHANGES,
+  TRADEABLE_TYPES,
+  SNAPSHOT_TYPES,
+  type Currency,
+  type HoldingWithData,
+} from "@/lib/constants";
 
-// Valid holding types
-const holdingTypes = ["stock", "etf", "crypto", "super", "cash", "debt"] as const;
-const currencies = ["AUD", "NZD", "USD"] as const;
-const exchanges = ["ASX", "NZX", "NYSE", "NASDAQ"] as const;
-
-// Types that require a symbol
-const tradeableTypes = ["stock", "etf", "crypto"] as const;
-// Types that require an exchange
+// Types that require an exchange (stock/etf only, not crypto)
 const exchangeRequiredTypes = ["stock", "etf"] as const;
-// Snapshot types that use balance tracking
-const snapshotTypes = ["super", "cash", "debt"] as const;
-
-type HoldingType = (typeof holdingTypes)[number];
-type Currency = (typeof currencies)[number];
-
-// Extended holding type with cost basis and snapshot data
-interface HoldingWithData extends Holding {
-  // Cost basis data (for tradeable holdings)
-  quantity: number | null;
-  costBasis: number | null;
-  avgCost: number | null;
-  // Snapshot data (for snapshot holdings)
-  latestSnapshot: {
-    id: string;
-    holdingId: string;
-    date: string;
-    balance: string;
-    currency: string;
-  } | null;
-}
 
 interface CreateHoldingBody {
   type?: string;
@@ -101,7 +82,7 @@ export const GET = withAuth(async (request, _context, userId) => {
 
   if (includeLatestSnapshot) {
     const snapshotHoldingIds = result
-      .filter((h) => snapshotTypes.includes(h.type as (typeof snapshotTypes)[number]))
+      .filter((h) => SNAPSHOT_TYPES.includes(h.type as (typeof SNAPSHOT_TYPES)[number]))
       .map((h) => h.id);
 
     if (snapshotHoldingIds.length > 0) {
@@ -151,8 +132,8 @@ export const GET = withAuth(async (request, _context, userId) => {
   // Build the response with cost basis and/or snapshots
   const holdingsWithData: HoldingWithData[] = await Promise.all(
     result.map(async (holding) => {
-      const isTradeable = tradeableTypes.includes(holding.type as (typeof tradeableTypes)[number]);
-      const isSnapshot = snapshotTypes.includes(holding.type as (typeof snapshotTypes)[number]);
+      const isTradeable = TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number]);
+      const isSnapshot = SNAPSHOT_TYPES.includes(holding.type as (typeof SNAPSHOT_TYPES)[number]);
 
       let quantity: number | null = null;
       let costBasis: number | null = null;
@@ -217,8 +198,8 @@ export const POST = withAuth(async (request, _context, userId) => {
   // Validate required fields
   if (!body.type) {
     errors.type = "Type is required";
-  } else if (!holdingTypes.includes(body.type as HoldingType)) {
-    errors.type = `Type must be one of: ${holdingTypes.join(", ")}`;
+  } else if (!HOLDING_TYPE_ORDER.includes(body.type as (typeof HOLDING_TYPE_ORDER)[number])) {
+    errors.type = `Type must be one of: ${HOLDING_TYPE_ORDER.join(", ")}`;
   }
 
   if (!body.name || body.name.trim() === "") {
@@ -227,12 +208,12 @@ export const POST = withAuth(async (request, _context, userId) => {
 
   if (!body.currency) {
     errors.currency = "Currency is required";
-  } else if (!currencies.includes(body.currency as Currency)) {
-    errors.currency = `Currency must be one of: ${currencies.join(", ")}`;
+  } else if (!CURRENCIES.includes(body.currency as Currency)) {
+    errors.currency = `Currency must be one of: ${CURRENCIES.join(", ")}`;
   }
 
   // Validate symbol is required for tradeable types
-  const isTradeable = tradeableTypes.includes(body.type as (typeof tradeableTypes)[number]);
+  const isTradeable = TRADEABLE_TYPES.includes(body.type as (typeof TRADEABLE_TYPES)[number]);
   if (isTradeable && (!body.symbol || body.symbol.trim() === "")) {
     errors.symbol = "Symbol is required for stock, etf, and crypto holdings";
   }
@@ -242,8 +223,8 @@ export const POST = withAuth(async (request, _context, userId) => {
   if (requiresExchange) {
     if (!body.exchange) {
       errors.exchange = "Exchange is required for stock and etf holdings";
-    } else if (!exchanges.includes(body.exchange as (typeof exchanges)[number])) {
-      errors.exchange = `Exchange must be one of: ${exchanges.join(", ")}`;
+    } else if (!EXCHANGES.includes(body.exchange as (typeof EXCHANGES)[number])) {
+      errors.exchange = `Exchange must be one of: ${EXCHANGES.join(", ")}`;
     }
   }
 
@@ -255,7 +236,7 @@ export const POST = withAuth(async (request, _context, userId) => {
   // Create the holding
   const newHolding: NewHolding = {
     userId,
-    type: body.type as HoldingType,
+    type: body.type as (typeof HOLDING_TYPE_ORDER)[number],
     name: body.name!.trim(),
     currency: body.currency as Currency,
     symbol: isTradeable ? body.symbol!.trim() : null,

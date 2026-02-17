@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { contributions, holdings, type NewContribution } from "@/lib/db/schema";
 import { eq, isNull, and, desc } from "drizzle-orm";
 import { withAuth } from "@/lib/utils/with-auth";
+import { normalizeToFirstOfMonth } from "@/lib/constants";
 
 interface CreateContributionBody {
   holding_id?: string;
@@ -10,12 +11,6 @@ interface CreateContributionBody {
   employer_contribution?: string | number;
   employee_contribution?: string | number;
   notes?: string;
-}
-
-// Normalize date to first of month (YYYY-MM-01)
-function normalizeToFirstOfMonth(dateStr: string): string {
-  const date = new Date(dateStr);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
 /**

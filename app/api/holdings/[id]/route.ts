@@ -1,36 +1,17 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { holdings, snapshots, type Holding } from "@/lib/db/schema";
+import { holdings, snapshots } from "@/lib/db/schema";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { calculateCostBasis } from "@/lib/calculations/cost-basis";
 import { withAuth } from "@/lib/utils/with-auth";
-
-// Valid values for validation
-const currencies = ["AUD", "NZD", "USD"] as const;
-const exchanges = ["ASX", "NZX", "NYSE", "NASDAQ"] as const;
-
-// Types that are tradeable (have cost basis)
-const tradeableTypes = ["stock", "etf", "crypto"] as const;
-// Snapshot types that use balance tracking
-const snapshotTypes = ["super", "cash", "debt"] as const;
-
-type Currency = (typeof currencies)[number];
-
-// Extended holding type with cost basis and snapshot data
-interface HoldingWithData extends Holding {
-  // Cost basis data (for tradeable holdings)
-  quantity: number | null;
-  costBasis: number | null;
-  avgCost: number | null;
-  // Snapshot data (for snapshot holdings)
-  latestSnapshot: {
-    id: string;
-    holdingId: string;
-    date: string;
-    balance: string;
-    currency: string;
-  } | null;
-}
+import {
+  CURRENCIES,
+  EXCHANGES,
+  TRADEABLE_TYPES,
+  SNAPSHOT_TYPES,
+  type Currency,
+  type HoldingWithData,
+} from "@/lib/constants";
 
 interface UpdateHoldingBody {
   name?: string;
@@ -86,8 +67,8 @@ export const GET = withAuth(async (request, context, userId) => {
     return NextResponse.json(holding);
   }
 
-  const isTradeable = tradeableTypes.includes(holding.type as (typeof tradeableTypes)[number]);
-  const isSnapshot = snapshotTypes.includes(holding.type as (typeof snapshotTypes)[number]);
+  const isTradeable = TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number]);
+  const isSnapshot = SNAPSHOT_TYPES.includes(holding.type as (typeof SNAPSHOT_TYPES)[number]);
 
   let quantity: number | null = null;
   let costBasis: number | null = null;
@@ -194,13 +175,13 @@ export const PATCH = withAuth(async (request, context, userId) => {
     errors.name = "Name cannot be empty";
   }
 
-  if (body.currency !== undefined && !currencies.includes(body.currency as Currency)) {
-    errors.currency = `Currency must be one of: ${currencies.join(", ")}`;
+  if (body.currency !== undefined && !CURRENCIES.includes(body.currency as Currency)) {
+    errors.currency = `Currency must be one of: ${CURRENCIES.join(", ")}`;
   }
 
   if (body.exchange !== undefined && body.exchange !== null && body.exchange !== "") {
-    if (!exchanges.includes(body.exchange as (typeof exchanges)[number])) {
-      errors.exchange = `Exchange must be one of: ${exchanges.join(", ")}`;
+    if (!EXCHANGES.includes(body.exchange as (typeof EXCHANGES)[number])) {
+      errors.exchange = `Exchange must be one of: ${EXCHANGES.join(", ")}`;
     }
   }
 
