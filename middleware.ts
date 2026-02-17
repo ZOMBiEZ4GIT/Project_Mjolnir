@@ -6,6 +6,7 @@ const PUBLIC_PATHS = [
   "/api/auth/login",
   "/api/auth/logout",
   "/api/health",
+  "/api/email/unsubscribe",                // Signed token auth (clicked from emails)
   "/api/up",                              // n8n webhooks (HMAC auth via withN8nAuth)
   "/api/budget/recommendations/callback",  // n8n recommendation callback (HMAC auth)
   "/api/cron",                             // Vercel cron jobs (CRON_SECRET auth)

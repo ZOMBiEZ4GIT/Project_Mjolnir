@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { upTransactions } from "@/lib/db/schema";
 import { isNull, sql } from "drizzle-orm";
 import { mapCategoryToSaver } from "@/lib/budget/categorisation";
+import { withAuth } from "@/lib/utils/with-auth";
 
 /**
  * Merchant description patterns → tags mapping.
@@ -87,7 +88,7 @@ const BATCH_SIZE = 100;
  * Processes transactions that have a mjolnirCategoryId but no saverKey.
  * Idempotent: skips transactions that already have a saverKey.
  */
-export async function POST() {
+export const POST = withAuth(async () => {
   try {
     // Count total transactions needing backfill
     const [{ count: totalCount }] = await db
@@ -200,4 +201,4 @@ export async function POST() {
       { status: 500 }
     );
   }
-}
+}, "backfilling transactions");
