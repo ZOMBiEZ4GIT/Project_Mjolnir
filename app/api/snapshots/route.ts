@@ -3,12 +3,13 @@ import { db } from "@/lib/db";
 import { snapshots, holdings, type NewSnapshot } from "@/lib/db/schema";
 import { eq, isNull, and, desc } from "drizzle-orm";
 import { withAuth } from "@/lib/utils/with-auth";
-
-// Valid snapshot types (non-tradeable holdings)
-const snapshotTypes = ["super", "cash", "debt"] as const;
-const currencies = ["AUD", "NZD", "USD"] as const;
-
-type Currency = (typeof currencies)[number];
+import {
+  SNAPSHOT_TYPES,
+  CURRENCIES,
+  type Currency,
+  normalizeToFirstOfMonth,
+  isValidSnapshotMonth,
+} from "@/lib/constants";
 
 interface CreateSnapshotBody {
   holding_id?: string;
@@ -16,25 +17,6 @@ interface CreateSnapshotBody {
   balance?: string | number;
   currency?: string;
   notes?: string;
-}
-
-// Normalize date to first of month (YYYY-MM-01)
-function normalizeToFirstOfMonth(dateStr: string): string {
-  const date = new Date(dateStr);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
-// Check if date is current or previous month
-function isValidSnapshotMonth(dateStr: string): boolean {
-  const now = new Date();
-  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-
-  const snapshotDate = new Date(dateStr);
-  const snapshotMonth = new Date(snapshotDate.getFullYear(), snapshotDate.getMonth(), 1);
-
-  return snapshotMonth.getTime() === currentMonth.getTime() ||
-         snapshotMonth.getTime() === previousMonth.getTime();
 }
 
 /**
@@ -149,8 +131,8 @@ export const POST = withAuth(async (request, _context, userId) => {
 
   if (!body.currency) {
     errors.currency = "Currency is required";
-  } else if (!currencies.includes(body.currency as Currency)) {
-    errors.currency = `Currency must be one of: ${currencies.join(", ")}`;
+  } else if (!CURRENCIES.includes(body.currency as Currency)) {
+    errors.currency = `Currency must be one of: ${CURRENCIES.join(", ")}`;
   }
 
   // Return early if basic validation fails
@@ -178,7 +160,7 @@ export const POST = withAuth(async (request, _context, userId) => {
   }
 
   const holding = holdingResult[0];
-  if (!snapshotTypes.includes(holding.type as (typeof snapshotTypes)[number])) {
+  if (!SNAPSHOT_TYPES.includes(holding.type as (typeof SNAPSHOT_TYPES)[number])) {
     return NextResponse.json(
       { errors: { holding_id: "Holding must be of type super, cash, or debt" } },
       { status: 400 }

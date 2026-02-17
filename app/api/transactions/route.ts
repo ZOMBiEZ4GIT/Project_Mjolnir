@@ -4,14 +4,13 @@ import { transactions, holdings, type NewTransaction } from "@/lib/db/schema";
 import { eq, isNull, and, desc } from "drizzle-orm";
 import { calculateQuantityHeld } from "@/lib/calculations/quantity";
 import { withAuth } from "@/lib/utils/with-auth";
-
-// Valid values for validation
-const transactionActions = ["BUY", "SELL", "DIVIDEND", "SPLIT"] as const;
-const currencies = ["AUD", "NZD", "USD"] as const;
-const tradeableTypes = ["stock", "etf", "crypto"] as const;
-
-type TransactionAction = (typeof transactionActions)[number];
-type Currency = (typeof currencies)[number];
+import {
+  TRANSACTION_ACTIONS,
+  CURRENCIES,
+  TRADEABLE_TYPES,
+  type TransactionAction,
+  type Currency,
+} from "@/lib/constants";
 
 interface CreateTransactionBody {
   holding_id?: string;
@@ -61,12 +60,12 @@ export const GET = withAuth(async (request, _context, userId) => {
   }
 
   // Filter by action type if provided and valid
-  if (action && transactionActions.includes(action as TransactionAction)) {
+  if (action && TRANSACTION_ACTIONS.includes(action as TransactionAction)) {
     baseConditions.push(eq(transactions.action, action as TransactionAction));
   }
 
   // Filter by currency if provided and valid
-  if (currency && currencies.includes(currency as Currency)) {
+  if (currency && CURRENCIES.includes(currency as Currency)) {
     baseConditions.push(eq(transactions.currency, currency as Currency));
   }
 
@@ -160,8 +159,8 @@ export const POST = withAuth(async (request, _context, userId) => {
 
   if (!body.action) {
     errors.action = "Action is required";
-  } else if (!transactionActions.includes(body.action as TransactionAction)) {
-    errors.action = `Action must be one of: ${transactionActions.join(", ")}`;
+  } else if (!TRANSACTION_ACTIONS.includes(body.action as TransactionAction)) {
+    errors.action = `Action must be one of: ${TRANSACTION_ACTIONS.join(", ")}`;
   }
 
   if (body.quantity === undefined || body.quantity === null || body.quantity === "") {
@@ -184,8 +183,8 @@ export const POST = withAuth(async (request, _context, userId) => {
 
   if (!body.currency) {
     errors.currency = "Currency is required";
-  } else if (!currencies.includes(body.currency as Currency)) {
-    errors.currency = `Currency must be one of: ${currencies.join(", ")}`;
+  } else if (!CURRENCIES.includes(body.currency as Currency)) {
+    errors.currency = `Currency must be one of: ${CURRENCIES.join(", ")}`;
   }
 
   // Validate fees if provided
@@ -211,8 +210,8 @@ export const POST = withAuth(async (request, _context, userId) => {
 
     if (!holding) {
       errors.holding_id = "Holding not found";
-    } else if (!tradeableTypes.includes(holding.type as (typeof tradeableTypes)[number])) {
-      errors.holding_id = `Transactions can only be added to tradeable holdings (${tradeableTypes.join(", ")})`;
+    } else if (!TRADEABLE_TYPES.includes(holding.type as (typeof TRADEABLE_TYPES)[number])) {
+      errors.holding_id = `Transactions can only be added to tradeable holdings (${TRADEABLE_TYPES.join(", ")})`;
     }
   }
 
