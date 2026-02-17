@@ -61,8 +61,8 @@ export function WeeklySummaryRow({ metrics }: WeeklySummaryRowProps) {
                 <div
                   className={cn(
                     "inline-flex items-center gap-0.5 text-xs mt-0.5",
-                    isGood && "text-green-500",
-                    isBad && "text-red-500",
+                    isGood && "text-positive",
+                    isBad && "text-destructive",
                     !isGood && !isBad && "text-muted-foreground"
                   )}
                 >

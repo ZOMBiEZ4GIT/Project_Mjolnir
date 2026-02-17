@@ -41,8 +41,8 @@ export function ProteinTracker({ data }: ProteinTrackerProps) {
               className={cn(
                 "h-4 w-4 rounded-sm",
                 noData && "bg-muted/50",
-                !noData && hit && "bg-green-500",
-                !noData && !hit && "bg-red-500/70"
+                !noData && hit && "bg-positive",
+                !noData && !hit && "bg-negative/70"
               )}
             />
           );

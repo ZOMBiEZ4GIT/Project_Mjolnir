@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AreaChart,
   Area,
@@ -12,6 +12,8 @@ import {
   ReferenceLine,
 } from "recharts";
 import { ChartCard } from "@/components/charts/chart-card";
+import { ChartSkeleton } from "@/components/charts/chart-skeleton";
+import { ChartError } from "@/components/charts/chart-error";
 import { queryKeys } from "@/lib/query-keys";
 import {
   CHART_GRID,
@@ -127,9 +129,10 @@ export function SpendingPaceChart({
   daysElapsed,
 }: SpendingPaceChartProps) {
   const totalBudgetDollars = totalBudgetCents / 100;
+  const queryClient = useQueryClient();
 
   // Fetch all transactions for the period
-  const { data: transactions, isLoading } = useQuery({
+  const { data: transactions, isLoading, error } = useQuery({
     queryKey: queryKeys.budget.transactions.list({
       from: periodStartDate,
       to: periodEndDate,
@@ -189,9 +192,26 @@ export function SpendingPaceChart({
   if (isLoading) {
     return (
       <ChartCard title="Spending Pace">
-        <div className="h-[250px] flex items-center justify-center">
-          <div className="h-4 w-32 rounded bg-muted animate-pulse" />
-        </div>
+        <ChartSkeleton variant="line" height="h-[250px]" />
+      </ChartCard>
+    );
+  }
+
+  if (error) {
+    return (
+      <ChartCard title="Spending Pace">
+        <ChartError
+          message="Failed to load spending pace"
+          onRetry={() =>
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.budget.transactions.list({
+                from: periodStartDate,
+                to: periodEndDate,
+                limit: "2000",
+              }),
+            })
+          }
+        />
       </ChartCard>
     );
   }

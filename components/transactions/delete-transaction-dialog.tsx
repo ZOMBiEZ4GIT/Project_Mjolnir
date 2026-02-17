@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { showSuccess, showError } from "@/lib/toast-helpers";
+import { showSuccessWithUndo, showError } from "@/lib/toast-helpers";
 import { queryKeys } from "@/lib/query-keys";
 import {
   AnimatedAlertDialog,
@@ -119,7 +119,15 @@ export function DeleteTransactionDialog({
       queryClient.invalidateQueries({
         queryKey: queryKeys.holdings.quantity(transaction.holdingId),
       });
-      showSuccess("Transaction deleted");
+      showSuccessWithUndo("Transaction deleted", async () => {
+        await fetch(`/api/transactions/${transaction.id}/restore`, {
+          method: "PATCH",
+        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.holdings.quantity(transaction.holdingId),
+        });
+      });
       onDeleted?.(transaction.id);
       onOpenChange(false);
     },
@@ -141,8 +149,8 @@ export function DeleteTransactionDialog({
           <AnimatedAlertDialogTitle>Delete Transaction</AnimatedAlertDialogTitle>
           <AnimatedAlertDialogDescription className="space-y-3">
             <p>
-              Are you sure you want to delete this transaction? This action cannot
-              be undone.
+              Are you sure you want to delete this transaction? You can undo this
+              briefly after deletion.
             </p>
 
             {/* Transaction details */}

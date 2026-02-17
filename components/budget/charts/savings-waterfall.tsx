@@ -12,6 +12,8 @@ import {
   ReferenceLine,
 } from "recharts";
 import { ChartCard } from "@/components/charts/chart-card";
+import { ChartSkeleton } from "@/components/charts/chart-skeleton";
+import { ChartError } from "@/components/charts/chart-error";
 import type { SaverSummary } from "@/lib/hooks/use-budget-summary";
 import { useBudgetSavers } from "@/lib/hooks/use-budget-savers";
 import {
@@ -162,7 +164,7 @@ export function SavingsWaterfall({
   incomeCents,
   spendingSavers,
 }: SavingsWaterfallProps) {
-  const { data: allSavers } = useBudgetSavers();
+  const { data: allSavers, isLoading, error } = useBudgetSavers();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -171,6 +173,22 @@ export function SavingsWaterfall({
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  if (isLoading) {
+    return (
+      <ChartCard title="Income Allocation">
+        <ChartSkeleton variant="bar" height="h-[320px]" />
+      </ChartCard>
+    );
+  }
+
+  if (error) {
+    return (
+      <ChartCard title="Income Allocation">
+        <ChartError message="Failed to load income allocation" />
+      </ChartCard>
+    );
+  }
 
   const incomeDollars = Math.round(incomeCents / 100);
 
@@ -272,7 +290,15 @@ export function SavingsWaterfall({
   const barSize = isMobile ? 24 : 32;
 
   // Nothing to show
-  if (incomeDollars <= 0 && bars.length <= 2) return null;
+  if (incomeDollars <= 0 && bars.length <= 2) {
+    return (
+      <ChartCard title="Income Allocation">
+        <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+          No income allocation data yet
+        </div>
+      </ChartCard>
+    );
+  }
 
   return (
     <ChartCard title="Income Allocation">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { showSuccessWithUndo, showError } from "@/lib/toast-helpers";
 import { Loader2 } from "lucide-react";
 import {
   AnimatedAlertDialog,
@@ -87,7 +87,7 @@ export function DeleteHoldingDialog({
 
   const mutation = useMutation({
     mutationFn: deleteHolding,
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
       // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: queryKeys.holdings.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
@@ -95,11 +95,20 @@ export function DeleteHoldingDialog({
       queryClient.invalidateQueries({ queryKey: queryKeys.contributions.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.prices.all });
 
-      toast.success("Holding deleted successfully");
+      showSuccessWithUndo("Holding deleted", async () => {
+        await fetch(`/api/holdings/${deletedId}/restore`, {
+          method: "PATCH",
+        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.holdings.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.transactions.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.snapshots.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.contributions.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.prices.all });
+      });
       onOpenChange(false);
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to delete holding");
+      showError(error.message || "Failed to delete holding");
     },
   });
 
@@ -120,7 +129,7 @@ export function DeleteHoldingDialog({
         <AnimatedAlertDialogHeader>
           <AnimatedAlertDialogTitle className="text-foreground">Delete Holding</AnimatedAlertDialogTitle>
           <AnimatedAlertDialogDescription className="text-muted-foreground">
-            Are you sure you want to delete this holding? This action cannot be undone.
+            Are you sure you want to delete this holding? You can undo this briefly after deletion.
           </AnimatedAlertDialogDescription>
         </AnimatedAlertDialogHeader>
 

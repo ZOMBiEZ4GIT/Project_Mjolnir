@@ -204,7 +204,15 @@ export function CategoryTreemap({
   // Only show categories with actual spend
   const withSpend = categories.filter((c) => c.actualCents > 0);
 
-  if (withSpend.length === 0) return null;
+  if (withSpend.length === 0) {
+    return (
+      <ChartCard title="Category Breakdown">
+        <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+          No category spending data yet
+        </div>
+      </ChartCard>
+    );
+  }
 
   const totalActualCents = withSpend.reduce((s, c) => s + c.actualCents, 0);
 

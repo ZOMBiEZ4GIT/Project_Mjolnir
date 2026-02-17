@@ -152,7 +152,15 @@ export function BudgetVsActualChart({
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  if (savers.length === 0) return null;
+  if (savers.length === 0) {
+    return (
+      <ChartCard title="Budget vs Actual">
+        <div className="h-[200px] flex items-center justify-center text-sm text-muted-foreground">
+          No saver data for this period
+        </div>
+      </ChartCard>
+    );
+  }
 
   // Transform saver data for the chart
   const chartData: ChartRow[] = savers.map((s) => {

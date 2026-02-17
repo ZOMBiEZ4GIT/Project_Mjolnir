@@ -103,12 +103,12 @@ export function N8nStatusCard() {
         <div className="flex items-center gap-1.5">
           <span
             className={`inline-block h-2 w-2 rounded-full ${
-              hasFailures ? "bg-red-500" : "bg-emerald-500"
+              hasFailures ? "bg-destructive" : "bg-positive"
             }`}
           />
           <span
             className={`text-xs ${
-              hasFailures ? "text-red-400" : "text-emerald-400"
+              hasFailures ? "text-destructive" : "text-positive"
             }`}
           >
             {hasFailures

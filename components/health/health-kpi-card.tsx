@@ -70,8 +70,8 @@ export function HealthKpiCard({
             <div
               className={cn(
                 "mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-                deltaIsGood && "bg-green-500/10 text-green-500",
-                deltaIsBad && "bg-red-500/10 text-red-500",
+                deltaIsGood && "bg-positive/10 text-positive",
+                deltaIsBad && "bg-destructive/10 text-destructive",
                 !deltaIsGood && !deltaIsBad && "bg-muted text-muted-foreground"
               )}
             >

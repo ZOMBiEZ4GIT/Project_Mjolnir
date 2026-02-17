@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { showSuccess, showError } from "@/lib/toast-helpers";
+import { showSuccessWithUndo, showError } from "@/lib/toast-helpers";
 import { Loader2 } from "lucide-react";
 import { CURRENCY_SYMBOLS, type Currency } from "@/lib/constants";
 import { queryKeys } from "@/lib/query-keys";
@@ -65,7 +65,7 @@ export function DeleteSnapshotDialog({
 
   const mutation = useMutation({
     mutationFn: deleteSnapshot,
-    onSuccess: () => {
+    onSuccess: (_data, deletedId) => {
       // Invalidate all relevant queries
       queryClient.invalidateQueries({ queryKey: queryKeys.snapshots.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.contributions.all });
@@ -73,7 +73,16 @@ export function DeleteSnapshotDialog({
       queryClient.invalidateQueries({ queryKey: queryKeys.checkIn.holdings });
       queryClient.invalidateQueries({ queryKey: queryKeys.holdings.all });
 
-      showSuccess("Snapshot deleted successfully");
+      showSuccessWithUndo("Snapshot deleted", async () => {
+        await fetch(`/api/snapshots/${deletedId}/restore`, {
+          method: "PATCH",
+        });
+        queryClient.invalidateQueries({ queryKey: queryKeys.snapshots.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.contributions.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.checkIn.status });
+        queryClient.invalidateQueries({ queryKey: queryKeys.checkIn.holdings });
+        queryClient.invalidateQueries({ queryKey: queryKeys.holdings.all });
+      });
       onOpenChange(false);
     },
     onError: (error: Error) => {
@@ -97,7 +106,7 @@ export function DeleteSnapshotDialog({
         <AnimatedAlertDialogHeader>
           <AnimatedAlertDialogTitle className="text-foreground">Delete Snapshot</AnimatedAlertDialogTitle>
           <AnimatedAlertDialogDescription className="text-muted-foreground">
-            Are you sure you want to delete this snapshot? This action cannot be undone.
+            Are you sure you want to delete this snapshot? You can undo this briefly after deletion.
           </AnimatedAlertDialogDescription>
         </AnimatedAlertDialogHeader>
 
