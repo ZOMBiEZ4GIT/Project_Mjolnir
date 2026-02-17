@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/auth/logout", "/api/health"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/api/auth/login",
+  "/api/auth/logout",
+  "/api/health",
+  "/api/up",                              // n8n webhooks (HMAC auth via withN8nAuth)
+  "/api/budget/recommendations/callback",  // n8n recommendation callback (HMAC auth)
+  "/api/cron",                             // Vercel cron jobs (CRON_SECRET auth)
+];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
